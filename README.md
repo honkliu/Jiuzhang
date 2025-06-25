@@ -5,7 +5,7 @@ Jiuzhang  Suanshu
 
 ## Command
 
-> it config --global credential.helper store 
+> git config --global credential.helper store 
 >
 > git add createfs.sh scp.sh ssh-set.sh
 > 
