@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <title>D3 家谱图（右键菜单）</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: "Microsoft YaHei", sans-serif;
+    }
+    svg {
+      width: 100vw;
+      height: 100vh;
+      background-color: #bbbbab;
+    }
+    .link {
+      fill: none;
+      stroke: #555;
+      stroke-width: 1px;
+    }
+    .node circle {
+      fill: #fff;
+      stroke: #000;
+      stroke-width: 2px;
+    }
+    .name tspan {
+      font-size: 16px;
+      text-anchor: middle;
+    }
+    .age {
+      font-size: 12px;
+      fill: #333;
+      text-anchor: middle;
+    }
+    .highlighted circle {
+      stroke: orange !important;
+      stroke-width: 3px;
+    }
+    .highlighted text,
+    .highlighted .tname {
+      fill: orange;
+      font-weight: bold;
+      font-size: 20px;
+    }
+    .link.highlighted {
+      stroke: orange !important;
+      stroke-width: 2px;
+    }
+    .dimmed {
+      opacity: 0.2;
+    }
+    #context-menu {
+      position: absolute;
+      display: none;
+      background: #fff;
+      border: 1px solid #ccc;
+      padding: 6px 10px;
+      box-shadow: 2px 2px 8px rgba(0,0,0,0.3);
+      font-size: 14px;
+      z-index: 9999;
+    }
+    #context-menu div:hover {
+      background: #f0f0f0;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+<svg></svg>
+<div id="context-menu"></div>
+<script>
+const data = {
+  name: "李太", age: 102,
+  children: [
+    {
+      name: "李松", age: 80,
+      children: [
+        {
+          name: "志松", age: 58,
+          children: [
+            { name: "正耕", age: 36, children: [{ name: "朝亮", age: 12 }] },
+            { name: "正容", age: 34, children: [{ name: "朝富", age: 10 }] }
+          ]
+        }
+      ]
+    }
+  ]
+};
+
+const svg = d3.select("svg");
+const width = window.innerWidth;
+const height = window.innerHeight;
+const g = svg.append("g").attr("transform", `translate(${width/2}, 40)`);
+
+const root = d3.hierarchy(data);
+const tree = d3.tree().nodeSize([50, 140]);
+tree(root);
+
+// 对齐最右子节点
+root.eachAfter(d => {
+  if (d.children && d.children.length) {
+    d.x = d.children[d.children.length - 1].x;
+  }
+});
+
+const allNodes = root.descendants();
+const allLinks = root.links();
+
+const link = g.selectAll(".link")
+  .data(allLinks)
+  .join("path")
+  .attr("class", "link")
+  .attr("d", d => `
+    M${d.source.x},${d.source.y + 30}
+    V${(d.source.y + d.target.y - 30)/2}
+    H${d.target.x}
+    V${d.target.y - 30}
+  `);
+
+const node = g.selectAll(".node")
+  .data(allNodes)
+  .join("g")
+  .attr("class", "node")
+  .attr("transform", d => `translate(${d.x},${d.y})`);
+
+node.append("circle")
+  .attr("cy", -35)
+  .attr("r", 4);
+
+node.append("text")
+  .attr("class", "name")
+  .attr("y", -32)
+  .selectAll("tspan")
+  .data(d => d.data.name.split(""))
+  .join("tspan")
+  .attr("class", "tname")
+  .attr("x", 0)
+  .attr("dy", "1.2em")
+  .text(d => d);
+
+node.append("text")
+  .attr("class", "age")
+  .attr("dy", "2.6em")
+  .text(d => `年龄：${d.data.age}`);
+
+// 高亮分支
+function highlightSubtree(startNode) {
+  const highlightedSet = new Set(startNode.ancestors());
+  startNode.each(d => highlightedSet.add(d));
+
+  node.classed("highlighted", d => highlightedSet.has(d))
+      .classed("dimmed", d => !highlightedSet.has(d));
+  link.classed("highlighted", d => highlightedSet.has(d.target))
+      .classed("dimmed", d => !highlightedSet.has(d.target));
+}
+
+// 高亮祖先路径
+function highlightAncestors(startNode) {
+  const ancestorSet = new Set(startNode.ancestors());
+  node.classed("highlighted", d => ancestorSet.has(d))
+      .classed("dimmed", d => !ancestorSet.has(d));
+  link.classed("highlighted", d =>
+      ancestorSet.has(d.source) && ancestorSet.has(d.target))
+      .classed("dimmed", d =>
+      !ancestorSet.has(d.source) || !ancestorSet.has(d.target));
+}
+
+// 左键点击高亮分支
+node.on("click", (event, d) => {
+  event.stopPropagation();
+  highlightSubtree(d);
+});
+
+// 背景点击取消
+svg.on("click", () => {
+  node.classed("highlighted", false).classed("dimmed", false);
+  link.classed("highlighted", false).classed("dimmed", false);
+});
+
+// 右键菜单
+svg.on("contextmenu", event => event.preventDefault());
+
+const menu = d3.select("#context-menu");
+
+/*
+node.on("contextmenu", (event, d) => {
+  console.log("Right click on node", d);
+  event.preventDefault();
+  event.stopPropagation();
+  showContextMenu(event.pageX, event.pageY, d);
+});
+*/
+node.each(function(d) {
+  d3.select(this).on("contextmenu", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    showContextMenu(event.pageX, event.pageY, d);
+  });
+});
+
+
+function showContextMenu(x, y, d) {
+  menu.html("")
+    .style("left", `${x}px`)
+    .style("top", `${y}px`)
+    .style("display", "block");
+
+  menu.append("div").text("🔸 高亮此分支")
+    .on("click", () => {
+      highlightSubtree(d);
+      hideMenu();
+    });
+
+  menu.append("div").text("🔹 高亮祖先路径")
+    .on("click", () => {
+      highlightAncestors(d);
+      hideMenu();
+    });
+}
+function hideMenu() {
+  menu.style("display", "none");
+}
+//d3.select("body").on("click", hideMenu);
+</script>
+</body>
+</html>

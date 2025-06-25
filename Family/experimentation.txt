@@ -1,0 +1,61 @@
+	1. Pubstore [Igor]
+		a. Deprecate Pegasus 
+		b. Re-enable Pubstore proxy [Code ready, need testing and deployment]
+		c. ACS Upgrade for PubStore communication []
+		d. PubStore/CA Reginal IP Support.[Follow up with Mahash]
+	2. Explore an extensible Supply and Demand Experimentation platform supporting different partners. 
+		a. Explore Industry standard such as Azure EXP
+		b. Flighter & Litmus unification[Start the design Q1, Start Feature work in Q2, Chandra, Igor, Sai, Victor]
+			i. There are two parallel systems serving Ads Experimentation needs
+			ii. Flighter UI is based on Kendo (old),  
+			iii. There are lot of micro services and deployed in VM.
+			iv. The key challenge is Flighter is closely tied with Pubstore and this needs to be unified with Litmus
+	3. Litmus[Chandra, Sai, Victor, Dini, Hao]
+		a. XANDR on-boarding, 
+		b. Complex parameters
+		c. KPI Validation for Demand Experimentation, P1
+		d. SetFlight support, P1
+		e. Litmus Usage Metrics 
+		f. Config Management for multiple partner support
+		g. Flight-Level alerting support for Demand Flights
+	4. Campaign Experimentation
+		a. Pmax Incrementality testing
+	5. Flighter
+		a. On-boarding and deprecation of lines
+		b. Show Mainstreams part of deployment
+	6. AI Agents/Copilot/MCP Server
+		a. Flighter MCP Server: MCP support for debugging- KPI Validation, flight issues, etc. 
+		b. Flight Mainstream Readiness: Assess Flight readiness for mainstream by automating the process the Marketplace follows. Leverage ML/Copilot to deliver insights on the Flight.
+	7. KPI Validation [Sushil, Victor, Abhigna]
+		a. Copilot Ads TGs KPI validation 
+		b. KPI Validation V2 - https://microsoft.sharepoint.com/:w:/t/AdsFrontdoor/EVX418269dJLtVHdIMqPmXMBOQoohDfiqZ9AOS3bbRzBAw?e=RV88HR
+			i. Query set Refresh Pipeline
+			ii. Reduce False alarm rate
+			iii. Alerting for measurement gaps - scraping request disparity, metric and scenario gaps.
+			iv. Enabling Revo validation for all relevant TGS  to expand beyond TA/PA to Hotel, VA ads etc.
+			v. Threshold recommendation and alerting 
+			vi. Email Report enhancement to point out TGS having failure
+			vii. Power BI dashboard for KPI validation
+			viii. Optimization
+				1) Rollback deployments
+				2) Optimizing Post KPI
+				3) Optimizing Auto revert
+			ix. UI Revamp
+			x. Migration of documentation to eng.ms
+		c. Enable Xlite KPI validation
+		d. Migration of Expanse to Azure Service Fabric
+		e. Move to App insights for logging
+		f. Long-term solution for Scraping - Falcon, Multi-Tenancy, AKS, Revo, Locust
+	8. Flight-Level Alerting
+		a. ML Based Flight Level alerting
+		b. On-boarding new metrics PA CTS
+	9. Tools
+		a. TG-Bot
+			i. Support or Tied Flighting
+			ii. Migrate to App insights logging
+	10. Security
+		a. Address SFI items 
+		b. Bond upgrade from 3.62 to 13.
+	11. DRI/Livesite
+		a. Reducing Sev-2s when the deployment stage is Canary/Active deployment
+Have a stage-wise expected threshold.
