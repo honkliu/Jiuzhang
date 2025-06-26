@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM Output Display</title>
+    <link rel="stylesheet" href="styles1.css">
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.27.4/full/pyodide.js"></script>
+    <script src="scripts1.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Language Model Output</h1>
+        <div id="output" readonly>"output"</div>
+
+        <textarea id="prompt" placeholder="write a phthon code to parse a table, which has two columns, the first column is age, the second is name, output the name"></textarea>
+        <button id="submit" onclick="callOpenAI()">Submit</button>
+        
+    </div>
+
+</body>
+</html>
