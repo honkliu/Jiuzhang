@@ -1,0 +1,10 @@
+ssh-keygen -f "/home/hpcuser/.ssh/known_hosts" -R "172.16.1.18"
+ssh-keygen -f "/home/hpcuser/.ssh/known_hosts" -R "172.16.1.19"
+ssh-keygen -f "/home/hpcuser/.ssh/known_hosts" -R "172.16.1.20"
+ssh-keygen -f "/home/hpcuser/.ssh/known_hosts" -R "172.16.1.21"
+ssh-keygen -f "/home/hpcuser/.ssh/known_hosts" -R "172.16.1.22"
+ssh-keygen -f "/home/hpcuser/.ssh/known_hosts" -R "172.16.1.23"
+ssh-keygen -f "/home/hpcuser/.ssh/known_hosts" -R "172.16.1.24"
+ssh-keygen -f "/home/hpcuser/.ssh/known_hosts" -R "172.16.1.25"
+ssh-keygen -f "/home/hpcuser/.ssh/known_hosts" -R "hpcdev000000"
+
