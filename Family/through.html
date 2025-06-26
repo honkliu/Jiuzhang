@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <title>双亲关系家谱图</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: "Microsoft YaHei", sans-serif;
+    }
+    svg {
+      width: 100vw;
+      height: 100vh;
+      background-color: #fff;
+    }
+    .link {
+      fill: none;
+      stroke: #555;
+      stroke-width: 1.6px;
+    }
+    .node circle {
+      fill: #fff;
+      stroke: #000;
+      stroke-width: 2px;
+    }
+    .name tspan {
+      font-size: 14px;
+      text-anchor: middle;
+    }
+    .age {
+      font-size: 12px;
+      fill: #333;
+      text-anchor: middle;
+    }
+    .alt-link {
+      stroke: orange;
+      stroke-width: 1.4px;
+      stroke-dasharray: 4,2;
+      fill: none;
+    }
+  </style>
+</head>
+<body>
+<svg></svg>
+<script>
+const data = {
+  name: "父亲 A", age: 50,
+  children: [
+    {
+      name: "孩子", age: 20
+    }
+  ]
+};
+
+const extraParent = {
+  name: "父亲 B", age: 52
+};
+
+const svg = d3.select("svg");
+const width = window.innerWidth;
+const height = window.innerHeight;
+const g = svg.append("g").attr("transform", `translate(${width/2}, 40)`);
+
+const root = d3.hierarchy(data);
+const tree = d3.tree().nodeSize([140, 140]);
+tree(root);
+
+// 添加额外的父节点（非 tree 结构）手动定位
+const extra = { x: root.x - 150, y: root.y, data: extraParent };
+
+// 将 extra 与 root.children[0] 手动连接
+const child = root.children[0];
+
+// 绘制主要连接线
+g.selectAll(".link")
+  .data(root.links())
+  .join("path")
+  .attr("class", "link")
+  .attr("d", d => `
+    M${d.source.x},${d.source.y + 20}
+    V${(d.source.y + d.target.y - 30)/2}
+    H${d.target.x}
+    V${d.target.y - 40}
+  `);
+
+// 绘制额外父节点的“副线”连接
+g.append("path")
+  .attr("class", "alt-link")
+  .attr("d", `
+    M${extra.x},${extra.y + 20}
+    V${(extra.y + child.y - 30)/2}
+    H${child.x}
+    V${child.y - 40}
+  `);
+
+// 合并节点进行绘制（主树 + extra 节点）
+const nodes = [...root.descendants(), extra];
+
+const node = g.selectAll(".node")
+  .data(nodes)
+  .join("g")
+  .attr("class", "node")
+  .attr("transform", d => `translate(${d.x},${d.y})`);
+
+node.append("circle")
+  .attr("cy", -40)
+  .attr("r", 16);
+
+node.append("text")
+  .attr("class", "name")
+  .attr("y", 0)
+  .selectAll("tspan")
+  .data(d => d.data.name.split(""))
+  .join("tspan")
+  .attr("x", 0)
+  .attr("dy", "1.2em")
+  .text(d => d);
+
+node.append("text")
+  .attr("class", "age")
+  .attr("dy", "2.6em")
+  .text(d => `年龄：${d.data.age}`);
+</script>
+</body>
+</html>

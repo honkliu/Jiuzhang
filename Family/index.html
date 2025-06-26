@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <title>家谱示意图</title>
+  <style>
+    body {
+      font-family: "Microsoft YaHei", sans-serif;
+      background: #fff;
+      margin: 0;
+      padding: 40px 10px;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .tree {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0px;
+    }
+
+    .generation {
+      display: flex;
+      justify-content: center;
+      gap: 60px;
+      position: relative;
+    }
+
+    .member {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+    }
+
+    .name {
+      writing-mode: vertical-rl;
+      text-orientation: upright;
+      font-size: 20px;
+      margin-bottom: 6px;
+      margin-top: 6px;
+    }
+
+    .circle {
+      width: 10px;
+      height: 10px;
+      border: 2px solid black;
+      border-radius: 50%;
+      background-color: white;
+    }
+
+    .v-line {
+      width: 2px;
+      height: 30px;
+      background: black;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1;
+    }
+
+
+    .h-line {
+      position: absolute;
+      height: 2px;
+      background-color: black;
+      top: 0;
+    }
+    .parent-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+.parent-v-line {
+  width: 2px;
+  height: 30px;
+  background: black;
+  margin: 0 auto;
+}
+.children-container {
+  display: flex;
+  justify-content: center;
+  flex-direction: row;
+  align-items: flex-start;
+  position: relative;
+  margin-top: 0px;
+}
+.h-line {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: black;
+  z-index: 0;
+}
+.child {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 0 30px;
+  position: relative;
+}
+.child-v-line {
+  width: 2px;
+  height: 20px;
+  background: black;
+  margin-bottom: 2px;
+  z-index: 1;
+}
+  </style>
+</head>
+<body>
+  <h1>家谱示意图</h1>
+
+  <div class="generation">
+  <!-- Parent -->
+  <div class="parent-container">
+    <div class="circle"></div>
+    <div class="name">父亲</div>
+    <div class="parent-v-line"></div>
+  </div>
+  <!-- Children row -->
+  <div class="children-container">
+    <div class="h-line"></div>
+    <div class="child">
+      <div class="child-v-line"></div>
+      <div class="circle"></div>
+      <div class="name">子1</div>
+    </div>
+    <div class="child">
+      <div class="child-v-line"></div>
+      <div class="circle"></div>
+      <div class="name">子2</div>
+    </div>
+    <div class="child">
+      <div class="child-v-line"></div>
+      <div class="circle"></div>
+      <div class="name">子3</div>
+    </div>
+  </div>
+</div>
+  <div class="tree" id="tree"></div>
+
+  <script>
+    class TreeNode {
+      constructor(val) {
+        this.name = val;
+        this.children = [];
+      }
+    }
+    const root = new TreeNode("李太");
+    const child1 = new TreeNode("李松");
+    const child2 = new TreeNode("李让");
+    root.children.push(child1, child2);
+
+    child1.children.push(new TreeNode("李志松"), new TreeNode("李志梅"),new TreeNode("李志风"), new TreeNode("李志鱼"));
+    child2.children.push(new TreeNode("李志柏"), new TreeNode("李志容"));
+    const data = {
+      name: "李太",
+      children: [
+        {
+          name: "李松",
+          children: [
+            {
+              name: "志柏",
+	      children: [
+                {
+                  name: "正耕",
+                },
+
+                {
+                  name: "正耕正耕正耕正耕",
+                },
+
+                {
+                  name: "正耕",
+                },
+
+                {
+                  name: "正容",
+                }
+              ]
+            },
+            {
+              name: "志松",
+              children: [
+                {
+                  name: "正耕正耕正耕正耕",
+                },
+
+                {
+                  name: "正耕",
+                },
+
+                {
+                  name: "正耕",
+                },
+
+                {
+                  name: "正容",
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    };
+    
+    const tree = document.getElementById("tree");
+    function levelOrderTraversal(root) {
+      if (!root) return [];
+
+      const result = [];
+      const queue = [root];
+
+      var index = 0;
+      while (queue.length > 0) {
+        const levelSize = queue.length;
+        const level = [];
+
+        const genDiv = document.createElement("div");
+        genDiv.className = "children-container"
+
+        for (let i = 0; i < levelSize; i++) {
+          const node = queue.shift();
+          level.push(node.val);
+          
+          const member = document.createElement("div");
+          member.className = "child";
+          member.id = "name00" + index;
+
+          index ++; 
+
+          const name = document.createElement("div");
+          name.className = "name";
+          name.textContent = node.name;
+
+          const circle = document.createElement("div");
+          circle.className = "circle";
+        
+          const line = document.createElement("div");
+          line.className = "child-v-line";
+        
+          member.appendChild(line);
+          member.appendChild(circle);
+          member.appendChild(name);
+
+          genDiv.appendChild(member);
+        
+          for (const child of node.children) {  
+            queue.push(child);
+          }          
+        }
+
+        const hLine = document.createElement("div")
+
+        hLine.className = "h-line";
+        hLine.style.left = "10px";
+        hLine.style.width =  "100px";
+        genDiv.appendChild(hLine)
+
+        tree.append(genDiv);
+
+        result.push(level);
+      }
+
+      
+      document.getElementById("name002").style.top = document.getElementById("name008").getBoundingClientRect().top + window.scrollY;
+
+      return result;
+    }
+ 
+
+    function renderGeneration(nodes, generation = 0) {
+      const genDiv = document.createElement("div");
+      genDiv.className = "children-container";
+      genDiv.id = "gen-" + generation;
+
+      const members = [];
+
+      nodes.forEach(node => {
+        const member = document.createElement("div");
+        member.className = "child";
+
+        const name = document.createElement("div");
+        name.className = "name";
+        name.textContent = node.name;
+
+        const circle = document.createElement("div");
+        circle.className = "circle";
+        
+        const line = document.createElement("div");
+        line.className = "child-v-line";
+        
+        member.appendChild(line);
+        member.appendChild(circle);
+        member.appendChild(name);
+
+        genDiv.appendChild(member);
+        members.push({ node, el: member });
+      });
+
+      tree.prepend(genDiv);
+
+      if (parentMid !== null && members.length > 0) {
+        const first = members[0].el.offsetLeft + members[0].el.offsetWidth / 2;
+        const last = members[members.length - 1].el.offsetLeft + members[members.length - 1].el.offsetWidth / 2;
+        const hLine = document.createElement("div");
+        hLine.className = "h-line";
+        hLine.style.left = first + "px";
+        hLine.style.width = (last - first) + "px";
+        genDiv.appendChild(hLine);
+
+      }
+
+      members.forEach(({ node, el }) => {
+        if (node.children) {
+          const line = document.createElement("div");
+          line.className = "v-line";
+          el.appendChild(line);
+          const midX = el.offsetLeft + el.offsetWidth / 2;
+          renderGeneration(node.children, midX);
+        }
+      });
+    }
+  window.onload = () => levelOrderTraversal(root);
+
+    //window.onload = () => renderGeneration([root]);
+  </script>
+</body>
+</html>
