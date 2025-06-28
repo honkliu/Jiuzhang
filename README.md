@@ -1,8 +1,8 @@
 # Jiuzhang
 
 # adding new
-Jiuzhang  Suanshu
-Add a client
+> iuzhang  Suanshu
+> d a client
 
 ## Command
 
