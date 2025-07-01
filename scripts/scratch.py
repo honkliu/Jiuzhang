@@ -1,7 +1,7 @@
 import openai
 import httpx
 client = openai.Client(
-       base_url="http://hpcdev000000:30000/v1",
+       base_url="http://4.151.212.118:30000/v1",
        api_key="123",
 #      http_client=httpx.Client(headers={"Authorization": None}))
 )
