@@ -15,6 +15,6 @@ docker run \
   -e GPU_FORCE_BLIT_COPY_SIZE=64 \
   -e DEBUG_HIP_BLOCK_SYN=1024 \
   rocm/sgl-dev:20250701 \
-  python3 -m sglang.launch_server --model-path /mnt/resource_nvme/DeepSeek-R1-0528 --tp 8 --trust-remote-code --chunked-prefill-size 131072 --torch-compile-max-bs 256 --host 0.0.0.0 --port 30000 > /mnt/nvme_raid0/gitroot/output.log 2>&1
+  python3 -m sglang.launch_server --model-path /mnt/nvme_raid0/DeepSeek-R1-0528 --tp 8 --trust-remote-code --chunked-prefill-size 131072 --torch-compile-max-bs 256 --host 0.0.0.0 --port 30000 > /mnt/nvme_raid0/gitroot/output.log 2>&1
 
 
