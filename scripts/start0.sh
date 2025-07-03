@@ -6,7 +6,7 @@ docker run --gpus all -itd \
   --ipc=host \
   --privileged \
   --network host \
-  --name dsklm \
+  --name dskf_lmsysorg \
   -e NCCL_IB_DISABLE=0 \
   -e NCCL_IB_HCA=mlx5_ib0,mlx5_ib1,mlx5_ib2,mlx5_ib3,mlx5_ib4,mlx5_ib5,mlx5_ib6,mlx5_ib7 \
   -e NCCL_IB_GID_INDEX=3 \
