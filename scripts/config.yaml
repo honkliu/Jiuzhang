@@ -1,0 +1,44 @@
+model_list:
+  - model_name: kimi-k2-instruct
+    litellm_params:
+      model: openai/kimi-k2-instruct
+      api_base: "http://shug3y75a000007:30000/v1"
+      api_key: "sk-dummy"
+
+  - model_name: deepseek-r1
+    litellm_params:
+      model: openai/deepseek-r1
+      api_base: "http://shug3y75a000000:30000/v1"
+      api_key: "sk-dummy"
+
+  - model_name: qwen3-235b
+    litellm_params:
+      model: openai/qwen3-235b
+      api_base: "http://shug3y75a000006:30000/v1"
+      api_key: "123"
+
+  - model_name: qwen3-coder-480b
+    litellm_params:
+      model: openai/qwen3-coder-480b
+      api_base: "http://shug3y75a000001:8000/v1"
+      api_key: "123"
+
+  - model_name: azure/gpt-4.1 
+    litellm_params:
+      model: openai/azure/gpt-4.1
+      api_base: "http://48.214.163.101:4000/v1"
+      api_key: "dummy-key" 
+      extra_headers:
+        x-lucia-sessionid: "session-1234"
+        x-lucia-traceid: "trace-5678"
+        x-lucia-agenttype: "agent-xyz"
+
+general_settings:
+  master_key: "123"
+  detailed_logging: true
+  request_timeout: 300
+
+litellm_settings:
+  num_retries: 3
+  request_timeout: 300
+
