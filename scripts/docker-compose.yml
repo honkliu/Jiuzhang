@@ -1,0 +1,24 @@
+#
+# start: 
+#   docker-compose [-f xxx.yml, default to docker-compose.yml] up -d
+# update:
+#   docker-compose pull
+#   docker-compose up -d
+# stop:
+#   docker-compose down
+version: '3.8'
+
+services:
+  web:
+    image: ghcr.io/open-webui/open-webui:latest
+    container_name: web
+    restart: unless-stopped
+    ports:
+      - "32000:8080"
+    environment:
+      - ENABLE_CHANNELS=true
+      - ENABLE_ADMIN_CHAT_ACCESS=true
+    volumes:
+      - /mnt/nvme_raid0/openweb:/app/backend/data
+
+
