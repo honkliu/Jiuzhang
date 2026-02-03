@@ -34,6 +34,12 @@
             text-anchor: middle;
         }
 
+        .spouse-text {
+            font-size: 14px;
+            fill: #555;
+            text-anchor: middle;
+        }
+
         .age {
             font-size: 12px;
             fill: #333;
@@ -127,13 +133,49 @@
             width: 20px;
             margin-bottom: -4px;
         }
+
+        #help-info {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(57, 81, 98, 0.9);
+            color: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 12px;
+            line-height: 1.6;
+            box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.3);
+            z-index: 999;
+        }
+
+        #help-info h4 {
+            margin: 0 0 8px 0;
+            font-size: 14px;
+            color: #2aad5a;
+        }
+
+        #help-info ul {
+            margin: 0;
+            padding-left: 20px;
+        }
     </style>
 </head>
 
 <body>
 
+    <div id="help-info">
+        <h4>操作说明</h4>
+        <ul>
+            <li>↑↓ 或 滚轮：上下滚动（切换代际层级）</li>
+            <li>←→ 或 Shift+滚轮：左右滚动（切换同代人）</li>
+            <li>左键点击：高亮此人及其祖先后代</li>
+            <li>右键点击：编辑节点信息</li>
+        </ul>
+    </div>
+
     <div id="context-menu" style="display: none; position: absolute;">
         <div class="menu-item">姓名：<input id="edit-name" /></div>
+        <div class="menu-item">配偶：<input id="edit-spouse" /></div>
         <div class="menu-item">年龄：<input id="edit-age" /></div>
         <div class="menu-item">生男：<input id="edit-boy" /></div>
         <div class="menu-item">生女：<input id="edit-girl" /></div>
@@ -199,43 +241,114 @@
         };
         */
     const data = {
-            name: "李周氏", age: 102,
+            name: "李周氏", age: 102, spouse: "李太",
             children: [
                 {
-                    name: "李国栋", age: 80,
+                    name: "李国栋", age: 80, spouse: "王氏",
                     children: [
                         {
-                            name: "李志远", age: 58,
+                            name: "李志远", age: 58, spouse: "张氏",
                             children: [
-                                { name: "李正豪", age: 36, children: [{ name: "李朝阳", age: 12 }] },
-                                { name: "李正轩", age: 35, children: [{ name: "李晓阳", age: 11 }] },
-                                { name: "李正宇", age: 33, children: [{ name: "李文博", age: 9 }, { name: "李文昊", age: 6 }, { name: "李文轩", age: 4 }] },
-                                { name: "李正航", age: 32, children: [{ name: "李星辰", age: 8 }] },
-                                { name: "李婉婷", age: 30, children: [{ name: "王思远", age: 7 }] }  // 嫁入王家
+                                {
+                                    name: "李正豪", age: 36, spouse: "刘氏",
+                                    children: [
+                                        {
+                                            name: "李朝阳", age: 12, spouse: "王芳",
+                                            children: [
+                                                {
+                                                    name: "李天佑", age: 2,
+                                                    children: [
+                                                        {
+                                                            name: "李宇轩", age: 1,
+                                                            children: [
+                                                                { name: "李明哲", age: 0, spouse: "赵敏" }
+                                                            ]
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                },
+                                {
+                                    name: "李正轩", age: 35, spouse: "陈氏",
+                                    children: [
+                                        {
+                                            name: "李晓阳", age: 11, spouse: "周丽",
+                                            children: [
+                                                {
+                                                    name: "李晨曦", age: 3,
+                                                    children: [
+                                                        { name: "李悦欣", age: 1 }
+                                                    ]
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                },
+                                {
+                                    name: "李正宇", age: 33, spouse: "赵氏",
+                                    children: [
+                                        { name: "李文博", age: 9, spouse: "孙雨", children: [{ name: "李子涵", age: 2, children: [{ name: "李浩然", age: 0 }] }] },
+                                        { name: "李文昊", age: 6, children: [{ name: "李嘉怡", age: 1 }] },
+                                        { name: "李文轩", age: 4 }
+                                    ]
+                                },
+                                {
+                                    name: "李正航", age: 32, spouse: "周氏",
+                                    children: [
+                                        {
+                                            name: "李星辰", age: 8,
+                                            children: [
+                                                { name: "李梦琪", age: 2, children: [{ name: "李思远", age: 0 }] }
+                                            ]
+                                        }
+                                    ]
+                                },
+                                { name: "李婉婷", age: 30, spouse: "王强", children: [{ name: "王思远", age: 7 }] }
                             ]
                         },
                         {
-                            name: "李志宏", age: 56,
+                            name: "李志宏", age: 56, spouse: "孙氏",
                             children: [
-                                { name: "李正阳", age: 34, children: [{ name: "李泽宇", age: 10 }] },
-                                { name: "李正明", age: 32, children: [{ name: "李雨萱", age: 8 }] },
-                                { name: "李正清", age: 30, children: [{ name: "李欣怡", age: 5 }] },
-                                { name: "李正华", age: 28, children: [{ name: "李昊然", age: 3 }] },
+                                { name: "李正阳", age: 34, spouse: "吴氏", children: [{ name: "李泽宇", age: 10, children: [{ name: "李俊豪", age: 3 }] }] },
+                                { name: "李正明", age: 32, spouse: "郑氏", children: [{ name: "李雨萱", age: 8 }] },
+                                { name: "李正清", age: 30, spouse: "林氏", children: [{ name: "李欣怡", age: 5 }] },
+                                { name: "李正华", age: 28, spouse: "黄氏", children: [{ name: "李昊然", age: 3 }] },
                                 { name: "李玉玲", age: 26, children: [] }
                             ]
                         },
                         {
-                            name: "李志伟", age: 54,
+                            name: "李志伟", age: 54, spouse: "马氏",
                             children: [
-                                { name: "李浩然", age: 29 },
-                                { name: "李梦瑶", age: 27, children: [{ name: "张子涵", age: 2 }] }  // 嫁入张家
+                                { name: "李浩然", age: 29, spouse: "林婷", children: [{ name: "李晨阳", age: 5, children: [{ name: "李明远", age: 1 }] }] },
+                                { name: "李梦瑶", age: 27, spouse: "张明", children: [{ name: "张子涵", age: 2 }] }
                             ]
                         },
                         {
-                            name: "李志强", age: 51,
+                            name: "李志强", age: 51, spouse: "徐氏",
                             children: [
-                                { name: "李正飞", age: 28, children: [{ name: "李梓涵", age: 4 }] },
-                                { name: "李佳琪", age: 25, children: [{ name: "陈宇航", age: 1 }] }  // 嫁入陈家
+                                { name: "李正飞", age: 28, spouse: "何氏", children: [{ name: "李梓涵", age: 4, children: [{ name: "李嘉豪", age: 1 }] }] },
+                                { name: "李佳琪", age: 25, spouse: "陈伟", children: [{ name: "陈宇航", age: 1 }] }
+                            ]
+                        },
+                        {
+                            name: "李志刚", age: 49, spouse: "赵氏",
+                            children: [
+                                { name: "李正伟", age: 26, spouse: "吴静", children: [{ name: "李雨涵", age: 3 }] },
+                                { name: "李正勇", age: 24, children: [] }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    name: "李国良", age: 78, spouse: "陈氏",
+                    children: [
+                        {
+                            name: "李志华", age: 55, spouse: "杨氏",
+                            children: [
+                                { name: "李正文", age: 32, spouse: "周婷", children: [{ name: "李天赐", age: 8 }] },
+                                { name: "李正武", age: 30, children: [] }
                             ]
                         }
                     ]
@@ -247,11 +360,18 @@
 
         const menu = document.getElementById("context-menu");
 
+        // 视窗管理变量
+        let viewportStartDepth = 0; // 当前显示的起始层级
+        const MAX_VISIBLE_DEPTH = 5; // 最多显示5层
+        let horizontalViewIndex = 0; // 横向视窗起始索引（按最宽层的人数计算）
+        const MAX_VISIBLE_WIDTH = 5; // 每层最多显示5个节点
+
         function showContextMenu(x, y, d) {
             const menu = document.getElementById("context-menu");
 
             // 绑定输入框初始值
             document.getElementById("edit-name").value = d.data.name || "";
+            document.getElementById("edit-spouse").value = d.data.spouse || "";
             document.getElementById("edit-age").value = d.data.age || 0;
             document.getElementById("edit-boy").value = "";
             document.getElementById("edit-girl").value = "";
@@ -287,6 +407,7 @@
             // 绑定 保存
             document.getElementById("save-node").onclick = () => {
                 d.data.name = document.getElementById("edit-name").value;
+                d.data.spouse = document.getElementById("edit-spouse").value;
                 d.data.age = +document.getElementById("edit-age").value;
                 hideMenu();
                 updateTree();
@@ -320,7 +441,11 @@
 
         const width = window.innerWidth;
         const height = window.innerHeight;
-        const g = svg.append("g").attr("transform", `translate(${width / 2}, 40)`);
+        const g = svg.append("g");
+
+        // 垂直和水平偏移量（用于平滑滚动）
+        let verticalOffset = 0;
+        let horizontalOffset = 0;
 
         const root = d3.hierarchy(data);
         const tree = d3.tree().nodeSize([50, 140]);
@@ -332,6 +457,85 @@
                 d.x = right.x;
             }
         });
+
+        // 计算所有节点的X坐标范围
+        function getXRange(nodes) {
+            if (nodes.length === 0) return { min: 0, max: 0 };
+            const xValues = nodes.map(n => n.x);
+            return {
+                min: Math.min(...xValues),
+                max: Math.max(...xValues)
+            };
+        }
+
+        // 按深度和横向窗口过滤可见节点
+        function getVisibleNodes(allNodes) {
+            // 按层级分组
+            const nodesByDepth = {};
+            allNodes.forEach(d => {
+                if (!nodesByDepth[d.depth]) nodesByDepth[d.depth] = [];
+                nodesByDepth[d.depth].push(d);
+            });
+
+            // 找出最宽的那一层（作为横向滚动的基准）
+            let widestLayerNodes = [];
+            let maxWidth = 0;
+            for (let depth = viewportStartDepth; depth < viewportStartDepth + MAX_VISIBLE_DEPTH; depth++) {
+                if (nodesByDepth[depth] && nodesByDepth[depth].length > maxWidth) {
+                    maxWidth = nodesByDepth[depth].length;
+                    widestLayerNodes = nodesByDepth[depth].sort((a, b) => a.x - b.x);
+                }
+            }
+
+            // 如果最宽层为空，返回默认值
+            if (widestLayerNodes.length === 0) {
+                return { nodes: [], centerX: 0 };
+            }
+
+            // 从最宽层中选择可见的节点范围
+            const startIdx = Math.max(0, horizontalViewIndex);
+            const endIdx = Math.min(widestLayerNodes.length, startIdx + MAX_VISIBLE_WIDTH);
+            const visibleInWidestLayer = widestLayerNodes.slice(startIdx, endIdx);
+
+            // 获取可见节点的X坐标范围
+            if (visibleInWidestLayer.length === 0) {
+                return { nodes: [], centerX: 0 };
+            }
+            const minX = Math.min(...visibleInWidestLayer.map(n => n.x));
+            const maxX = Math.max(...visibleInWidestLayer.map(n => n.x));
+
+            // 创建可见节点集合
+            const visibleNodeSet = new Set();
+
+            // 添加最宽层中可见的节点
+            visibleInWidestLayer.forEach(node => visibleNodeSet.add(node));
+
+            // 对于深度范围内的所有节点，如果在X范围内就添加
+            for (let depth = viewportStartDepth; depth < viewportStartDepth + MAX_VISIBLE_DEPTH; depth++) {
+                if (nodesByDepth[depth]) {
+                    nodesByDepth[depth].forEach(node => {
+                        if (node.x >= minX - 50 && node.x <= maxX + 50) {
+                            visibleNodeSet.add(node);
+                        }
+                    });
+                }
+            }
+
+            // 为所有可见节点添加祖先
+            const nodesToAddAncestors = Array.from(visibleNodeSet);
+            nodesToAddAncestors.forEach(node => {
+                let ancestor = node.parent;
+                while (ancestor) {
+                    visibleNodeSet.add(ancestor);
+                    ancestor = ancestor.parent;
+                }
+            });
+
+            return {
+                nodes: Array.from(visibleNodeSet),
+                centerX: (minX + maxX) / 2  // 返回最宽层可见节点的中心
+            };
+        }
 
         function updateTree() {
             g.selectAll(".link").remove();
@@ -347,9 +551,38 @@
             const allNodes = root.descendants();
             const allLinks = root.links();
 
+            // 过滤可见节点并获取中心位置
+            const result = getVisibleNodes(allNodes);
+            const visibleNodes = result.nodes;
+            const centerX = result.centerX;
+            const visibleNodeSet = new Set(visibleNodes);
+
+            // 根据最宽层可见节点的中心位置调整水平偏移
+            horizontalOffset = -centerX;
+
+            // 调试信息：打印祖先节点的坐标
+            const ancestorNodes = visibleNodes.filter(n => n.depth < viewportStartDepth);
+            console.log(`[更新] index=${horizontalViewIndex}, 可见节点=${visibleNodes.length}, 祖先=${ancestorNodes.length}, centerX=${centerX.toFixed(1)}, offset=${horizontalOffset.toFixed(1)}`);
+            if (ancestorNodes.length > 0) {
+                ancestorNodes.forEach(a => {
+                    const screenX = width / 2 + horizontalOffset + a.x;
+                    console.log(`  祖先 ${a.data.name}: 原始X=${a.x}, 屏幕X=${screenX.toFixed(1)}`);
+                });
+            }
+
+            // 简化的连线过滤逻辑：只要父子都在可见节点集合中，就显示连线
+            const visibleLinks = allLinks.filter(link =>
+                visibleNodeSet.has(link.source) && visibleNodeSet.has(link.target)
+            );
+
+            // 更新容器位置（带动画）
+            g.transition()
+                .duration(300)
+                .attr("transform", `translate(${width / 2 + horizontalOffset}, ${40 + verticalOffset})`);
+
             // 绘制连线
             const link = g.selectAll(".link")
-                .data(allLinks)
+                .data(visibleLinks)
                 .join("path")
                 .attr("class", "link")
                 .attr("d", d => `
@@ -365,7 +598,7 @@
 
             // 绘制节点
             const node = g.selectAll(".node")
-                .data(allNodes)
+                .data(visibleNodes)
                 .join("g")
                 .attr("class", "node")
                 .attr("transform", d => `translate(${d.x},${d.y})`);
@@ -374,16 +607,36 @@
                 .attr("cy", -35)
                 .attr("r", 4);
 
-            node.append("text")
-                .attr("class", "name")
-                .attr("y", -32)
-                .selectAll("tspan")
-                .data(d => d.data.name.split(""))
-                .join("tspan")
-                .attr("class", "tname")
-                .attr("x", 0)
-                .attr("dy", "1.2em")
-                .text(d => d);
+            // 绘制主要姓名（竖排）
+            node.each(function(nodeData) {
+                const nameText = d3.select(this).append("text")
+                    .attr("class", "name")
+                    .attr("y", -32)
+                    .attr("x", nodeData.data.spouse ? -15 : 0);  // 如果有配偶，左移
+
+                nodeData.data.name.split("").forEach((char, i) => {
+                    nameText.append("tspan")
+                        .attr("class", "tname")
+                        .attr("x", nodeData.data.spouse ? -15 : 0)
+                        .attr("dy", i === 0 ? "1.2em" : "1.2em")
+                        .text(char);
+                });
+            });
+
+            // 绘制配偶姓名（竖排，并列显示）
+            node.filter(d => d.data.spouse).each(function(nodeData) {
+                const spouseText = d3.select(this).append("text")
+                    .attr("class", "spouse-text")
+                    .attr("y", -32)
+                    .attr("x", 15);  // 右移
+
+                nodeData.data.spouse.split("").forEach((char, i) => {
+                    spouseText.append("tspan")
+                        .attr("x", 15)
+                        .attr("dy", i === 0 ? "1.2em" : "1.2em")
+                        .text(char);
+                });
+            });
 
             node.append("text")
                 .attr("class", "age")
@@ -428,6 +681,113 @@
             g.selectAll(".node").classed("highlighted", false).classed("dimmed", false);
             g.selectAll(".link").classed("highlighted", false).classed("dimmed", false);
             highlightedSet.clear();
+        });
+
+        // 键盘控制和滚动
+        document.addEventListener("keydown", (e) => {
+            let needUpdate = false;
+
+            // 上下滚动控制深度 - 每代140px
+            if (e.key === "ArrowUp" && viewportStartDepth > 0) {
+                viewportStartDepth--;
+                verticalOffset += 140;
+                needUpdate = true;
+            } else if (e.key === "ArrowDown") {
+                const maxDepth = root.height;
+                if (viewportStartDepth + MAX_VISIBLE_DEPTH <= maxDepth) {
+                    viewportStartDepth++;
+                    verticalOffset -= 140;
+                    needUpdate = true;
+                }
+            }
+
+            // 左右滚动控制横向位置 - 按索引移动
+            if (e.key === "ArrowLeft") {
+                if (horizontalViewIndex > 0) {
+                    horizontalViewIndex--;
+                    needUpdate = true;
+                }
+            } else if (e.key === "ArrowRight") {
+                // 计算最宽层的节点数
+                const allNodes = root.descendants();
+                const nodesByDepth = {};
+                allNodes.forEach(d => {
+                    if (!nodesByDepth[d.depth]) nodesByDepth[d.depth] = [];
+                    nodesByDepth[d.depth].push(d);
+                });
+
+                let maxWidth = 0;
+                for (let depth = viewportStartDepth; depth < viewportStartDepth + MAX_VISIBLE_DEPTH; depth++) {
+                    if (nodesByDepth[depth]) {
+                        maxWidth = Math.max(maxWidth, nodesByDepth[depth].length);
+                    }
+                }
+
+                // 检查是否还能向右滚动
+                if (horizontalViewIndex + MAX_VISIBLE_WIDTH < maxWidth) {
+                    horizontalViewIndex++;
+                    needUpdate = true;
+                }
+            }
+
+            if (needUpdate) {
+                updateTree();
+            }
+        });
+
+        // 鼠标滚轮控制（上下滚动=深度，按住Shift+滚轮=横向）
+        svg.on("wheel", (event) => {
+            event.preventDefault();
+            let needUpdate = false;
+
+            if (event.shiftKey) {
+                // 横向滚动 - 按索引移动
+                if (event.deltaY < 0) {
+                    // 向左滚动
+                    if (horizontalViewIndex > 0) {
+                        horizontalViewIndex--;
+                        needUpdate = true;
+                    }
+                } else if (event.deltaY > 0) {
+                    // 向右滚动
+                    const allNodes = root.descendants();
+                    const nodesByDepth = {};
+                    allNodes.forEach(d => {
+                        if (!nodesByDepth[d.depth]) nodesByDepth[d.depth] = [];
+                        nodesByDepth[d.depth].push(d);
+                    });
+
+                    let maxWidth = 0;
+                    for (let depth = viewportStartDepth; depth < viewportStartDepth + MAX_VISIBLE_DEPTH; depth++) {
+                        if (nodesByDepth[depth]) {
+                            maxWidth = Math.max(maxWidth, nodesByDepth[depth].length);
+                        }
+                    }
+
+                    if (horizontalViewIndex + MAX_VISIBLE_WIDTH < maxWidth) {
+                        horizontalViewIndex++;
+                        needUpdate = true;
+                    }
+                }
+            } else {
+                // 纵向滚动（深度）- 每代140px
+                if (event.deltaY < 0 && viewportStartDepth > 0) {
+                    viewportStartDepth--;
+                    verticalOffset += 140;
+                    needUpdate = true;
+                } else if (event.deltaY > 0) {
+                    const maxDepth = root.height;
+                    if (viewportStartDepth + MAX_VISIBLE_DEPTH <= maxDepth) {
+                        viewportStartDepth++;
+                        verticalOffset -= 140;
+                        needUpdate = true;
+                    }
+                }
+            }
+
+            if (needUpdate) {
+                updateTree();
+            }
         });
 
         updateTree();
