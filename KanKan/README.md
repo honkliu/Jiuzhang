@@ -155,6 +155,8 @@ dotnet run
 **Terminal 2 - Start Frontend:**
 ```bash
 cd client
+npm install 
+npm run dev
 npm start
 # UI will run on http://localhost:3000
 ```
