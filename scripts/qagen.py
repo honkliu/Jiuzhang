@@ -60,7 +60,8 @@ root_dir = Path(r"Q:/src")
 
 files_num = 0
 block = 0
-output_file = Path(f"flighter_alpaca.{block}.json")
+output_file = Path(f"ads_alpaca.{block}.json")
+output_dir = Path(f"ads_alpaca_dir.{block}.json")
 for md_path in root_dir.rglob("*.md"):
     try:
         text = md_path.read_text(encoding="utf-8")
@@ -72,18 +73,24 @@ for md_path in root_dir.rglob("*.md"):
 
         print(f"Processing: {md_path}")
 
-        response = f"Processing: {md_path}"
-#        response = generate_alpaca(text)
+        response_ = f"{md_path} --- Processed"
+        response = generate_alpaca(text)
+
+        with open(output_dir, "a", encoding="utf-8") as f:
+            f.write(response_)
+            if not response_.endswith("\n"):
+                f.write("\n")
 
         with open(output_file, "a", encoding="utf-8") as f:
             f.write(response)
             if not response.endswith("\n"):
                 f.write("\n")
         files_num += 1
-        if files_num >= 100:
+        if files_num >= 1000:
             files_num = 0
             block += 1
             output_file = Path(f"flighter_alpaca.{block}.json")
+            output_dir = Path(f"ads_alpaca_dir.{block}.json")
 
     except Exception as e:
         print(f"ERROR processing {md_path}: {e}")

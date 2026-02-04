@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>调试版本</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body { margin: 0; font-family: "Microsoft YaHei", sans-serif; }
+        svg { width: 100vw; height: 100vh; background-color: #ddd; }
+        .link { fill: none; stroke: #555; stroke-width: 2px; }
+        .node circle { fill: #fff; stroke: #000; stroke-width: 2px; }
+        .name tspan { font-size: 16px; text-anchor: middle; }
+        .spouse-text { font-size: 14px; fill: #555; text-anchor: middle; }
+        #debug { position: fixed; top: 10px; left: 10px; background: white; padding: 10px; border: 1px solid black; }
+    </style>
+</head>
+<body>
+    <div id="debug">
+        <div>horizontalViewIndex: <span id="h-index">0</span></div>
+        <div>horizontalOffset: <span id="h-offset">0</span></div>
+        <div>可见节点数: <span id="node-count">0</span></div>
+        <div>中心X: <span id="center-x">0</span></div>
+    </div>
+    <svg></svg>
+    <script>
+        const data = {
+            name: "A", age: 1, spouse: "A配",
+            children: [
+                {
+                    name: "B1", age: 2, spouse: "B1配",
+                    children: [
+                        { name: "C1", age: 3, spouse: "C1配" },
+                        { name: "C2", age: 3 },
+                        { name: "C3", age: 3, spouse: "C3配" },
+                        { name: "C4", age: 3 },
+                        { name: "C5", age: 3, spouse: "C5配" },
+                        { name: "C6", age: 3 },
+                        { name: "C7", age: 3, spouse: "C7配" },
+                        { name: "C8", age: 3 }
+                    ]
+                }
+            ]
+        };
+
+        const svg = d3.select("svg");
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+        const g = svg.append("g");
+
+        let verticalOffset = 0;
+        let horizontalOffset = 0;
+        let viewportStartDepth = 0;
+        const MAX_VISIBLE_DEPTH = 5;
+        let horizontalViewIndex = 0;
+        const MAX_VISIBLE_WIDTH = 5;
+
+        const root = d3.hierarchy(data);
+        const tree = d3.tree().nodeSize([80, 140]);
+        tree(root);
+
+        function getVisibleNodes(allNodes) {
+            const nodesByDepth = {};
+            allNodes.forEach(d => {
+                if (!nodesByDepth[d.depth]) nodesByDepth[d.depth] = [];
+                nodesByDepth[d.depth].push(d);
+            });
+
+            let widestLayerNodes = [];
+            let maxWidth = 0;
+            for (let depth = viewportStartDepth; depth < viewportStartDepth + MAX_VISIBLE_DEPTH; depth++) {
+                if (nodesByDepth[depth] && nodesByDepth[depth].length > maxWidth) {
+                    maxWidth = nodesByDepth[depth].length;
+                    widestLayerNodes = nodesByDepth[depth].sort((a, b) => a.x - b.x);
+                }
+            }
+
+            if (widestLayerNodes.length === 0) return { nodes: [], centerX: 0 };
+
+            const startIdx = Math.max(0, horizontalViewIndex);
+            const endIdx = Math.min(widestLayerNodes.length, startIdx + MAX_VISIBLE_WIDTH);
+            const visibleInWidestLayer = widestLayerNodes.slice(startIdx, endIdx);
+
+            if (visibleInWidestLayer.length === 0) return { nodes: [], centerX: 0 };
+
+            const minX = Math.min(...visibleInWidestLayer.map(n => n.x));
+            const maxX = Math.max(...visibleInWidestLayer.map(n => n.x));
+
+            console.log(`最宽层可见节点范围: index ${startIdx}-${endIdx}, X坐标: ${minX} to ${maxX}`);
+
+            const visibleNodeSet = new Set();
+            visibleInWidestLayer.forEach(node => visibleNodeSet.add(node));
+
+            for (let depth = viewportStartDepth; depth < viewportStartDepth + MAX_VISIBLE_DEPTH; depth++) {
+                if (nodesByDepth[depth]) {
+                    nodesByDepth[depth].forEach(node => {
+                        if (node.x >= minX - 50 && node.x <= maxX + 50) {
+                            visibleNodeSet.add(node);
+                        }
+                    });
+                }
+            }
+
+            const nodesToAddAncestors = Array.from(visibleNodeSet);
+            nodesToAddAncestors.forEach(node => {
+                let ancestor = node.parent;
+                while (ancestor) {
+                    visibleNodeSet.add(ancestor);
+                    ancestor = ancestor.parent;
+                }
+            });
+
+            return {
+                nodes: Array.from(visibleNodeSet),
+                centerX: (minX + maxX) / 2
+            };
+        }
+
+        function updateTree() {
+            g.selectAll("*").remove();
+
+            tree(root);
+
+            const allNodes = root.descendants();
+            const allLinks = root.links();
+
+            const result = getVisibleNodes(allNodes);
+            const visibleNodes = result.nodes;
+            const centerX = result.centerX;
+            const visibleNodeSet = new Set(visibleNodes);
+
+            horizontalOffset = -centerX;
+
+            console.log(`更新: horizontalViewIndex=${horizontalViewIndex}, centerX=${centerX}, horizontalOffset=${horizontalOffset}`);
+
+            document.getElementById("h-index").textContent = horizontalViewIndex;
+            document.getElementById("h-offset").textContent = horizontalOffset.toFixed(1);
+            document.getElementById("node-count").textContent = visibleNodes.length;
+            document.getElementById("center-x").textContent = centerX.toFixed(1);
+
+            const visibleLinks = allLinks.filter(link =>
+                visibleNodeSet.has(link.source) && visibleNodeSet.has(link.target)
+            );
+
+            g.transition()
+                .duration(300)
+                .attr("transform", `translate(${width / 2 + horizontalOffset}, ${40 + verticalOffset})`);
+
+            const link = g.selectAll(".link")
+                .data(visibleLinks)
+                .join("path")
+                .attr("class", "link")
+                .attr("d", d => `M${d.source.x},${d.source.y + 20} V${(d.source.y + d.target.y) / 2} H${d.target.x} V${d.target.y - 20}`)
+                .attr("stroke", "#555");
+
+            const node = g.selectAll(".node")
+                .data(visibleNodes)
+                .join("g")
+                .attr("class", "node")
+                .attr("transform", d => `translate(${d.x},${d.y})`);
+
+            node.append("circle").attr("r", 5);
+
+            node.each(function(nodeData) {
+                const nameText = d3.select(this).append("text")
+                    .attr("y", 0)
+                    .attr("x", nodeData.data.spouse ? -20 : 0);
+
+                nodeData.data.name.split("").forEach((char, i) => {
+                    nameText.append("tspan")
+                        .attr("x", nodeData.data.spouse ? -20 : 0)
+                        .attr("dy", "1.2em")
+                        .text(char);
+                });
+            });
+
+            node.filter(d => d.data.spouse).each(function(nodeData) {
+                const spouseText = d3.select(this).append("text")
+                    .attr("class", "spouse-text")
+                    .attr("y", 0)
+                    .attr("x", 20);
+
+                nodeData.data.spouse.split("").forEach((char, i) => {
+                    spouseText.append("tspan")
+                        .attr("x", 20)
+                        .attr("dy", "1.2em")
+                        .text(char);
+                });
+            });
+        }
+
+        document.addEventListener("keydown", (e) => {
+            if (e.key === "ArrowLeft" && horizontalViewIndex > 0) {
+                horizontalViewIndex--;
+                updateTree();
+            } else if (e.key === "ArrowRight") {
+                const allNodes = root.descendants();
+                const nodesByDepth = {};
+                allNodes.forEach(d => {
+                    if (!nodesByDepth[d.depth]) nodesByDepth[d.depth] = [];
+                    nodesByDepth[d.depth].push(d);
+                });
+
+                let maxWidth = 0;
+                for (let depth = 0; depth < MAX_VISIBLE_DEPTH; depth++) {
+                    if (nodesByDepth[depth]) {
+                        maxWidth = Math.max(maxWidth, nodesByDepth[depth].length);
+                    }
+                }
+
+                if (horizontalViewIndex + MAX_VISIBLE_WIDTH < maxWidth) {
+                    horizontalViewIndex++;
+                    updateTree();
+                }
+            }
+        });
+
+        updateTree();
+    </script>
+</body>
+</html>

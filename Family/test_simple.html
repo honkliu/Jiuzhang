@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>简单测试</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <svg width="800" height="600" style="background: #eee"></svg>
+    <script>
+        const testData = {
+            name: "张三", age: 60, spouse: "李四",
+            children: [
+                { name: "张小明", age: 30, spouse: "王芳" },
+                { name: "张小红", age: 28 }
+            ]
+        };
+
+        const svg = d3.select("svg");
+        const g = svg.append("g").attr("transform", "translate(400, 50)");
+
+        const root = d3.hierarchy(testData);
+        const tree = d3.tree().nodeSize([100, 100]);
+        tree(root);
+
+        const nodes = root.descendants();
+
+        const node = g.selectAll(".node")
+            .data(nodes)
+            .join("g")
+            .attr("class", "node")
+            .attr("transform", d => `translate(${d.x},${d.y})`);
+
+        node.append("circle").attr("r", 5).attr("fill", "blue");
+
+        // 测试名字显示
+        node.each(function(nodeData) {
+            const nameText = d3.select(this).append("text")
+                .attr("y", 0)
+                .attr("x", nodeData.data.spouse ? -10 : 0);
+
+            nodeData.data.name.split("").forEach((char, i) => {
+                nameText.append("tspan")
+                    .attr("x", nodeData.data.spouse ? -10 : 0)
+                    .attr("dy", "1.2em")
+                    .text(char);
+            });
+        });
+
+        // 测试配偶显示
+        node.filter(d => d.data.spouse).each(function(nodeData) {
+            const spouseText = d3.select(this).append("text")
+                .attr("y", 0)
+                .attr("x", 10)
+                .style("fill", "red");
+
+            nodeData.data.spouse.split("").forEach((char, i) => {
+                spouseText.append("tspan")
+                    .attr("x", 10)
+                    .attr("dy", "1.2em")
+                    .text(char);
+            });
+        });
+
+        console.log("测试完成，节点数:", nodes.length);
+    </script>
+</body>
+</html>

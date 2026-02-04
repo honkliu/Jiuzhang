@@ -1,0 +1,28 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "KanShan.Server: Launch",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "KanShan.Server: run (5174)",
+      "program": "${workspaceFolder}/KanShan/KanShan.Server/bin/Debug/net8.0/KanShan.Server.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/KanShan/KanShan.Server",
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_URLS": "http://localhost:5174"
+      },
+      "stopAtEntry": false,
+      "serverReadyAction": {
+        "action": "openExternally",
+        "pattern": "Now listening on: (https?://\\S+)"
+      }
+    },
+    {
+      "name": "KanShan.Server: Attach",
+      "type": "coreclr",
+      "request": "attach"
+    }
+  ]
+}

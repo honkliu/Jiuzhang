@@ -1,0 +1,69 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "KanShan: dev (server + web)",
+      "dependsOn": [
+        "KanShan.web: install",
+        "KanShan.Server: run (5174)",
+        "KanShan.web: dev"
+      ],
+      "dependsOrder": "sequence",
+      "problemMatcher": []
+    },
+    {
+      "label": "KanShan.Server: run (5174)",
+      "type": "shell",
+      "command": "dotnet",
+      "args": ["run", "--urls", "http://localhost:5174"],
+      "options": {
+        "cwd": "${workspaceFolder}/KanShan/KanShan.Server"
+      },
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "group": "build"
+    },
+    {
+      "label": "KanShan.web: dev",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "dev"],
+      "options": {
+        "cwd": "${workspaceFolder}/KanShan/KanShan.web"
+      },
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      }
+    },
+    {
+      "label": "KanShan.web: build",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "build"],
+      "options": {
+        "cwd": "${workspaceFolder}/KanShan/KanShan.web"
+      },
+      "problemMatcher": [],
+      "group": "build"
+    },
+    {
+      "label": "KanShan.web: install",
+      "type": "shell",
+      "command": "npm",
+      "args": ["install"],
+      "options": {
+        "cwd": "${workspaceFolder}/KanShan/KanShan.web"
+      },
+      "problemMatcher": []
+    }
+  ]
+}

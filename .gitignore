@@ -1,0 +1,51 @@
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# VS / VS Code
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Keep repo-level VS Code config tracked (tasks/launch/settings)
+# (So we intentionally do NOT ignore .vscode/ here.)
+
+# --- .NET build outputs ---
+**/bin/
+**/obj/
+TestResults/
+*.nupkg
+
+# --- Node / Vite ---
+**/node_modules/
+**/dist/
+**/dist-ssr/
+**/.vite/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Env files (do not commit secrets/local config)
+**/.env
+**/.env.*
+!**/.env.example
+
+# --- Python ---
+**/__pycache__/
+**/*.py[cod]
+.venv/
+
+# --- KanShan runtime data (SQLite + uploads) ---
+KanShan/KanShan.Server/App_Data/chat.db
+KanShan/KanShan.Server/App_Data/chat.db-shm
+KanShan/KanShan.Server/App_Data/chat.db-wal
+KanShan/KanShan.Server/App_Data/uploads/
+
+# Allow keeping empty folders via gitkeep if you choose to add them
+!KanShan/KanShan.Server/App_Data/.gitkeep
+!KanShan/KanShan.Server/App_Data/uploads/.gitkeep
