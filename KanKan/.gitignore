@@ -1,0 +1,69 @@
+# Dependencies
+node_modules/
+client/node_modules/
+server/node_modules/
+
+# Build outputs
+client/build/
+client/dist/
+server/bin/
+server/obj/
+server/publish/
+
+# Environment files
+.env
+.env.local
+.env.development
+.env.production
+client/.env
+client/.env.local
+server/appsettings.Development.json
+server/appsettings.Production.json
+
+# IDE
+.vscode/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Testing
+coverage/
+*.coverage
+*.coveragexml
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Azure
+*.pubxml
+*.PublishSettings
+
+# Secrets
+secrets.json
+*.pfx
+*.key
+*.pem
+
+# Database
+*.db
+*.db-shm
+*.db-wal

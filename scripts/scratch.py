@@ -1,11 +1,7 @@
 import openai
 import httpx
 client = openai.Client(
-<<<<<<< HEAD
-       base_url="http://4.151.212.118:30000/v1",
-=======
-       base_url="http://hpcdev000000:8000/v1",
->>>>>>> 95a28bad4866db1eadfd7447b43307dc7c0276ed
+       base_url="http://52.171.138.19:8001/v1",
        api_key="123",
 #      http_client=httpx.Client(headers={"Authorization": None}))
 )
@@ -25,5 +21,5 @@ response = client.chat.completions.create(
         temperature=0,
         max_tokens=6400,
         )
-print(response)
+print(response.choices[0].message.content)
 

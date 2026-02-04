@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install)",
+      "Bash(dotnet run)",
+      "Bash(dotnet build:*)",
+      "Bash(tree:*)"
+    ]
+  }
+}
