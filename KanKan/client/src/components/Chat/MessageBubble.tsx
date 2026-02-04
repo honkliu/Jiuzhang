@@ -78,7 +78,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         display: 'flex',
         flexDirection: isOwn ? 'row-reverse' : 'row',
         justifyContent: isOwn ? 'flex-end' : 'flex-start',
-        alignItems: 'flex-end',
+        alignItems: 'flex-start', // Adjusted alignment to top-align the avatar
         gap: 1,
         mb: 0.5,
         width: '100%',
