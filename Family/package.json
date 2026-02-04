@@ -1,0 +1,7 @@
+{
+  "dependencies": {
+    "@azure/identity": "^4.10.1",
+    "azure-kusto-data": "^7.0.0",
+    "azure-kusto-ingest": "^7.0.0"
+  }
+}
