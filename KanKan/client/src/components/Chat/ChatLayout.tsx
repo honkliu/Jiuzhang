@@ -16,6 +16,7 @@ import {
   incrementUnread,
   setTypingUser,
   updateUserOnlineStatus,
+  upsertParticipantProfile,
   markMessageDelivered,
   markMessageRead,
   startAgentMessage,
@@ -130,6 +131,17 @@ export const ChatLayout: React.FC = () => {
     const unsubNotification = signalRService.onNotificationCreated((notification) => {
       dispatch(addNotification(notification));
     });
+
+    const unsubUserUpdated = signalRService.onUserUpdated((updated) => {
+      dispatch(
+        upsertParticipantProfile({
+          userId: updated.userId,
+          displayName: updated.displayName,
+          avatarUrl: updated.avatarUrl,
+          gender: updated.gender,
+        })
+      );
+    });
     const unsubAgentStart = signalRService.onAgentMessageStart((message) => {
       dispatch(startAgentMessage(message));
 
@@ -186,6 +198,7 @@ export const ChatLayout: React.FC = () => {
       unsubAgentChunk();
       unsubAgentComplete();
       unsubDraft();
+      unsubUserUpdated();
       signalRService.disconnect();
     };
   }, [dispatch]);

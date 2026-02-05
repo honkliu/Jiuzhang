@@ -18,6 +18,7 @@ import { RootState, AppDispatch } from '@/store';
 import { updateUser } from '@/store/authSlice';
 import { mediaService } from '@/services/media.service';
 import { UserAvatar } from '@/components/Shared/UserAvatar';
+import { ZodiacAvatarPicker } from './ZodiacAvatarPicker';
 
 export const ProfilePage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -75,6 +76,7 @@ export const ProfilePage: React.FC = () => {
       setError('');
       const upload = await mediaService.upload(file);
       setAvatarUrl(upload.url);
+      // If user uploads a custom avatar, it supersedes zodiac selection
       setMessage('Avatar uploaded. Click Save Changes to apply.');
     } catch (err: any) {
       setError(err.message || 'Failed to upload avatar');
@@ -138,6 +140,17 @@ export const ProfilePage: React.FC = () => {
                 </Button>
               </Stack>
             </Stack>
+
+            <Box sx={{ mb: 2 }}>
+              <ZodiacAvatarPicker
+                disabled={uploading || saving}
+                value={avatarUrl}
+                onChange={(url) => {
+                  setAvatarUrl(url);
+                  setMessage('Zodiac avatar selected. Click Save Changes to apply.');
+                }}
+              />
+            </Box>
 
             <TextField
               fullWidth

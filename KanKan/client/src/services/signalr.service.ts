@@ -7,6 +7,7 @@ export interface Message {
   senderId: string;
   senderName: string;
   senderAvatar: string;
+  senderGender?: string;
   messageType: string;
   text?: string;
   mediaUrl?: string;
@@ -45,6 +46,7 @@ export type AgentMessageChunkHandler = (chatId: string, messageId: string, chunk
 export type AgentMessageCompleteHandler = (chatId: string, messageId: string, fullText: string) => void;
 export type DraftChangedHandler = (chatId: string, userId: string, userName: string, text: string) => void;
 export type NotificationCreatedHandler = (notification: any) => void;
+export type UserUpdatedHandler = (user: { userId: string; displayName: string; avatarUrl: string; gender?: string }) => void;
 
 class SignalRService {
   private connection: signalR.HubConnection | null = null;
@@ -62,6 +64,7 @@ class SignalRService {
   private agentMessageCompleteHandlers: AgentMessageCompleteHandler[] = [];
   private draftChangedHandlers: DraftChangedHandler[] = [];
   private notificationCreatedHandlers: NotificationCreatedHandler[] = [];
+  private userUpdatedHandlers: UserUpdatedHandler[] = [];
   private maxReconnectAttempts = 5;
 
   async connect(): Promise<void> {
@@ -192,6 +195,11 @@ class SignalRService {
     // Notification created
     this.connection.on('NotificationCreated', (notification: any) => {
       this.notificationCreatedHandlers.forEach((handler) => handler(notification));
+    });
+
+    // User profile updated
+    this.connection.on('UserUpdated', (user: { userId: string; displayName: string; avatarUrl: string; gender?: string }) => {
+      this.userUpdatedHandlers.forEach((handler) => handler(user));
     });
 
     // Connection state changes
@@ -361,6 +369,13 @@ class SignalRService {
     this.notificationCreatedHandlers.push(handler);
     return () => {
       this.notificationCreatedHandlers = this.notificationCreatedHandlers.filter((h) => h !== handler);
+    };
+  }
+
+  onUserUpdated(handler: UserUpdatedHandler): () => void {
+    this.userUpdatedHandlers.push(handler);
+    return () => {
+      this.userUpdatedHandlers = this.userUpdatedHandlers.filter((h) => h !== handler);
     };
   }
 

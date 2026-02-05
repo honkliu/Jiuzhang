@@ -32,6 +32,10 @@ export default defineConfig({
         target: 'http://localhost:5001',
         changeOrigin: true,
       },
+      '/zodiac': {
+        target: 'http://localhost:5001',
+        changeOrigin: true,
+      },
     },
   },
   build: {

@@ -35,6 +35,7 @@ export interface Message {
   senderId: string;
   senderName: string;
   senderAvatar: string;
+  senderGender?: string;
   messageType: string;
   text?: string;
   mediaUrl?: string;
@@ -68,6 +69,11 @@ export interface SendMessageRequest {
   replyTo?: string;
 }
 
+export interface UpdateChatRequest {
+  groupName?: string;
+  groupAvatar?: string;
+}
+
 class ChatService {
   async getChats(): Promise<Chat[]> {
     const response = await apiClient.get<Chat[]>('/chat');
@@ -88,12 +94,21 @@ class ChatService {
     await apiClient.delete(`/chat/${chatId}`);
   }
 
+  async updateChat(chatId: string, request: UpdateChatRequest): Promise<Chat> {
+    const response = await apiClient.put<Chat>(`/chat/${chatId}`, request);
+    return response.data;
+  }
+
   async hideChat(chatId: string): Promise<void> {
     await apiClient.post(`/chat/${chatId}/hide`, {});
   }
 
   async unhideChat(chatId: string): Promise<void> {
     await apiClient.post(`/chat/${chatId}/unhide`, {});
+  }
+
+  async clearChat(chatId: string): Promise<void> {
+    await apiClient.post(`/chat/${chatId}/clear`, {});
   }
 
   async getMessages(chatId: string, limit = 50, before?: string): Promise<Message[]> {

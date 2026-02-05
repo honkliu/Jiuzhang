@@ -101,6 +101,46 @@ public class ChatRepository : IChatRepository
         );
     }
 
+    public async Task ClearChatForUserAsync(string chatId, string userId, DateTime clearedAtUtc)
+    {
+        var chat = await GetByIdAsync(chatId);
+        if (chat == null) return;
+
+        var idx = chat.Participants.FindIndex(p => p.UserId == userId);
+        if (idx < 0) return;
+
+        await _container.PatchItemAsync<Chat>(
+            id: chatId,
+            partitionKey: new PartitionKey(chatId),
+            patchOperations: new[]
+            {
+                PatchOperation.Set($"/participants/{idx}/isHidden", true),
+                PatchOperation.Set($"/participants/{idx}/clearedAt", clearedAtUtc)
+            }
+        );
+    }
+
+    public async Task PatchParticipantProfileAsync(
+        string chatId,
+        int participantIndex,
+        string displayName,
+        string avatarUrl,
+        string gender)
+    {
+        if (participantIndex < 0) return;
+
+        await _container.PatchItemAsync<Chat>(
+            id: chatId,
+            partitionKey: new PartitionKey(chatId),
+            patchOperations: new[]
+            {
+                PatchOperation.Set($"/participants/{participantIndex}/displayName", displayName ?? string.Empty),
+                PatchOperation.Set($"/participants/{participantIndex}/avatarUrl", avatarUrl ?? string.Empty),
+                PatchOperation.Set($"/participants/{participantIndex}/gender", gender ?? "male"),
+            }
+        );
+    }
+
     public async Task DeleteAsync(string id)
     {
         await _container.DeleteItemAsync<Chat>(id, new PartitionKey(id));

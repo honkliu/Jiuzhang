@@ -370,6 +370,33 @@ public class ChatController : ControllerBase
     }
 
     /// <summary>
+    /// Clear chat history for the current user (hides the chat and only shows new messages after this point).
+    /// </summary>
+    [HttpPost("{chatId}/clear")]
+    public async Task<IActionResult> ClearChat(string chatId)
+    {
+        try
+        {
+            var userId = GetUserId();
+            var chat = await _chatRepository.GetByIdAsync(chatId);
+
+            if (chat == null)
+                return NotFound(new { message = "Chat not found" });
+
+            if (!chat.Participants.Any(p => p.UserId == userId))
+                return Forbid();
+
+            await _chatRepository.ClearChatForUserAsync(chatId, userId, DateTime.UtcNow);
+            return Ok(new { message = "Chat cleared" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to clear chat {ChatId}", chatId);
+            return StatusCode(500, new { message = "Failed to clear chat" });
+        }
+    }
+
+    /// <summary>
     /// Get messages for a chat (paginated)
     /// </summary>
     [HttpGet("{chatId}/messages")]
@@ -397,6 +424,23 @@ public class ChatController : ControllerBase
 
             var messages = await _messageRepository.GetChatMessagesAsync(chatId, limit, beforeDate);
 
+            var clearedAt = chat.Participants.FirstOrDefault(p => p.UserId == userId)?.ClearedAt;
+            if (clearedAt.HasValue)
+            {
+                messages = messages.Where(m => m.Timestamp > clearedAt.Value).ToList();
+            }
+
+            var senderIds = messages
+                .Select(m => m.SenderId)
+                .Where(id => !string.IsNullOrWhiteSpace(id))
+                .Distinct()
+                .ToList();
+
+            var senderUsers = await Task.WhenAll(senderIds.Select(id => _userRepository.GetByIdAsync(id)));
+            var senderGenderById = senderUsers
+                .Where(u => u != null)
+                .ToDictionary(u => u!.Id, u => u!.Gender ?? "male");
+
             var messageDtos = messages.Select(m => new MessageDto
             {
                 Id = m.Id,
@@ -404,6 +448,7 @@ public class ChatController : ControllerBase
                 SenderId = m.SenderId,
                 SenderName = m.SenderName,
                 SenderAvatar = m.SenderAvatar,
+                SenderGender = senderGenderById.TryGetValue(m.SenderId, out var g) ? g : "male",
                 MessageType = m.MessageType,
                 Text = m.Content?.Text,
                 MediaUrl = m.Content?.MediaUrl,
@@ -509,6 +554,7 @@ public class ChatController : ControllerBase
                 SenderId = message.SenderId,
                 SenderName = message.SenderName,
                 SenderAvatar = message.SenderAvatar,
+                SenderGender = user?.Gender ?? "male",
                 MessageType = message.MessageType,
                 Text = message.Content.Text,
                 MediaUrl = message.Content.MediaUrl,
@@ -540,7 +586,9 @@ public class ChatController : ControllerBase
             {
                 await EnsureAgentParticipantAsync(chat);
                 var agentMessageId = $"msg_{Guid.NewGuid()}";
-                var agentAvatar = (await _userRepository.GetByIdAsync(AgentUserId))?.AvatarUrl ?? string.Empty;
+                var agentUser = await _userRepository.GetByIdAsync(AgentUserId);
+                var agentAvatar = agentUser?.AvatarUrl ?? string.Empty;
+                var agentGender = agentUser?.Gender ?? "male";
 
                 await _hubContext.Clients.Group(chatId).SendAsync("AgentMessageStart", new
                 {
@@ -549,6 +597,7 @@ public class ChatController : ControllerBase
                     senderId = AgentUserId,
                     senderName = AgentDisplayName,
                     senderAvatar = agentAvatar,
+                    senderGender = agentGender,
                     messageType = "text",
                     text = "",
                     timestamp = DateTime.UtcNow,
@@ -756,7 +805,9 @@ public class ChatController : ControllerBase
 
         if (chat.ChatType == "direct")
         {
-            var otherParticipant = chat.Participants.FirstOrDefault(p => p.UserId != currentUserId);
+            var otherParticipant = chat.Participants
+                .FirstOrDefault(p => p.UserId != currentUserId && p.UserId != AgentUserId)
+                ?? chat.Participants.FirstOrDefault(p => p.UserId != currentUserId);
             if (otherParticipant != null)
             {
                 displayName = otherParticipant.DisplayName;
@@ -768,7 +819,7 @@ public class ChatController : ControllerBase
             if (string.IsNullOrWhiteSpace(displayName))
             {
                 var names = chat.Participants
-                    .Where(p => p.UserId != currentUserId)
+                    .Where(p => p.UserId != currentUserId && p.UserId != AgentUserId)
                     .Select(p => p.DisplayName)
                     .Where(n => !string.IsNullOrWhiteSpace(n))
                     .ToList();
@@ -784,7 +835,10 @@ public class ChatController : ControllerBase
 
             if (string.IsNullOrWhiteSpace(displayAvatar))
             {
-                displayAvatar = chat.Participants.FirstOrDefault(p => p.UserId != currentUserId)?.AvatarUrl ?? "";
+                displayAvatar = chat.Participants
+                    .FirstOrDefault(p => p.UserId != currentUserId && p.UserId != AgentUserId)?.AvatarUrl
+                    ?? chat.Participants.FirstOrDefault(p => p.UserId != currentUserId)?.AvatarUrl
+                    ?? "";
             }
         }
 
@@ -794,6 +848,7 @@ public class ChatController : ControllerBase
             ChatType = chat.ChatType,
             Name = displayName,
             Avatar = displayAvatar,
+            AdminIds = chat.AdminIds ?? new List<string>(),
             Participants = chat.Participants.Select(p => new ParticipantDto
             {
                 UserId = p.UserId,
@@ -889,14 +944,24 @@ public class ChatController : ControllerBase
 
         if (chat.ChatType == "direct")
         {
-            chat.ChatType = "group";
-            if (chat.AdminIds == null || chat.AdminIds.Count == 0)
+            // Wa can be present in a 1–1 chat, but is not counted as a participant.
+            // Only convert a direct chat into a group when there are 2+ real participants besides the current user.
+            var realOtherCount = chat.Participants.Count(p =>
+                p.UserId != currentUserId &&
+                p.UserId != AgentUserId &&
+                !string.IsNullOrWhiteSpace(p.UserId));
+
+            if (realOtherCount >= 2)
             {
-                chat.AdminIds = new List<string> { currentUserId };
-            }
-            if (string.IsNullOrWhiteSpace(chat.GroupName))
-            {
-                chat.GroupName = BuildGroupName(chat.Participants);
+                chat.ChatType = "group";
+                if (chat.AdminIds == null || chat.AdminIds.Count == 0)
+                {
+                    chat.AdminIds = new List<string> { currentUserId };
+                }
+                if (string.IsNullOrWhiteSpace(chat.GroupName))
+                {
+                    chat.GroupName = BuildGroupName(chat.Participants);
+                }
             }
         }
 
@@ -928,6 +993,7 @@ public class ChatController : ControllerBase
     private static string BuildGroupName(IEnumerable<ChatParticipant> participants)
     {
         var names = participants
+            .Where(p => p.UserId != AgentUserId)
             .Select(p => p.DisplayName)
             .Where(n => !string.IsNullOrWhiteSpace(n))
             .Distinct()
@@ -938,7 +1004,7 @@ public class ChatController : ControllerBase
             return "Group Chat";
 
         var baseName = string.Join(", ", names);
-        if (participants.Count() > names.Count)
+        if (participants.Count(p => p.UserId != AgentUserId) > names.Count)
             baseName += " +";
 
         return baseName;

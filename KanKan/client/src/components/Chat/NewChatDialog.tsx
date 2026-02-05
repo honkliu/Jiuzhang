@@ -10,7 +10,6 @@ import {
   ListItemButton,
   ListItemAvatar,
   ListItemText,
-  Avatar,
   Box,
   Typography,
   CircularProgress,
@@ -22,6 +21,7 @@ import { useDispatch } from 'react-redux';
 import { AppDispatch } from '@/store';
 import { createChat } from '@/store/chatSlice';
 import { contactService, User } from '@/services/contact.service';
+import { UserAvatar } from '@/components/Shared/UserAvatar';
 
 interface NewChatDialogProps {
   open: boolean;
@@ -122,7 +122,7 @@ export const NewChatDialog: React.FC<NewChatDialogProps> = ({ open, onClose }) =
             {selectedUsers.map((user) => (
               <Chip
                 key={user.id}
-                avatar={<Avatar src={user.avatarUrl}>{user.displayName[0]}</Avatar>}
+                avatar={<UserAvatar src={user.avatarUrl} gender={user.gender} fallbackText={user.displayName} />}
                 label={user.displayName}
                 onDelete={() => handleSelectUser(user)}
                 deleteIcon={<CloseIcon />}
@@ -165,7 +165,7 @@ export const NewChatDialog: React.FC<NewChatDialogProps> = ({ open, onClose }) =
                 selected={selectedUsers.some((u) => u.id === user.id)}
               >
                 <ListItemAvatar>
-                  <Avatar src={user.avatarUrl}>{user.displayName[0]}</Avatar>
+                  <UserAvatar src={user.avatarUrl} gender={user.gender} fallbackText={user.displayName} />
                 </ListItemAvatar>
                 <ListItemText
                   primary={user.displayName}

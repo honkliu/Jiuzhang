@@ -22,6 +22,7 @@ public class ChatParticipant
     public string Gender { get; set; } = "male";
     public DateTime JoinedAt { get; set; }
     public bool IsHidden { get; set; }
+    public DateTime? ClearedAt { get; set; }
 }
 
 public class ChatLastMessage

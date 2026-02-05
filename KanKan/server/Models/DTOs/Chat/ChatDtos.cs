@@ -58,6 +58,7 @@ public class MessageDto
     public string SenderId { get; set; } = string.Empty;
     public string SenderName { get; set; } = string.Empty;
     public string SenderAvatar { get; set; } = string.Empty;
+    public string SenderGender { get; set; } = "male";
     public string MessageType { get; set; } = string.Empty;
     public string? Text { get; set; }
     public string? MediaUrl { get; set; }

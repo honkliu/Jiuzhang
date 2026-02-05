@@ -10,5 +10,7 @@ public interface IChatRepository
     Task<Chat> CreateAsync(Chat chat);
     Task<Chat> UpdateAsync(Chat chat);
     Task SetHiddenAsync(string chatId, string userId, bool isHidden);
+    Task ClearChatForUserAsync(string chatId, string userId, DateTime clearedAtUtc);
+    Task PatchParticipantProfileAsync(string chatId, int participantIndex, string displayName, string avatarUrl, string gender);
     Task DeleteAsync(string id);
 }

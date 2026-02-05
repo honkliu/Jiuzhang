@@ -8,7 +8,6 @@ import {
   ListItem,
   ListItemAvatar,
   ListItemText,
-  Avatar,
   Button,
   CircularProgress,
   Chip,
@@ -20,6 +19,7 @@ import { AppDispatch } from '@/store';
 import { contactService, User, FriendRequest } from '@/services/contact.service';
 import { createChat } from '@/store/chatSlice';
 import { AppHeader } from '@/components/Shared/AppHeader';
+import { UserAvatar } from '@/components/Shared/UserAvatar';
 import { useLanguage } from '@/i18n/LanguageContext';
 
 export const ContactsPage: React.FC = () => {
@@ -180,7 +180,11 @@ export const ContactsPage: React.FC = () => {
                     }
                   >
                     <ListItemAvatar>
-                      <Avatar src={req.fromUser.avatarUrl}>{req.fromUser.displayName[0]}</Avatar>
+                      <UserAvatar
+                        src={req.fromUser.avatarUrl}
+                        gender={req.fromUser.gender}
+                        fallbackText={req.fromUser.displayName}
+                      />
                     </ListItemAvatar>
                     <ListItemText
                       primary={req.fromUser.displayName}
@@ -209,7 +213,11 @@ export const ContactsPage: React.FC = () => {
                     </Button>
                   }>
                     <ListItemAvatar>
-                      <Avatar src={user.avatarUrl}>{user.displayName[0]}</Avatar>
+                      <UserAvatar
+                        src={user.avatarUrl}
+                        gender={user.gender}
+                        fallbackText={user.displayName}
+                      />
                     </ListItemAvatar>
                     <ListItemText
                       primary={
@@ -251,7 +259,11 @@ export const ContactsPage: React.FC = () => {
                     )
                   }>
                     <ListItemAvatar>
-                      <Avatar src={user.avatarUrl}>{user.displayName[0]}</Avatar>
+                      <UserAvatar
+                        src={user.avatarUrl}
+                        gender={user.gender}
+                        fallbackText={user.displayName}
+                      />
                     </ListItemAvatar>
                     <ListItemText
                       primary={

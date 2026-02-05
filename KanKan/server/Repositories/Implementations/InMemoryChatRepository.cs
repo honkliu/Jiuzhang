@@ -81,6 +81,51 @@ public class InMemoryChatRepository : IChatRepository
         }
     }
 
+    public Task ClearChatForUserAsync(string chatId, string userId, DateTime clearedAtUtc)
+    {
+        lock (_lock)
+        {
+            if (_chats.TryGetValue(chatId, out var chat))
+            {
+                var participant = chat.Participants.FirstOrDefault(p => p.UserId == userId);
+                if (participant != null)
+                {
+                    participant.IsHidden = true;
+                    participant.ClearedAt = clearedAtUtc;
+                }
+            }
+            return Task.CompletedTask;
+        }
+    }
+
+    public Task PatchParticipantProfileAsync(
+        string chatId,
+        int participantIndex,
+        string displayName,
+        string avatarUrl,
+        string gender)
+    {
+        lock (_lock)
+        {
+            if (!_chats.TryGetValue(chatId, out var chat))
+            {
+                return Task.CompletedTask;
+            }
+
+            if (participantIndex < 0 || participantIndex >= chat.Participants.Count)
+            {
+                return Task.CompletedTask;
+            }
+
+            var participant = chat.Participants[participantIndex];
+            participant.DisplayName = displayName ?? participant.DisplayName;
+            participant.AvatarUrl = avatarUrl ?? participant.AvatarUrl;
+            participant.Gender = gender ?? participant.Gender;
+
+            return Task.CompletedTask;
+        }
+    }
+
     public Task DeleteAsync(string id)
     {
         lock (_lock)

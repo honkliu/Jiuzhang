@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using System.Security.Claims;
 using KanKan.API.Models.DTOs.User;
 using KanKan.API.Models.Entities;
+using KanKan.API.Hubs;
 using KanKan.API.Repositories.Interfaces;
 
 namespace KanKan.API.Controllers;
@@ -14,19 +16,38 @@ public class ContactController : ControllerBase
 {
     private readonly IUserRepository _userRepository;
     private readonly IContactRepository _contactRepository;
+    private readonly IChatRepository _chatRepository;
+    private readonly IHubContext<ChatHub> _hubContext;
     private readonly ILogger<ContactController> _logger;
 
     public ContactController(
         IUserRepository userRepository,
         IContactRepository contactRepository,
+        IChatRepository chatRepository,
+        IHubContext<ChatHub> hubContext,
         ILogger<ContactController> logger)
     {
         _userRepository = userRepository;
         _contactRepository = contactRepository;
+        _chatRepository = chatRepository;
+        _hubContext = hubContext;
         _logger = logger;
     }
 
     private string GetUserId() => User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
+
+    private static UserDto ToUserDto(User user) => new()
+    {
+        Id = user.Id,
+        Email = user.Email,
+        Handle = user.Handle,
+        DisplayName = user.DisplayName,
+        AvatarUrl = user.AvatarUrl,
+        Gender = user.Gender,
+        Bio = user.Bio,
+        IsOnline = user.IsOnline,
+        LastSeen = user.LastSeen
+    };
 
     /// <summary>
     /// Search for users by email or display name
@@ -42,17 +63,7 @@ public class ContactController : ControllerBase
             var userId = GetUserId();
             var users = await _userRepository.SearchUsersAsync(q, userId);
 
-            var userDtos = users.Select(u => new UserDto
-            {
-                Id = u.Id,
-                Email = u.Email,
-                Handle = u.Handle,
-                DisplayName = u.DisplayName,
-                AvatarUrl = u.AvatarUrl,
-                Bio = u.Bio,
-                IsOnline = u.IsOnline,
-                LastSeen = u.LastSeen
-            }).ToList();
+            var userDtos = users.Select(ToUserDto).ToList();
 
             return Ok(userDtos);
         }
@@ -76,18 +87,7 @@ public class ContactController : ControllerBase
             if (user == null)
                 return NotFound(new { message = "User not found" });
 
-            return Ok(new UserDto
-            {
-                Id = user.Id,
-                Email = user.Email,
-                Handle = user.Handle,
-                DisplayName = user.DisplayName,
-                AvatarUrl = user.AvatarUrl,
-                Gender = user.Gender,
-                Bio = user.Bio,
-                IsOnline = user.IsOnline,
-                LastSeen = user.LastSeen
-            });
+            return Ok(ToUserDto(user));
         }
         catch (Exception ex)
         {
@@ -107,17 +107,7 @@ public class ContactController : ControllerBase
             var userId = GetUserId();
             var users = await _userRepository.GetAllUsersAsync(userId);
 
-            var userDtos = users.Select(u => new UserDto
-            {
-                Id = u.Id,
-                Email = u.Email,
-                Handle = u.Handle,
-                DisplayName = u.DisplayName,
-                AvatarUrl = u.AvatarUrl,
-                Bio = u.Bio,
-                IsOnline = u.IsOnline,
-                LastSeen = u.LastSeen
-            }).ToList();
+            var userDtos = users.Select(ToUserDto).ToList();
 
             return Ok(userDtos);
         }
@@ -145,17 +135,7 @@ public class ContactController : ControllerBase
                 var user = await _userRepository.GetByIdAsync(contact.ContactId);
                 if (user != null)
                 {
-                    users.Add(new UserDto
-                    {
-                        Id = user.Id,
-                        Email = user.Email,
-                        Handle = user.Handle,
-                        DisplayName = user.DisplayName,
-                        AvatarUrl = user.AvatarUrl,
-                        Bio = user.Bio,
-                        IsOnline = user.IsOnline,
-                        LastSeen = user.LastSeen
-                    });
+                    users.Add(ToUserDto(user));
                 }
             }
 
@@ -192,17 +172,7 @@ public class ContactController : ControllerBase
                         ToUserId = userId,
                         Status = contact.Status,
                         CreatedAt = contact.AddedAt,
-                        FromUser = new UserDto
-                        {
-                            Id = fromUser.Id,
-                            Email = fromUser.Email,
-                            Handle = fromUser.Handle,
-                            DisplayName = fromUser.DisplayName,
-                            AvatarUrl = fromUser.AvatarUrl,
-                            Bio = fromUser.Bio,
-                            IsOnline = fromUser.IsOnline,
-                            LastSeen = fromUser.LastSeen
-                        }
+                        FromUser = ToUserDto(fromUser)
                     });
                 }
             }
@@ -362,17 +332,7 @@ public class ContactController : ControllerBase
             if (user == null)
                 return NotFound(new { message = "User not found" });
 
-            return Ok(new UserDto
-            {
-                Id = user.Id,
-                Email = user.Email,
-                Handle = user.Handle,
-                DisplayName = user.DisplayName,
-                AvatarUrl = user.AvatarUrl,
-                Bio = user.Bio,
-                IsOnline = user.IsOnline,
-                LastSeen = user.LastSeen
-            });
+            return Ok(ToUserDto(user));
         }
         catch (Exception ex)
         {
@@ -398,11 +358,11 @@ public class ContactController : ControllerBase
             if (!string.IsNullOrWhiteSpace(request.DisplayName))
                 user.DisplayName = request.DisplayName;
 
-            if (!string.IsNullOrWhiteSpace(request.Bio))
-                user.Bio = request.Bio;
+            if (request.Bio != null)
+                user.Bio = request.Bio.Trim();
 
-            if (!string.IsNullOrWhiteSpace(request.AvatarUrl))
-                user.AvatarUrl = request.AvatarUrl;
+            if (request.AvatarUrl != null)
+                user.AvatarUrl = request.AvatarUrl.Trim();
 
             if (!string.IsNullOrWhiteSpace(request.Gender))
             {
@@ -415,18 +375,41 @@ public class ContactController : ControllerBase
             user.UpdatedAt = DateTime.UtcNow;
             await _userRepository.UpdateAsync(user);
 
-            return Ok(new UserDto
+            // Persist profile changes into chat participant snapshots so future fetches are consistent,
+            // even if the client missed the real-time SignalR event (e.g., user was on Profile page).
+            try
             {
-                Id = user.Id,
-                Email = user.Email,
-                Handle = user.Handle,
-                DisplayName = user.DisplayName,
-                AvatarUrl = user.AvatarUrl,
-                Gender = user.Gender,
-                Bio = user.Bio,
-                IsOnline = user.IsOnline,
-                LastSeen = user.LastSeen
+                var chats = await _chatRepository.GetUserChatsAsync(user.Id);
+                foreach (var chat in chats)
+                {
+                    var idx = chat.Participants.FindIndex(p => p.UserId == user.Id);
+                    if (idx >= 0)
+                    {
+                        await _chatRepository.PatchParticipantProfileAsync(
+                            chatId: chat.Id,
+                            participantIndex: idx,
+                            displayName: user.DisplayName,
+                            avatarUrl: user.AvatarUrl ?? string.Empty,
+                            gender: user.Gender
+                        );
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to update chat participant snapshots for {UserId}", user.Id);
+            }
+
+            // Notify all connected clients so they can update chat list avatars/names immediately.
+            await _hubContext.Clients.All.SendAsync("UserUpdated", new
+            {
+                userId = user.Id,
+                displayName = user.DisplayName,
+                avatarUrl = user.AvatarUrl,
+                gender = user.Gender
             });
+
+            return Ok(ToUserDto(user));
         }
         catch (Exception ex)
         {

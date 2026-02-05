@@ -8,11 +8,11 @@ import {
   Card,
   CardHeader,
   CardContent,
-  Avatar,
   CircularProgress,
   Alert,
 } from '@mui/material';
 import { AppHeader } from '@/components/Shared/AppHeader';
+import { UserAvatar } from '@/components/Shared/UserAvatar';
 import { momentService, Moment } from '../../services/moment.service';
 
 export const MomentsPage: React.FC = () => {
@@ -114,7 +114,7 @@ export const MomentsPage: React.FC = () => {
           moments.map((moment) => (
             <Card key={moment.id} sx={{ mb: 2 }}>
               <CardHeader
-                avatar={<Avatar src={moment.userAvatar}>{moment.userName?.[0]}</Avatar>}
+                avatar={<UserAvatar src={moment.userAvatar} fallbackText={moment.userName} />}
                 title={moment.userName}
                 subheader={new Date(moment.createdAt).toLocaleString()}
               />

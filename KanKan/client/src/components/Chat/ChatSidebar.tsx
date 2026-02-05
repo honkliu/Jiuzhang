@@ -5,7 +5,6 @@ import {
   ListItemButton,
   ListItemAvatar,
   ListItemText,
-  Avatar,
   Typography,
   Badge,
   IconButton,
@@ -25,7 +24,9 @@ import { useSelector, useDispatch } from 'react-redux';
 import { RootState, AppDispatch } from '@/store';
 import { setActiveChat, fetchMessages, clearUnread, removeChat } from '@/store/chatSlice';
 import { chatService, Chat } from '@/services/chat.service';
-import { formatDistanceToNow } from 'date-fns';
+import { GroupAvatar } from '@/components/Shared/GroupAvatar';
+import { UserAvatar } from '@/components/Shared/UserAvatar';
+import { getDirectDisplayParticipant, getOtherRealParticipants, isRealGroupChat, WA_USER_ID } from '@/utils/chatParticipants';
 
 interface ChatSidebarProps {
   onNewChat: () => void;
@@ -49,15 +50,15 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
     dispatch(fetchMessages({ chatId: chat.id }));
   };
 
-  const handleHideChat = async (chat: Chat) => {
-    const label = 'Hide this chat?';
+  const handleClearChat = async (chat: Chat) => {
+    const label = 'Clear this chat?\n\nThis will hide previous messages. The chat will reappear when a new message arrives.';
     if (!window.confirm(label)) return;
     try {
-      await chatService.hideChat(chat.id);
+      await chatService.clearChat(chat.id);
       dispatch(removeChat(chat.id));
     } catch (e) {
-      console.error('Failed to hide chat', e);
-      alert('Failed to hide chat. Please try again.');
+      console.error('Failed to clear chat', e);
+      alert('Failed to clear chat. Please try again.');
     }
   };
 
@@ -76,9 +77,9 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
   };
 
   const getGroupParticipantsLine = (chat: Chat) => {
-    if (chat.chatType !== 'group') return '';
     const meId = user?.id;
     const names = chat.participants
+      .filter((p) => p.userId !== WA_USER_ID)
       .filter((p) => !meId || p.userId !== meId)
       .map((p) => p.displayName)
       .filter(Boolean);
@@ -91,7 +92,25 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
 
   const formatLastMessageTime = (timestamp: string) => {
     try {
-      return formatDistanceToNow(new Date(timestamp), { addSuffix: true });
+      const dt = new Date(timestamp);
+      const ms = Date.now() - dt.getTime();
+      if (!Number.isFinite(ms) || ms < 0) return '';
+
+      const totalMinutes = Math.floor(ms / 60000);
+      if (totalMinutes < 1) return '1 m. ago';
+      if (totalMinutes < 60) return `${totalMinutes} m. ago`;
+
+      const totalHours = Math.floor(totalMinutes / 60);
+      if (totalHours < 24) return `${totalHours} h. ago`;
+
+      const totalDays = Math.floor(totalHours / 24);
+      if (totalDays < 7) return `${totalDays} d. ago`;
+
+      const totalWeeks = Math.floor(totalDays / 7);
+      if (totalWeeks < 52) return `${totalWeeks} w. ago`;
+
+      const totalYears = Math.max(1, Math.floor(totalDays / 365));
+      return `${totalYears} y. ago`;
     } catch {
       return '';
     }
@@ -165,17 +184,27 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
             </Typography>
           </Box>
         ) : (
-          filteredChats.map((chat) => (
+          filteredChats.map((chat) => {
+            const meId = user?.id;
+            const isGroup = isRealGroupChat(chat, meId);
+
+            return (
             <ListItemButton
               key={chat.id}
               selected={activeChat?.id === chat.id}
               onClick={() => handleChatSelect(chat)}
               sx={{
                 py: 1.5,
+                position: 'relative',
+                pr: 5,
                 '& .chatRowActions': {
                   opacity: 0,
                   pointerEvents: 'none',
                   transition: 'opacity 120ms ease',
+                  position: 'absolute',
+                  right: 6,
+                  top: '50%',
+                  transform: 'translateY(-50%)',
                 },
                 '&:hover .chatRowActions, &:focus-within .chatRowActions': {
                   opacity: 1,
@@ -191,34 +220,60 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
             >
               <ListItemAvatar>
                 <Badge
-                  overlap="circular"
+                  overlap="rectangular"
                   anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
                   variant="dot"
                   color="success"
                   invisible={
-                    chat.chatType === 'group' ||
-                    !chat.participants.some((p) => p.userId !== user?.id && p.isOnline)
+                    isGroup ||
+                    !chat.participants.some(
+                      (p) => p.userId !== user?.id && p.userId !== WA_USER_ID && p.isOnline
+                    )
                   }
                 >
-                  <Avatar src={chat.avatar} variant="rounded" sx={{ width: 48, height: 48 }}>
-                    {chat.name?.[0]}
-                  </Avatar>
+                  {isGroup ? (
+                    <GroupAvatar
+                      size={48}
+                      members={(() => {
+                        const others = getOtherRealParticipants(chat, meId);
+                        const source = others.length > 0 ? others : chat.participants.filter((p) => p.userId !== WA_USER_ID);
+                        return source.map((p) => ({
+                          avatarUrl: p.avatarUrl,
+                          gender: p.gender,
+                          displayName: p.displayName,
+                        }));
+                      })()}
+                    />
+                  ) : (
+                    (() => {
+                      const m = getDirectDisplayParticipant(chat, user?.id);
+                      return (
+                        <UserAvatar
+                          src={m?.avatarUrl}
+                          gender={m?.gender}
+                          fallbackText={m?.displayName || chat.name}
+                          variant="rounded"
+                          sx={{ width: 48, height: 48 }}
+                        />
+                      );
+                    })()
+                  )}
                 </Badge>
               </ListItemAvatar>
               <ListItemText
                 primary={
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0, flex: 1 }}>
                       <Typography
                         variant="subtitle2"
                         fontWeight={chat.unreadCount > 0 ? 'bold' : 'medium'}
                         noWrap
-                        sx={{ maxWidth: 180 }}
+                        sx={{ minWidth: 0, flex: 1 }}
                       >
                         {chat.name}
                       </Typography>
                     </Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexShrink: 0, justifyContent: 'flex-end' }}>
                       {chat.unreadCount > 0 && (
                         <Box
                           sx={{
@@ -242,22 +297,24 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
                       )}
 
                       {chat.lastMessage && (
-                        <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          sx={{ whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}
+                          title={chat.lastMessage.timestamp}
+                        >
                           {formatLastMessageTime(chat.lastMessage.timestamp)}
                         </Typography>
                       )}
 
-                      <Box
-                        className="chatRowActions"
-                        sx={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}
-                      >
+                      <Box className="chatRowActions" sx={{ display: 'flex', alignItems: 'center' }}>
                         <IconButton
                           size="small"
-                          title="Hide"
+                          title="Clear"
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
-                            void handleHideChat(chat);
+                            void handleClearChat(chat);
                           }}
                         >
                           <CloseIcon fontSize="small" />
@@ -269,7 +326,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
                 secondary={
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 1 }}>
                     <Box sx={{ minWidth: 0 }}>
-                      {chat.chatType === 'group' && (
+                      {isGroup && (
                         <Typography
                           variant="caption"
                           color="text.secondary"
@@ -299,7 +356,8 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
                 }
               />
             </ListItemButton>
-          ))
+            );
+          })
         )}
       </List>
     </Box>

@@ -3,7 +3,6 @@ import {
   Box,
   AppBar,
   Toolbar,
-  Avatar,
   Typography,
   IconButton,
   TextField,
@@ -20,15 +19,25 @@ import {
   Send as SendIcon,
   EmojiEmotions as EmojiIcon,
   Menu as MenuIcon,
-  PushPin as PushPinIcon,
+  AttachFile as AttachFileIcon,
+  Edit as EditIcon,
 } from '@mui/icons-material';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState, AppDispatch } from '@/store';
-import { fetchMessages, addMessage } from '@/store/chatSlice';
+import { fetchMessages, addMessage, updateChat } from '@/store/chatSlice';
 import { MessageBubble } from './MessageBubble';
 import { signalRService } from '@/services/signalr.service';
 import { chatService } from '@/services/chat.service';
 import { mediaService } from '@/services/media.service';
+import { UserAvatar } from '@/components/Shared/UserAvatar';
+import { GroupAvatar } from '@/components/Shared/GroupAvatar';
+import {
+  getDirectDisplayParticipant,
+  getOtherRealParticipants,
+  getRealParticipants,
+  isRealGroupChat,
+  WA_USER_ID,
+} from '@/utils/chatParticipants';
 
 interface ChatWindowProps {
   onBack?: () => void;
@@ -78,10 +87,27 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
 
   const mergedMessages = [...chatMessages, ...draftMessages];
 
+  const handleRenameGroup = async () => {
+    if (!activeChat) return;
+    if (activeChat.chatType !== 'group') return;
+    if (!user?.id || !activeChat.adminIds?.includes(user.id)) return;
+
+    const next = window.prompt('Group name', activeChat.name);
+    if (!next) return;
+
+    try {
+      const updated = await chatService.updateChat(activeChat.id, { groupName: next });
+      dispatch(updateChat(updated));
+    } catch (e) {
+      console.error('Failed to rename group', e);
+      alert('Failed to rename group. Please try again.');
+    }
+  };
+
   type ChatCommandId = '/w' | '/wa' | '/h' | '/b' | '/i' | '/r';
   const CHAT_COMMANDS: Array<{ id: ChatCommandId; description: string; example: string }> = [
-    { id: '/w', description: 'List all participants in this chat (including Assistant)', example: '/w' },
-    { id: '/wa', description: 'List active (online) participants in this chat', example: '/wa' },
+    { id: '/w', description: 'List real participants in this chat (excluding Wa)', example: '/w' },
+    { id: '/wa', description: 'List active (online) real participants (excluding Wa)', example: '/wa' },
     { id: '/h', description: 'Show command help', example: '/h' },
     { id: '/b', description: 'Send the rest of your input in bold', example: '/b hello' },
     { id: '/i', description: 'Send the rest of your input in italic', example: '/i hello' },
@@ -111,8 +137,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
     const infoMessage = {
       id: `local_${Date.now()}_${Math.random().toString(16).slice(2)}`,
       chatId: activeChat.id,
-      senderId: 'user_ai_wa',
-      senderName: 'Assistant',
+      senderId: WA_USER_ID,
+      senderName: 'Wa',
       senderAvatar: '',
       messageType: 'text',
       text,
@@ -154,13 +180,13 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
         return;
 
       case '/w': {
-        const names = activeChat.participants.map((p) => p.displayName);
+        const names = getRealParticipants(activeChat.participants).map((p) => p.displayName);
         addLocalInfoMessage(`Participants (${names.length}):\n  ${names.join('\n  ')}`);
         return;
       }
 
       case '/wa': {
-        const active = activeChat.participants.filter((p) => p.isOnline);
+        const active = getRealParticipants(activeChat.participants).filter((p) => p.isOnline);
         const names = active.map((p) => p.displayName);
         addLocalInfoMessage(
           active.length === 0
@@ -359,10 +385,15 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
     }
   };
 
-  // Get online participant for direct chats
-  const otherParticipant = activeChat?.chatType === 'direct'
-    ? activeChat.participants.find((p) => p.userId !== user?.id)
-    : null;
+  const isGroup = activeChat ? isRealGroupChat(activeChat, user?.id) : false;
+
+  const displayParticipant = activeChat
+    ? getDirectDisplayParticipant(activeChat, user?.id)
+    : undefined;
+
+  const groupMembersCount = activeChat
+    ? getRealParticipants(activeChat.participants).length
+    : 0;
 
   if (!activeChat) {
     return (
@@ -408,9 +439,29 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
               <ArrowBackIcon />
             </IconButton>
           )}
-          <Avatar src={activeChat.avatar} sx={{ width: 40, height: 40, mr: 2 }}>
-            {activeChat.name?.[0]}
-          </Avatar>
+          {isGroup ? (
+            <GroupAvatar
+              size={40}
+              sx={{ mr: 2 }}
+              members={(() => {
+                const others = getOtherRealParticipants(activeChat, user?.id);
+                const source = others.length > 0 ? others : getRealParticipants(activeChat.participants);
+                return source.map((p) => ({
+                  avatarUrl: p.avatarUrl,
+                  gender: p.gender,
+                  displayName: p.displayName,
+                }));
+              })()}
+            />
+          ) : (
+            <UserAvatar
+              src={displayParticipant?.avatarUrl || activeChat.avatar}
+              gender={displayParticipant?.gender}
+              sx={{ width: 40, height: 40, mr: 2 }}
+              fallbackText={displayParticipant?.displayName || activeChat.name}
+              variant="rounded"
+            />
+          )}
           <Box sx={{ flexGrow: 1 }}>
             <Typography variant="subtitle1" fontWeight="bold">
               {activeChat.name}
@@ -418,13 +469,19 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
             <Typography variant="caption" color="text.secondary">
               {chatTypingUsers.length > 0
                 ? `${chatTypingUsers.map((u) => u.userName).join(', ')} is typing...`
-                : otherParticipant?.isOnline
+                : displayParticipant?.isOnline && displayParticipant.userId !== WA_USER_ID
                 ? 'Online'
-                : activeChat.chatType === 'group'
-                ? `${activeChat.participants.length} members`
+                : isGroup
+                ? `${groupMembersCount} members`
                 : 'Offline'}
             </Typography>
           </Box>
+
+          {activeChat.chatType === 'group' && user?.id && activeChat.adminIds?.includes(user.id) && (
+            <IconButton edge="end" onClick={handleRenameGroup} title="Rename group">
+              <EditIcon />
+            </IconButton>
+          )}
         </Toolbar>
       </AppBar>
 
@@ -493,7 +550,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
             title="Attach"
             aria-label="Attach"
           >
-            {uploading ? <CircularProgress size={18} /> : <PushPinIcon />}
+            {uploading ? <CircularProgress size={18} /> : <AttachFileIcon />}
           </IconButton>
           <TextField
             inputRef={inputRef}

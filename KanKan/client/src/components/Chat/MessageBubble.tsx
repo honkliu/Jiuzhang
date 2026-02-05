@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Box, Avatar, Typography, Paper } from '@mui/material';
+import { Box, Typography, Paper } from '@mui/material';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { FiberManualRecord as FiberManualRecordIcon } from '@mui/icons-material';
 import { Message } from '@/services/chat.service';
+import { UserAvatar } from '@/components/Shared/UserAvatar';
 import { format } from 'date-fns';
 
 const renderBoldItalic = (text: string, keyPrefix: string): React.ReactNode[] => {
@@ -156,13 +157,13 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
       {/* Avatar */}
       <Box sx={{ width: 56, flexShrink: 0, textAlign: 'center' }}>
         {showAvatar && (
-          <Avatar
+          <UserAvatar
             src={message.senderAvatar}
+            gender={message.senderGender}
+            fallbackText={message.senderName}
             variant="rounded"
             sx={{ width: 40, height: 40, mx: 'auto' }}
-          >
-            {message.senderName?.[0]}
-          </Avatar>
+          />
         )}
         {showAvatar && (
           <Typography variant="caption" sx={{ display: 'block', mt: 0.5 }}>

@@ -179,6 +179,24 @@ const chatSlice = createSlice({
         });
       }
     },
+    upsertParticipantProfile: (
+      state,
+      action: PayloadAction<{ userId: string; displayName?: string; avatarUrl?: string; gender?: 'male' | 'female' | string }>
+    ) => {
+      const { userId, displayName, avatarUrl, gender } = action.payload;
+
+      const applyToParticipants = (participants: Array<{ userId: string; displayName: string; avatarUrl: string; gender?: any }>) => {
+        participants.forEach((p) => {
+          if (p.userId !== userId) return;
+          if (typeof displayName === 'string') p.displayName = displayName;
+          if (typeof avatarUrl === 'string') p.avatarUrl = avatarUrl;
+          if (typeof gender === 'string') p.gender = gender;
+        });
+      };
+
+      state.chats.forEach((chat) => applyToParticipants(chat.participants));
+      if (state.activeChat) applyToParticipants(state.activeChat.participants);
+    },
     startAgentMessage: (state, action: PayloadAction<Message>) => {
       const message = action.payload;
       if (!state.messages[message.chatId]) {
@@ -297,6 +315,7 @@ export const {
   updateChat,
   removeChat,
   setTypingUser,
+  upsertParticipantProfile,
   updateUserOnlineStatus,
   markMessageDelivered,
   markMessageRead,

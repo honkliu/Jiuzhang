@@ -258,6 +258,7 @@ public class ChatHub : Hub
             SenderId = newMessage.SenderId,
             SenderName = newMessage.SenderName,
             SenderAvatar = newMessage.SenderAvatar,
+            SenderGender = user?.Gender ?? "male",
             MessageType = newMessage.MessageType,
             Text = newMessage.Content.Text,
             MediaUrl = newMessage.Content.MediaUrl,
@@ -290,7 +291,9 @@ public class ChatHub : Hub
         {
             await EnsureAgentParticipantAsync(chat);
             var agentMessageId = $"msg_{Guid.NewGuid()}";
-            var agentAvatar = (await _userRepository.GetByIdAsync(AgentUserId))?.AvatarUrl ?? string.Empty;
+            var agentUser = await _userRepository.GetByIdAsync(AgentUserId);
+            var agentAvatar = agentUser?.AvatarUrl ?? string.Empty;
+            var agentGender = agentUser?.Gender ?? "male";
 
             await Clients.Group(chat.Id).SendAsync("AgentMessageStart", new
             {
@@ -299,6 +302,7 @@ public class ChatHub : Hub
                 senderId = AgentUserId,
                 senderName = AgentDisplayName,
                 senderAvatar = agentAvatar,
+                senderGender = agentGender,
                 messageType = "text",
                 text = "",
                 timestamp = DateTime.UtcNow,
@@ -646,7 +650,9 @@ public class ChatHub : Hub
 
         if (chat.ChatType == "direct")
         {
-            var otherParticipant = chat.Participants.FirstOrDefault(p => p.UserId != currentUserId);
+            var otherParticipant = chat.Participants
+                .FirstOrDefault(p => p.UserId != currentUserId && p.UserId != AgentUserId)
+                ?? chat.Participants.FirstOrDefault(p => p.UserId != currentUserId);
             if (otherParticipant != null)
             {
                 displayName = otherParticipant.DisplayName;
@@ -660,11 +666,13 @@ public class ChatHub : Hub
             ChatType = chat.ChatType,
             Name = displayName,
             Avatar = displayAvatar,
+            AdminIds = chat.AdminIds ?? new List<string>(),
             Participants = chat.Participants.Select(p => new ParticipantDto
             {
                 UserId = p.UserId,
                 DisplayName = p.DisplayName,
                 AvatarUrl = p.AvatarUrl,
+                Gender = p.Gender,
                 IsOnline = IsUserOnline(p.UserId)
             }).ToList(),
             LastMessage = chat.LastMessage != null ? new LastMessageDto
