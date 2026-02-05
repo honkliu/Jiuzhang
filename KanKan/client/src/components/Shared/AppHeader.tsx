@@ -4,7 +4,6 @@ import {
   Toolbar,
   Box,
   Button,
-  Avatar,
   Typography,
   IconButton,
   Badge,
@@ -19,6 +18,7 @@ import { RootState, AppDispatch } from '@/store';
 import { authService } from '@/services/auth.service';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { fetchNotifications, fetchUnreadNotificationCount } from '@/store/notificationsSlice';
+import { UserAvatar } from '@/components/Shared/UserAvatar';
 import { formatDistanceToNow } from 'date-fns';
 
 const navItems = [
@@ -90,9 +90,7 @@ export const AppHeader: React.FC = () => {
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 0.5 }}>
-            <Avatar src={user?.avatarUrl} variant="rounded" sx={{ width: 32, height: 32 }}>
-              {user?.displayName?.[0]}
-            </Avatar>
+              <UserAvatar src={user?.avatarUrl} gender={user?.gender} variant="rounded" sx={{ width: 32, height: 32 }} />
             <Typography
               variant="subtitle2"
               fontWeight="bold"

@@ -5,6 +5,7 @@ export interface User {
   handle: string;
   displayName: string;
   avatarUrl: string;
+  gender?: 'male' | 'female';
   bio: string;
   phoneNumber?: string;
   isOnline: boolean;
@@ -63,6 +64,7 @@ export interface ChatParticipant {
   userId: string;
   displayName: string;
   avatarUrl: string;
+  gender?: 'male' | 'female';
   joinedAt: string;
 }
 

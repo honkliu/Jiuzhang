@@ -7,6 +7,10 @@ import {
   Typography,
   IconButton,
   TextField,
+  Popper,
+  Paper,
+  Stack,
+  Chip,
   SxProps,
   Theme,
   CircularProgress,
@@ -41,6 +45,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
   const [messageText, setMessageText] = useState('');
   const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [commandSelectedIndex, setCommandSelectedIndex] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -72,6 +77,142 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
     : [];
 
   const mergedMessages = [...chatMessages, ...draftMessages];
+
+  type ChatCommandId = '/w' | '/wa' | '/h' | '/b' | '/i' | '/r';
+  const CHAT_COMMANDS: Array<{ id: ChatCommandId; description: string; example: string }> = [
+    { id: '/w', description: 'List all participants in this chat (including Assistant)', example: '/w' },
+    { id: '/wa', description: 'List active (online) participants in this chat', example: '/wa' },
+    { id: '/h', description: 'Show command help', example: '/h' },
+    { id: '/b', description: 'Send the rest of your input in bold', example: '/b hello' },
+    { id: '/i', description: 'Send the rest of your input in italic', example: '/i hello' },
+    { id: '/r', description: 'Send the rest of your input in red', example: '/r hello' },
+  ];
+
+  const isCommandMode = messageText.startsWith('/');
+  const commandToken = (() => {
+    if (!isCommandMode) return null;
+    const firstSpace = messageText.indexOf(' ');
+    return (firstSpace === -1 ? messageText : messageText.slice(0, firstSpace)).trim();
+  })();
+
+  const commandSuggestions = (() => {
+    if (!isCommandMode) return [];
+    const prefix = commandToken ?? '/';
+    return CHAT_COMMANDS.filter((c) => c.id.startsWith(prefix as string));
+  })();
+
+  useEffect(() => {
+    setCommandSelectedIndex(0);
+  }, [commandToken]);
+
+  const addLocalInfoMessage = (text: string) => {
+    if (!activeChat) return;
+
+    const infoMessage = {
+      id: `local_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+      chatId: activeChat.id,
+      senderId: 'user_ai_wa',
+      senderName: 'Assistant',
+      senderAvatar: '',
+      messageType: 'text',
+      text,
+      timestamp: new Date().toISOString(),
+      deliveredTo: [],
+      readBy: [],
+      reactions: {},
+      isDeleted: false,
+    };
+
+    dispatch(addMessage(infoMessage as any));
+  };
+
+  const runChatCommand = async (rawInput: string) => {
+    if (!activeChat) return;
+
+    const firstSpace = rawInput.indexOf(' ');
+    const cmd = (firstSpace === -1 ? rawInput : rawInput.slice(0, firstSpace)).trim() as string;
+    const rest = (firstSpace === -1 ? '' : rawInput.slice(firstSpace + 1)).trim();
+
+    const known = CHAT_COMMANDS.some((c) => c.id === cmd);
+    if (!known || cmd === '/' || cmd.length === 0) {
+      addLocalInfoMessage(
+        [
+          'Available commands:',
+          ...CHAT_COMMANDS.map((c) => `  ${c.example}  — ${c.description}`),
+          '',
+          "Tip: commands only work when '/' is the first character.",
+        ].join('\n')
+      );
+      return;
+    }
+
+    switch (cmd as ChatCommandId) {
+      case '/h':
+        addLocalInfoMessage(
+          ['Available commands:', ...CHAT_COMMANDS.map((c) => `  ${c.example}  — ${c.description}`)].join('\n')
+        );
+        return;
+
+      case '/w': {
+        const names = activeChat.participants.map((p) => p.displayName);
+        addLocalInfoMessage(`Participants (${names.length}):\n  ${names.join('\n  ')}`);
+        return;
+      }
+
+      case '/wa': {
+        const active = activeChat.participants.filter((p) => p.isOnline);
+        const names = active.map((p) => p.displayName);
+        addLocalInfoMessage(
+          active.length === 0
+            ? 'No active (online) participants right now.'
+            : `Active participants (${names.length}):\n  ${names.join('\n  ')}`
+        );
+        return;
+      }
+
+      case '/r': {
+        if (!rest) {
+          addLocalInfoMessage('Usage: /r <text>');
+          return;
+        }
+        const formatted = `[red]${rest}[/red]`;
+        const message = await chatService.sendMessage(activeChat.id, {
+          messageType: 'text',
+          text: formatted,
+        });
+        dispatch(addMessage(message));
+        return;
+      }
+
+      case '/b': {
+        if (!rest) {
+          addLocalInfoMessage("Usage: /b <text>");
+          return;
+        }
+        const formatted = `**${rest}**`;
+        const message = await chatService.sendMessage(activeChat.id, {
+          messageType: 'text',
+          text: formatted,
+        });
+        dispatch(addMessage(message));
+        return;
+      }
+
+      case '/i': {
+        if (!rest) {
+          addLocalInfoMessage('Usage: /i <text>');
+          return;
+        }
+        const formatted = `*${rest}*`;
+        const message = await chatService.sendMessage(activeChat.id, {
+          messageType: 'text',
+          text: formatted,
+        });
+        dispatch(addMessage(message));
+        return;
+      }
+    }
+  };
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -108,9 +249,33 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
   }, [activeChat?.id, chatMessages, user?.id]);
 
   const handleSendMessage = async () => {
-    if (!messageText.trim() || !activeChat || sending) return;
+    if (!activeChat || sending) return;
 
-    const text = messageText.trim();
+    // Commands only trigger when '/' is the first character.
+    // Leading whitespace like "  /w" is NOT a command.
+    const raw = messageText;
+    if (raw.startsWith('/')) {
+      setMessageText('');
+      signalRService.sendDraftChanged(activeChat.id, '');
+      setSending(true);
+
+      try {
+        await runChatCommand(raw);
+      } catch (error) {
+        console.error('Failed to run command:', error);
+        setMessageText(raw);
+        signalRService.sendDraftChanged(activeChat.id, raw);
+      } finally {
+        setSending(false);
+        inputRef.current?.focus();
+      }
+
+      return;
+    }
+
+    if (!raw.trim()) return;
+
+    const text = raw.trim();
     setMessageText('');
     signalRService.sendDraftChanged(activeChat.id, '');
     setSending(true);
@@ -175,6 +340,22 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!isCommandMode || commandSuggestions.length === 0) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setCommandSelectedIndex((i) => Math.min(i + 1, commandSuggestions.length - 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setCommandSelectedIndex((i) => Math.max(i - 1, 0));
+    } else if (e.key === 'Tab') {
+      e.preventDefault();
+      const next = commandSuggestions[commandSelectedIndex] ?? commandSuggestions[0];
+      setMessageText(`${next.id} `);
     }
   };
 
@@ -329,6 +510,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
               }
             }}
             onKeyPress={handleKeyPress}
+            onKeyDown={handleKeyDown}
             size="small"
             sx={{
               '& .MuiOutlinedInput-root': {
@@ -337,6 +519,38 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
               },
             }}
           />
+          <Popper
+            open={isCommandMode && commandSuggestions.length > 0}
+            anchorEl={inputRef.current}
+            placement="top-start"
+            sx={{ zIndex: 1300 }}
+          >
+            <Paper
+              elevation={6}
+              sx={{
+                width: 'fit-content',
+                maxWidth: 'calc(100vw - 32px)',
+                mb: 1,
+                px: 1,
+                py: 0.75,
+              }}
+            >
+              <Stack direction="row" spacing={0.75} useFlexGap flexWrap="wrap">
+                {commandSuggestions.map((c, idx) => (
+                  <Chip
+                    key={c.id}
+                    size="small"
+                    label={c.id}
+                    color={idx === commandSelectedIndex ? 'primary' : 'default'}
+                    variant={idx === commandSelectedIndex ? 'filled' : 'outlined'}
+                    onMouseEnter={() => setCommandSelectedIndex(idx)}
+                    onClick={() => setMessageText(`${c.id} `)}
+                    sx={{ fontFamily: 'monospace' }}
+                  />
+                ))}
+              </Stack>
+            </Paper>
+          </Popper>
           <IconButton
             color="primary"
             onClick={handleSendMessage}

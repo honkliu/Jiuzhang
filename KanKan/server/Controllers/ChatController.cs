@@ -180,6 +180,7 @@ public class ChatController : ControllerBase
                         UserId = user.Id,
                         DisplayName = user.DisplayName,
                         AvatarUrl = user.AvatarUrl ?? "",
+                        Gender = user.Gender,
                         JoinedAt = DateTime.UtcNow
                     });
                 }
@@ -688,6 +689,7 @@ public class ChatController : ControllerBase
                         UserId = user.Id,
                         DisplayName = user.DisplayName,
                         AvatarUrl = user.AvatarUrl ?? "",
+                        Gender = user.Gender,
                         JoinedAt = DateTime.UtcNow
                     });
                 }
@@ -797,6 +799,7 @@ public class ChatController : ControllerBase
                 UserId = p.UserId,
                 DisplayName = p.DisplayName,
                 AvatarUrl = p.AvatarUrl,
+                Gender = p.Gender,
                 IsOnline = ChatHub.IsUserOnline(p.UserId)
             }).ToList(),
             LastMessage = chat.LastMessage != null ? new LastMessageDto

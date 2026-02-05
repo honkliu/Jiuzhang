@@ -4,6 +4,7 @@ export interface Participant {
   userId: string;
   displayName: string;
   avatarUrl: string;
+  gender?: 'male' | 'female';
   isOnline: boolean;
 }
 

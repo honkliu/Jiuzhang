@@ -6,6 +6,7 @@ export interface User {
   handle: string;
   displayName: string;
   avatarUrl: string;
+  gender?: 'male' | 'female';
   bio: string;
   isOnline: boolean;
   lastSeen: string;
@@ -63,7 +64,7 @@ class ContactService {
     return response.data;
   }
 
-  async updateProfile(data: { displayName?: string; bio?: string; avatarUrl?: string }): Promise<User> {
+  async updateProfile(data: { displayName?: string; bio?: string; avatarUrl?: string; gender?: 'male' | 'female' }): Promise<User> {
     const response = await apiClient.put<User>('/contact/me', data);
     return response.data;
   }

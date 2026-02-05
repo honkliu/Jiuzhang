@@ -83,6 +83,7 @@ public class ContactController : ControllerBase
                 Handle = user.Handle,
                 DisplayName = user.DisplayName,
                 AvatarUrl = user.AvatarUrl,
+                Gender = user.Gender,
                 Bio = user.Bio,
                 IsOnline = user.IsOnline,
                 LastSeen = user.LastSeen
@@ -403,6 +404,14 @@ public class ContactController : ControllerBase
             if (!string.IsNullOrWhiteSpace(request.AvatarUrl))
                 user.AvatarUrl = request.AvatarUrl;
 
+            if (!string.IsNullOrWhiteSpace(request.Gender))
+            {
+                var g = request.Gender.Trim().ToLowerInvariant();
+                if (g is not ("male" or "female"))
+                    return BadRequest(new { message = "Gender must be 'male' or 'female'" });
+                user.Gender = g;
+            }
+
             user.UpdatedAt = DateTime.UtcNow;
             await _userRepository.UpdateAsync(user);
 
@@ -413,6 +422,7 @@ public class ContactController : ControllerBase
                 Handle = user.Handle,
                 DisplayName = user.DisplayName,
                 AvatarUrl = user.AvatarUrl,
+                Gender = user.Gender,
                 Bio = user.Bio,
                 IsOnline = user.IsOnline,
                 LastSeen = user.LastSeen
@@ -431,6 +441,7 @@ public class UpdateProfileRequest
     public string? DisplayName { get; set; }
     public string? Bio { get; set; }
     public string? AvatarUrl { get; set; }
+    public string? Gender { get; set; }
 }
 
 public class SendFriendRequestRequest

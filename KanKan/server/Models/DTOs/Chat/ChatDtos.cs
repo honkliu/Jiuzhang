@@ -21,6 +21,7 @@ public class ParticipantDto
     public string UserId { get; set; } = string.Empty;
     public string DisplayName { get; set; } = string.Empty;
     public string AvatarUrl { get; set; } = string.Empty;
+    public string Gender { get; set; } = "male";
     public bool IsOnline { get; set; }
 }
 

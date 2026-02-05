@@ -10,6 +10,8 @@ public class User
     public string Handle { get; set; } = string.Empty;
     public string DisplayName { get; set; } = string.Empty;
     public string AvatarUrl { get; set; } = string.Empty;
+    // "male" | "female" (defaults to "male" if not set)
+    public string Gender { get; set; } = "male";
     public string Bio { get; set; } = "Hello, I'm using KanKan!";
     public string? PhoneNumber { get; set; }
     public bool IsOnline { get; set; }

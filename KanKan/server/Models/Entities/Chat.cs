@@ -19,6 +19,7 @@ public class ChatParticipant
     public string UserId { get; set; } = string.Empty;
     public string DisplayName { get; set; } = string.Empty;
     public string AvatarUrl { get; set; } = string.Empty;
+    public string Gender { get; set; } = "male";
     public DateTime JoinedAt { get; set; }
     public bool IsHidden { get; set; }
 }

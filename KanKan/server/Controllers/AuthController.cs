@@ -329,6 +329,7 @@ public class AuthController : ControllerBase
             Handle = user.Handle,
             DisplayName = user.DisplayName,
             AvatarUrl = user.AvatarUrl,
+            Gender = user.Gender,
             Bio = user.Bio,
             IsOnline = user.IsOnline,
             LastSeen = user.LastSeen

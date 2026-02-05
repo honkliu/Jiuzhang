@@ -1,7 +1,16 @@
 # Quick Reference Guide
 
 ## 🚀 Quick Start Commands
+##  With Docker
 
+ 
+```bash
+In the Host: 
+  cd Jiuzhang/Kankan & docker run --rm -it -p 5000:5000 -v "$(pwd):/src" -w /src mcr.microsoft.com/dotnet/sdk:8.0 bash
+Inside the docker:
+  dotnet restore server/KanKan.API.csproj
+  dotnet run --project server/KanKan.API.csproj --urls http://0.0.0.0:5000
+```
 ### Backend
 ```bash
 cd server

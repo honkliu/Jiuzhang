@@ -194,6 +194,7 @@ if (useInMemory)
             Handle = "alice_1001",
             DisplayName = "Alice",
             AvatarUrl = "https://i.pravatar.cc/150?img=1",
+            Gender = "female",
             Bio = "Hi, I'm Alice",
             IsOnline = false,
             LastSeen = DateTime.UtcNow,
@@ -223,6 +224,7 @@ if (useInMemory)
             Handle = "bob_1002",
             DisplayName = "Bob",
             AvatarUrl = "https://i.pravatar.cc/150?img=2",
+            Gender = "male",
             Bio = "Hi, I'm Bob",
             IsOnline = false,
             LastSeen = DateTime.UtcNow,
@@ -252,6 +254,7 @@ if (useInMemory)
             Handle = "carol_1004",
             DisplayName = "Carol",
             AvatarUrl = "https://i.pravatar.cc/150?img=4",
+            Gender = "female",
             Bio = "Hi, I'm Carol",
             IsOnline = false,
             LastSeen = DateTime.UtcNow,
@@ -281,6 +284,7 @@ if (useInMemory)
             Handle = "assistant_1003",
             DisplayName = "Assistant",
             AvatarUrl = "https://i.pravatar.cc/150?img=3",
+            Gender = "male",
             Bio = "AI assistant",
             IsOnline = true,
             LastSeen = DateTime.UtcNow,
@@ -308,6 +312,7 @@ if (useInMemory)
         UserId = u.Id,
         DisplayName = u.DisplayName,
         AvatarUrl = u.AvatarUrl ?? "",
+        Gender = u.Gender,
         JoinedAt = DateTime.UtcNow,
     };
 
@@ -401,7 +406,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI(c =>
     {
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "KanKan API v1");
-        c.RoutePrefix = string.Empty; // Swagger at root
+        // Serve Swagger UI at /swagger
+        c.RoutePrefix = "swagger";
     });
 }
 
