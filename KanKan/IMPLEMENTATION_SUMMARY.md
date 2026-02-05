@@ -69,6 +69,7 @@ I've successfully implemented a complete **Phase 1 (MVP)** of the KanKan messagi
 #### 📚 Documentation
 - ✅ README.md - Project overview
 - ✅ Architecture.md - Complete system design
+- ✅ CHAT_DETAILED_DESIGN.md - Chat semantics (Wa rules, avatars, clear chat, rename)
 - ✅ GETTING_STARTED.md - Setup guide
 - ✅ .gitignore - Proper exclusions
 

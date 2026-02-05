@@ -251,19 +251,25 @@ POST   /api/auth/reset-password      # Reset password with code
 
 #### Chat Endpoints
 
+For Wa-specific behavior, avatar rules, per-user clear semantics, and group rename/admin rules, see [CHAT_DETAILED_DESIGN.md](CHAT_DETAILED_DESIGN.md).
+
 ```
-GET    /api/chats                    # Get user's chat list
-GET    /api/chats/{chatId}           # Get chat details
-POST   /api/chats                    # Create new chat (direct or group)
-PUT    /api/chats/{chatId}           # Update chat (group name, avatar)
-DELETE /api/chats/{chatId}           # Delete/leave chat
+GET    /api/chat                     # Get user's chat list
+GET    /api/chat/{chatId}            # Get chat details (may unhide for current user)
+POST   /api/chat                     # Create new chat (direct or group)
+PUT    /api/chat/{chatId}            # Update chat (group name, avatar)
+DELETE /api/chat/{chatId}            # Delete/leave chat
 
-GET    /api/chats/{chatId}/messages  # Get messages (paginated)
-POST   /api/chats/{chatId}/messages  # Send message
-DELETE /api/chats/{chatId}/messages/{messageId}  # Delete message
+POST   /api/chat/{chatId}/hide       # Hide chat for current user
+POST   /api/chat/{chatId}/unhide     # Unhide chat for current user
+POST   /api/chat/{chatId}/clear      # Clear chat history for current user
 
-POST   /api/chats/{chatId}/participants  # Add group members
-DELETE /api/chats/{chatId}/participants/{userId}  # Remove member
+GET    /api/chat/{chatId}/messages   # Get messages (paginated; filtered by clearedAt)
+POST   /api/chat/{chatId}/messages   # Send message
+DELETE /api/chat/{chatId}/messages/{messageId}  # Delete message
+
+POST   /api/chat/{chatId}/participants           # Add group members
+DELETE /api/chat/{chatId}/participants/{userId}  # Remove member
 ```
 
 #### Contact Endpoints
@@ -385,19 +391,25 @@ Containers:
 {
   "id": "chat_456",
   "type": "chat",
-  "chatType": "direct",  // or "group"
+  "chatType": "direct",  // "direct" or "group" (UI may derive group-ness from participants)
   "participants": [
     {
       "userId": "user_123",
       "displayName": "John Doe",
       "avatarUrl": "https://...",
-      "joinedAt": "2024-01-10T00:00:00Z"
+      "gender": "male",
+      "joinedAt": "2024-01-10T00:00:00Z",
+      "isHidden": false,
+      "clearedAt": null
     },
     {
       "userId": "user_789",
       "displayName": "Jane Smith",
       "avatarUrl": "https://...",
-      "joinedAt": "2024-01-10T00:00:00Z"
+      "gender": "female",
+      "joinedAt": "2024-01-10T00:00:00Z",
+      "isHidden": false,
+      "clearedAt": null
     }
   ],
   "groupName": null,  // for group chats

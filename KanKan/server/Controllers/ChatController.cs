@@ -5,6 +5,7 @@ using System.Security.Claims;
 using System.Text;
 using System.Text.RegularExpressions;
 using KanKan.API.Hubs;
+using KanKan.API.Domain.Chat;
 using KanKan.API.Models.DTOs.Chat;
 using KanKan.API.Models.DTOs.Notification;
 using KanKan.API.Models.Entities;
@@ -18,9 +19,6 @@ namespace KanKan.API.Controllers;
 [Route("api/[controller]")]
 public class ChatController : ControllerBase
 {
-    private const string AgentUserId = "user_ai_wa";
-    private const string AgentDisplayName = "Wa";
-
     private readonly IChatRepository _chatRepository;
     private readonly IMessageRepository _messageRepository;
     private readonly IUserRepository _userRepository;
@@ -61,7 +59,7 @@ public class ChatController : ControllerBase
             var userId = GetUserId();
             var chats = await _chatRepository.GetUserChatsAsync(userId);
 
-            var chatDtos = chats.Select(c => MapToChatDto(c, userId)).ToList();
+            var chatDtos = chats.Select(c => ChatDomain.ToChatDto(c, userId, ChatHub.IsUserOnline)).ToList();
             return Ok(chatDtos);
         }
         catch (Exception ex)
@@ -96,7 +94,7 @@ public class ChatController : ControllerBase
                 me.IsHidden = false;
             }
 
-            return Ok(MapToChatDto(chat, userId));
+            return Ok(ChatDomain.ToChatDto(chat, userId, ChatHub.IsUserOnline));
         }
         catch (Exception ex)
         {
@@ -134,7 +132,7 @@ public class ChatController : ControllerBase
                         await _chatRepository.SetHiddenAsync(existingChat.Id, userId, isHidden: false);
                         me.IsHidden = false;
                     }
-                    return Ok(MapToChatDto(existingChat, userId));
+                    return Ok(ChatDomain.ToChatDto(existingChat, userId, ChatHub.IsUserOnline));
                 }
             }
 
@@ -146,17 +144,17 @@ public class ChatController : ControllerBase
             foreach (var participantId in participantIds.Distinct())
             {
                 var user = await _userRepository.GetByIdAsync(participantId);
-                if (user == null && participantId == AgentUserId)
+                if (user == null && participantId == ChatDomain.AgentUserId)
                 {
                     user = await _userRepository.CreateAsync(new User
                     {
-                        Id = AgentUserId,
+                        Id = ChatDomain.AgentUserId,
                         Type = "user",
                         Email = "wa@assistant.local",
                         EmailVerified = true,
                         PasswordHash = BCrypt.Net.BCrypt.HashPassword(Guid.NewGuid().ToString()),
                         Handle = "assistant_1003",
-                        DisplayName = AgentDisplayName,
+                        DisplayName = ChatDomain.AgentDisplayName,
                         AvatarUrl = "https://i.pravatar.cc/150?img=3",
                         Bio = "AI assistant",
                         IsOnline = true,
@@ -208,12 +206,12 @@ public class ChatController : ControllerBase
             foreach (var participant in participants)
             {
                 await _hubContext.Clients.User(participant.UserId)
-                    .SendAsync("ChatCreated", MapToChatDto(chat, participant.UserId));
+                    .SendAsync("ChatCreated", ChatDomain.ToChatDto(chat, participant.UserId, ChatHub.IsUserOnline));
             }
 
             _logger.LogInformation("Chat {ChatId} created by user {UserId}", chat.Id, userId);
 
-            return CreatedAtAction(nameof(GetChat), new { chatId = chat.Id }, MapToChatDto(chat, userId));
+            return CreatedAtAction(nameof(GetChat), new { chatId = chat.Id }, ChatDomain.ToChatDto(chat, userId, ChatHub.IsUserOnline));
         }
         catch (Exception ex)
         {
@@ -253,9 +251,9 @@ public class ChatController : ControllerBase
             await _chatRepository.UpdateAsync(chat);
 
             // Notify participants
-            await _hubContext.Clients.Group(chatId).SendAsync("ChatUpdated", MapToChatDto(chat, userId));
+            await _hubContext.Clients.Group(chatId).SendAsync("ChatUpdated", ChatDomain.ToChatDto(chat, userId, ChatHub.IsUserOnline));
 
-            return Ok(MapToChatDto(chat, userId));
+            return Ok(ChatDomain.ToChatDto(chat, userId, ChatHub.IsUserOnline));
         }
         catch (Exception ex)
         {
@@ -544,7 +542,7 @@ public class ChatController : ControllerBase
                 unhiddenRecipientIds.Add(participant.UserId);
 
                 await _hubContext.Clients.User(participant.UserId)
-                    .SendAsync("ChatCreated", MapToChatDto(chat, participant.UserId));
+                    .SendAsync("ChatCreated", ChatDomain.ToChatDto(chat, participant.UserId, ChatHub.IsUserOnline));
             }
 
             var messageDto = new MessageDto
@@ -586,7 +584,7 @@ public class ChatController : ControllerBase
             {
                 await EnsureAgentParticipantAsync(chat);
                 var agentMessageId = $"msg_{Guid.NewGuid()}";
-                var agentUser = await _userRepository.GetByIdAsync(AgentUserId);
+                var agentUser = await _userRepository.GetByIdAsync(ChatDomain.AgentUserId);
                 var agentAvatar = agentUser?.AvatarUrl ?? string.Empty;
                 var agentGender = agentUser?.Gender ?? "male";
 
@@ -594,8 +592,8 @@ public class ChatController : ControllerBase
                 {
                     id = agentMessageId,
                     chatId = chat.Id,
-                    senderId = AgentUserId,
-                    senderName = AgentDisplayName,
+                    senderId = ChatDomain.AgentUserId,
+                    senderName = ChatDomain.AgentDisplayName,
                     senderAvatar = agentAvatar,
                     senderGender = agentGender,
                     messageType = "text",
@@ -632,8 +630,8 @@ public class ChatController : ControllerBase
                     {
                         Id = agentMessageId,
                         ChatId = chat.Id,
-                        SenderId = AgentUserId,
-                        SenderName = AgentDisplayName,
+                        SenderId = ChatDomain.AgentUserId,
+                        SenderName = ChatDomain.AgentDisplayName,
                         SenderAvatar = agentAvatar,
                         MessageType = "text",
                         Content = new MessageContent { Text = reply },
@@ -649,8 +647,8 @@ public class ChatController : ControllerBase
                     chat.LastMessage = new ChatLastMessage
                     {
                         Text = reply,
-                        SenderId = AgentUserId,
-                        SenderName = AgentDisplayName,
+                        SenderId = ChatDomain.AgentUserId,
+                        SenderName = ChatDomain.AgentDisplayName,
                         MessageType = "text",
                         Timestamp = DateTime.UtcNow
                     };
@@ -750,7 +748,7 @@ public class ChatController : ControllerBase
             // Notify via SignalR
             await _hubContext.Clients.Group(chatId).SendAsync("ParticipantsAdded", chatId, request.UserIds);
 
-            return Ok(MapToChatDto(chat, userId));
+            return Ok(ChatDomain.ToChatDto(chat, userId, ChatHub.IsUserOnline));
         }
         catch (Exception ex)
         {
@@ -797,80 +795,6 @@ public class ChatController : ControllerBase
         }
     }
 
-    private ChatDto MapToChatDto(Chat chat, string currentUserId)
-    {
-        // For direct chats, get the other participant's name as the chat name
-        string displayName = chat.GroupName ?? "";
-        string displayAvatar = chat.GroupAvatar ?? "";
-
-        if (chat.ChatType == "direct")
-        {
-            var otherParticipant = chat.Participants
-                .FirstOrDefault(p => p.UserId != currentUserId && p.UserId != AgentUserId)
-                ?? chat.Participants.FirstOrDefault(p => p.UserId != currentUserId);
-            if (otherParticipant != null)
-            {
-                displayName = otherParticipant.DisplayName;
-                displayAvatar = otherParticipant.AvatarUrl;
-            }
-        }
-        else
-        {
-            if (string.IsNullOrWhiteSpace(displayName))
-            {
-                var names = chat.Participants
-                    .Where(p => p.UserId != currentUserId && p.UserId != AgentUserId)
-                    .Select(p => p.DisplayName)
-                    .Where(n => !string.IsNullOrWhiteSpace(n))
-                    .ToList();
-
-                var shown = names.Take(4).ToList();
-                var extra = names.Count - shown.Count;
-                displayName = string.Join(" · ", shown) + (extra > 0 ? $" +{extra}" : "");
-                if (string.IsNullOrWhiteSpace(displayName))
-                {
-                    displayName = "Group";
-                }
-            }
-
-            if (string.IsNullOrWhiteSpace(displayAvatar))
-            {
-                displayAvatar = chat.Participants
-                    .FirstOrDefault(p => p.UserId != currentUserId && p.UserId != AgentUserId)?.AvatarUrl
-                    ?? chat.Participants.FirstOrDefault(p => p.UserId != currentUserId)?.AvatarUrl
-                    ?? "";
-            }
-        }
-
-        return new ChatDto
-        {
-            Id = chat.Id,
-            ChatType = chat.ChatType,
-            Name = displayName,
-            Avatar = displayAvatar,
-            AdminIds = chat.AdminIds ?? new List<string>(),
-            Participants = chat.Participants.Select(p => new ParticipantDto
-            {
-                UserId = p.UserId,
-                DisplayName = p.DisplayName,
-                AvatarUrl = p.AvatarUrl,
-                Gender = p.Gender,
-                IsOnline = ChatHub.IsUserOnline(p.UserId)
-            }).ToList(),
-            LastMessage = chat.LastMessage != null ? new LastMessageDto
-            {
-                Text = chat.LastMessage.Text,
-                SenderId = chat.LastMessage.SenderId,
-                SenderName = chat.LastMessage.SenderName,
-                MessageType = chat.LastMessage.MessageType,
-                Timestamp = chat.LastMessage.Timestamp
-            } : null,
-            UnreadCount = 0, // TODO: Implement unread count
-            CreatedAt = chat.CreatedAt,
-            UpdatedAt = chat.UpdatedAt
-        };
-    }
-
     private static string GetMessagePreviewText(string? messageType)
     {
         return messageType switch
@@ -885,7 +809,7 @@ public class ChatController : ControllerBase
 
     private static bool ShouldTriggerAgent(Chat chat, Message message)
     {
-        if (message.SenderId == AgentUserId)
+        if (message.SenderId == ChatDomain.AgentUserId)
             return false;
 
         if (IsDirectChatWithAgent(chat))
@@ -900,7 +824,7 @@ public class ChatController : ControllerBase
     {
         return chat.ChatType == "direct" &&
             chat.Participants.Count == 2 &&
-            chat.Participants.Any(p => p.UserId == AgentUserId);
+            chat.Participants.Any(p => p.UserId == ChatDomain.AgentUserId);
     }
 
     private async Task TryAddMentionedParticipantsAsync(Chat chat, Message message, string currentUserId)
@@ -948,7 +872,7 @@ public class ChatController : ControllerBase
             // Only convert a direct chat into a group when there are 2+ real participants besides the current user.
             var realOtherCount = chat.Participants.Count(p =>
                 p.UserId != currentUserId &&
-                p.UserId != AgentUserId &&
+                p.UserId != ChatDomain.AgentUserId &&
                 !string.IsNullOrWhiteSpace(p.UserId));
 
             if (realOtherCount >= 2)
@@ -969,7 +893,7 @@ public class ChatController : ControllerBase
         await _chatRepository.UpdateAsync(chat);
 
         await _hubContext.Clients.Group(chat.Id)
-            .SendAsync("ChatUpdated", MapToChatDto(chat, currentUserId));
+            .SendAsync("ChatUpdated", ChatDomain.ToChatDto(chat, currentUserId, ChatHub.IsUserOnline));
 
         await _hubContext.Clients.Group(chat.Id)
             .SendAsync("ParticipantsAdded", chat.Id, addedUsers.Select(u => u.Id).ToList());
@@ -977,7 +901,7 @@ public class ChatController : ControllerBase
         foreach (var user in addedUsers)
         {
             await _hubContext.Clients.User(user.Id)
-                .SendAsync("ChatCreated", MapToChatDto(chat, user.Id));
+                .SendAsync("ChatCreated", ChatDomain.ToChatDto(chat, user.Id, ChatHub.IsUserOnline));
         }
     }
 
@@ -993,7 +917,7 @@ public class ChatController : ControllerBase
     private static string BuildGroupName(IEnumerable<ChatParticipant> participants)
     {
         var names = participants
-            .Where(p => p.UserId != AgentUserId)
+            .Where(p => p.UserId != ChatDomain.AgentUserId)
             .Select(p => p.DisplayName)
             .Where(n => !string.IsNullOrWhiteSpace(n))
             .Distinct()
@@ -1004,7 +928,7 @@ public class ChatController : ControllerBase
             return "Group Chat";
 
         var baseName = string.Join(", ", names);
-        if (participants.Count(p => p.UserId != AgentUserId) > names.Count)
+        if (participants.Count(p => p.UserId != ChatDomain.AgentUserId) > names.Count)
             baseName += " +";
 
         return baseName;
@@ -1012,10 +936,10 @@ public class ChatController : ControllerBase
 
     private async Task EnsureAgentParticipantAsync(Chat chat)
     {
-        if (chat.Participants.Any(p => p.UserId == AgentUserId))
+        if (chat.Participants.Any(p => p.UserId == ChatDomain.AgentUserId))
             return;
 
-        var agent = await _userRepository.GetByIdAsync(AgentUserId);
+        var agent = await _userRepository.GetByIdAsync(ChatDomain.AgentUserId);
         if (agent == null)
             return;
 

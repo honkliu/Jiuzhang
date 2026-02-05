@@ -262,12 +262,19 @@ See [Architecture.md](Architecture.md) for detailed data models.
 - `POST /api/auth/reset-password` - Reset password
 
 ### Chats
-- `GET /api/chats` - Get user's chat list
-- `GET /api/chats/{chatId}` - Get chat details
-- `POST /api/chats` - Create new chat
-- `GET /api/chats/{chatId}/messages` - Get messages
-- `POST /api/chats/{chatId}/messages` - Send message
-- `DELETE /api/chats/{chatId}/messages/{messageId}` - Delete message
+- `GET /api/chat` - Get user's chat list
+- `GET /api/chat/{chatId}` - Get chat details
+- `POST /api/chat` - Create new chat
+- `PUT /api/chat/{chatId}` - Update chat (group name/avatar)
+- `DELETE /api/chat/{chatId}` - Delete/leave chat
+
+- `POST /api/chat/{chatId}/hide` - Hide chat for current user
+- `POST /api/chat/{chatId}/unhide` - Unhide chat for current user
+- `POST /api/chat/{chatId}/clear` - Clear chat history for current user
+
+- `GET /api/chat/{chatId}/messages` - Get messages
+- `POST /api/chat/{chatId}/messages` - Send message
+- `DELETE /api/chat/{chatId}/messages/{messageId}` - Delete message
 
 ### Contacts
 - `GET /api/contacts` - Get contact list
