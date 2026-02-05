@@ -1,4 +1,4 @@
-namespace WeChat.API.Services.Interfaces;
+namespace KanKan.API.Services.Interfaces;
 
 public interface IAgentService
 {

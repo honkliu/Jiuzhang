@@ -1,7 +1,7 @@
-using WeChat.API.Models.Entities;
-using WeChat.API.Repositories.Interfaces;
+using KanKan.API.Models.Entities;
+using KanKan.API.Repositories.Interfaces;
 
-namespace WeChat.API.Repositories.Implementations;
+namespace KanKan.API.Repositories.Implementations;
 
 /// <summary>
 /// In-memory implementation of IMessageRepository for development/testing without Cosmos DB

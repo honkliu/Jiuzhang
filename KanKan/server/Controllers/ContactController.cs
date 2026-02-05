@@ -1,11 +1,11 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
-using WeChat.API.Models.DTOs.User;
-using WeChat.API.Models.Entities;
-using WeChat.API.Repositories.Interfaces;
+using KanKan.API.Models.DTOs.User;
+using KanKan.API.Models.Entities;
+using KanKan.API.Repositories.Interfaces;
 
-namespace WeChat.API.Controllers;
+namespace KanKan.API.Controllers;
 
 [Authorize]
 [ApiController]
@@ -46,7 +46,7 @@ public class ContactController : ControllerBase
             {
                 Id = u.Id,
                 Email = u.Email,
-                WeChatId = u.WeChatId,
+                Handle = u.Handle,
                 DisplayName = u.DisplayName,
                 AvatarUrl = u.AvatarUrl,
                 Bio = u.Bio,
@@ -80,7 +80,7 @@ public class ContactController : ControllerBase
             {
                 Id = user.Id,
                 Email = user.Email,
-                WeChatId = user.WeChatId,
+                Handle = user.Handle,
                 DisplayName = user.DisplayName,
                 AvatarUrl = user.AvatarUrl,
                 Bio = user.Bio,
@@ -110,7 +110,7 @@ public class ContactController : ControllerBase
             {
                 Id = u.Id,
                 Email = u.Email,
-                WeChatId = u.WeChatId,
+                Handle = u.Handle,
                 DisplayName = u.DisplayName,
                 AvatarUrl = u.AvatarUrl,
                 Bio = u.Bio,
@@ -148,7 +148,7 @@ public class ContactController : ControllerBase
                     {
                         Id = user.Id,
                         Email = user.Email,
-                        WeChatId = user.WeChatId,
+                        Handle = user.Handle,
                         DisplayName = user.DisplayName,
                         AvatarUrl = user.AvatarUrl,
                         Bio = user.Bio,
@@ -195,7 +195,7 @@ public class ContactController : ControllerBase
                         {
                             Id = fromUser.Id,
                             Email = fromUser.Email,
-                            WeChatId = fromUser.WeChatId,
+                            Handle = fromUser.Handle,
                             DisplayName = fromUser.DisplayName,
                             AvatarUrl = fromUser.AvatarUrl,
                             Bio = fromUser.Bio,
@@ -365,7 +365,7 @@ public class ContactController : ControllerBase
             {
                 Id = user.Id,
                 Email = user.Email,
-                WeChatId = user.WeChatId,
+                Handle = user.Handle,
                 DisplayName = user.DisplayName,
                 AvatarUrl = user.AvatarUrl,
                 Bio = user.Bio,
@@ -410,7 +410,7 @@ public class ContactController : ControllerBase
             {
                 Id = user.Id,
                 Email = user.Email,
-                WeChatId = user.WeChatId,
+                Handle = user.Handle,
                 DisplayName = user.DisplayName,
                 AvatarUrl = user.AvatarUrl,
                 Bio = user.Bio,

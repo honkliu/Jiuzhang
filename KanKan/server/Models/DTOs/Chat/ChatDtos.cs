@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace WeChat.API.Models.DTOs.Chat;
+namespace KanKan.API.Models.DTOs.Chat;
 
 public class ChatDto
 {

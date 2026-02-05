@@ -48,6 +48,21 @@ const chatSlice = createSlice({
     setActiveChat: (state, action: PayloadAction<Chat | null>) => {
       state.activeChat = action.payload;
     },
+    incrementUnread: (state, action: PayloadAction<{ chatId: string; by?: number }>) => {
+      const { chatId, by } = action.payload;
+      const inc = by ?? 1;
+      const idx = state.chats.findIndex((c) => c.id === chatId);
+      if (idx !== -1) {
+        state.chats[idx].unreadCount = (state.chats[idx].unreadCount || 0) + inc;
+      }
+    },
+    clearUnread: (state, action: PayloadAction<{ chatId: string }>) => {
+      const { chatId } = action.payload;
+      const idx = state.chats.findIndex((c) => c.id === chatId);
+      if (idx !== -1) {
+        state.chats[idx].unreadCount = 0;
+      }
+    },
     addMessage: (state, action: PayloadAction<Message>) => {
       const message = action.payload;
       if (!state.messages[message.chatId]) {
@@ -79,15 +94,30 @@ const chatSlice = createSlice({
       }
     },
     addChat: (state, action: PayloadAction<Chat>) => {
-      const exists = state.chats.some((c) => c.id === action.payload.id);
-      if (!exists) {
-        state.chats.unshift(action.payload);
+      const incoming = action.payload;
+      const index = state.chats.findIndex((c) => c.id === incoming.id);
+      if (index === -1) {
+        state.chats.unshift(incoming);
+        return;
       }
+
+      const existingUnread = state.chats[index].unreadCount || 0;
+      const merged: Chat = {
+        ...incoming,
+        unreadCount: Math.max(existingUnread, incoming.unreadCount || 0),
+      };
+
+      state.chats.splice(index, 1);
+      state.chats.unshift(merged);
     },
     updateChat: (state, action: PayloadAction<Chat>) => {
       const index = state.chats.findIndex((c) => c.id === action.payload.id);
       if (index !== -1) {
-        state.chats[index] = action.payload;
+        const existingUnread = state.chats[index].unreadCount || 0;
+        state.chats[index] = {
+          ...action.payload,
+          unreadCount: Math.max(existingUnread, action.payload.unreadCount || 0),
+        };
       }
       if (state.activeChat?.id === action.payload.id) {
         state.activeChat = action.payload;
@@ -224,7 +254,11 @@ const chatSlice = createSlice({
       })
       .addCase(fetchChats.fulfilled, (state, action) => {
         state.loading = false;
-        state.chats = action.payload;
+        const unreadById = new Map(state.chats.map((c) => [c.id, c.unreadCount || 0] as const));
+        state.chats = action.payload.map((chat) => ({
+          ...chat,
+          unreadCount: Math.max(unreadById.get(chat.id) || 0, chat.unreadCount || 0),
+        }));
       })
       .addCase(fetchChats.rejected, (state, action) => {
         state.loading = false;
@@ -256,6 +290,8 @@ const chatSlice = createSlice({
 
 export const {
   setActiveChat,
+  incrementUnread,
+  clearUnread,
   addMessage,
   addChat,
   updateChat,

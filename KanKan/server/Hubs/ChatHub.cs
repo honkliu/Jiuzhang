@@ -3,11 +3,13 @@ using Microsoft.AspNetCore.SignalR;
 using System.Security.Claims;
 using System.Text;
 using System.Text.RegularExpressions;
-using WeChat.API.Models.DTOs.Chat;
-using WeChat.API.Repositories.Interfaces;
-using WeChat.API.Services.Interfaces;
+using KanKan.API.Models.DTOs.Chat;
+using KanKan.API.Models.Entities;
+using KanKan.API.Models.DTOs.Notification;
+using KanKan.API.Repositories.Interfaces;
+using KanKan.API.Services.Interfaces;
 
-namespace WeChat.API.Hubs;
+namespace KanKan.API.Hubs;
 
 [Authorize]
 public class ChatHub : Hub
@@ -18,6 +20,7 @@ public class ChatHub : Hub
     private readonly IChatRepository _chatRepository;
     private readonly IMessageRepository _messageRepository;
     private readonly IUserRepository _userRepository;
+    private readonly INotificationRepository _notificationRepository;
     private readonly IAgentService _agentService;
     private readonly ILogger<ChatHub> _logger;
 
@@ -29,12 +32,14 @@ public class ChatHub : Hub
         IChatRepository chatRepository,
         IMessageRepository messageRepository,
         IUserRepository userRepository,
+        INotificationRepository notificationRepository,
         IAgentService agentService,
         ILogger<ChatHub> logger)
     {
         _chatRepository = chatRepository;
         _messageRepository = messageRepository;
         _userRepository = userRepository;
+        _notificationRepository = notificationRepository;
         _agentService = agentService;
         _logger = logger;
     }
@@ -179,6 +184,45 @@ public class ChatHub : Hub
         // Save to database
         await _messageRepository.CreateAsync(newMessage);
 
+        // Create per-user notifications for recipients
+        var recipientIds = chat.Participants
+            .Select(p => p.UserId)
+            .Where(id => !string.IsNullOrWhiteSpace(id) && id != userId)
+            .Distinct()
+            .ToList();
+
+        foreach (var recipientId in recipientIds)
+        {
+            var notif = new Notification
+            {
+                Id = $"notif_{recipientId}_{newMessage.Id}",
+                UserId = recipientId,
+                Category = "message",
+                ChatId = chat.Id,
+                MessageId = newMessage.Id,
+                EntityId = newMessage.Id,
+                Title = newMessage.SenderName,
+                Body = newMessage.Content.Text ?? "[Media]",
+                IsRead = false,
+                CreatedAt = DateTime.UtcNow,
+                Ttl = 60 * 60 * 24 * 30
+            };
+
+            await _notificationRepository.CreateAsync(notif);
+            await Clients.User(recipientId).SendAsync("NotificationCreated", new NotificationDto
+            {
+                Id = notif.Id,
+                Category = notif.Category,
+                ChatId = notif.ChatId,
+                MessageId = notif.MessageId,
+                Title = notif.Title,
+                Body = notif.Body,
+                IsRead = notif.IsRead,
+                CreatedAt = notif.CreatedAt,
+                ReadAt = notif.ReadAt
+            });
+        }
+
         // Update chat's last message
         chat.LastMessage = new Models.Entities.ChatLastMessage
         {
@@ -190,6 +234,21 @@ public class ChatHub : Hub
         };
         chat.UpdatedAt = DateTime.UtcNow;
         await _chatRepository.UpdateAsync(chat);
+
+        // New activity should bring a hidden conversation back for recipients.
+        var unhiddenRecipientIds = new List<string>();
+        foreach (var participant in chat.Participants.Where(p => p.UserId != userId))
+        {
+            if (!participant.IsHidden)
+                continue;
+
+            await _chatRepository.SetHiddenAsync(chat.Id, participant.UserId, isHidden: false);
+            participant.IsHidden = false;
+            unhiddenRecipientIds.Add(participant.UserId);
+
+            await Clients.User(participant.UserId)
+                .SendAsync("ChatCreated", MapToChatDto(chat, participant.UserId));
+        }
 
         // Create response DTO
         var messageResponse = new MessageDto
@@ -213,8 +272,13 @@ public class ChatHub : Hub
             Reactions = newMessage.Reactions
         };
 
-        // Send to all participants in the chat
-        await Clients.Group(message.ChatId).SendAsync("ReceiveMessage", messageResponse);
+        // Deliver message to all participants regardless of current group membership.
+        var messageRecipientIds = chat.Participants
+            .Select(p => p.UserId)
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Distinct()
+            .ToList();
+        await Clients.Users(messageRecipientIds).SendAsync("ReceiveMessage", messageResponse);
 
         _logger.LogInformation("Message sent to chat {ChatId} by user {UserId}", message.ChatId, userId);
 
@@ -347,6 +411,9 @@ public class ChatHub : Hub
         {
             message.ReadBy.Add(userId);
             await _messageRepository.UpdateAsync(message);
+
+            // Mark the message notification as read for this user, if it exists.
+            await _notificationRepository.MarkReadAsync(userId, $"notif_{userId}_{messageId}");
 
             await Clients.Group(chatId).SendAsync("MessageRead", chatId, messageId, userId);
         }
@@ -492,7 +559,7 @@ public class ChatHub : Hub
             var candidates = await _userRepository.SearchUsersAsync(mention, currentUserId, 10);
             var match = candidates.FirstOrDefault(u =>
                 string.Equals(u.DisplayName, mention, StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(u.WeChatId, mention, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(u.Handle, mention, StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(u.Email.Split('@')[0], mention, StringComparison.OrdinalIgnoreCase));
 
             var userToAdd = match ?? candidates.FirstOrDefault();

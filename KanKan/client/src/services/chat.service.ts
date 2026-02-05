@@ -60,6 +60,10 @@ export interface SendMessageRequest {
   messageType?: string;
   text?: string;
   mediaUrl?: string;
+  thumbnailUrl?: string;
+  duration?: number;
+  fileName?: string;
+  fileSize?: string;
   replyTo?: string;
 }
 
@@ -81,6 +85,14 @@ class ChatService {
 
   async deleteChat(chatId: string): Promise<void> {
     await apiClient.delete(`/chat/${chatId}`);
+  }
+
+  async hideChat(chatId: string): Promise<void> {
+    await apiClient.post(`/chat/${chatId}/hide`, {});
+  }
+
+  async unhideChat(chatId: string): Promise<void> {
+    await apiClient.post(`/chat/${chatId}/unhide`, {});
   }
 
   async getMessages(chatId: string, limit = 50, before?: string): Promise<Message[]> {

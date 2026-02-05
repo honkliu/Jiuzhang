@@ -4,13 +4,14 @@ using Microsoft.AspNetCore.SignalR;
 using System.Security.Claims;
 using System.Text;
 using System.Text.RegularExpressions;
-using WeChat.API.Hubs;
-using WeChat.API.Models.DTOs.Chat;
-using WeChat.API.Models.Entities;
-using WeChat.API.Repositories.Interfaces;
-using WeChat.API.Services.Interfaces;
+using KanKan.API.Hubs;
+using KanKan.API.Models.DTOs.Chat;
+using KanKan.API.Models.DTOs.Notification;
+using KanKan.API.Models.Entities;
+using KanKan.API.Repositories.Interfaces;
+using KanKan.API.Services.Interfaces;
 
-namespace WeChat.API.Controllers;
+namespace KanKan.API.Controllers;
 
 [Authorize]
 [ApiController]
@@ -23,6 +24,7 @@ public class ChatController : ControllerBase
     private readonly IChatRepository _chatRepository;
     private readonly IMessageRepository _messageRepository;
     private readonly IUserRepository _userRepository;
+    private readonly INotificationRepository _notificationRepository;
     private readonly IAgentService _agentService;
     private readonly IHubContext<ChatHub> _hubContext;
     private readonly ILogger<ChatController> _logger;
@@ -31,6 +33,7 @@ public class ChatController : ControllerBase
         IChatRepository chatRepository,
         IMessageRepository messageRepository,
         IUserRepository userRepository,
+        INotificationRepository notificationRepository,
         IAgentService agentService,
         IHubContext<ChatHub> hubContext,
         ILogger<ChatController> logger)
@@ -38,6 +41,7 @@ public class ChatController : ControllerBase
         _chatRepository = chatRepository;
         _messageRepository = messageRepository;
         _userRepository = userRepository;
+        _notificationRepository = notificationRepository;
         _agentService = agentService;
         _hubContext = hubContext;
         _logger = logger;
@@ -84,6 +88,14 @@ public class ChatController : ControllerBase
             if (!chat.Participants.Any(p => p.UserId == userId))
                 return Forbid();
 
+            // If the user explicitly opens a hidden chat, unhide it for them.
+            var me = chat.Participants.FirstOrDefault(p => p.UserId == userId);
+            if (me != null && me.IsHidden)
+            {
+                await _chatRepository.SetHiddenAsync(chatId, userId, isHidden: false);
+                me.IsHidden = false;
+            }
+
             return Ok(MapToChatDto(chat, userId));
         }
         catch (Exception ex)
@@ -115,7 +127,15 @@ public class ChatController : ControllerBase
                 var existingChat = await _chatRepository.GetDirectChatAsync(userId, otherUserId);
 
                 if (existingChat != null)
+                {
+                    var me = existingChat.Participants.FirstOrDefault(p => p.UserId == userId);
+                    if (me != null && me.IsHidden)
+                    {
+                        await _chatRepository.SetHiddenAsync(existingChat.Id, userId, isHidden: false);
+                        me.IsHidden = false;
+                    }
                     return Ok(MapToChatDto(existingChat, userId));
+                }
             }
 
             // Get all participant users
@@ -135,7 +155,7 @@ public class ChatController : ControllerBase
                         Email = "wa@assistant.local",
                         EmailVerified = true,
                         PasswordHash = BCrypt.Net.BCrypt.HashPassword(Guid.NewGuid().ToString()),
-                        WeChatId = "wa_1003",
+                        Handle = "assistant_1003",
                         DisplayName = AgentDisplayName,
                         AvatarUrl = "https://i.pravatar.cc/150?img=3",
                         Bio = "AI assistant",
@@ -295,6 +315,60 @@ public class ChatController : ControllerBase
     }
 
     /// <summary>
+    /// Hide a chat for the current user (server-side).
+    /// </summary>
+    [HttpPost("{chatId}/hide")]
+    public async Task<IActionResult> HideChat(string chatId)
+    {
+        try
+        {
+            var userId = GetUserId();
+            var chat = await _chatRepository.GetByIdAsync(chatId);
+
+            if (chat == null)
+                return NotFound(new { message = "Chat not found" });
+
+            if (!chat.Participants.Any(p => p.UserId == userId))
+                return Forbid();
+
+            await _chatRepository.SetHiddenAsync(chatId, userId, isHidden: true);
+            return Ok(new { message = "Chat hidden" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to hide chat {ChatId}", chatId);
+            return StatusCode(500, new { message = "Failed to hide chat" });
+        }
+    }
+
+    /// <summary>
+    /// Unhide a chat for the current user (server-side).
+    /// </summary>
+    [HttpPost("{chatId}/unhide")]
+    public async Task<IActionResult> UnhideChat(string chatId)
+    {
+        try
+        {
+            var userId = GetUserId();
+            var chat = await _chatRepository.GetByIdAsync(chatId);
+
+            if (chat == null)
+                return NotFound(new { message = "Chat not found" });
+
+            if (!chat.Participants.Any(p => p.UserId == userId))
+                return Forbid();
+
+            await _chatRepository.SetHiddenAsync(chatId, userId, isHidden: false);
+            return Ok(new { message = "Chat unhidden" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to unhide chat {ChatId}", chatId);
+            return StatusCode(500, new { message = "Failed to unhide chat" });
+        }
+    }
+
+    /// <summary>
     /// Get messages for a chat (paginated)
     /// </summary>
     [HttpGet("{chatId}/messages")]
@@ -412,6 +486,21 @@ public class ChatController : ControllerBase
             chat.UpdatedAt = DateTime.UtcNow;
             await _chatRepository.UpdateAsync(chat);
 
+            // New activity should bring a hidden conversation back for recipients.
+            var unhiddenRecipientIds = new List<string>();
+            foreach (var participant in chat.Participants.Where(p => p.UserId != userId))
+            {
+                if (!participant.IsHidden)
+                    continue;
+
+                await _chatRepository.SetHiddenAsync(chat.Id, participant.UserId, isHidden: false);
+                participant.IsHidden = false;
+                unhiddenRecipientIds.Add(participant.UserId);
+
+                await _hubContext.Clients.User(participant.UserId)
+                    .SendAsync("ChatCreated", MapToChatDto(chat, participant.UserId));
+            }
+
             var messageDto = new MessageDto
             {
                 Id = message.Id,
@@ -433,8 +522,14 @@ public class ChatController : ControllerBase
                 Reactions = message.Reactions
             };
 
-            // Broadcast via SignalR
-            await _hubContext.Clients.Group(chatId).SendAsync("ReceiveMessage", messageDto);
+            // Deliver message to all participants regardless of whether they are currently
+            // joined to the chat's SignalR group (the client may leave non-active chats).
+            var recipientIds = chat.Participants
+                .Select(p => p.UserId)
+                .Where(id => !string.IsNullOrWhiteSpace(id))
+                .Distinct()
+                .ToList();
+            await _hubContext.Clients.Users(recipientIds).SendAsync("ReceiveMessage", messageDto);
 
             // Add participants based on @mentions (e.g., @carol)
             await TryAddMentionedParticipantsAsync(chat, message, userId);
@@ -666,6 +761,30 @@ public class ChatController : ControllerBase
                 displayAvatar = otherParticipant.AvatarUrl;
             }
         }
+        else
+        {
+            if (string.IsNullOrWhiteSpace(displayName))
+            {
+                var names = chat.Participants
+                    .Where(p => p.UserId != currentUserId)
+                    .Select(p => p.DisplayName)
+                    .Where(n => !string.IsNullOrWhiteSpace(n))
+                    .ToList();
+
+                var shown = names.Take(4).ToList();
+                var extra = names.Count - shown.Count;
+                displayName = string.Join(" · ", shown) + (extra > 0 ? $" +{extra}" : "");
+                if (string.IsNullOrWhiteSpace(displayName))
+                {
+                    displayName = "Group";
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(displayAvatar))
+            {
+                displayAvatar = chat.Participants.FirstOrDefault(p => p.UserId != currentUserId)?.AvatarUrl ?? "";
+            }
+        }
 
         return new ChatDto
         {
@@ -742,7 +861,7 @@ public class ChatController : ControllerBase
             var candidates = await _userRepository.SearchUsersAsync(mention, currentUserId, 10);
             var match = candidates.FirstOrDefault(u =>
                 string.Equals(u.DisplayName, mention, StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(u.WeChatId, mention, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(u.Handle, mention, StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(u.Email.Split('@')[0], mention, StringComparison.OrdinalIgnoreCase));
 
             var userToAdd = match ?? candidates.FirstOrDefault();

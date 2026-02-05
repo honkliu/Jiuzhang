@@ -1,7 +1,7 @@
-using WeChat.API.Models.Entities;
-using WeChat.API.Repositories.Interfaces;
+using KanKan.API.Models.Entities;
+using KanKan.API.Repositories.Interfaces;
 
-namespace WeChat.API.Repositories.Implementations;
+namespace KanKan.API.Repositories.Implementations;
 
 /// <summary>
 /// In-memory implementation of IChatRepository for development/testing without Cosmos DB
@@ -25,7 +25,7 @@ public class InMemoryChatRepository : IChatRepository
         lock (_lock)
         {
             var chats = _chats.Values
-                .Where(c => c.Participants.Any(p => p.UserId == userId))
+                .Where(c => c.Participants.Any(p => p.UserId == userId && !p.IsHidden))
                 .OrderByDescending(c => c.UpdatedAt)
                 .ToList();
             return Task.FromResult(chats);
@@ -62,6 +62,22 @@ public class InMemoryChatRepository : IChatRepository
             chat.UpdatedAt = DateTime.UtcNow;
             _chats[chat.Id] = chat;
             return Task.FromResult(chat);
+        }
+    }
+
+    public Task SetHiddenAsync(string chatId, string userId, bool isHidden)
+    {
+        lock (_lock)
+        {
+            if (_chats.TryGetValue(chatId, out var chat))
+            {
+                var participant = chat.Participants.FirstOrDefault(p => p.UserId == userId);
+                if (participant != null)
+                {
+                    participant.IsHidden = isHidden;
+                }
+            }
+            return Task.CompletedTask;
         }
     }
 

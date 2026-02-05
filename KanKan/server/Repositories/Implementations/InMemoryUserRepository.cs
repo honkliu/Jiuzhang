@@ -1,7 +1,7 @@
-using WeChat.API.Repositories.Interfaces;
-using UserEntity = WeChat.API.Models.Entities.User;
+using KanKan.API.Repositories.Interfaces;
+using UserEntity = KanKan.API.Models.Entities.User;
 
-namespace WeChat.API.Repositories.Implementations;
+namespace KanKan.API.Repositories.Implementations;
 
 /// <summary>
 /// In-memory implementation of IUserRepository for development/testing without Cosmos DB

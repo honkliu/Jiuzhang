@@ -1,6 +1,6 @@
-using WeChat.API.Models.Entities;
+using KanKan.API.Models.Entities;
 
-namespace WeChat.API.Repositories.Interfaces;
+namespace KanKan.API.Repositories.Interfaces;
 
 public interface IMessageRepository
 {

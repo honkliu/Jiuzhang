@@ -1,6 +1,6 @@
 {
   "profiles": {
-    "WeChat.API": {
+    "KanKan.API": {
       "commandName": "Project",
       "dotnetRunMessages": true,
       "applicationUrl": "http://localhost:5001",

@@ -1,4 +1,4 @@
-# WeChat Clone - Real-time Messaging Application
+# KanKan - Real-time Messaging Application
 
 A full-stack real-time messaging application built with React, .NET Core, SignalR, and Azure Cosmos DB.
 
@@ -76,7 +76,7 @@ KanKan/
 │   ├── Repositories/      # Data access
 │   ├── Models/            # Data models
 │   ├── Middleware/        # Custom middleware
-│   └── WeChat.API.csproj
+│   └── KanKan.API.csproj
 │
 ├── Architecture.md         # System architecture documentation
 └── README.md              # This file
@@ -105,7 +105,7 @@ VITE_SIGNALR_URL=http://localhost:5001/hub/chat
   "CosmosDb": {
     "Endpoint": "your-cosmos-db-endpoint",
     "Key": "your-cosmos-db-key",
-    "DatabaseName": "WeChatDB"
+   "DatabaseName": "KanKanDB"
   },
   "Jwt": {
     "Secret": "your-jwt-secret-key-at-least-32-characters",
@@ -116,7 +116,7 @@ VITE_SIGNALR_URL=http://localhost:5001/hub/chat
     "Provider": "SendGrid",
     "ApiKey": "your-sendgrid-api-key",
     "FromEmail": "noreply@example.com",
-    "FromName": "WeChat Clone"
+   "FromName": "KanKan"
   }
 }
 ```
@@ -214,24 +214,24 @@ See [Architecture.md](Architecture.md) for detailed data models.
 1. **Create Azure Resources:**
    ```bash
    # Create Resource Group
-   az group create --name wechat-rg --location eastus
+   az group create --name kankan-rg --location eastus
 
    # Create App Service Plan
-   az appservice plan create --name wechat-plan --resource-group wechat-rg --sku B1
+   az appservice plan create --name kankan-plan --resource-group kankan-rg --sku B1
 
    # Create Web App
-   az webapp create --name wechat-api --resource-group wechat-rg --plan wechat-plan
+   az webapp create --name kankan-api --resource-group kankan-rg --plan kankan-plan
 
    # Create Cosmos DB
-   az cosmosdb create --name wechat-db --resource-group wechat-rg
+   az cosmosdb create --name kankan-db --resource-group kankan-rg
 
    # Create Storage Account
-   az storage account create --name wechatstorage --resource-group wechat-rg
+   az storage account create --name kankanstorage --resource-group kankan-rg
    ```
 
 2. **Configure App Settings:**
    ```bash
-   az webapp config appsettings set --name wechat-api --resource-group wechat-rg --settings \
+   az webapp config appsettings set --name kankan-api --resource-group kankan-rg --settings \
      CosmosDb__Endpoint=<endpoint> \
      CosmosDb__Key=<key> \
      Jwt__Secret=<secret>
@@ -242,12 +242,12 @@ See [Architecture.md](Architecture.md) for detailed data models.
    # Deploy backend
    cd server
    dotnet publish -c Release
-   az webapp deploy --resource-group wechat-rg --name wechat-api --src-path ./bin/Release/net8.0/publish
+   az webapp deploy --resource-group kankan-rg --name kankan-api --src-path ./bin/Release/net8.0/publish
 
    # Deploy frontend (to Azure Static Web Apps or Blob Storage + CDN)
    cd ../client
    npm run build
-   az storage blob upload-batch --account-name wechatstorage --source ./build --destination '$web'
+   az storage blob upload-batch --account-name kankanstorage --source ./build --destination '$web'
    ```
 
 ## 📊 API Endpoints
@@ -319,7 +319,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## 🙏 Acknowledgments
 
-- Inspired by WeChat messaging platform
+- Inspired by modern messaging platforms
 - Built with modern web technologies
 - Azure cloud infrastructure
 

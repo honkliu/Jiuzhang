@@ -6,7 +6,6 @@ import {
   Avatar,
   Typography,
   IconButton,
-  Button,
   TextField,
   SxProps,
   Theme,
@@ -15,17 +14,17 @@ import {
 import {
   ArrowBack as ArrowBackIcon,
   Send as SendIcon,
-  AttachFile as AttachFileIcon,
   EmojiEmotions as EmojiIcon,
   Menu as MenuIcon,
+  PushPin as PushPinIcon,
 } from '@mui/icons-material';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState, AppDispatch } from '@/store';
 import { fetchMessages, addMessage } from '@/store/chatSlice';
 import { MessageBubble } from './MessageBubble';
 import { signalRService } from '@/services/signalr.service';
-import { mediaService } from '@/services/media.service';
 import { chatService } from '@/services/chat.service';
+import { mediaService } from '@/services/media.service';
 
 interface ChatWindowProps {
   onBack?: () => void;
@@ -132,46 +131,52 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
     }
   };
 
+  const guessMessageType = (file: File): 'image' | 'video' | 'voice' | 'file' => {
+    const type = file.type || '';
+    if (type.startsWith('image/')) return 'image';
+    if (type.startsWith('video/')) return 'video';
+    if (type.startsWith('audio/')) return 'voice';
+    return 'file';
+  };
+
+  const handlePickFile = () => {
+    if (uploading || sending) return;
+    fileInputRef.current?.click();
+  };
+
+  const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !activeChat) return;
+
+    try {
+      setUploading(true);
+      const upload = await mediaService.upload(file);
+      const messageType = guessMessageType(file);
+
+      const message = await chatService.sendMessage(activeChat.id, {
+        messageType,
+        mediaUrl: upload.url,
+        fileName: upload.fileName || file.name,
+        fileSize: String(upload.size ?? file.size),
+      });
+
+      dispatch(addMessage(message));
+    } catch (error) {
+      console.error('Failed to upload/send file:', error);
+      alert('Failed to send file. Please try again.');
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      inputRef.current?.focus();
+    }
+  };
+
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
     }
   };
-
-  const handleAttachClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!activeChat || !e.target.files || e.target.files.length === 0) return;
-
-    const file = e.target.files[0];
-    e.target.value = '';
-
-    setUploading(true);
-    try {
-      const upload = await mediaService.upload(file);
-
-      const contentType = file.type || upload.contentType;
-      let messageType: 'image' | 'video' | 'voice' | 'file' = 'file';
-
-      if (contentType.startsWith('image/')) messageType = 'image';
-      else if (contentType.startsWith('video/')) messageType = 'video';
-      else if (contentType.startsWith('audio/')) messageType = 'voice';
-
-      const message = await chatService.sendMessage(activeChat.id, {
-        messageType,
-        mediaUrl: upload.url,
-      });
-      dispatch(addMessage(message));
-    } catch (error) {
-      console.error('Failed to upload file:', error);
-    } finally {
-      setUploading(false);
-    }
-  };
-
 
   // Get online participant for direct chats
   const otherParticipant = activeChat?.chatType === 'direct'
@@ -290,12 +295,24 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
           borderColor: 'divider',
         }}
       >
+        <input
+          ref={fileInputRef}
+          type="file"
+          style={{ display: 'none' }}
+          onChange={handleFileSelected}
+        />
         <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
-          <IconButton size="small" onClick={handleAttachClick} disabled={uploading}>
-            <AttachFileIcon />
-          </IconButton>
           <IconButton size="small" disabled>
             <EmojiIcon />
+          </IconButton>
+          <IconButton
+            size="small"
+            onClick={handlePickFile}
+            disabled={uploading || sending}
+            title="Attach"
+            aria-label="Attach"
+          >
+            {uploading ? <CircularProgress size={18} /> : <PushPinIcon />}
           </IconButton>
           <TextField
             inputRef={inputRef}
@@ -327,17 +344,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
           >
             {sending ? <CircularProgress size={24} /> : <SendIcon />}
           </IconButton>
-        </Box>
-        <input
-          ref={fileInputRef}
-          type="file"
-          hidden
-          onChange={handleFileChange}
-        />
-        <Box sx={{ mt: 1, display: 'flex', gap: 1 }}>
-          <Button size="small" onClick={handleAttachClick} disabled={uploading}>
-            {uploading ? 'Uploading...' : 'Attach File'}
-          </Button>
         </Box>
       </Box>
     </Box>

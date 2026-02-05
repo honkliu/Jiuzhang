@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Box, Avatar, Typography, Paper } from '@mui/material';
 import { useLanguage } from '@/i18n/LanguageContext';
-import { DoneAll as DoneAllIcon, Done as DoneIcon } from '@mui/icons-material';
+import { FiberManualRecord as FiberManualRecordIcon } from '@mui/icons-material';
 import { Message } from '@/services/chat.service';
 import { format } from 'date-fns';
 
@@ -109,10 +109,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
           maxWidth: '70%',
           px: 2,
           py: 1,
-          borderRadius: 2,
-          bgcolor: isOwn
-            ? 'rgba(7, 193, 96, 0.9)'
-            : 'rgba(255, 255, 255, 0.6)',
+          bgcolor: isOwn ? 'rgba(7, 193, 96, 0.9)' : 'rgba(255, 255, 255, 0.6)',
           color: isOwn ? 'primary.contrastText' : 'text.primary',
           borderTopLeftRadius: !isOwn && !showAvatar ? 4 : undefined,
           borderTopRightRadius: isOwn && !showAvatar ? 4 : undefined,
@@ -175,23 +172,14 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
             mt: 0.5,
           }}
         >
-          <Typography
-            variant="caption"
-            sx={{
-              opacity: 0.7,
-              fontSize: '0.7rem',
-            }}
-          >
+          <Typography variant="caption" sx={{ opacity: 0.7, fontSize: '0.7rem' }}>
             {formatTime(message.timestamp)}
           </Typography>
-          {isOwn && (
-            message.readBy.length > 0 ? (
-              <DoneAllIcon sx={{ fontSize: 14, color: 'info.light' }} />
-            ) : message.deliveredTo.length > 0 ? (
-              <DoneAllIcon sx={{ fontSize: 14, opacity: 0.7 }} />
-            ) : (
-              <DoneIcon sx={{ fontSize: 14, opacity: 0.7 }} />
-            )
+          {isOwn && !isAgent && !isDraft && message.readBy.length === 0 && (
+            <FiberManualRecordIcon
+              sx={{ fontSize: 10, color: 'error.main' }}
+              titleAccess="Unread"
+            />
           )}
         </Box>
       </Paper>

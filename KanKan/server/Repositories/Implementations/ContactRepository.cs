@@ -1,8 +1,8 @@
 using Microsoft.Azure.Cosmos;
-using WeChat.API.Models.Entities;
-using WeChat.API.Repositories.Interfaces;
+using KanKan.API.Models.Entities;
+using KanKan.API.Repositories.Interfaces;
 
-namespace WeChat.API.Repositories.Implementations;
+namespace KanKan.API.Repositories.Implementations;
 
 public class ContactRepository : IContactRepository
 {
@@ -10,7 +10,7 @@ public class ContactRepository : IContactRepository
 
     public ContactRepository(CosmosClient cosmosClient, IConfiguration configuration)
     {
-        var databaseName = configuration["CosmosDb:DatabaseName"] ?? "WeChatDB";
+        var databaseName = configuration["CosmosDb:DatabaseName"] ?? "KanKanDB";
         var containerName = configuration["CosmosDb:Containers:Contacts"] ?? "Contacts";
         _container = cosmosClient.GetContainer(databaseName, containerName);
     }

@@ -1,4 +1,4 @@
-namespace WeChat.API.Models.Entities;
+namespace KanKan.API.Models.Entities;
 
 public class Chat
 {
@@ -20,6 +20,7 @@ public class ChatParticipant
     public string DisplayName { get; set; } = string.Empty;
     public string AvatarUrl { get; set; } = string.Empty;
     public DateTime JoinedAt { get; set; }
+    public bool IsHidden { get; set; }
 }
 
 public class ChatLastMessage

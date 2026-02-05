@@ -1,9 +1,9 @@
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
-using WeChat.API.Services.Interfaces;
+using KanKan.API.Services.Interfaces;
 
-namespace WeChat.API.Services.Implementations;
+namespace KanKan.API.Services.Implementations;
 
 public class OpenAiAgentService : IAgentService
 {

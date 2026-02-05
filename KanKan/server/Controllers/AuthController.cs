@@ -1,12 +1,12 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
-using WeChat.API.Models.DTOs.Auth;
-using WeChat.API.Models.DTOs.User;
-using WeChat.API.Services.Interfaces;
-using UserEntity = WeChat.API.Models.Entities.User;
+using KanKan.API.Models.DTOs.Auth;
+using KanKan.API.Models.DTOs.User;
+using KanKan.API.Services.Interfaces;
+using UserEntity = KanKan.API.Models.Entities.User;
 
-namespace WeChat.API.Controllers;
+namespace KanKan.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
@@ -326,7 +326,7 @@ public class AuthController : ControllerBase
         {
             Id = user.Id,
             Email = user.Email,
-            WeChatId = user.WeChatId,
+            Handle = user.Handle,
             DisplayName = user.DisplayName,
             AvatarUrl = user.AvatarUrl,
             Bio = user.Bio,

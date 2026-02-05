@@ -1,6 +1,6 @@
-using UserEntity = WeChat.API.Models.Entities.User;
+using UserEntity = KanKan.API.Models.Entities.User;
 
-namespace WeChat.API.Repositories.Interfaces;
+namespace KanKan.API.Repositories.Interfaces;
 
 public interface IUserRepository
 {

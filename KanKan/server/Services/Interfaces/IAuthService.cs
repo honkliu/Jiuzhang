@@ -1,8 +1,8 @@
-using WeChat.API.Models.DTOs.Auth;
-using WeChat.API.Models.DTOs.User;
-using UserEntity = WeChat.API.Models.Entities.User;
+using KanKan.API.Models.DTOs.Auth;
+using KanKan.API.Models.DTOs.User;
+using UserEntity = KanKan.API.Models.Entities.User;
 
-namespace WeChat.API.Services.Interfaces;
+namespace KanKan.API.Services.Interfaces;
 
 public interface IAuthService
 {

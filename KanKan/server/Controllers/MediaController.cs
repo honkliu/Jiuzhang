@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace WeChat.API.Controllers;
+namespace KanKan.API.Controllers;
 
 [Authorize]
 [ApiController]

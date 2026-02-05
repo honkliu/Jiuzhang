@@ -1,4 +1,4 @@
-namespace WeChat.API.Models.Entities;
+namespace KanKan.API.Models.Entities;
 
 public class Moment
 {

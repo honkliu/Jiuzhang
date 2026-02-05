@@ -7,13 +7,19 @@ import {
   Avatar,
   Typography,
   IconButton,
+  Badge,
+  Menu,
+  Divider,
+  CircularProgress,
 } from '@mui/material';
-import { Logout as LogoutIcon } from '@mui/icons-material';
+import { Logout as LogoutIcon, Notifications as NotificationsIcon } from '@mui/icons-material';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useSelector } from 'react-redux';
-import { RootState } from '@/store';
+import { useDispatch, useSelector } from 'react-redux';
+import { RootState, AppDispatch } from '@/store';
 import { authService } from '@/services/auth.service';
 import { useLanguage } from '@/i18n/LanguageContext';
+import { fetchNotifications, fetchUnreadNotificationCount } from '@/store/notificationsSlice';
+import { formatDistanceToNow } from 'date-fns';
 
 const navItems = [
   { label: 'Chats', path: '/chats' },
@@ -25,8 +31,33 @@ const navItems = [
 export const AppHeader: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const dispatch = useDispatch<AppDispatch>();
   const { user } = useSelector((state: RootState) => state.auth);
+  const { unreadCount: unreadNotifications, items, loading, error } = useSelector(
+    (state: RootState) => state.notifications
+  );
   const { t, toggleLanguage, language } = useLanguage();
+  const [notificationsAnchorEl, setNotificationsAnchorEl] = React.useState<null | HTMLElement>(null);
+
+  const notificationsOpen = Boolean(notificationsAnchorEl);
+
+  const handleOpenNotifications = (e: React.MouseEvent<HTMLElement>) => {
+    setNotificationsAnchorEl(e.currentTarget);
+    dispatch(fetchUnreadNotificationCount());
+    dispatch(fetchNotifications({ limit: 25 }));
+  };
+
+  const handleCloseNotifications = () => {
+    setNotificationsAnchorEl(null);
+  };
+
+  const formatWhen = (iso: string) => {
+    try {
+      return formatDistanceToNow(new Date(iso), { addSuffix: true });
+    } catch {
+      return '';
+    }
+  };
 
   const handleLogout = async () => {
     try {
@@ -40,14 +71,11 @@ export const AppHeader: React.FC = () => {
   return (
     <AppBar position="fixed" color="default" elevation={0}>
       <Toolbar sx={{ gap: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexGrow: 1 }}>
-          <Avatar src={user?.avatarUrl} variant="rounded" sx={{ width: 32, height: 32 }}>
-            {user?.displayName?.[0]}
-          </Avatar>
-          <Typography variant="subtitle1" fontWeight="bold">
-            {user?.displayName || t('appName')}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexGrow: 1, minWidth: 0 }}>
+          <Typography variant="subtitle1" fontWeight="bold" sx={{ mr: 1, whiteSpace: 'nowrap' }}>
+            {t('appName')}
           </Typography>
-          <Box sx={{ display: 'flex', gap: 1, ml: 2 }}>
+          <Box sx={{ display: 'flex', gap: 1, overflow: 'hidden' }}>
             {navItems.map((item) => (
               <Button
                 key={item.path}
@@ -59,12 +87,135 @@ export const AppHeader: React.FC = () => {
             ))}
           </Box>
         </Box>
-        <Button onClick={toggleLanguage} variant="outlined" size="small">
-          {language === 'en' ? '中文' : 'EN'}
-        </Button>
-        <IconButton onClick={handleLogout} title="Logout">
-          <LogoutIcon />
-        </IconButton>
+
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 0.5 }}>
+            <Avatar src={user?.avatarUrl} variant="rounded" sx={{ width: 32, height: 32 }}>
+              {user?.displayName?.[0]}
+            </Avatar>
+            <Typography
+              variant="subtitle2"
+              fontWeight="bold"
+              sx={{ maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+            >
+              {user?.displayName || ''}
+            </Typography>
+          </Box>
+
+          <Button onClick={toggleLanguage} variant="outlined" size="small">
+            {language === 'en' ? '中文' : 'EN'}
+          </Button>
+          <IconButton title="Notifications" onClick={handleOpenNotifications}>
+            <Badge
+              color="error"
+              badgeContent={unreadNotifications > 99 ? '99+' : unreadNotifications}
+              invisible={unreadNotifications <= 0}
+            >
+              <NotificationsIcon />
+            </Badge>
+          </IconButton>
+          <IconButton onClick={handleLogout} title="Logout">
+            <LogoutIcon />
+          </IconButton>
+        </Box>
+
+        <Menu
+          anchorEl={notificationsAnchorEl}
+          open={notificationsOpen}
+          onClose={handleCloseNotifications}
+          transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+          PaperProps={{
+            sx: {
+              width: 420,
+              maxWidth: '92vw',
+              maxHeight: '70vh',
+            },
+          }}
+        >
+          <Box sx={{ px: 2, py: 1.25, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Typography variant="subtitle1" fontWeight="bold">
+              Notifications
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {unreadNotifications > 0 ? `${unreadNotifications} unread` : 'All caught up'}
+            </Typography>
+          </Box>
+          <Divider />
+
+          {loading ? (
+            <Box sx={{ px: 2, py: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <CircularProgress size={20} />
+            </Box>
+          ) : error ? (
+            <Box sx={{ px: 2, py: 2 }}>
+              <Typography variant="body2" color="error.main">
+                {error}
+              </Typography>
+            </Box>
+          ) : items.length === 0 ? (
+            <Box sx={{ px: 2, py: 2 }}>
+              <Typography variant="body2" color="text.secondary">
+                No notifications
+              </Typography>
+            </Box>
+          ) : (
+            items.slice(0, 25).map((n) => (
+              <Box
+                key={n.id}
+                onClick={handleCloseNotifications}
+                role="menuitem"
+                tabIndex={0}
+                sx={{
+                  px: 2,
+                  py: 1.25,
+                  cursor: 'pointer',
+                  bgcolor: n.isRead ? 'transparent' : 'rgba(211, 47, 47, 0.04)',
+                  '&:hover': { bgcolor: 'action.hover' },
+                  display: 'flex',
+                  gap: 1,
+                }}
+              >
+                <Box
+                  sx={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: 999,
+                    bgcolor: n.isRead ? 'transparent' : 'error.main',
+                    mt: 0.75,
+                    flexShrink: 0,
+                  }}
+                />
+                <Box sx={{ minWidth: 0, flexGrow: 1 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1 }}>
+                    <Typography
+                      variant="body2"
+                      fontWeight={n.isRead ? 500 : 700}
+                      sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                    >
+                      {n.title}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
+                      {formatWhen(n.createdAt)}
+                    </Typography>
+                  </Box>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{
+                      overflow: 'hidden',
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                    }}
+                  >
+                    {n.body}
+                  </Typography>
+                </Box>
+              </Box>
+            ))
+          )}
+        </Menu>
       </Toolbar>
     </AppBar>
   );

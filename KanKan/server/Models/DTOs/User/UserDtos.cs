@@ -1,10 +1,10 @@
-namespace WeChat.API.Models.DTOs.User;
+namespace KanKan.API.Models.DTOs.User;
 
 public class UserDto
 {
     public string Id { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
-    public string WeChatId { get; set; } = string.Empty;
+    public string Handle { get; set; } = string.Empty;
     public string DisplayName { get; set; } = string.Empty;
     public string AvatarUrl { get; set; } = string.Empty;
     public string Bio { get; set; } = string.Empty;

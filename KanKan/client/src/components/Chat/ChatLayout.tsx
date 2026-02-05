@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { Box, useMediaQuery, useTheme } from '@mui/material';
+import React, { useEffect, useRef, useState } from 'react';
+import { Box, IconButton, useMediaQuery, useTheme } from '@mui/material';
+import { KeyboardDoubleArrowRight as KeyboardDoubleArrowRightIcon } from '@mui/icons-material';
 import { useDispatch, useSelector } from 'react-redux';
 import { ChatSidebar } from './ChatSidebar';
 import { ChatWindow } from './ChatWindow';
@@ -12,6 +13,7 @@ import {
   addMessage,
   addChat,
   updateChat,
+  incrementUnread,
   setTypingUser,
   updateUserOnlineStatus,
   markMessageDelivered,
@@ -21,18 +23,39 @@ import {
   finalizeAgentMessage,
   setDraft,
 } from '@/store/chatSlice';
+import { addNotification, fetchUnreadNotificationCount } from '@/store/notificationsSlice';
+import { chatService } from '@/services/chat.service';
 
 export const ChatLayout: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const dispatch = useDispatch<AppDispatch>();
-  const { activeChat } = useSelector((state: RootState) => state.chat);
+  const { activeChat, chats } = useSelector((state: RootState) => state.chat);
+  const myUserId = useSelector((state: RootState) => state.auth.user?.id);
   const [showSidebar, setShowSidebar] = useState(true);
   const [newChatOpen, setNewChatOpen] = useState(false);
+
+  const activeChatIdRef = useRef<string | null>(null);
+  const myUserIdRef = useRef<string | null>(null);
+  const chatIdsRef = useRef<Set<string>>(new Set());
+  const inFlightChatFetchRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    activeChatIdRef.current = activeChat?.id ?? null;
+  }, [activeChat?.id]);
+
+  useEffect(() => {
+    myUserIdRef.current = myUserId ?? null;
+  }, [myUserId]);
+
+  useEffect(() => {
+    chatIdsRef.current = new Set(chats.map((c) => c.id));
+  }, [chats]);
 
   useEffect(() => {
     // Fetch chats on mount
     dispatch(fetchChats());
+    dispatch(fetchUnreadNotificationCount());
 
     // Connect to SignalR
     const connectSignalR = async () => {
@@ -48,6 +71,32 @@ export const ChatLayout: React.FC = () => {
     // Set up SignalR event handlers
     const unsubMessage = signalRService.onMessage((message) => {
       dispatch(addMessage(message));
+
+      // New message indicator: increment unread for inactive chats.
+      const activeChatId = activeChatIdRef.current;
+      const currentUserId = myUserIdRef.current;
+      if (message.chatId !== activeChatId && message.senderId !== currentUserId) {
+        if (chatIdsRef.current.has(message.chatId)) {
+          dispatch(incrementUnread({ chatId: message.chatId, by: 1 }));
+          return;
+        }
+
+        if (inFlightChatFetchRef.current.has(message.chatId)) return;
+        inFlightChatFetchRef.current.add(message.chatId);
+
+        void (async () => {
+          try {
+            const chat = await chatService.getChat(message.chatId);
+            dispatch(addChat(chat));
+            dispatch(incrementUnread({ chatId: message.chatId, by: 1 }));
+          } catch (error) {
+            console.error('Failed to fetch chat for incoming message:', error);
+            dispatch(fetchChats());
+          } finally {
+            inFlightChatFetchRef.current.delete(message.chatId);
+          }
+        })();
+      }
     });
 
     const unsubTyping = signalRService.onTyping((chatId, userId, userName, isTyping) => {
@@ -78,8 +127,36 @@ export const ChatLayout: React.FC = () => {
       dispatch(markMessageRead({ chatId, messageId, userId }));
     });
 
+    const unsubNotification = signalRService.onNotificationCreated((notification) => {
+      dispatch(addNotification(notification));
+    });
     const unsubAgentStart = signalRService.onAgentMessageStart((message) => {
       dispatch(startAgentMessage(message));
+
+      const activeChatId = activeChatIdRef.current;
+      const currentUserId = myUserIdRef.current;
+      if (message.chatId !== activeChatId && message.senderId !== currentUserId) {
+        if (chatIdsRef.current.has(message.chatId)) {
+          dispatch(incrementUnread({ chatId: message.chatId, by: 1 }));
+          return;
+        }
+
+        if (inFlightChatFetchRef.current.has(message.chatId)) return;
+        inFlightChatFetchRef.current.add(message.chatId);
+
+        void (async () => {
+          try {
+            const chat = await chatService.getChat(message.chatId);
+            dispatch(addChat(chat));
+            dispatch(incrementUnread({ chatId: message.chatId, by: 1 }));
+          } catch (error) {
+            console.error('Failed to fetch chat for incoming agent message:', error);
+            dispatch(fetchChats());
+          } finally {
+            inFlightChatFetchRef.current.delete(message.chatId);
+          }
+        })();
+      }
     });
 
     const unsubAgentChunk = signalRService.onAgentMessageChunk((chatId, messageId, chunk) => {
@@ -104,6 +181,7 @@ export const ChatLayout: React.FC = () => {
       unsubChatUpdated();
       unsubDelivered();
       unsubRead();
+      unsubNotification();
       unsubAgentStart();
       unsubAgentChunk();
       unsubAgentComplete();
@@ -124,33 +202,58 @@ export const ChatLayout: React.FC = () => {
   };
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
       <AppHeader />
       <Box
         sx={{
           display: 'flex',
-          flexGrow: 1,
-          pt: 8,
+          height: 'calc(100vh - 64px)',
+          mt: '64px',
           bgcolor: 'background.default',
+          overflow: 'hidden',
+          minHeight: 0,
         }}
       >
         {/* Sidebar - Chat List */}
-        {showSidebar && (
+        {showSidebar ? (
           <ChatSidebar
             onNewChat={() => setNewChatOpen(true)}
+            onCollapse={() => setShowSidebar(false)}
             sx={{
-              width: isMobile ? '100%' : 350,
+              width: isMobile ? '100%' : 300,
               flexShrink: 0,
+              height: '100%',
+              minHeight: 0,
             }}
           />
-        )}
+        ) : !isMobile ? (
+          // Collapsed rail (desktop): keep expand control on the left.
+          <Box
+            sx={{
+              width: 48,
+              flexShrink: 0,
+              height: '100%',
+              minHeight: 0,
+              borderRight: '1px solid',
+              borderColor: 'divider',
+              bgcolor: 'background.paper',
+              display: 'flex',
+              alignItems: 'flex-start',
+              justifyContent: 'center',
+              pt: 1,
+            }}
+          >
+            <IconButton onClick={() => setShowSidebar(true)} title="Expand" size="small">
+              <KeyboardDoubleArrowRightIcon />
+            </IconButton>
+          </Box>
+        ) : null}
 
         {/* Main Chat Window */}
         {(!isMobile || !showSidebar) && (
           <ChatWindow
             onBack={isMobile ? handleBackToList : undefined}
-            onToggleSidebar={!isMobile ? () => setShowSidebar((prev) => !prev) : undefined}
-            sx={{ flexGrow: 1 }}
+            sx={{ flexGrow: 1, minWidth: 0, minHeight: 0, height: '100%' }}
           />
         )}
 

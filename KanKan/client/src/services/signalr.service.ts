@@ -44,6 +44,7 @@ export type AgentMessageStartHandler = (message: Message) => void;
 export type AgentMessageChunkHandler = (chatId: string, messageId: string, chunk: string) => void;
 export type AgentMessageCompleteHandler = (chatId: string, messageId: string, fullText: string) => void;
 export type DraftChangedHandler = (chatId: string, userId: string, userName: string, text: string) => void;
+export type NotificationCreatedHandler = (notification: any) => void;
 
 class SignalRService {
   private connection: signalR.HubConnection | null = null;
@@ -60,6 +61,7 @@ class SignalRService {
   private agentMessageChunkHandlers: AgentMessageChunkHandler[] = [];
   private agentMessageCompleteHandlers: AgentMessageCompleteHandler[] = [];
   private draftChangedHandlers: DraftChangedHandler[] = [];
+  private notificationCreatedHandlers: NotificationCreatedHandler[] = [];
   private maxReconnectAttempts = 5;
 
   async connect(): Promise<void> {
@@ -185,6 +187,11 @@ class SignalRService {
     // Draft changed
     this.connection.on('DraftChanged', (chatId: string, userId: string, userName: string, text: string) => {
       this.draftChangedHandlers.forEach((handler) => handler(chatId, userId, userName, text));
+    });
+
+    // Notification created
+    this.connection.on('NotificationCreated', (notification: any) => {
+      this.notificationCreatedHandlers.forEach((handler) => handler(notification));
     });
 
     // Connection state changes
@@ -347,6 +354,13 @@ class SignalRService {
     this.draftChangedHandlers.push(handler);
     return () => {
       this.draftChangedHandlers = this.draftChangedHandlers.filter((h) => h !== handler);
+    };
+  }
+
+  onNotificationCreated(handler: NotificationCreatedHandler): () => void {
+    this.notificationCreatedHandlers.push(handler);
+    return () => {
+      this.notificationCreatedHandlers = this.notificationCreatedHandlers.filter((h) => h !== handler);
     };
   }
 

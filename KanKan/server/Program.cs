@@ -3,12 +3,12 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Azure.Cosmos;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using WeChat.API.Hubs;
-using WeChat.API.Models.Entities;
-using WeChat.API.Repositories.Implementations;
-using WeChat.API.Repositories.Interfaces;
-using WeChat.API.Services.Implementations;
-using WeChat.API.Services.Interfaces;
+using KanKan.API.Hubs;
+using KanKan.API.Models.Entities;
+using KanKan.API.Repositories.Implementations;
+using KanKan.API.Repositories.Interfaces;
+using KanKan.API.Services.Implementations;
+using KanKan.API.Services.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -148,6 +148,7 @@ if (useInMemory)
     builder.Services.AddSingleton<IMessageRepository, InMemoryMessageRepository>();
     builder.Services.AddSingleton<IMomentRepository, InMemoryMomentRepository>();
     builder.Services.AddSingleton<IContactRepository, InMemoryContactRepository>();
+    builder.Services.AddSingleton<INotificationRepository, InMemoryNotificationRepository>();
     builder.Services.AddScoped<IAuthService, InMemoryAuthService>();
 }
 else
@@ -158,6 +159,7 @@ else
     builder.Services.AddScoped<IMessageRepository, MessageRepository>();
     builder.Services.AddScoped<IMomentRepository, MomentRepository>();
     builder.Services.AddScoped<IContactRepository, ContactRepository>();
+    builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
     builder.Services.AddScoped<IAuthService, AuthService>();
 }
 
@@ -176,18 +178,20 @@ if (useInMemory)
 {
     using var scope = app.Services.CreateScope();
     var users = scope.ServiceProvider.GetRequiredService<IUserRepository>();
+    var chats = scope.ServiceProvider.GetRequiredService<IChatRepository>();
+    var messages = scope.ServiceProvider.GetRequiredService<IMessageRepository>();
 
     var alice = await users.GetByEmailAsync("alice@example.com");
     if (alice == null)
     {
-        await users.CreateAsync(new WeChat.API.Models.Entities.User
+        await users.CreateAsync(new KanKan.API.Models.Entities.User
         {
             Id = "user_alice",
             Type = "user",
             Email = "alice@example.com",
             EmailVerified = true,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword("12345678"),
-            WeChatId = "alice_1001",
+            Handle = "alice_1001",
             DisplayName = "Alice",
             AvatarUrl = "https://i.pravatar.cc/150?img=1",
             Bio = "Hi, I'm Alice",
@@ -209,14 +213,14 @@ if (useInMemory)
     var bob = await users.GetByEmailAsync("bob@example.com");
     if (bob == null)
     {
-        await users.CreateAsync(new WeChat.API.Models.Entities.User
+        await users.CreateAsync(new KanKan.API.Models.Entities.User
         {
             Id = "user_bob",
             Type = "user",
             Email = "bob@example.com",
             EmailVerified = true,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword("12345678"),
-            WeChatId = "bob_1002",
+            Handle = "bob_1002",
             DisplayName = "Bob",
             AvatarUrl = "https://i.pravatar.cc/150?img=2",
             Bio = "Hi, I'm Bob",
@@ -238,14 +242,14 @@ if (useInMemory)
     var carol = await users.GetByEmailAsync("carol@example.com");
     if (carol == null)
     {
-        await users.CreateAsync(new WeChat.API.Models.Entities.User
+        await users.CreateAsync(new KanKan.API.Models.Entities.User
         {
             Id = "user_carol",
             Type = "user",
             Email = "carol@example.com",
             EmailVerified = true,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword("12345678"),
-            WeChatId = "carol_1004",
+            Handle = "carol_1004",
             DisplayName = "Carol",
             AvatarUrl = "https://i.pravatar.cc/150?img=4",
             Bio = "Hi, I'm Carol",
@@ -267,15 +271,15 @@ if (useInMemory)
     var ai = await users.GetByEmailAsync("wa@assistant.local");
     if (ai == null)
     {
-        await users.CreateAsync(new WeChat.API.Models.Entities.User
+        await users.CreateAsync(new KanKan.API.Models.Entities.User
         {
             Id = "user_ai_wa",
             Type = "user",
             Email = "wa@assistant.local",
             EmailVerified = true,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(Guid.NewGuid().ToString()),
-            WeChatId = "wa_1003",
-            DisplayName = "Wa",
+            Handle = "assistant_1003",
+            DisplayName = "Assistant",
             AvatarUrl = "https://i.pravatar.cc/150?img=3",
             Bio = "AI assistant",
             IsOnline = true,
@@ -291,6 +295,102 @@ if (useInMemory)
             },
             RefreshTokens = new List<RefreshToken>()
         });
+    }
+
+    // Seed a few starter chats/messages so the UI has something to show.
+    // This is intentionally idempotent and only applies to in-memory dev mode.
+    var aliceUser = await users.GetByEmailAsync("alice@example.com");
+    var bobUser = await users.GetByEmailAsync("bob@example.com");
+    var carolUser = await users.GetByEmailAsync("carol@example.com");
+
+    static KanKan.API.Models.Entities.ChatParticipant ToParticipant(KanKan.API.Models.Entities.User u) => new()
+    {
+        UserId = u.Id,
+        DisplayName = u.DisplayName,
+        AvatarUrl = u.AvatarUrl ?? "",
+        JoinedAt = DateTime.UtcNow,
+    };
+
+    async Task SeedTextAsync(KanKan.API.Models.Entities.Chat chat, KanKan.API.Models.Entities.User sender, string text)
+    {
+        var existing = await messages.GetChatMessagesAsync(chat.Id, limit: 1);
+        if (existing.Count > 0) return;
+
+        var msg = new KanKan.API.Models.Entities.Message
+        {
+            Id = $"msg_seed_{Guid.NewGuid():N}",
+            ChatId = chat.Id,
+            SenderId = sender.Id,
+            SenderName = sender.DisplayName,
+            SenderAvatar = sender.AvatarUrl ?? "",
+            MessageType = "text",
+            Content = new KanKan.API.Models.Entities.MessageContent { Text = text },
+            Timestamp = DateTime.UtcNow,
+            DeliveredTo = new List<string>(),
+            ReadBy = new List<string>(),
+            Reactions = new Dictionary<string, string>(),
+            IsDeleted = false,
+        };
+
+        await messages.CreateAsync(msg);
+
+        chat.LastMessage = new KanKan.API.Models.Entities.ChatLastMessage
+        {
+            Text = text,
+            SenderId = sender.Id,
+            SenderName = sender.DisplayName,
+            MessageType = "text",
+            Timestamp = DateTime.UtcNow,
+        };
+        chat.UpdatedAt = DateTime.UtcNow;
+        await chats.UpdateAsync(chat);
+    }
+
+    if (aliceUser != null && bobUser != null)
+    {
+        var existingDirect = await chats.GetDirectChatAsync(aliceUser.Id, bobUser.Id);
+        if (existingDirect == null)
+        {
+            existingDirect = await chats.CreateAsync(new KanKan.API.Models.Entities.Chat
+            {
+                Id = "chat_seed_alice_bob",
+                ChatType = "direct",
+                Participants = new List<KanKan.API.Models.Entities.ChatParticipant>
+                {
+                    ToParticipant(aliceUser),
+                    ToParticipant(bobUser),
+                },
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+            });
+        }
+
+        await SeedTextAsync(existingDirect, aliceUser, "Hi Bob 👋");
+    }
+
+    if (aliceUser != null && bobUser != null && carolUser != null)
+    {
+        var group = await chats.GetByIdAsync("chat_seed_group_abc");
+        if (group == null)
+        {
+            group = await chats.CreateAsync(new KanKan.API.Models.Entities.Chat
+            {
+                Id = "chat_seed_group_abc",
+                ChatType = "group",
+                GroupName = "Alice · Bob · Carol",
+                Participants = new List<KanKan.API.Models.Entities.ChatParticipant>
+                {
+                    ToParticipant(aliceUser),
+                    ToParticipant(bobUser),
+                    ToParticipant(carolUser),
+                },
+                AdminIds = new List<string> { aliceUser.Id },
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+            });
+        }
+
+        await SeedTextAsync(group, carolUser, "Welcome to the group chat!" );
     }
 }
 

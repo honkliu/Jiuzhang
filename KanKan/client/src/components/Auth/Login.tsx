@@ -51,6 +51,21 @@ export const Login: React.FC = () => {
     }
   };
 
+  const quickLogin = async (quickEmail: string) => {
+    setError('');
+    setLoading(true);
+    try {
+      const response = await authService.login({ email: quickEmail, password: '12345678' });
+      authService.saveAuth(response.accessToken, response.user);
+      dispatch(setAuth(response));
+      navigate('/chats');
+    } catch (err: any) {
+      setError(err.message || 'Login failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Container component="main" maxWidth="xs">
       <Box
@@ -146,6 +161,33 @@ export const Login: React.FC = () => {
                 OR
               </Typography>
             </Divider>
+
+            <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+              <Button
+                fullWidth
+                variant="outlined"
+                onClick={() => quickLogin('alice@example.com')}
+                disabled={loading}
+              >
+                Alice
+              </Button>
+              <Button
+                fullWidth
+                variant="outlined"
+                onClick={() => quickLogin('bob@example.com')}
+                disabled={loading}
+              >
+                Bob
+              </Button>
+              <Button
+                fullWidth
+                variant="outlined"
+                onClick={() => quickLogin('carol@example.com')}
+                disabled={loading}
+              >
+                Carol
+              </Button>
+            </Box>
 
             <Box sx={{ textAlign: 'center' }}>
               <Typography variant="body2" color="text.secondary">

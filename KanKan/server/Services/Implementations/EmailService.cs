@@ -1,8 +1,8 @@
 using SendGrid;
 using SendGrid.Helpers.Mail;
-using WeChat.API.Services.Interfaces;
+using KanKan.API.Services.Interfaces;
 
-namespace WeChat.API.Services.Implementations;
+namespace KanKan.API.Services.Implementations;
 
 public class EmailService : IEmailService
 {

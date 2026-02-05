@@ -1,4 +1,4 @@
-# Getting Started with WeChat Clone
+# Getting Started with KanKan
 
 ## 📦 What's Been Implemented
 
@@ -42,20 +42,20 @@ cd server
   "CosmosDb": {
     "Endpoint": "https://localhost:8081",  // Emulator endpoint
     "Key": "C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==",  // Emulator key
-    "DatabaseName": "WeChatDB"
+    "DatabaseName": "KanKanDB"
   },
   "Jwt": {
     "Secret": "your-super-secret-jwt-key-must-be-at-least-32-characters-long-for-security",
-    "Issuer": "WeChat.API",
-    "Audience": "WeChat.Client",
+    "Issuer": "KanKan.API",
+    "Audience": "KanKan.Client",
     "AccessTokenExpirationMinutes": 15,
     "RefreshTokenExpirationDays": 7
   },
   "Email": {
     "Provider": "SendGrid",
     "ApiKey": "your-sendgrid-api-key-or-leave-empty",
-    "FromEmail": "noreply@wechat-clone.com",
-    "FromName": "WeChat Clone"
+    "FromEmail": "noreply@kankan.local",
+    "FromName": "KanKan"
   }
 }
 ```
@@ -103,7 +103,7 @@ The first time you run the application, you need to create the database and cont
 
 **Option 1: Use Cosmos DB Data Explorer**
 1. Open Cosmos DB emulator at `https://localhost:8081/_explorer/index.html`
-2. Create a new database named `WeChatDB`
+2. Create a new database named `KanKanDB`
 3. Create the following containers:
 
 | Container Name | Partition Key | Description |
@@ -122,8 +122,8 @@ You can also create a script to initialize the database. Create a file `init-db.
 ```bash
 # This would use Azure CLI or Cosmos DB SDK
 # Example commands for reference
-az cosmosdb sql database create --account-name YOUR_ACCOUNT --name WeChatDB
-az cosmosdb sql container create --account-name YOUR_ACCOUNT --database-name WeChatDB --name Users --partition-key-path "/id"
+az cosmosdb sql database create --account-name YOUR_ACCOUNT --name KanKanDB
+az cosmosdb sql container create --account-name YOUR_ACCOUNT --database-name KanKanDB --name Users --partition-key-path "/id"
 # ... repeat for other containers
 ```
 

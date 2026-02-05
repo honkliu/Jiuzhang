@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
-using WeChat.API.Models.DTOs.User;
+using KanKan.API.Models.DTOs.User;
 
-namespace WeChat.API.Models.DTOs.Auth;
+namespace KanKan.API.Models.DTOs.Auth;
 
 public class RegisterRequest
 {

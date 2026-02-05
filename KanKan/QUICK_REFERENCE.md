@@ -48,7 +48,7 @@ npm run preview      # Preview production build
   "CosmosDb": {
     "Endpoint": "https://localhost:8081",
     "Key": "C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==",
-    "DatabaseName": "WeChatDB"
+    "DatabaseName": "KanKanDB"
   },
   "Jwt": {
     "Secret": "your-super-secret-jwt-key-at-least-32-chars"
@@ -132,8 +132,8 @@ npm install
 
 ## 🎨 Theme Colors
 
-- **Primary (WeChat Green):** #07c160
-- **Secondary (WeChat Blue):** #576b95
+- **Primary (Brand Green):** #07c160
+- **Secondary (Brand Blue):** #576b95
 - **Background:** #f5f5f5
 - **Error:** #d32f2f
 - **Success:** #2e7d32

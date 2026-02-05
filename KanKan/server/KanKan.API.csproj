@@ -4,7 +4,8 @@
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <RootNamespace>WeChat.API</RootNamespace>
+    <AssemblyName>KanKan.API</AssemblyName>
+    <RootNamespace>KanKan.API</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>

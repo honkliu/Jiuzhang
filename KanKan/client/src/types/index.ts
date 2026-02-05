@@ -2,7 +2,7 @@
 export interface User {
   id: string;
   email: string;
-  weChatId: string;
+  handle: string;
   displayName: string;
   avatarUrl: string;
   bio: string;

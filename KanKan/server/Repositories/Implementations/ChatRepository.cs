@@ -1,8 +1,8 @@
 using Microsoft.Azure.Cosmos;
-using WeChat.API.Models.Entities;
-using WeChat.API.Repositories.Interfaces;
+using KanKan.API.Models.Entities;
+using KanKan.API.Repositories.Interfaces;
 
-namespace WeChat.API.Repositories.Implementations;
+namespace KanKan.API.Repositories.Implementations;
 
 public class ChatRepository : IChatRepository
 {
@@ -10,7 +10,7 @@ public class ChatRepository : IChatRepository
 
     public ChatRepository(CosmosClient cosmosClient, IConfiguration configuration)
     {
-        var databaseName = configuration["CosmosDb:DatabaseName"] ?? "WeChatDB";
+        var databaseName = configuration["CosmosDb:DatabaseName"] ?? "KanKanDB";
         var containerName = configuration["CosmosDb:Containers:Chats"] ?? "Chats";
         _container = cosmosClient.GetContainer(databaseName, containerName);
     }
@@ -30,12 +30,14 @@ public class ChatRepository : IChatRepository
 
     public async Task<List<Chat>> GetUserChatsAsync(string userId)
     {
-        var query = new QueryDefinition(
-            @"SELECT * FROM c
-              WHERE c.type = 'chat'
-              AND ARRAY_CONTAINS(c.participants, {'userId': @userId}, true)
-              ORDER BY c.updatedAt DESC"
-        ).WithParameter("@userId", userId);
+                var query = new QueryDefinition(
+                    @"SELECT VALUE c FROM c
+                            JOIN p IN c.participants
+                            WHERE c.type = 'chat'
+                            AND p.userId = @userId
+                            AND (NOT IS_DEFINED(p.isHidden) OR p.isHidden = false)
+                            ORDER BY c.updatedAt DESC"
+                ).WithParameter("@userId", userId);
 
         var iterator = _container.GetItemQueryIterator<Chat>(query);
         var results = new List<Chat>();
@@ -79,6 +81,24 @@ public class ChatRepository : IChatRepository
         chat.UpdatedAt = DateTime.UtcNow;
         var response = await _container.ReplaceItemAsync(chat, chat.Id, new PartitionKey(chat.Id));
         return response.Resource;
+    }
+
+    public async Task SetHiddenAsync(string chatId, string userId, bool isHidden)
+    {
+        var chat = await GetByIdAsync(chatId);
+        if (chat == null) return;
+
+        var idx = chat.Participants.FindIndex(p => p.UserId == userId);
+        if (idx < 0) return;
+
+        await _container.PatchItemAsync<Chat>(
+            id: chatId,
+            partitionKey: new PartitionKey(chatId),
+            patchOperations: new[]
+            {
+                PatchOperation.Set($"/participants/{idx}/isHidden", isHidden)
+            }
+        );
     }
 
     public async Task DeleteAsync(string id)

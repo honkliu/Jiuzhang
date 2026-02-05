@@ -1,4 +1,4 @@
-# WeChat-Like Application Architecture
+# KanKan Application Architecture
 
 ## Table of Contents
 1. [System Architecture Overview](#system-architecture-overview)
@@ -179,7 +179,7 @@ src/
 ### Project Structure
 
 ```
-WeChat.API/
+KanKan.API/
 ├── Controllers/
 │   ├── AuthController.cs
 │   ├── ChatController.cs
@@ -332,7 +332,7 @@ Task ChatUpdated(Chat chat)
 Cosmos DB organizes data into containers with partition keys for optimal performance.
 
 ```
-Database: WeChatDB
+Database: KanKanDB
 
 Containers:
 1. Users           (Partition Key: /id)
@@ -354,10 +354,10 @@ Containers:
   "email": "john.doe@example.com",
   "emailVerified": true,
   "passwordHash": "$2b$10$...",
-  "weChatId": "john_doe_123",
+  "handle": "john_doe_123",
   "displayName": "John Doe",
   "avatarUrl": "https://storage.../avatars/user_123.jpg",
-  "bio": "Hello, I'm using WeChat!",
+  "bio": "Hello, I'm using KanKan!",
   "phoneNumber": "+1234567890",
   "isOnline": true,
   "lastSeen": "2024-01-15T10:30:00Z",
@@ -1244,18 +1244,19 @@ Store sensitive configuration:
 
 **.env (Client)**
 ```
-REACT_APP_API_URL=https://api.wechat-clone.com
-REACT_APP_SIGNALR_URL=https://api.wechat-clone.com/hub
-REACT_APP_CDN_URL=https://cdn.wechat-clone.com
+REACT_APP_API_URL=https://api.kankan.example.com
+REACT_APP_SIGNALR_URL=https://api.kankan.example.com/hub
+REACT_APP_CDN_URL=https://cdn.kankan.example.com
+
 ```
 
 **appsettings.json (Server)**
 ```json
 {
   "CosmosDb": {
-    "Endpoint": "https://wechat-db.documents.azure.com:443/",
+    "Endpoint": "https://kankan-db.documents.azure.com:443/",
     "Key": "stored-in-key-vault",
-    "DatabaseName": "WeChatDB"
+    "DatabaseName": "KanKanDB"
   },
   "AzureStorage": {
     "ConnectionString": "stored-in-key-vault",
@@ -1280,8 +1281,8 @@ REACT_APP_CDN_URL=https://cdn.wechat-clone.com
   "Email": {
     "Provider": "SendGrid",
     "ApiKey": "stored-in-key-vault",
-    "FromEmail": "noreply@wechat-clone.com",
-    "FromName": "WeChat Clone"
+    "FromEmail": "noreply@kankan.example.com",
+    "FromName": "KanKan"
   }
 }
 ```
@@ -1318,7 +1319,7 @@ REACT_APP_CDN_URL=https://cdn.wechat-clone.com
 
 ## Conclusion
 
-This architecture provides a robust, scalable foundation for building a WeChat-like messaging application using modern technologies:
+This architecture provides a robust, scalable foundation for building a real-time messaging application using modern technologies:
 
 - **React** for a responsive, interactive client
 - **.NET Core** for a high-performance, secure API

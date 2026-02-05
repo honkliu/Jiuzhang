@@ -20,10 +20,10 @@ const theme = createTheme({
   },
   palette: {
     primary: {
-      main: '#07c160', // WeChat green
+      main: '#07c160', // Brand green
     },
     secondary: {
-      main: '#576b95', // WeChat blue
+      main: '#576b95', // Brand blue
     },
     background: {
       default: 'rgba(244, 247, 251, 0.9)',

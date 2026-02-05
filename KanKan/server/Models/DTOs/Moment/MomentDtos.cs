@@ -1,6 +1,6 @@
-using WeChat.API.Models.Entities;
+using KanKan.API.Models.Entities;
 
-namespace WeChat.API.Models.DTOs.Moment;
+namespace KanKan.API.Models.DTOs.Moment;
 
 public class MomentDto
 {

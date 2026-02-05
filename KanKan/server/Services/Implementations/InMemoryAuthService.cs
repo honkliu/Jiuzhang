@@ -3,14 +3,14 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.IdentityModel.Tokens;
-using WeChat.API.Models.DTOs.Auth;
-using WeChat.API.Models.DTOs.User;
-using WeChat.API.Models.Entities;
-using WeChat.API.Repositories.Interfaces;
-using WeChat.API.Services.Interfaces;
-using UserEntity = WeChat.API.Models.Entities.User;
+using KanKan.API.Models.DTOs.Auth;
+using KanKan.API.Models.DTOs.User;
+using KanKan.API.Models.Entities;
+using KanKan.API.Repositories.Interfaces;
+using KanKan.API.Services.Interfaces;
+using UserEntity = KanKan.API.Models.Entities.User;
 
-namespace WeChat.API.Services.Implementations;
+namespace KanKan.API.Services.Implementations;
 
 /// <summary>
 /// In-memory implementation of AuthService for development without Cosmos DB
@@ -80,7 +80,7 @@ public class InMemoryAuthService : IAuthService
             Email = dto.Email.ToLower(),
             EmailVerified = true,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
-            WeChatId = GenerateUniqueWeChatId(dto.DisplayName),
+            Handle = GenerateUniqueHandle(dto.DisplayName),
             DisplayName = dto.DisplayName,
             AvatarUrl = GetDefaultAvatar(),
             Bio = "Hello, I'm using KanKan!",
@@ -227,7 +227,7 @@ public class InMemoryAuthService : IAuthService
         }
     }
 
-    private string GenerateUniqueWeChatId(string displayName)
+    private string GenerateUniqueHandle(string displayName)
     {
         var cleanName = new string(displayName
             .Where(c => char.IsLetterOrDigit(c))
