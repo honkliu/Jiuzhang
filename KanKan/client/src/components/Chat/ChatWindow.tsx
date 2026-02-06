@@ -13,6 +13,7 @@ import {
   SxProps,
   Theme,
   CircularProgress,
+  Tooltip,
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
@@ -21,6 +22,7 @@ import {
   Menu as MenuIcon,
   AttachFile as AttachFileIcon,
   Edit as EditIcon,
+  ViewInAr as ViewInArIcon,
 } from '@mui/icons-material';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState, AppDispatch } from '@/store';
@@ -38,6 +40,10 @@ import {
   isRealGroupChat,
   WA_USER_ID,
 } from '@/utils/chatParticipants';
+import { ChatRoom3D } from './ChatRoom3D';
+
+// Work around TS2590 (“union type too complex”) from MUI Box typings in some TS versions.
+const BoxAny = Box as any;
 
 interface ChatWindowProps {
   onBack?: () => void;
@@ -54,6 +60,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
   const [messageText, setMessageText] = useState('');
   const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [isRoom3D, setIsRoom3D] = useState(false);
   const [commandSelectedIndex, setCommandSelectedIndex] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -86,6 +93,14 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
     : [];
 
   const mergedMessages = [...chatMessages, ...draftMessages];
+
+  const room3DStorageKey = activeChat ? `kankan.chat.3d:${activeChat.id}` : null;
+
+  useEffect(() => {
+    if (!room3DStorageKey) return;
+    const saved = window.localStorage.getItem(room3DStorageKey);
+    setIsRoom3D(saved === '1');
+  }, [room3DStorageKey]);
 
   const handleRenameGroup = async () => {
     if (!activeChat) return;
@@ -242,8 +257,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
 
   // Scroll to bottom when messages change
   useEffect(() => {
+    if (isRoom3D) return;
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [mergedMessages]);
+  }, [mergedMessages, isRoom3D]);
 
   // Join chat room when active chat changes
   useEffect(() => {
@@ -397,7 +413,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
 
   if (!activeChat) {
     return (
-      <Box
+      <BoxAny
         sx={{
           display: 'flex',
           flexDirection: 'column',
@@ -413,12 +429,12 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
         <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
           or start a new conversation
         </Typography>
-      </Box>
+      </BoxAny>
     );
   }
 
   return (
-    <Box
+    <BoxAny
       sx={{
         display: 'flex',
         flexDirection: 'column',
@@ -462,7 +478,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
               variant="rounded"
             />
           )}
-          <Box sx={{ flexGrow: 1 }}>
+          <BoxAny sx={{ flexGrow: 1 }}>
             <Typography variant="subtitle1" fontWeight="bold">
               {activeChat.name}
             </Typography>
@@ -475,57 +491,95 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
                 ? `${groupMembersCount} members`
                 : 'Offline'}
             </Typography>
-          </Box>
+          </BoxAny>
 
           {activeChat.chatType === 'group' && user?.id && activeChat.adminIds?.includes(user.id) && (
             <IconButton edge="end" onClick={handleRenameGroup} title="Rename group">
               <EditIcon />
             </IconButton>
           )}
+
+          <Tooltip title={isRoom3D ? 'Exit 3D room' : 'Enter 3D room'}>
+            <span>
+              <IconButton
+                edge="end"
+                onClick={() => {
+                  if (!room3DStorageKey) return;
+                  setIsRoom3D((prev) => {
+                    const next = !prev;
+                    window.localStorage.setItem(room3DStorageKey, next ? '1' : '0');
+                    return next;
+                  });
+                }}
+                color={isRoom3D ? 'primary' : 'default'}
+                aria-label="Toggle 3D room"
+              >
+                <ViewInArIcon />
+              </IconButton>
+            </span>
+          </Tooltip>
         </Toolbar>
       </AppBar>
 
       {/* Messages */}
-      <Box
-        sx={{
-          flexGrow: 1,
-          overflow: 'auto',
-          p: 2,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 1,
-        }}
-      >
-        {loading && mergedMessages.length === 0 ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-            <CircularProgress />
-          </Box>
-        ) : mergedMessages.length === 0 ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-            <Typography color="text.secondary">
-              No messages yet. Say hello! 👋
-            </Typography>
-          </Box>
-        ) : (
-          mergedMessages.map((message, index) => {
-            const prevMessage = index > 0 ? mergedMessages[index - 1] : null;
-            const showAvatar = !prevMessage || prevMessage.senderId !== message.senderId;
+      {isRoom3D ? (
+        <BoxAny sx={{ flexGrow: 1, overflow: 'hidden', position: 'relative' }}>
+          <ChatRoom3D chat={activeChat} me={user} messages={mergedMessages as any} typingUsers={chatTypingUsers} />
+          {loading && mergedMessages.length === 0 ? (
+            <BoxAny
+              sx={{
+                position: 'absolute',
+                inset: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                pointerEvents: 'none',
+              }}
+            >
+              <CircularProgress />
+            </BoxAny>
+          ) : null}
+        </BoxAny>
+      ) : (
+        <BoxAny
+          sx={{
+            flexGrow: 1,
+            overflow: 'auto',
+            p: 2,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 1,
+          }}
+        >
+          {loading && mergedMessages.length === 0 ? (
+            <BoxAny sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+              <CircularProgress />
+            </BoxAny>
+          ) : mergedMessages.length === 0 ? (
+            <BoxAny sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+              <Typography color="text.secondary">No messages yet. Say hello! 👋</Typography>
+            </BoxAny>
+          ) : (
+            mergedMessages.map((message, index) => {
+              const prevMessage = index > 0 ? mergedMessages[index - 1] : null;
+              const showAvatar = !prevMessage || prevMessage.senderId !== message.senderId;
 
-            return (
-              <MessageBubble
-                key={message.id}
-                message={message}
-                isOwn={message.senderId === user?.id}
-                showAvatar={showAvatar}
-              />
-            );
-          })
-        )}
-        <div ref={messagesEndRef} />
-      </Box>
+              return (
+                <MessageBubble
+                  key={message.id}
+                  message={message}
+                  isOwn={message.senderId === user?.id}
+                  showAvatar={showAvatar}
+                />
+              );
+            })
+          )}
+          <div ref={messagesEndRef} />
+        </BoxAny>
+      )}
 
       {/* Input */}
-      <Box
+      <BoxAny
         sx={{
           p: 2,
           bgcolor: 'background.paper',
@@ -539,7 +593,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
           style={{ display: 'none' }}
           onChange={handleFileSelected}
         />
-        <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
+        <BoxAny sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
           <IconButton size="small" disabled>
             <EmojiIcon />
           </IconButton>
@@ -615,8 +669,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
           >
             {sending ? <CircularProgress size={24} /> : <SendIcon />}
           </IconButton>
-        </Box>
-      </Box>
-    </Box>
+        </BoxAny>
+      </BoxAny>
+    </BoxAny>
   );
 };

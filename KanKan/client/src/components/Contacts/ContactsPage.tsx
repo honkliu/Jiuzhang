@@ -22,6 +22,9 @@ import { AppHeader } from '@/components/Shared/AppHeader';
 import { UserAvatar } from '@/components/Shared/UserAvatar';
 import { useLanguage } from '@/i18n/LanguageContext';
 
+// Work around TS2590 (“union type too complex”) from MUI Box typings in some TS versions.
+const BoxAny = Box as any;
+
 export const ContactsPage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
@@ -120,18 +123,18 @@ export const ContactsPage: React.FC = () => {
   const isContact = (userId: string) => contacts.some((c) => c.id === userId);
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+    <BoxAny sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
       <AppHeader />
       <Container sx={{ py: 3, flexGrow: 1, pt: 10 }} maxWidth="md">
         <Typography variant="h5" fontWeight="bold" gutterBottom>
           Contacts
         </Typography>
 
-        <Box sx={{ mb: 2 }}>
+        <BoxAny sx={{ mb: 2 }}>
           <Button variant="contained" onClick={handleChatWithWa}>
             {t('Wa')}
           </Button>
-        </Box>
+        </BoxAny>
 
         <TextField
           fullWidth
@@ -142,9 +145,9 @@ export const ContactsPage: React.FC = () => {
         />
 
         {loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+          <BoxAny sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
             <CircularProgress />
-          </Box>
+          </BoxAny>
         ) : (
           <>
             <Typography variant="subtitle1" fontWeight="bold" sx={{ mb: 1 }}>
@@ -161,7 +164,7 @@ export const ContactsPage: React.FC = () => {
                     key={req.id}
                     divider
                     secondaryAction={
-                      <Box sx={{ display: 'flex', gap: 1 }}>
+                      <BoxAny sx={{ display: 'flex', gap: 1 }}>
                         <Button
                           variant="contained"
                           onClick={() => handleAccept(req.fromUserId)}
@@ -176,7 +179,7 @@ export const ContactsPage: React.FC = () => {
                         >
                           Reject
                         </Button>
-                      </Box>
+                      </BoxAny>
                     }
                   >
                     <ListItemAvatar>
@@ -221,10 +224,10 @@ export const ContactsPage: React.FC = () => {
                     </ListItemAvatar>
                     <ListItemText
                       primary={
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <Typography fontWeight="bold">{user.displayName}</Typography>
                           {user.isOnline && <Chip size="small" color="success" label="Online" />}
-                        </Box>
+                        </BoxAny>
                       }
                       secondary={user.email}
                     />
@@ -267,10 +270,10 @@ export const ContactsPage: React.FC = () => {
                     </ListItemAvatar>
                     <ListItemText
                       primary={
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <Typography fontWeight="bold">{user.displayName}</Typography>
                           {user.isOnline && <Chip size="small" color="success" label="Online" />}
-                        </Box>
+                        </BoxAny>
                       }
                       secondary={user.email}
                     />
@@ -281,6 +284,6 @@ export const ContactsPage: React.FC = () => {
           </>
         )}
       </Container>
-    </Box>
+    </BoxAny>
   );
 };

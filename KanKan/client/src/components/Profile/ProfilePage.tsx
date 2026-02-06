@@ -20,6 +20,9 @@ import { mediaService } from '@/services/media.service';
 import { UserAvatar } from '@/components/Shared/UserAvatar';
 import { ZodiacAvatarPicker } from './ZodiacAvatarPicker';
 
+// Work around TS2590 (“union type too complex”) from MUI Box typings in some TS versions.
+const BoxAny = Box as any;
+
 export const ProfilePage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { user } = useSelector((state: RootState) => state.auth);
@@ -86,7 +89,7 @@ export const ProfilePage: React.FC = () => {
   };
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+    <BoxAny sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
       <AppHeader />
       <Container sx={{ py: 3, pt: 10 }} maxWidth="sm">
         <Typography variant="h5" fontWeight="bold" gutterBottom>
@@ -94,9 +97,9 @@ export const ProfilePage: React.FC = () => {
         </Typography>
 
         {loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+          <BoxAny sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
             <CircularProgress />
-          </Box>
+          </BoxAny>
         ) : (
           <>
             {error && (
@@ -141,7 +144,7 @@ export const ProfilePage: React.FC = () => {
               </Stack>
             </Stack>
 
-            <Box sx={{ mb: 2 }}>
+            <BoxAny sx={{ mb: 2 }}>
               <ZodiacAvatarPicker
                 disabled={uploading || saving}
                 value={avatarUrl}
@@ -150,7 +153,7 @@ export const ProfilePage: React.FC = () => {
                   setMessage('Zodiac avatar selected. Click Save Changes to apply.');
                 }}
               />
-            </Box>
+            </BoxAny>
 
             <TextField
               fullWidth
@@ -169,7 +172,7 @@ export const ProfilePage: React.FC = () => {
               sx={{ mb: 2 }}
             />
 
-            <Box sx={{ mb: 2 }}>
+            <BoxAny sx={{ mb: 2 }}>
               <Typography variant="subtitle2" sx={{ mb: 1 }}>
                 Gender
               </Typography>
@@ -184,7 +187,7 @@ export const ProfilePage: React.FC = () => {
                 <ToggleButton value="male">Male</ToggleButton>
                 <ToggleButton value="female">Female</ToggleButton>
               </ToggleButtonGroup>
-            </Box>
+            </BoxAny>
 
             <Button variant="contained" onClick={handleSave} disabled={saving}>
               {saving ? <CircularProgress size={24} /> : 'Save Changes'}
@@ -192,6 +195,6 @@ export const ProfilePage: React.FC = () => {
           </>
         )}
       </Container>
-    </Box>
+    </BoxAny>
   );
 };

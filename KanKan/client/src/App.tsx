@@ -10,6 +10,7 @@ import { ChatLayout } from './components/Chat';
 import { ContactsPage } from './components/Contacts/ContactsPage';
 import { MomentsPage } from './components/Moments/MomentsPage';
 import { ProfilePage } from './components/Profile/ProfilePage';
+import { ChatRoom3DTestPage } from './components/Chat/ChatRoom3DTestPage';
 import { authService } from './services/auth.service';
 import { LanguageProvider } from './i18n/LanguageContext';
 
@@ -211,6 +212,7 @@ function App() {
                   </PublicRoute>
                 }
               />
+              <Route path="/room3d-test" element={<ChatRoom3DTestPage />} />
 
               {/* Protected routes */}
               <Route

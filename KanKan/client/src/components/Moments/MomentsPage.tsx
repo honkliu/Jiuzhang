@@ -15,6 +15,9 @@ import { AppHeader } from '@/components/Shared/AppHeader';
 import { UserAvatar } from '@/components/Shared/UserAvatar';
 import { momentService, Moment } from '../../services/moment.service';
 
+// Work around TS2590 (“union type too complex”) from MUI Box typings in some TS versions.
+const BoxAny = Box as any;
+
 export const MomentsPage: React.FC = () => {
   const [moments, setMoments] = useState<Moment[]>([]);
   const [text, setText] = useState('');
@@ -67,7 +70,7 @@ export const MomentsPage: React.FC = () => {
   };
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+    <BoxAny sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
       <AppHeader />
       <Container sx={{ py: 3, pt: 10 }} maxWidth="md">
         <Typography variant="h5" fontWeight="bold" gutterBottom>
@@ -105,9 +108,9 @@ export const MomentsPage: React.FC = () => {
         </Card>
 
         {loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+          <BoxAny sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
             <CircularProgress />
-          </Box>
+          </BoxAny>
         ) : moments.length === 0 ? (
           <Typography color="text.secondary">No posts yet.</Typography>
         ) : (
@@ -130,6 +133,6 @@ export const MomentsPage: React.FC = () => {
           ))
         )}
       </Container>
-    </Box>
+    </BoxAny>
   );
 };

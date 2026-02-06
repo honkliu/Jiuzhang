@@ -21,6 +21,9 @@ import { fetchNotifications, fetchUnreadNotificationCount } from '@/store/notifi
 import { UserAvatar } from '@/components/Shared/UserAvatar';
 import { formatDistanceToNow } from 'date-fns';
 
+// Work around TS2590 (“union type too complex”) from MUI Box typings in some TS versions.
+const BoxAny = Box as any;
+
 const navItems = [
   { label: 'Chats', path: '/chats' },
   { label: 'Contacts', path: '/contacts' },
@@ -71,11 +74,11 @@ export const AppHeader: React.FC = () => {
   return (
     <AppBar position="fixed" color="default" elevation={0}>
       <Toolbar sx={{ gap: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexGrow: 1, minWidth: 0 }}>
+        <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1, flexGrow: 1, minWidth: 0 }}>
           <Typography variant="subtitle1" fontWeight="bold" sx={{ mr: 1, whiteSpace: 'nowrap' }}>
             {t('appName')}
           </Typography>
-          <Box sx={{ display: 'flex', gap: 1, overflow: 'hidden' }}>
+          <BoxAny sx={{ display: 'flex', gap: 1, overflow: 'hidden' }}>
             {navItems.map((item) => (
               <Button
                 key={item.path}
@@ -85,11 +88,11 @@ export const AppHeader: React.FC = () => {
                 {t(item.label)}
               </Button>
             ))}
-          </Box>
-        </Box>
+          </BoxAny>
+        </BoxAny>
 
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 0.5 }}>
+        <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 0.5 }}>
               <UserAvatar src={user?.avatarUrl} gender={user?.gender} variant="rounded" sx={{ width: 32, height: 32 }} />
             <Typography
               variant="subtitle2"
@@ -98,7 +101,7 @@ export const AppHeader: React.FC = () => {
             >
               {user?.displayName || ''}
             </Typography>
-          </Box>
+          </BoxAny>
 
           <Button onClick={toggleLanguage} variant="outlined" size="small">
             {language === 'en' ? '中文' : 'EN'}
@@ -115,7 +118,7 @@ export const AppHeader: React.FC = () => {
           <IconButton onClick={handleLogout} title="Logout">
             <LogoutIcon />
           </IconButton>
-        </Box>
+        </BoxAny>
 
         <Menu
           anchorEl={notificationsAnchorEl}
@@ -131,35 +134,35 @@ export const AppHeader: React.FC = () => {
             },
           }}
         >
-          <Box sx={{ px: 2, py: 1.25, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <BoxAny sx={{ px: 2, py: 1.25, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <Typography variant="subtitle1" fontWeight="bold">
               Notifications
             </Typography>
             <Typography variant="caption" color="text.secondary">
               {unreadNotifications > 0 ? `${unreadNotifications} unread` : 'All caught up'}
             </Typography>
-          </Box>
+          </BoxAny>
           <Divider />
 
           {loading ? (
-            <Box sx={{ px: 2, py: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <BoxAny sx={{ px: 2, py: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <CircularProgress size={20} />
-            </Box>
+            </BoxAny>
           ) : error ? (
-            <Box sx={{ px: 2, py: 2 }}>
+            <BoxAny sx={{ px: 2, py: 2 }}>
               <Typography variant="body2" color="error.main">
                 {error}
               </Typography>
-            </Box>
+            </BoxAny>
           ) : items.length === 0 ? (
-            <Box sx={{ px: 2, py: 2 }}>
+            <BoxAny sx={{ px: 2, py: 2 }}>
               <Typography variant="body2" color="text.secondary">
                 No notifications
               </Typography>
-            </Box>
+            </BoxAny>
           ) : (
             items.slice(0, 25).map((n) => (
-              <Box
+              <BoxAny
                 key={n.id}
                 onClick={handleCloseNotifications}
                 role="menuitem"
@@ -174,7 +177,7 @@ export const AppHeader: React.FC = () => {
                   gap: 1,
                 }}
               >
-                <Box
+                <BoxAny
                   sx={{
                     width: 8,
                     height: 8,
@@ -184,8 +187,8 @@ export const AppHeader: React.FC = () => {
                     flexShrink: 0,
                   }}
                 />
-                <Box sx={{ minWidth: 0, flexGrow: 1 }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1 }}>
+                <BoxAny sx={{ minWidth: 0, flexGrow: 1 }}>
+                  <BoxAny sx={{ display: 'flex', justifyContent: 'space-between', gap: 1 }}>
                     <Typography
                       variant="body2"
                       fontWeight={n.isRead ? 500 : 700}
@@ -196,7 +199,7 @@ export const AppHeader: React.FC = () => {
                     <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
                       {formatWhen(n.createdAt)}
                     </Typography>
-                  </Box>
+                  </BoxAny>
                   <Typography
                     variant="body2"
                     color="text.secondary"
@@ -209,8 +212,8 @@ export const AppHeader: React.FC = () => {
                   >
                     {n.body}
                   </Typography>
-                </Box>
-              </Box>
+                </BoxAny>
+              </BoxAny>
             ))
           )}
         </Menu>

@@ -6,6 +6,9 @@ import { Message } from '@/services/chat.service';
 import { UserAvatar } from '@/components/Shared/UserAvatar';
 import { format } from 'date-fns';
 
+// Work around TS2590 (“union type too complex”) from MUI Box typings in some TS versions.
+const BoxAny = Box as any;
+
 const renderBoldItalic = (text: string, keyPrefix: string): React.ReactNode[] => {
   const parts: React.ReactNode[] = [];
   const pattern = /(\*\*[^*]+\*\*|\*[^*]+\*)/g;
@@ -143,7 +146,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   };
 
   return (
-    <Box
+    <BoxAny
       sx={{
         display: 'flex',
         flexDirection: isOwn ? 'row-reverse' : 'row',
@@ -155,7 +158,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
       }}
     >
       {/* Avatar */}
-      <Box sx={{ width: 56, flexShrink: 0, textAlign: 'center' }}>
+      <BoxAny sx={{ width: 56, flexShrink: 0, textAlign: 'center' }}>
         {showAvatar && (
           <UserAvatar
             src={message.senderAvatar}
@@ -170,7 +173,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
             {language === 'zh' && message.senderName === 'Wa' ? t('Wa') : message.senderName}
           </Typography>
         )}
-      </Box>
+      </BoxAny>
 
       {/* Message Bubble */}
       <Paper
@@ -203,7 +206,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
             {renderInlineFormat(isOwn || isAgent || isDraft ? message.text || '' : displayText)}
           </Typography>
         ) : message.messageType === 'image' ? (
-          <Box
+          <BoxAny
             component="img"
             src={message.mediaUrl}
             alt="Image"
@@ -214,14 +217,14 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
             }}
           />
         ) : message.messageType === 'video' ? (
-          <Box
+          <BoxAny
             component="video"
             src={message.mediaUrl}
             controls
             sx={{ maxWidth: '100%', maxHeight: 300, borderRadius: 1 }}
           />
         ) : message.messageType === 'voice' ? (
-          <Box component="audio" src={message.mediaUrl} controls />
+          <BoxAny component="audio" src={message.mediaUrl} controls />
         ) : message.messageType === 'file' ? (
           <Typography variant="body2">
             <a href={message.mediaUrl} target="_blank" rel="noreferrer">
@@ -233,7 +236,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         )}
 
         {/* Time and status */}
-        <Box
+        <BoxAny
           sx={{
             display: 'flex',
             alignItems: 'center',
@@ -251,8 +254,8 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
               titleAccess="Unread"
             />
           )}
-        </Box>
+        </BoxAny>
       </Paper>
-    </Box>
+    </BoxAny>
   );
 };

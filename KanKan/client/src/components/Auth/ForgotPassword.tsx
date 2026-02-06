@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
-  Box,
   TextField,
   Button,
   Typography,
@@ -84,14 +83,7 @@ export const ForgotPassword: React.FC = () => {
 
   return (
     <Container component="main" maxWidth="sm">
-      <Box
-        sx={{
-          marginTop: 8,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-        }}
-      >
+      <div style={{ marginTop: 64, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         <Paper elevation={3} sx={{ p: 4, width: '100%' }}>
           <Typography component="h1" variant="h4" align="center" gutterBottom>
             Reset Password
@@ -118,7 +110,7 @@ export const ForgotPassword: React.FC = () => {
           )}
 
           {activeStep === 0 ? (
-            <Box component="form" onSubmit={handleSendCode}>
+            <form onSubmit={handleSendCode}>
               <TextField
                 margin="normal"
                 required
@@ -145,17 +137,17 @@ export const ForgotPassword: React.FC = () => {
                 {loading ? <CircularProgress size={24} /> : 'Send Reset Code'}
               </Button>
 
-              <Box sx={{ textAlign: 'center', mt: 2 }}>
+              <div style={{ textAlign: 'center', marginTop: 16 }}>
                 <Typography variant="body2" color="text.secondary">
                   Remembered your password?{' '}
                   <Link to="/login" style={{ color: '#1976d2', textDecoration: 'none' }}>
                     Sign in
                   </Link>
                 </Typography>
-              </Box>
-            </Box>
+              </div>
+            </form>
           ) : (
-            <Box component="form" onSubmit={handleResetPassword}>
+            <form onSubmit={handleResetPassword}>
               <Alert severity="info" sx={{ mb: 2 }}>
                 We sent a 6-digit code to {email}
               </Alert>
@@ -221,10 +213,10 @@ export const ForgotPassword: React.FC = () => {
               >
                 Change Email
               </Button>
-            </Box>
+            </form>
           )}
         </Paper>
-      </Box>
+      </div>
     </Container>
   );
 };

@@ -20,6 +20,10 @@ const getGrid = (count: number): { cols: number; rows: number } => {
   return { cols: 3, rows: 3 };
 };
 
+// Work around TS2590 (“union type too complex”) from MUI Box typings in some TS versions.
+// Using a locally-cast component keeps runtime behavior identical.
+const BoxAny = Box as any;
+
 export const GroupAvatar: React.FC<GroupAvatarProps> = ({ members, size = 48, sx }) => {
   const items = (members || []).filter(Boolean).slice(0, 9);
   const count = items.length;
@@ -32,7 +36,7 @@ export const GroupAvatar: React.FC<GroupAvatarProps> = ({ members, size = 48, sx
         gender={m?.gender}
         fallbackText={m?.displayName}
         variant="rounded"
-        sx={{ width: size, height: size, ...(sx as any) }}
+        sx={sx ? ([{ width: size, height: size }, sx] as any) : ({ width: size, height: size } as any)}
       />
     );
   }
@@ -41,7 +45,7 @@ export const GroupAvatar: React.FC<GroupAvatarProps> = ({ members, size = 48, sx
   const cellCount = cols * rows;
 
   return (
-    <Box
+    <BoxAny
       sx={{
         width: size,
         height: size,
@@ -59,7 +63,7 @@ export const GroupAvatar: React.FC<GroupAvatarProps> = ({ members, size = 48, sx
       {Array.from({ length: cellCount }).map((_, idx) => {
         const m = items[idx];
         if (!m) {
-          return <Box key={`blank_${idx}`} sx={{ bgcolor: 'transparent' }} />;
+          return <BoxAny key={`blank_${idx}`} sx={{ bgcolor: 'transparent' }} />;
         }
 
         return (
@@ -81,6 +85,6 @@ export const GroupAvatar: React.FC<GroupAvatarProps> = ({ members, size = 48, sx
           />
         );
       })}
-    </Box>
+    </BoxAny>
   );
 };

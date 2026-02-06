@@ -28,6 +28,9 @@ import { GroupAvatar } from '@/components/Shared/GroupAvatar';
 import { UserAvatar } from '@/components/Shared/UserAvatar';
 import { getDirectDisplayParticipant, getOtherRealParticipants, isRealGroupChat, WA_USER_ID } from '@/utils/chatParticipants';
 
+// Work around TS2590 (“union type too complex”) from MUI Box typings in some TS versions.
+const BoxAny = Box as any;
+
 interface ChatSidebarProps {
   onNewChat: () => void;
   onCollapse?: () => void;
@@ -117,7 +120,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
   };
 
   return (
-    <Box
+    <BoxAny
       sx={{
         display: 'flex',
         flexDirection: 'column',
@@ -135,7 +138,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
           <Typography variant="subtitle1" fontWeight="bold">
             Chat
           </Typography>
-          <Box>
+          <BoxAny>
             {onCollapse && (
               <IconButton onClick={onCollapse} title="Collapse" size="small">
                 <KeyboardDoubleArrowLeftIcon />
@@ -144,13 +147,13 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
             <IconButton color="primary" onClick={onNewChat} title="New Chat">
               <AddIcon />
             </IconButton>
-          </Box>
+          </BoxAny>
         </Toolbar>
       </AppBar>
 
       {/* Search */}
-      <Box sx={{ p: 1 }}>
-        <Box
+      <BoxAny sx={{ p: 1 }}>
+        <BoxAny
           sx={{
             display: 'flex',
             alignItems: 'center',
@@ -168,21 +171,21 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
             fullWidth
             sx={{ fontSize: '0.9rem' }}
           />
-        </Box>
-      </Box>
+        </BoxAny>
+      </BoxAny>
 
       {/* Chat List */}
       <List sx={{ flexGrow: 1, overflow: 'auto', py: 0 }}>
         {loading && chats.length === 0 ? (
-          <Box sx={{ p: 3, textAlign: 'center' }}>
+          <BoxAny sx={{ p: 3, textAlign: 'center' }}>
             <Typography color="text.secondary">Loading chats...</Typography>
-          </Box>
+          </BoxAny>
         ) : filteredChats.length === 0 ? (
-          <Box sx={{ p: 3, textAlign: 'center' }}>
+          <BoxAny sx={{ p: 3, textAlign: 'center' }}>
             <Typography color="text.secondary">
               {searchQuery ? 'No chats found' : 'No chats yet. Start a new conversation!'}
             </Typography>
-          </Box>
+          </BoxAny>
         ) : (
           filteredChats.map((chat) => {
             const meId = user?.id;
@@ -262,8 +265,8 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
               </ListItemAvatar>
               <ListItemText
                 primary={
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0, flex: 1 }}>
+                  <BoxAny sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1 }}>
+                    <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0, flex: 1 }}>
                       <Typography
                         variant="subtitle2"
                         fontWeight={chat.unreadCount > 0 ? 'bold' : 'medium'}
@@ -272,10 +275,10 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
                       >
                         {chat.name}
                       </Typography>
-                    </Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexShrink: 0, justifyContent: 'flex-end' }}>
+                    </BoxAny>
+                    <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexShrink: 0, justifyContent: 'flex-end' }}>
                       {chat.unreadCount > 0 && (
-                        <Box
+                        <BoxAny
                           sx={{
                             minWidth: 20,
                             height: 20,
@@ -293,7 +296,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
                           title={`${chat.unreadCount} new message${chat.unreadCount === 1 ? '' : 's'}`}
                         >
                           {chat.unreadCount > 99 ? '99+' : chat.unreadCount}
-                        </Box>
+                        </BoxAny>
                       )}
 
                       {chat.lastMessage && (
@@ -307,7 +310,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
                         </Typography>
                       )}
 
-                      <Box className="chatRowActions" sx={{ display: 'flex', alignItems: 'center' }}>
+                      <BoxAny className="chatRowActions" sx={{ display: 'flex', alignItems: 'center' }}>
                         <IconButton
                           size="small"
                           title="Clear"
@@ -319,13 +322,13 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
                         >
                           <CloseIcon fontSize="small" />
                         </IconButton>
-                      </Box>
-                    </Box>
-                  </Box>
+                      </BoxAny>
+                    </BoxAny>
+                  </BoxAny>
                 }
                 secondary={
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 1 }}>
-                    <Box sx={{ minWidth: 0 }}>
+                  <BoxAny sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 1 }}>
+                    <BoxAny sx={{ minWidth: 0 }}>
                       {isGroup && (
                         <Typography
                           variant="caption"
@@ -351,8 +354,8 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
                       >
                         {getLastMessagePreview(chat)}
                       </Typography>
-                    </Box>
-                  </Box>
+                    </BoxAny>
+                  </BoxAny>
                 }
               />
             </ListItemButton>
@@ -360,6 +363,6 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
           })
         )}
       </List>
-    </Box>
+    </BoxAny>
   );
 };

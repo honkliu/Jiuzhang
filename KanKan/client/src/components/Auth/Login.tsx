@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
-  Box,
   TextField,
   Button,
   Typography,
@@ -66,16 +65,16 @@ export const Login: React.FC = () => {
     }
   };
 
+  const containerStyle: React.CSSProperties = {
+    marginTop: 64,
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+  };
+
   return (
     <Container component="main" maxWidth="xs">
-      <Box
-        sx={{
-          marginTop: 8,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-        }}
-      >
+      <div style={containerStyle}>
         <Paper elevation={3} sx={{ p: 4, width: '100%' }}>
           <Typography component="h1" variant="h4" align="center" gutterBottom>
             Welcome Back
@@ -91,7 +90,7 @@ export const Login: React.FC = () => {
             </Alert>
           )}
 
-          <Box component="form" onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit}>
             <TextField
               margin="normal"
               required
@@ -121,7 +120,14 @@ export const Login: React.FC = () => {
               disabled={loading}
             />
 
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1 }}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginTop: 8,
+              }}
+            >
               <FormControlLabel
                 control={
                   <Checkbox
@@ -143,7 +149,7 @@ export const Login: React.FC = () => {
               >
                 Forgot password?
               </Link>
-            </Box>
+            </div>
 
             <Button
               type="submit"
@@ -162,7 +168,7 @@ export const Login: React.FC = () => {
               </Typography>
             </Divider>
 
-            <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
               <Button
                 fullWidth
                 variant="outlined"
@@ -187,19 +193,19 @@ export const Login: React.FC = () => {
               >
                 Carol
               </Button>
-            </Box>
+            </div>
 
-            <Box sx={{ textAlign: 'center' }}>
+            <div style={{ textAlign: 'center' }}>
               <Typography variant="body2" color="text.secondary">
                 Don't have an account?{' '}
                 <Link to="/register" style={{ color: '#1976d2', textDecoration: 'none', fontWeight: 500 }}>
                   Create one
                 </Link>
               </Typography>
-            </Box>
-          </Box>
+            </div>
+          </form>
         </Paper>
-      </Box>
+      </div>
     </Container>
   );
 };

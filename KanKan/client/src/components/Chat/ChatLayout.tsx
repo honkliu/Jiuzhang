@@ -27,6 +27,9 @@ import {
 import { addNotification, fetchUnreadNotificationCount } from '@/store/notificationsSlice';
 import { chatService } from '@/services/chat.service';
 
+// Work around TS2590 (“union type too complex”) from MUI Box typings in some TS versions.
+const BoxAny = Box as any;
+
 export const ChatLayout: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -215,9 +218,9 @@ export const ChatLayout: React.FC = () => {
   };
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
+    <BoxAny sx={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
       <AppHeader />
-      <Box
+      <BoxAny
         sx={{
           display: 'flex',
           height: 'calc(100vh - 64px)',
@@ -241,7 +244,7 @@ export const ChatLayout: React.FC = () => {
           />
         ) : !isMobile ? (
           // Collapsed rail (desktop): keep expand control on the left.
-          <Box
+          <BoxAny
             sx={{
               width: 48,
               flexShrink: 0,
@@ -259,7 +262,7 @@ export const ChatLayout: React.FC = () => {
             <IconButton onClick={() => setShowSidebar(true)} title="Expand" size="small">
               <KeyboardDoubleArrowRightIcon />
             </IconButton>
-          </Box>
+          </BoxAny>
         ) : null}
 
         {/* Main Chat Window */}
@@ -275,7 +278,7 @@ export const ChatLayout: React.FC = () => {
           open={newChatOpen}
           onClose={() => setNewChatOpen(false)}
         />
-      </Box>
-    </Box>
+      </BoxAny>
+    </BoxAny>
   );
 };

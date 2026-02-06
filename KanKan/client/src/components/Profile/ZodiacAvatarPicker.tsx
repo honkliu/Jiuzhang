@@ -1,6 +1,9 @@
 import React from 'react';
 import { Box, Typography } from '@mui/material';
 
+// Work around TS2590 (“union type too complex”) from MUI Box typings in some TS versions.
+const BoxAny = Box as any;
+
 export type ZodiacAvatarId =
   | 'm1'
   | 'm2'
@@ -62,7 +65,7 @@ const AvatarOptionTile: React.FC<AvatarOptionTileProps> = ({
   }, [value, primary, fallback]);
 
   return (
-    <Box
+    <BoxAny
       role="button"
       aria-label={id}
       tabIndex={disabled ? -1 : 0}
@@ -70,7 +73,7 @@ const AvatarOptionTile: React.FC<AvatarOptionTileProps> = ({
         if (disabled) return;
         onSelect(currentSrc, id);
       }}
-      onKeyDown={(e) => {
+      onKeyDown={(e: any) => {
         if (disabled) return;
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
@@ -104,7 +107,7 @@ const AvatarOptionTile: React.FC<AvatarOptionTileProps> = ({
         },
       }}
     >
-      <Box
+      <BoxAny
         component="img"
         src={currentSrc}
         alt={id}
@@ -121,7 +124,7 @@ const AvatarOptionTile: React.FC<AvatarOptionTileProps> = ({
           borderRadius: 'inherit',
         }}
       />
-    </Box>
+    </BoxAny>
   );
 };
 
@@ -139,12 +142,12 @@ export const ZodiacAvatarPicker: React.FC<ZodiacAvatarPickerProps> = ({
   // We serve zodiac images from the API's static files folder: /zodiac/*.png
   // This keeps URLs stable (unlike Vite hashed asset paths).
   return (
-    <Box>
+    <BoxAny>
       <Typography variant="subtitle2" sx={{ mb: 1 }}>
         Choose Zodiac Avatar
       </Typography>
 
-      <Box
+      <BoxAny
         sx={{
           display: 'grid',
           gridTemplateColumns: 'repeat(4, 56px)',
@@ -167,7 +170,7 @@ export const ZodiacAvatarPicker: React.FC<ZodiacAvatarPickerProps> = ({
             />
           );
         })}
-      </Box>
-    </Box>
+      </BoxAny>
+    </BoxAny>
   );
 };

@@ -23,6 +23,9 @@ import { createChat } from '@/store/chatSlice';
 import { contactService, User } from '@/services/contact.service';
 import { UserAvatar } from '@/components/Shared/UserAvatar';
 
+// Work around TS2590 (“union type too complex”) from MUI Box typings in some TS versions.
+const BoxAny = Box as any;
+
 interface NewChatDialogProps {
   open: boolean;
   onClose: () => void;
@@ -118,7 +121,7 @@ export const NewChatDialog: React.FC<NewChatDialogProps> = ({ open, onClose }) =
       <DialogContent>
         {/* Selected Users */}
         {selectedUsers.length > 0 && (
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+          <BoxAny sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
             {selectedUsers.map((user) => (
               <Chip
                 key={user.id}
@@ -128,7 +131,7 @@ export const NewChatDialog: React.FC<NewChatDialogProps> = ({ open, onClose }) =
                 deleteIcon={<CloseIcon />}
               />
             ))}
-          </Box>
+          </BoxAny>
         )}
 
         {/* Search */}
@@ -149,9 +152,9 @@ export const NewChatDialog: React.FC<NewChatDialogProps> = ({ open, onClose }) =
 
         {/* User List */}
         {loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+          <BoxAny sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
             <CircularProgress />
-          </Box>
+          </BoxAny>
         ) : filteredUsers.length === 0 ? (
           <Typography color="text.secondary" align="center" sx={{ py: 4 }}>
             No users found
