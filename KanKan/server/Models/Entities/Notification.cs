@@ -5,7 +5,7 @@ public class Notification
     public string Id { get; set; } = string.Empty;
     public string Type { get; set; } = "notification";
 
-    // Partition key in Cosmos
+    // Owner user id for notification routing
     public string UserId { get; set; } = string.Empty;
 
     // notification categories: message, friend_request, pa, etc.
@@ -23,5 +23,6 @@ public class Notification
     public DateTime CreatedAt { get; set; }
     public DateTime? ReadAt { get; set; }
 
+    public DateTime? ExpiresAt { get; set; }
     public int? Ttl { get; set; }
 }

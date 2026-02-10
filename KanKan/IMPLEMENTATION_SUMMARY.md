@@ -39,7 +39,7 @@ I've successfully implemented a complete **Phase 1 (MVP)** of the KanKan messagi
 - ✅ BCrypt password hashing
 - ✅ Swagger documentation
 - ✅ CORS configuration
-- ✅ Cosmos DB integration
+- ✅ MongoDB integration
 
 #### 💻 Frontend (React 18 + TypeScript)
 **Components:**
@@ -185,9 +185,9 @@ npm run dev
 ```
 
 ### 3. Database
-- Install Cosmos DB Emulator or use Azure Cosmos DB
+- Install MongoDB (Docker recommended)
 - Create database `KanKanDB`
-- Create containers: Users, Messages, Chats, Contacts, Moments, EmailVerifications
+- Create collections: Users, UserEmailLookup, Chats, ChatUsers, Messages, Contacts, Moments, EmailVerifications, Notifications
 
 ## 📊 Statistics
 
@@ -223,7 +223,7 @@ The foundation is ready. Next steps:
 - ASP.NET Core Web API
 - JWT Authentication
 - BCrypt.NET
-- Azure Cosmos DB SDK
+- MongoDB Driver
 - SendGrid
 - Swagger/OpenAPI
 
@@ -237,14 +237,14 @@ The foundation is ready. Next steps:
 - React Router v6
 
 ### Database
-- Azure Cosmos DB (NoSQL)
+- MongoDB (NoSQL)
 - Partition-based data modeling
 
 ## 📝 Notes
 
 1. **Email Configuration:** SendGrid API key optional for development. Verification codes logged to console.
 
-2. **Database:** Cosmos DB Emulator can be used for local development. Production should use Azure Cosmos DB.
+2. **Database:** MongoDB can be used locally via Docker or in a managed cloud deployment.
 
 3. **Security:** All passwords are hashed with BCrypt. JWT tokens are properly secured.
 

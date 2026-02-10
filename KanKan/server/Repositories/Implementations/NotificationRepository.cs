@@ -67,6 +67,11 @@ public class NotificationRepository : INotificationRepository
         if (notification.CreatedAt == default)
             notification.CreatedAt = DateTime.UtcNow;
 
+        if (notification.Ttl.HasValue && notification.ExpiresAt == null)
+        {
+            notification.ExpiresAt = notification.CreatedAt.AddSeconds(notification.Ttl.Value);
+        }
+
         await _collection.InsertOneAsync(notification);
         return notification;
     }

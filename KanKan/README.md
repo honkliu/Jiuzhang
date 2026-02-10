@@ -1,6 +1,6 @@
 # KanKan - Real-time Messaging Application
 
-A full-stack real-time messaging application built with React, .NET Core, SignalR, and Azure Cosmos DB.
+A full-stack real-time messaging application built with React, .NET Core, SignalR, and MongoDB.
 
 ## 🚀 Features
 
@@ -36,17 +36,14 @@ A full-stack real-time messaging application built with React, .NET Core, Signal
 - **.NET 8** - Framework
 - **ASP.NET Core Web API** - RESTful API
 - **SignalR** - WebSocket server
-- **Azure Cosmos DB** - NoSQL database
-- **Azure Blob Storage** - Media storage
+- **MongoDB** - NoSQL database
+- **Local/Cloud Storage** - Media storage
 - **JWT Authentication** - Security
 - **BCrypt.NET** - Password hashing
 
 ### Infrastructure
-- **Azure App Service** - Hosting
-- **Azure Cosmos DB** - Database
-- **Azure SignalR Service** - WebSocket scaling
-- **Azure Blob Storage** - File storage
-- **Azure Redis Cache** - Caching
+- **MongoDB** - Database
+- **Docker** - Containerization
 
 ## 📁 Project Structure
 
@@ -87,9 +84,8 @@ KanKan/
 ### Prerequisites
 - Node.js 18+ and npm
 - .NET 8 SDK
-- Azure account (for deployment)
-- Azure Cosmos DB instance
-- Azure Storage account
+- Docker Desktop (for MongoDB)
+- MongoDB (via Docker)
 
 ### Environment Variables
 
@@ -102,10 +98,10 @@ VITE_SIGNALR_URL=http://localhost:5001/hub/chat
 #### Server (appsettings.json)
 ```json
 {
-  "CosmosDb": {
-    "Endpoint": "your-cosmos-db-endpoint",
-    "Key": "your-cosmos-db-key",
-   "DatabaseName": "KanKanDB"
+  "StorageMode": "MongoDB",
+  "MongoDB": {
+    "ConnectionString": "mongodb://admin:password123@localhost:27017",
+    "DatabaseName": "KanKanDB"
   },
   "Jwt": {
     "Secret": "your-jwt-secret-key-at-least-32-characters",
@@ -177,13 +173,13 @@ dotnet publish -c Release
 
 ## 🗄️ Database Schema
 
-### Cosmos DB Containers
+### MongoDB Collections
 
 1. **Users** - User accounts and profiles
 2. **UserEmailLookup** - Email -> user id lookup
-3. **Messages** - Chat messages (partitioned by chatId)
+3. **Messages** - Chat messages
 4. **Chats** - Chat metadata (direct and group)
-5. **ChatUsers** - Per-user chat summaries (partitioned by userId)
+5. **ChatUsers** - Per-user chat summaries
 6. **Contacts** - User contacts and friend requests
 7. **Moments** - Social timeline posts
 8. **EmailVerifications** - Email verification codes (TTL: 10 min)
@@ -212,45 +208,80 @@ See [Architecture.md](Architecture.md) for detailed data models.
 
 ## 🚀 Deployment
 
-### Azure Deployment
+### MongoDB Setup
 
-1. **Create Azure Resources:**
+1. **Pull MongoDB image:**
    ```bash
-   # Create Resource Group
-   az group create --name kankan-rg --location eastus
-
-   # Create App Service Plan
-   az appservice plan create --name kankan-plan --resource-group kankan-rg --sku B1
-
-   # Create Web App
-   az webapp create --name kankan-api --resource-group kankan-rg --plan kankan-plan
-
-   # Create Cosmos DB
-   az cosmosdb create --name kankan-db --resource-group kankan-rg
-
-   # Create Storage Account
-   az storage account create --name kankanstorage --resource-group kankan-rg
+   docker pull mongo:latest
    ```
 
-2. **Configure App Settings:**
+2. **Start MongoDB with Docker:**
    ```bash
-   az webapp config appsettings set --name kankan-api --resource-group kankan-rg --settings \
-     CosmosDb__Endpoint=<endpoint> \
-     CosmosDb__Key=<key> \
-     Jwt__Secret=<secret>
+   docker run -d \
+     --name mongodb \
+     -p 27017:27017 \
+     -e MONGO_INITDB_ROOT_USERNAME=admin \
+     -e MONGO_INITDB_ROOT_PASSWORD=password123 \
+     -v mongodb_data:/data/db \
+     mongo:latest
    ```
 
-3. **Deploy Application:**
+3. **Create database, user, and collections (optional manual bootstrap):**
    ```bash
-   # Deploy backend
+   docker exec -it mongodb mongosh -u admin -p password123 --authenticationDatabase admin
+   ```
+
+   ```javascript
+   use KanKanDB
+
+   db.createUser({
+     user: "kankan",
+     pwd: "kankan123",
+     roles: [ { role: "readWrite", db: "KanKanDB" } ]
+   })
+
+   db.createCollection("Users")
+   db.createCollection("UserEmailLookup")
+   db.createCollection("Chats")
+   db.createCollection("ChatUsers")
+   db.createCollection("Messages")
+   db.createCollection("Contacts")
+   db.createCollection("Moments")
+   db.createCollection("EmailVerifications")
+   db.createCollection("Notifications")
+
+   show collections
+   exit
+   ```
+
+4. **Configure Application:**
+   Update `appsettings.json` with MongoDB connection string:
+   ```json
+   {
+     "StorageMode": "MongoDB",
+     "MongoDB": {
+       "ConnectionString": "mongodb://admin:password123@localhost:27017",
+          "DatabaseName": "KanKanDB",
+          "Initialization": {
+             "Enabled": true,
+             "SeedTestData": true
+          }
+     }
+   }
+   ```
+
+5. **Deploy Application:**
+   ```bash
+   # Build backend
    cd server
    dotnet publish -c Release
-   az webapp deploy --resource-group kankan-rg --name kankan-api --src-path ./bin/Release/net8.0/publish
 
-   # Deploy frontend (to Azure Static Web Apps or Blob Storage + CDN)
+   # Build frontend
    cd ../client
    npm run build
-   az storage blob upload-batch --account-name kankanstorage --source ./build --destination '$web'
+
+   # Deploy to your hosting platform of choice
+   # (Docker, Kubernetes, VPS, etc.)
    ```
 
 ## 📊 API Endpoints
@@ -307,9 +338,9 @@ npm run test:e2e
 ## 📈 Monitoring
 
 - **Application Insights** - Performance monitoring
-- **Azure Monitor** - Resource monitoring
+- **System Monitoring** - Resource monitoring
 - **SignalR Dashboard** - Connection monitoring
-- **Cosmos DB Metrics** - Database performance
+- **MongoDB Metrics** - Database performance
 
 ## 🤝 Contributing
 
@@ -331,7 +362,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 - Inspired by modern messaging platforms
 - Built with modern web technologies
-- Azure cloud infrastructure
+- MongoDB database infrastructure
 
 ## 📞 Support
 

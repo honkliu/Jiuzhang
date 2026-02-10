@@ -13,7 +13,7 @@ using UserEntity = KanKan.API.Models.Entities.User;
 namespace KanKan.API.Services.Implementations;
 
 /// <summary>
-/// In-memory implementation of AuthService for development without Cosmos DB
+/// In-memory implementation of AuthService for development without MongoDB
 /// </summary>
 public class InMemoryAuthService : IAuthService
 {

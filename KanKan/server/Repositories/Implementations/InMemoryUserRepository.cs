@@ -4,7 +4,7 @@ using UserEntity = KanKan.API.Models.Entities.User;
 namespace KanKan.API.Repositories.Implementations;
 
 /// <summary>
-/// In-memory implementation of IUserRepository for development/testing without Cosmos DB
+/// In-memory implementation of IUserRepository for development/testing without MongoDB
 /// </summary>
 public class InMemoryUserRepository : IUserRepository
 {

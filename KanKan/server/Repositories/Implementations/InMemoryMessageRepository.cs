@@ -4,7 +4,7 @@ using KanKan.API.Repositories.Interfaces;
 namespace KanKan.API.Repositories.Implementations;
 
 /// <summary>
-/// In-memory implementation of IMessageRepository for development/testing without Cosmos DB
+/// In-memory implementation of IMessageRepository for development/testing without MongoDB
 /// </summary>
 public class InMemoryMessageRepository : IMessageRepository
 {

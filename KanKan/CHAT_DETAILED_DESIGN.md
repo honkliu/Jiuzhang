@@ -119,7 +119,7 @@ Source of truth: `server/Models/Entities/Chat.cs`.
 
 Implementation notes:
 - `ChatController.ClearChat(...)` delegates to `IChatRepository.ClearChatForUserAsync(...)`.
-- Cosmos implementation patches participant fields; in-memory implementation updates the in-memory entity.
+- MongoDB implementation patches participant fields; in-memory implementation updates the in-memory entity.
 
 ### 8) Re-appearance on new messages
 When a new message is sent, the server un-hides any participants that were hidden so the chat reappears (existing behavior in send-message flows). This keeps “clear” semantics aligned with “chat comes back only when new messages arrive”.

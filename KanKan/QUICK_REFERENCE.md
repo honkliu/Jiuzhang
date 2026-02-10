@@ -33,7 +33,7 @@ npm run preview      # Preview production build
 - **Frontend:** http://localhost:3000
 - **Backend API:** http://localhost:5001
 - **Swagger Docs:** http://localhost:5001
-- **Cosmos DB Emulator:** https://localhost:8081/_explorer/index.html
+- **MongoDB Compass:** mongodb://localhost:27017
 
 ## 📋 Default Test Flow
 
@@ -54,14 +54,10 @@ npm run preview      # Preview production build
 ### Backend: `server/appsettings.json`
 ```json
 {
-  "UseInMemoryStorage": false,
-  "CosmosDb": {
-    "Endpoint": "https://localhost:8081",
-    "Key": "C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==",
-    "DatabaseName": "KanKanDB",
-    "Provisioning": {
-      "Enabled": true
-    }
+  "StorageMode": "MongoDB",
+  "MongoDB": {
+    "ConnectionString": "mongodb://admin:password123@localhost:27017",
+    "DatabaseName": "KanKanDB"
   },
   "Jwt": {
     "Secret": "your-super-secret-jwt-key-at-least-32-chars"
@@ -74,19 +70,19 @@ npm run preview      # Preview production build
 VITE_API_URL=http://localhost:5001/api
 ```
 
-## 📊 Database Containers
+## 📊 Database Collections
 
-| Container | Partition Key | TTL | Purpose |
-|-----------|---------------|-----|---------|
-| Users | /id | - | User accounts |
-| UserEmailLookup | /email | - | Email lookup |
-| Messages | /chatId | - | Chat messages |
-| Chats | /id | - | Chat metadata |
-| ChatUsers | /userId | - | Per-user chat summaries |
-| Contacts | /userId | - | User contacts |
-| Moments | /userId | - | Timeline posts |
-| EmailVerifications | /email | 600s | Email codes |
-| Notifications | /userId | - | Notifications |
+| Collection | Purpose |
+|-----------|---------|
+| Users | User accounts |
+| UserEmailLookup | Email lookup |
+| Messages | Chat messages |
+| Chats | Chat metadata |
+| ChatUsers | Per-user chat summaries |
+| Contacts | User contacts |
+| Moments | Timeline posts |
+| EmailVerifications | Email codes (TTL: 600s) |
+| Notifications | Notifications |
 
 ## 🎯 Key API Endpoints
 
@@ -114,10 +110,16 @@ lsof -i :5000
 kill -9 <PID>
 ```
 
-### "Cosmos DB connection failed"
-- Install Cosmos DB Emulator
-- Start emulator before running backend
-- Use correct endpoint and key
+### "MongoDB connection failed"
+- Start MongoDB with Docker:
+  ```bash
+  docker run -d --name mongodb -p 27017:27017 \
+    -e MONGO_INITDB_ROOT_USERNAME=admin \
+    -e MONGO_INITDB_ROOT_PASSWORD=password123 \
+    mongo:latest
+  ```
+- Verify MongoDB is running: `docker ps`
+- Check connection string in appsettings.json
 
 ### "Module not found" in React
 ```bash
@@ -133,7 +135,7 @@ npm install
 
 ### Backend (.NET 8)
 - Microsoft.AspNetCore.Authentication.JwtBearer (8.0.0)
-- Microsoft.Azure.Cosmos (3.38.0)
+- MongoDB.Driver (2.25.0)
 - BCrypt.Net-Next (4.0.3)
 - SendGrid (9.28.1)
 - Swashbuckle.AspNetCore (6.5.0)

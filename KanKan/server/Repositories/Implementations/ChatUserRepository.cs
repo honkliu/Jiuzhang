@@ -56,7 +56,11 @@ public class ChatUserRepository : IChatUserRepository
     {
         if (string.IsNullOrWhiteSpace(chatUser.Id))
         {
-            chatUser.Id = chatUser.ChatId;
+            chatUser.Id = BuildChatUserId(chatUser.ChatId, chatUser.UserId);
+        }
+        else if (!chatUser.Id.Contains(':'))
+        {
+            chatUser.Id = BuildChatUserId(chatUser.ChatId, chatUser.UserId);
         }
 
         var filter = Builders<ChatUser>.Filter.And(
@@ -69,6 +73,11 @@ public class ChatUserRepository : IChatUserRepository
             chatUser,
             new ReplaceOptions { IsUpsert = true }
         );
+    }
+
+    private static string BuildChatUserId(string chatId, string userId)
+    {
+        return $"{chatId}:{userId}";
     }
 
     public async Task UpsertManyAsync(IEnumerable<ChatUser> chatUsers)

@@ -8,7 +8,7 @@
 - User registration with email verification
 - Login/logout functionality
 - JWT token-based authentication with refresh tokens
-- Database models and repositories (Cosmos DB ready)
+- Database models and repositories (MongoDB ready)
 - Complete backend API (.NET Core 8)
 - Complete frontend (React 18 + TypeScript)
 
@@ -123,6 +123,23 @@ show dbs
 exit
 ```
 
+6. (Optional) Create collections manually if you want explicit bootstrap commands:
+```javascript
+use KanKanDB
+
+db.createCollection("Users")
+db.createCollection("UserEmailLookup")
+db.createCollection("Chats")
+db.createCollection("ChatUsers")
+db.createCollection("Messages")
+db.createCollection("Contacts")
+db.createCollection("Moments")
+db.createCollection("EmailVerifications")
+db.createCollection("Notifications")
+
+show collections
+```
+
 **Useful Docker Commands:**
 ```bash
 # Stop MongoDB
@@ -156,7 +173,8 @@ cd server
     "ConnectionString": "mongodb://admin:password123@localhost:27017",
     "DatabaseName": "KanKanDB",
     "Initialization": {
-      "Enabled": true
+      "Enabled": true,
+      "SeedTestData": true
     }
   }
 }
@@ -201,6 +219,7 @@ The application automatically initializes MongoDB when `MongoDB:Initialization:E
 1. Create the database if it doesn't exist
 2. Create all required collections
 3. Create indexes for optimal query performance
+4. Seed test users (Alice, Bob, Carol) when `SeedTestData` is enabled
 
 You can verify the setup by connecting to MongoDB:
 
