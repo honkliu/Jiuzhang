@@ -33,7 +33,7 @@ A full-stack real-time messaging application built with React, .NET Core, Signal
 - **React Router v6** - Routing
 
 ### Backend
-- **.NET 8** - Framework
+- **.NET 9** - Framework
 - **ASP.NET Core Web API** - RESTful API
 - **SignalR** - WebSocket server
 - **MongoDB** - NoSQL database
@@ -83,7 +83,7 @@ KanKan/
 
 ### Prerequisites
 - Node.js 18+ and npm
-- .NET 8 SDK
+- .NET 9 SDK
 - Docker Desktop (for MongoDB)
 - MongoDB (via Docker)
 

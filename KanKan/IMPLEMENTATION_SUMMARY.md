@@ -219,7 +219,7 @@ The foundation is ready. Next steps:
 ## 🎓 Technologies Used
 
 ### Backend
-- .NET 8
+- .NET 9
 - ASP.NET Core Web API
 - JWT Authentication
 - BCrypt.NET

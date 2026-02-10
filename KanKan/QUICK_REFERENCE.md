@@ -133,7 +133,7 @@ npm install
 
 ## 📦 Dependencies
 
-### Backend (.NET 8)
+### Backend (.NET 9)
 - Microsoft.AspNetCore.Authentication.JwtBearer (8.0.0)
 - MongoDB.Driver (2.25.0)
 - BCrypt.Net-Next (4.0.3)

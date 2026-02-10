@@ -167,7 +167,7 @@ src/
 
 | Technology | Purpose |
 |------------|---------|
-| .NET 8 | Framework |
+| .NET 9 | Framework |
 | ASP.NET Core Web API | RESTful API |
 | SignalR | WebSocket communication |
 | Azure Cosmos DB SDK | Database access |

@@ -9,7 +9,7 @@
 - Login/logout functionality
 - JWT token-based authentication with refresh tokens
 - Database models and repositories (MongoDB ready)
-- Complete backend API (.NET Core 8)
+- Complete backend API (.NET 9)
 - Complete frontend (React 18 + TypeScript)
 
 ## 🚀 Quick Start
@@ -18,7 +18,7 @@
 
 Before you begin, ensure you have:
 - **Node.js 18+** and npm installed
-- **.NET 8 SDK** installed
+- **.NET 9 SDK** installed
 - **Docker Desktop** installed (optional, only needed for MongoDB persistent mode)
 - **SendGrid API key** (optional, for email functionality)
 
