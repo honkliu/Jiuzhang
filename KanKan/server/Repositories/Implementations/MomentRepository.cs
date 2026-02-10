@@ -1,4 +1,4 @@
-using Microsoft.Azure.Cosmos;
+using MongoDB.Driver;
 using KanKan.API.Models.Entities;
 using KanKan.API.Repositories.Interfaces;
 
@@ -6,75 +6,56 @@ namespace KanKan.API.Repositories.Implementations;
 
 public class MomentRepository : IMomentRepository
 {
-    private readonly Container _container;
+    private readonly IMongoCollection<Moment> _collection;
 
-    public MomentRepository(CosmosClient cosmosClient, IConfiguration configuration)
+    public MomentRepository(IMongoClient mongoClient, IConfiguration configuration)
     {
-        var databaseName = configuration["CosmosDb:DatabaseName"] ?? "KanKanDB";
-        var containerName = configuration["CosmosDb:Containers:Moments"] ?? "Moments";
-        _container = cosmosClient.GetContainer(databaseName, containerName);
+        var databaseName = configuration["MongoDB:DatabaseName"] ?? "KanKanDB";
+        var collectionName = configuration["MongoDB:Collections:Moments"] ?? "Moments";
+        var database = mongoClient.GetDatabase(databaseName);
+        _collection = database.GetCollection<Moment>(collectionName);
     }
 
     public async Task<Moment?> GetByIdAsync(string id)
     {
-        try
-        {
-            var response = await _container.ReadItemAsync<Moment>(id, new PartitionKey(id));
-            return response.Resource;
-        }
-        catch (CosmosException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
-        {
-            return null;
-        }
+        var filter = Builders<Moment>.Filter.Eq(m => m.Id, id);
+        return await _collection.Find(filter).FirstOrDefaultAsync();
     }
 
     public async Task<List<Moment>> GetFeedAsync(int limit = 50, DateTime? before = null)
     {
-        var queryText = @"SELECT * FROM c
-            WHERE c.type = 'moment'";
+        var filterBuilder = Builders<Moment>.Filter;
+        var filter = filterBuilder.Eq(m => m.Type, "moment");
 
         if (before.HasValue)
         {
-            queryText += " AND c.createdAt < @before";
+            filter = filterBuilder.And(
+                filter,
+                filterBuilder.Lt(m => m.CreatedAt, before.Value)
+            );
         }
 
-        queryText += " ORDER BY c.createdAt DESC OFFSET 0 LIMIT @limit";
-
-        var query = new QueryDefinition(queryText)
-            .WithParameter("@limit", limit);
-
-        if (before.HasValue)
-        {
-            query = query.WithParameter("@before", before.Value);
-        }
-
-        var iterator = _container.GetItemQueryIterator<Moment>(query);
-        var results = new List<Moment>();
-
-        while (iterator.HasMoreResults)
-        {
-            var response = await iterator.ReadNextAsync();
-            results.AddRange(response);
-        }
-
-        return results;
+        var sort = Builders<Moment>.Sort.Descending(m => m.CreatedAt);
+        return await _collection.Find(filter).Sort(sort).Limit(limit).ToListAsync();
     }
 
     public async Task<Moment> CreateAsync(Moment moment)
     {
         moment.CreatedAt = DateTime.UtcNow;
-        var response = await _container.CreateItemAsync(moment, new PartitionKey(moment.Id));
-        return response.Resource;
+        await _collection.InsertOneAsync(moment);
+        return moment;
     }
 
     public async Task<Moment> UpdateAsync(Moment moment)
     {
-        var response = await _container.ReplaceItemAsync(moment, moment.Id, new PartitionKey(moment.Id));
-        return response.Resource;
+        var filter = Builders<Moment>.Filter.Eq(m => m.Id, moment.Id);
+        await _collection.ReplaceOneAsync(filter, moment);
+        return moment;
     }
 
     public async Task DeleteAsync(string id)
     {
-        await _container.DeleteItemAsync<Moment>(id, new PartitionKey(id));
+        var filter = Builders<Moment>.Filter.Eq(m => m.Id, id);
+        await _collection.DeleteOneAsync(filter);
     }
 }

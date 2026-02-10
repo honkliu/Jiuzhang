@@ -20,6 +20,7 @@ namespace KanKan.API.Controllers;
 public class ChatController : ControllerBase
 {
     private readonly IChatRepository _chatRepository;
+    private readonly IChatUserRepository _chatUserRepository;
     private readonly IMessageRepository _messageRepository;
     private readonly IUserRepository _userRepository;
     private readonly INotificationRepository _notificationRepository;
@@ -29,6 +30,7 @@ public class ChatController : ControllerBase
 
     public ChatController(
         IChatRepository chatRepository,
+        IChatUserRepository chatUserRepository,
         IMessageRepository messageRepository,
         IUserRepository userRepository,
         INotificationRepository notificationRepository,
@@ -37,6 +39,7 @@ public class ChatController : ControllerBase
         ILogger<ChatController> logger)
     {
         _chatRepository = chatRepository;
+        _chatUserRepository = chatUserRepository;
         _messageRepository = messageRepository;
         _userRepository = userRepository;
         _notificationRepository = notificationRepository;
@@ -57,9 +60,20 @@ public class ChatController : ControllerBase
         try
         {
             var userId = GetUserId();
-            var chats = await _chatRepository.GetUserChatsAsync(userId);
+            var chatUsers = await _chatUserRepository.GetUserChatsAsync(userId);
+            if (chatUsers.Count == 0)
+            {
+                var chats = await _chatRepository.GetUserChatsAsync(userId);
+                foreach (var chat in chats)
+                {
+                    await UpsertChatUsersFromChatAsync(chat);
+                }
+                chatUsers = await _chatUserRepository.GetUserChatsAsync(userId);
+            }
 
-            var chatDtos = chats.Select(c => ChatDomain.ToChatDto(c, userId, ChatHub.IsUserOnline)).ToList();
+            var chatDtos = chatUsers
+                .Select(cu => ChatDomain.ToChatDto(ChatDomain.ToChat(cu), userId, ChatHub.IsUserOnline))
+                .ToList();
             return Ok(chatDtos);
         }
         catch (Exception ex)
@@ -91,6 +105,7 @@ public class ChatController : ControllerBase
             if (me != null && me.IsHidden)
             {
                 await _chatRepository.SetHiddenAsync(chatId, userId, isHidden: false);
+                await _chatUserRepository.SetHiddenAsync(userId, chatId, isHidden: false);
                 me.IsHidden = false;
             }
 
@@ -130,6 +145,7 @@ public class ChatController : ControllerBase
                     if (me != null && me.IsHidden)
                     {
                         await _chatRepository.SetHiddenAsync(existingChat.Id, userId, isHidden: false);
+                        await _chatUserRepository.SetHiddenAsync(userId, existingChat.Id, isHidden: false);
                         me.IsHidden = false;
                     }
                     return Ok(ChatDomain.ToChatDto(existingChat, userId, ChatHub.IsUserOnline));
@@ -201,6 +217,7 @@ public class ChatController : ControllerBase
             };
 
             await _chatRepository.CreateAsync(chat);
+            await UpsertChatUsersFromChatAsync(chat);
 
             // Notify all participants about the new chat via SignalR
             foreach (var participant in participants)
@@ -249,6 +266,8 @@ public class ChatController : ControllerBase
 
             chat.UpdatedAt = DateTime.UtcNow;
             await _chatRepository.UpdateAsync(chat);
+            await UpsertChatUsersFromChatAsync(chat);
+            await UpsertChatUsersFromChatAsync(chat);
 
             // Notify participants
             await _hubContext.Clients.Group(chatId).SendAsync("ChatUpdated", ChatDomain.ToChatDto(chat, userId, ChatHub.IsUserOnline));
@@ -283,21 +302,30 @@ public class ChatController : ControllerBase
             {
                 // For direct chats, actually delete
                 await _chatRepository.DeleteAsync(chatId);
+                await DeleteChatUsersAsync(chat);
             }
             else
             {
                 // For group chats, just remove the user
+                var previousParticipants = chat.Participants.ToList();
                 chat.Participants.RemoveAll(p => p.UserId == userId);
                 chat.AdminIds.Remove(userId);
 
                 if (chat.Participants.Count == 0)
                 {
                     await _chatRepository.DeleteAsync(chatId);
+                    await DeleteChatUsersAsync(new Chat
+                    {
+                        Id = chatId,
+                        Participants = previousParticipants
+                    });
                 }
                 else
                 {
                     chat.UpdatedAt = DateTime.UtcNow;
                     await _chatRepository.UpdateAsync(chat);
+                    await UpsertChatUsersFromChatAsync(chat);
+                    await _chatUserRepository.DeleteAsync(userId, chatId);
 
                     // Notify remaining participants
                     await _hubContext.Clients.Group(chatId).SendAsync("ParticipantLeft", chatId, userId);
@@ -331,6 +359,7 @@ public class ChatController : ControllerBase
                 return Forbid();
 
             await _chatRepository.SetHiddenAsync(chatId, userId, isHidden: true);
+            await _chatUserRepository.SetHiddenAsync(userId, chatId, isHidden: true);
             return Ok(new { message = "Chat hidden" });
         }
         catch (Exception ex)
@@ -358,6 +387,7 @@ public class ChatController : ControllerBase
                 return Forbid();
 
             await _chatRepository.SetHiddenAsync(chatId, userId, isHidden: false);
+            await _chatUserRepository.SetHiddenAsync(userId, chatId, isHidden: false);
             return Ok(new { message = "Chat unhidden" });
         }
         catch (Exception ex)
@@ -385,6 +415,7 @@ public class ChatController : ControllerBase
                 return Forbid();
 
             await _chatRepository.ClearChatForUserAsync(chatId, userId, DateTime.UtcNow);
+            await _chatUserRepository.ClearChatForUserAsync(userId, chatId, DateTime.UtcNow);
             return Ok(new { message = "Chat cleared" });
         }
         catch (Exception ex)
@@ -422,7 +453,8 @@ public class ChatController : ControllerBase
 
             var messages = await _messageRepository.GetChatMessagesAsync(chatId, limit, beforeDate);
 
-            var clearedAt = chat.Participants.FirstOrDefault(p => p.UserId == userId)?.ClearedAt;
+            var chatUser = await _chatUserRepository.GetByUserAndChatAsync(userId, chatId);
+            var clearedAt = chatUser?.ClearedAt ?? chat.Participants.FirstOrDefault(p => p.UserId == userId)?.ClearedAt;
             if (clearedAt.HasValue)
             {
                 messages = messages.Where(m => m.Timestamp > clearedAt.Value).ToList();
@@ -545,6 +577,8 @@ public class ChatController : ControllerBase
                     .SendAsync("ChatCreated", ChatDomain.ToChatDto(chat, participant.UserId, ChatHub.IsUserOnline));
             }
 
+            await UpsertChatUsersFromChatAsync(chat);
+
             var messageDto = new MessageDto
             {
                 Id = message.Id,
@@ -654,6 +688,7 @@ public class ChatController : ControllerBase
                     };
                     chat.UpdatedAt = DateTime.UtcNow;
                     await _chatRepository.UpdateAsync(chat);
+                    await UpsertChatUsersFromChatAsync(chat);
 
                     await _hubContext.Clients.Group(chatId).SendAsync("AgentMessageComplete", chat.Id, agentMessageId, reply);
                 }
@@ -782,6 +817,8 @@ public class ChatController : ControllerBase
             chat.AdminIds.Remove(participantId);
             chat.UpdatedAt = DateTime.UtcNow;
             await _chatRepository.UpdateAsync(chat);
+            await UpsertChatUsersFromChatAsync(chat);
+            await _chatUserRepository.DeleteAsync(participantId, chatId);
 
             // Notify via SignalR
             await _hubContext.Clients.Group(chatId).SendAsync("ParticipantRemoved", chatId, participantId);
@@ -891,6 +928,7 @@ public class ChatController : ControllerBase
 
         chat.UpdatedAt = DateTime.UtcNow;
         await _chatRepository.UpdateAsync(chat);
+        await UpsertChatUsersFromChatAsync(chat);
 
         await _hubContext.Clients.Group(chat.Id)
             .SendAsync("ChatUpdated", ChatDomain.ToChatDto(chat, currentUserId, ChatHub.IsUserOnline));
@@ -934,6 +972,59 @@ public class ChatController : ControllerBase
         return baseName;
     }
 
+    private static List<ChatParticipant> CloneParticipants(IEnumerable<ChatParticipant> participants)
+    {
+        return participants.Select(p => new ChatParticipant
+        {
+            UserId = p.UserId,
+            DisplayName = p.DisplayName,
+            AvatarUrl = p.AvatarUrl,
+            Gender = p.Gender,
+            JoinedAt = p.JoinedAt,
+            IsHidden = p.IsHidden,
+            ClearedAt = p.ClearedAt
+        }).ToList();
+    }
+
+    private static ChatUser BuildChatUser(Chat chat, ChatParticipant participant)
+    {
+        return new ChatUser
+        {
+            Id = chat.Id,
+            ChatId = chat.Id,
+            UserId = participant.UserId,
+            ChatType = chat.ChatType,
+            Participants = CloneParticipants(chat.Participants),
+            GroupName = chat.GroupName,
+            GroupAvatar = chat.GroupAvatar,
+            AdminIds = chat.AdminIds ?? new List<string>(),
+            LastMessage = chat.LastMessage,
+            IsHidden = participant.IsHidden,
+            ClearedAt = participant.ClearedAt,
+            CreatedAt = chat.CreatedAt,
+            UpdatedAt = chat.UpdatedAt
+        };
+    }
+
+    private async Task UpsertChatUsersFromChatAsync(Chat chat)
+    {
+        var chatUsers = chat.Participants
+            .Where(p => !string.IsNullOrWhiteSpace(p.UserId))
+            .Select(p => BuildChatUser(chat, p))
+            .ToList();
+
+        await _chatUserRepository.UpsertManyAsync(chatUsers);
+    }
+
+    private async Task DeleteChatUsersAsync(Chat chat)
+    {
+        var tasks = chat.Participants
+            .Where(p => !string.IsNullOrWhiteSpace(p.UserId))
+            .Select(p => _chatUserRepository.DeleteAsync(p.UserId, chat.Id));
+
+        await Task.WhenAll(tasks);
+    }
+
     private async Task EnsureAgentParticipantAsync(Chat chat)
     {
         if (chat.Participants.Any(p => p.UserId == ChatDomain.AgentUserId))
@@ -952,6 +1043,7 @@ public class ChatController : ControllerBase
         });
         chat.UpdatedAt = DateTime.UtcNow;
         await _chatRepository.UpdateAsync(chat);
+        await UpsertChatUsersFromChatAsync(chat);
     }
 
     private static async Task<string> BuildAgentPromptAsync(Message message)

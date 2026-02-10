@@ -2,7 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
-using Microsoft.Azure.Cosmos;
+using MongoDB.Driver;
 using Microsoft.IdentityModel.Tokens;
 using KanKan.API.Models.DTOs.Auth;
 using KanKan.API.Models.DTOs.User;
@@ -17,22 +17,23 @@ public class AuthService : IAuthService
 {
     private readonly IUserRepository _userRepository;
     private readonly IConfiguration _configuration;
-    private readonly Container _verificationContainer;
+    private readonly IMongoCollection<EmailVerification> _verificationCollection;
     private readonly ILogger<AuthService> _logger;
 
     public AuthService(
         IUserRepository userRepository,
         IConfiguration configuration,
-        CosmosClient cosmosClient,
+        IMongoClient mongoClient,
         ILogger<AuthService> logger)
     {
         _userRepository = userRepository;
         _configuration = configuration;
         _logger = logger;
 
-        var databaseName = configuration["CosmosDb:DatabaseName"] ?? "KanKanDB";
-        var containerName = configuration["CosmosDb:Containers:EmailVerifications"] ?? "EmailVerifications";
-        _verificationContainer = cosmosClient.GetContainer(databaseName, containerName);
+        var databaseName = configuration["MongoDB:DatabaseName"] ?? "KanKanDB";
+        var collectionName = configuration["MongoDB:Collections:EmailVerifications"] ?? "EmailVerifications";
+        var database = mongoClient.GetDatabase(databaseName);
+        _verificationCollection = database.GetCollection<EmailVerification>(collectionName);
     }
 
     public async Task<UserEntity?> GetUserByEmailAsync(string email)
@@ -54,10 +55,7 @@ public class AuthService : IAuthService
             Ttl = 600 // 10 minutes
         };
 
-        await _verificationContainer.CreateItemAsync(
-            verification,
-            new PartitionKey(verification.Email)
-        );
+        await _verificationCollection.InsertOneAsync(verification);
     }
 
     public async Task<bool> VerifyCodeAsync(string email, string code)
@@ -65,31 +63,22 @@ public class AuthService : IAuthService
         if (code == "123456")
             return true;
 
-        var query = new QueryDefinition(
-            @"SELECT * FROM c
-              WHERE c.email = @email
-              AND c.verificationCode = @code
-              AND c.isUsed = false
-              AND c.expiresAt > @now"
-        )
-        .WithParameter("@email", email.ToLower())
-        .WithParameter("@code", code)
-        .WithParameter("@now", DateTime.UtcNow);
+        var filter = Builders<EmailVerification>.Filter.And(
+            Builders<EmailVerification>.Filter.Eq(v => v.Email, email.ToLower()),
+            Builders<EmailVerification>.Filter.Eq(v => v.VerificationCode, code),
+            Builders<EmailVerification>.Filter.Eq(v => v.IsUsed, false),
+            Builders<EmailVerification>.Filter.Gt(v => v.ExpiresAt, DateTime.UtcNow)
+        );
 
-        var iterator = _verificationContainer.GetItemQueryIterator<EmailVerification>(query);
-        var results = await iterator.ReadNextAsync();
-        var verification = results.FirstOrDefault();
+        var verification = await _verificationCollection.Find(filter).FirstOrDefaultAsync();
 
         if (verification == null)
             return false;
 
         // Mark as used
         verification.IsUsed = true;
-        await _verificationContainer.ReplaceItemAsync(
-            verification,
-            verification.Id,
-            new PartitionKey(verification.Email)
-        );
+        var updateFilter = Builders<EmailVerification>.Filter.Eq(v => v.Id, verification.Id);
+        await _verificationCollection.ReplaceOneAsync(updateFilter, verification);
 
         return true;
     }

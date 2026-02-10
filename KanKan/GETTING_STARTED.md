@@ -19,59 +19,156 @@
 Before you begin, ensure you have:
 - **Node.js 18+** and npm installed
 - **.NET 8 SDK** installed
-- **Azure Cosmos DB** account (or use Cosmos DB emulator for local development)
+- **Docker Desktop** installed (optional, only needed for MongoDB persistent mode)
 - **SendGrid API key** (optional, for email functionality)
 
 ### 1. Backend Setup
 
-#### Install Cosmos DB Emulator (for local development)
-Download and install from: https://aka.ms/cosmosdb-emulator
+#### Choose Your Storage Mode
 
-Or use Azure Cosmos DB in the cloud.
+The application supports two storage modes:
 
-#### Configure Backend
+1. **InMemory Mode** (Default - Quick Start)
+   - No database setup required
+   - Perfect for quick testing and development
+   - Data is lost when application restarts
+   - Test users (Alice, Bob, Carol) are automatically created
+
+2. **MongoDB Mode** (Persistent Storage)
+   - Requires MongoDB Docker container
+   - Data persists across application restarts
+   - Suitable for production or long-term development
+
+#### Option A: InMemory Mode (Quick Start - No MongoDB Needed)
+
+If you just want to quickly test the application without setting up MongoDB:
 
 1. Navigate to the server directory:
 ```bash
 cd server
 ```
 
-2. Update `appsettings.json` with your configuration:
+2. The default `appsettings.json` is already configured for InMemory mode:
 ```json
 {
-  "CosmosDb": {
-    "Endpoint": "https://localhost:8081",  // Emulator endpoint
-    "Key": "C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==",  // Emulator key
-    "DatabaseName": "KanKanDB"
-  },
-  "Jwt": {
-    "Secret": "your-super-secret-jwt-key-must-be-at-least-32-characters-long-for-security",
-    "Issuer": "KanKan.API",
-    "Audience": "KanKan.Client",
-    "AccessTokenExpirationMinutes": 15,
-    "RefreshTokenExpirationDays": 7
-  },
-  "Email": {
-    "Provider": "SendGrid",
-    "ApiKey": "your-sendgrid-api-key-or-leave-empty",
-    "FromEmail": "noreply@kankan.local",
-    "FromName": "KanKan"
+  "StorageMode": "InMemory"
+}
+```
+
+3. Run the backend:
+```bash
+dotnet restore
+dotnet run
+```
+
+That's it! The application will start with in-memory storage and test users (Alice, Bob, Carol) will be automatically created.
+
+#### Option B: MongoDB Mode (Persistent Storage)
+
+For persistent data storage, follow these steps:
+
+##### Install MongoDB using Docker
+
+1. Pull the official MongoDB Docker image:
+```bash
+docker pull mongo:latest
+```
+
+2. Run MongoDB in a Docker container:
+```bash
+docker run -d \
+  --name mongodb \
+  -p 27017:27017 \
+  -e MONGO_INITDB_ROOT_USERNAME=admin \
+  -e MONGO_INITDB_ROOT_PASSWORD=password123 \
+  -v mongodb_data:/data/db \
+  mongo:latest
+```
+
+**What this command does:**
+- `-d` - Runs the container in detached mode (background)
+- `--name mongodb` - Names the container "mongodb"
+- `-p 27017:27017` - Maps port 27017 (MongoDB default) from container to host
+- `-e MONGO_INITDB_ROOT_USERNAME=admin` - Sets root username
+- `-e MONGO_INITDB_ROOT_PASSWORD=password123` - Sets root password
+- `-v mongodb_data:/data/db` - Creates a volume for data persistence
+- `mongo:latest` - Uses the latest MongoDB image
+
+3. Verify MongoDB is running:
+```bash
+docker ps
+```
+
+You should see the mongodb container running.
+
+4. Connect to MongoDB shell to create database and user (optional - the app will auto-create):
+```bash
+docker exec -it mongodb mongosh -u admin -p password123 --authenticationDatabase admin
+```
+
+5. In the MongoDB shell, create database and user:
+```javascript
+use KanKanDB
+
+db.createUser({
+  user: "kankan",
+  pwd: "kankan123",
+  roles: [
+    { role: "readWrite", db: "KanKanDB" }
+  ]
+})
+
+// Verify
+show dbs
+exit
+```
+
+**Useful Docker Commands:**
+```bash
+# Stop MongoDB
+docker stop mongodb
+
+# Start MongoDB
+docker start mongodb
+
+# View MongoDB logs
+docker logs mongodb
+
+# Remove MongoDB container (data persists in volume)
+docker rm mongodb
+
+# Remove MongoDB data volume (WARNING: deletes all data)
+docker volume rm mongodb_data
+```
+
+##### Configure Backend for MongoDB
+
+1. Navigate to the server directory:
+```bash
+cd server
+```
+
+2. Update `appsettings.json` to enable MongoDB mode:
+```json
+{
+  "StorageMode": "MongoDB",
+  "MongoDB": {
+    "ConnectionString": "mongodb://admin:password123@localhost:27017",
+    "DatabaseName": "KanKanDB",
+    "Initialization": {
+      "Enabled": true
+    }
   }
 }
 ```
 
-3. Restore dependencies:
+3. Run the backend:
 ```bash
 dotnet restore
-```
-
-4. Run the backend:
-```bash
 dotnet run
 ```
 
 The API will be available at: `http://localhost:5001`
-Swagger documentation: `http://localhost:5001` (root)
 
 ### 2. Frontend Setup
 
@@ -97,35 +194,143 @@ npm run dev
 
 The app will be available at: `http://localhost:3000`
 
-### 3. Initialize Cosmos DB
+### 3. Initialize MongoDB
 
-The first time you run the application, you need to create the database and containers.
+The application automatically initializes MongoDB when `MongoDB:Initialization:Enabled` is set to true. On startup, it will:
 
-**Option 1: Use Cosmos DB Data Explorer**
-1. Open Cosmos DB emulator at `https://localhost:8081/_explorer/index.html`
-2. Create a new database named `KanKanDB`
-3. Create the following containers:
+1. Create the database if it doesn't exist
+2. Create all required collections
+3. Create indexes for optimal query performance
 
-| Container Name | Partition Key | Description |
-|---------------|---------------|-------------|
-| Users | /id | User accounts and profiles |
-| Messages | /chatId | Chat messages |
-| Chats | /id | Chat metadata |
-| Contacts | /userId | User contacts |
-| Moments | /userId | Social timeline posts |
-| EmailVerifications | /email | Email verification codes (TTL: 600s) |
-
-**Option 2: Use Azure Data Studio or Cosmos DB SDK**
-
-You can also create a script to initialize the database. Create a file `init-db.sh`:
+You can verify the setup by connecting to MongoDB:
 
 ```bash
-# This would use Azure CLI or Cosmos DB SDK
-# Example commands for reference
-az cosmosdb sql database create --account-name YOUR_ACCOUNT --name KanKanDB
-az cosmosdb sql container create --account-name YOUR_ACCOUNT --database-name KanKanDB --name Users --partition-key-path "/id"
-# ... repeat for other containers
+docker exec -it mongodb mongosh -u admin -p password123 --authenticationDatabase admin
 ```
+
+Then in the MongoDB shell:
+
+```javascript
+use KanKanDB
+
+// Show all collections
+show collections
+
+// You should see:
+// - Users
+// - UserEmailLookup
+// - Chats
+// - ChatUsers
+// - Messages
+// - Contacts
+// - Moments
+// - EmailVerifications
+// - Notifications
+
+// Check indexes on Users collection
+db.Users.getIndexes()
+
+// Exit
+exit
+```
+
+**MongoDB Management Options:**
+
+1. **MongoDB Compass** (Recommended GUI):
+   - Download from: https://www.mongodb.com/products/compass
+   - Connect using: `mongodb://admin:password123@localhost:27017`
+
+2. **Command Line** (mongosh):
+   ```bash
+   # Connect
+   docker exec -it mongodb mongosh -u admin -p password123 --authenticationDatabase admin
+
+   # List databases
+   show dbs
+
+   # Switch to KanKanDB
+   use KanKanDB
+
+   # List collections
+   show collections
+
+   # Query users
+   db.Users.find().pretty()
+
+   # Count documents
+   db.Users.countDocuments()
+   ```
+
+3. **VS Code Extension**:
+   - Install "MongoDB for VS Code" extension
+   - Connect to `mongodb://admin:password123@localhost:27017`
+
+## 🔄 Storage Mode Configuration
+
+The application supports flexible storage configuration via the `StorageMode` setting in `appsettings.json`:
+
+### InMemory Mode
+
+```json
+{
+  "StorageMode": "InMemory"
+}
+```
+
+**Features:**
+- ✅ No database required
+- ✅ Fast startup
+- ✅ Perfect for development and testing
+- ✅ Test users (Alice, Bob, Carol) auto-created
+- ⚠️ Data lost on restart
+
+**Use when:**
+- Quick prototyping
+- Running automated tests
+- Learning the application
+- No MongoDB available
+
+### MongoDB Mode
+
+```json
+{
+  "StorageMode": "MongoDB",
+  "MongoDB": {
+    "ConnectionString": "mongodb://admin:password123@localhost:27017",
+    "DatabaseName": "KanKanDB",
+    "Initialization": {
+      "Enabled": true
+    }
+  }
+}
+```
+
+**Features:**
+- ✅ Data persists across restarts
+- ✅ Production-ready
+- ✅ Scalable storage
+- ✅ Auto-creates collections and indexes
+- 🔧 Requires MongoDB setup
+
+**Use when:**
+- Production deployment
+- Long-term development
+- Data persistence needed
+- Team collaboration
+
+### Switching Between Modes
+
+Simply change the `StorageMode` value and restart the application:
+
+```bash
+# Switch to InMemory mode
+"StorageMode": "InMemory"
+
+# Switch to MongoDB mode (requires MongoDB running)
+"StorageMode": "MongoDB"
+```
+
+No code changes needed - just configuration!
 
 ## 🧪 Testing the Application
 
@@ -174,12 +379,19 @@ az cosmosdb sql container create --account-name YOUR_ACCOUNT --database-name Kan
 
 ### Backend Issues
 
-**Issue: "CosmosDb:Endpoint not configured"**
-- Make sure `appsettings.json` has the correct Cosmos DB configuration
-- For local development, install and run Cosmos DB Emulator
+**Issue: "MongoDB ConnectionString not configured"**
+- Make sure `appsettings.json` has the correct MongoDB configuration
+- For local development with Docker, use: `mongodb://admin:password123@localhost:27017`
+- Verify MongoDB container is running: `docker ps`
 
-**Issue: "JWT Secret not configured"**
-- Ensure `Jwt:Secret` in `appsettings.json` is at least 32 characters long
+**Issue: "Cannot connect to MongoDB"**
+- Check if MongoDB container is running: `docker ps`
+- Restart MongoDB if needed: `docker restart mongodb`
+- Verify port 27017 is not blocked by firewall
+
+**Issue: "Authentication failed"**
+- Ensure username/password in connection string matches Docker environment variables
+- Default credentials: username=`admin`, password=`password123`
 
 **Issue: Email not being sent**
 - This is expected if SendGrid is not configured
@@ -197,15 +409,17 @@ az cosmosdb sql container create --account-name YOUR_ACCOUNT --database-name Kan
 - Make sure path aliases are configured in `tsconfig.json` and `vite.config.ts`
 - Try `npm install` again
 
-### Cosmos DB Issues
+### MongoDB Issues
 
-**Issue: "Container not found"**
-- Create the required containers in Cosmos DB
-- Use the exact names from the configuration
+**Issue: "Collection not found"**
+- The application auto-creates collections on startup
+- Verify `MongoDB:Initialization:Enabled` is true in `appsettings.json`
+- Restart the backend application
 
-**Issue: "Unauthorized" errors with Cosmos DB**
-- Verify the account key is correct
-- For emulator, use the default key provided
+**Issue: "Connection timeout"**
+- Check if MongoDB Docker container is running: `docker ps`
+- Check MongoDB logs: `docker logs mongodb`
+- Ensure port 27017 is accessible
 
 ## 📚 Next Steps
 
@@ -236,6 +450,8 @@ az cosmosdb sql container create --account-name YOUR_ACCOUNT --database-name Kan
 2. **Check Console Logs** for verification codes when email is not configured
 3. **Use Redux DevTools** to inspect application state
 4. **Enable Hot Reload** - Both frontend (Vite) and backend (dotnet watch) support hot reload
+5. **MongoDB Compass** - Use MongoDB Compass GUI for easy database management
+6. **Docker Commands** - Use `docker logs mongodb` to troubleshoot MongoDB issues
 
 ## 🐛 Known Limitations
 
@@ -247,10 +463,12 @@ az cosmosdb sql container create --account-name YOUR_ACCOUNT --database-name Kan
 ## 📞 Support
 
 For issues or questions:
+
 1. Check the troubleshooting section
 2. Review `Architecture.md` for detailed design
 3. Check console logs for errors
 4. Verify all prerequisites are installed
+5. Verify MongoDB is running: `docker ps`
 
 ---
 

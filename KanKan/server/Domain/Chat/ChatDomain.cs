@@ -114,4 +114,21 @@ public static class ChatDomain
             UpdatedAt = chat.UpdatedAt
         };
     }
+
+    public static ChatEntity ToChat(ChatUser chatUser)
+    {
+        return new ChatEntity
+        {
+            Id = string.IsNullOrWhiteSpace(chatUser.ChatId) ? chatUser.Id : chatUser.ChatId,
+            Type = "chat",
+            ChatType = chatUser.ChatType,
+            Participants = chatUser.Participants ?? new List<ChatParticipant>(),
+            GroupName = chatUser.GroupName,
+            GroupAvatar = chatUser.GroupAvatar,
+            AdminIds = chatUser.AdminIds ?? new List<string>(),
+            LastMessage = chatUser.LastMessage,
+            CreatedAt = chatUser.CreatedAt,
+            UpdatedAt = chatUser.UpdatedAt
+        };
+    }
 }

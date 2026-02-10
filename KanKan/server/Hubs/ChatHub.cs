@@ -16,6 +16,7 @@ namespace KanKan.API.Hubs;
 public class ChatHub : Hub
 {
     private readonly IChatRepository _chatRepository;
+    private readonly IChatUserRepository _chatUserRepository;
     private readonly IMessageRepository _messageRepository;
     private readonly IUserRepository _userRepository;
     private readonly INotificationRepository _notificationRepository;
@@ -28,6 +29,7 @@ public class ChatHub : Hub
 
     public ChatHub(
         IChatRepository chatRepository,
+        IChatUserRepository chatUserRepository,
         IMessageRepository messageRepository,
         IUserRepository userRepository,
         INotificationRepository notificationRepository,
@@ -35,6 +37,7 @@ public class ChatHub : Hub
         ILogger<ChatHub> logger)
     {
         _chatRepository = chatRepository;
+        _chatUserRepository = chatUserRepository;
         _messageRepository = messageRepository;
         _userRepository = userRepository;
         _notificationRepository = notificationRepository;
@@ -63,10 +66,22 @@ public class ChatHub : Hub
             }
 
             // Join all user's chat rooms
-            var chats = await _chatRepository.GetUserChatsAsync(userId);
-            foreach (var chat in chats)
+            var chatUsers = await _chatUserRepository.GetUserChatsAsync(userId, includeHidden: true);
+            if (chatUsers.Count == 0)
             {
-                await Groups.AddToGroupAsync(Context.ConnectionId, chat.Id);
+                var chats = await _chatRepository.GetUserChatsAsync(userId);
+                foreach (var chat in chats)
+                {
+                    await UpsertChatUsersFromChatAsync(chat);
+                }
+                chatUsers = await _chatUserRepository.GetUserChatsAsync(userId, includeHidden: true);
+            }
+            foreach (var chatUser in chatUsers)
+            {
+                if (!string.IsNullOrWhiteSpace(chatUser.ChatId))
+                {
+                    await Groups.AddToGroupAsync(Context.ConnectionId, chatUser.ChatId);
+                }
             }
 
             // Notify contacts that user is online
@@ -248,6 +263,8 @@ public class ChatHub : Hub
                 .SendAsync("ChatCreated", ChatDomain.ToChatDto(chat, participant.UserId, IsUserOnline));
         }
 
+            await UpsertChatUsersFromChatAsync(chat);
+
         // Create response DTO
         var messageResponse = new MessageDto
         {
@@ -356,6 +373,7 @@ public class ChatHub : Hub
                 };
                 chat.UpdatedAt = DateTime.UtcNow;
                 await _chatRepository.UpdateAsync(chat);
+                await UpsertChatUsersFromChatAsync(chat);
 
                 await Clients.Group(chat.Id).SendAsync("AgentMessageComplete", chat.Id, agentMessageId, reply);
             }
@@ -511,6 +529,7 @@ public class ChatHub : Hub
         });
         chat.UpdatedAt = DateTime.UtcNow;
         await _chatRepository.UpdateAsync(chat);
+        await UpsertChatUsersFromChatAsync(chat);
     }
 
     private static async Task<string> BuildAgentPromptAsync(Models.Entities.Message message)
@@ -609,6 +628,7 @@ public class ChatHub : Hub
 
         chat.UpdatedAt = DateTime.UtcNow;
         await _chatRepository.UpdateAsync(chat);
+        await UpsertChatUsersFromChatAsync(chat);
 
         await Clients.Group(chat.Id)
             .SendAsync("ChatUpdated", ChatDomain.ToChatDto(chat, currentUserId, IsUserOnline));
@@ -650,6 +670,50 @@ public class ChatHub : Hub
             baseName += " +";
 
         return baseName;
+    }
+
+    private static List<Models.Entities.ChatParticipant> CloneParticipants(IEnumerable<Models.Entities.ChatParticipant> participants)
+    {
+        return participants.Select(p => new Models.Entities.ChatParticipant
+        {
+            UserId = p.UserId,
+            DisplayName = p.DisplayName,
+            AvatarUrl = p.AvatarUrl,
+            Gender = p.Gender,
+            JoinedAt = p.JoinedAt,
+            IsHidden = p.IsHidden,
+            ClearedAt = p.ClearedAt
+        }).ToList();
+    }
+
+    private static ChatUser BuildChatUser(Models.Entities.Chat chat, Models.Entities.ChatParticipant participant)
+    {
+        return new ChatUser
+        {
+            Id = chat.Id,
+            ChatId = chat.Id,
+            UserId = participant.UserId,
+            ChatType = chat.ChatType,
+            Participants = CloneParticipants(chat.Participants),
+            GroupName = chat.GroupName,
+            GroupAvatar = chat.GroupAvatar,
+            AdminIds = chat.AdminIds ?? new List<string>(),
+            LastMessage = chat.LastMessage,
+            IsHidden = participant.IsHidden,
+            ClearedAt = participant.ClearedAt,
+            CreatedAt = chat.CreatedAt,
+            UpdatedAt = chat.UpdatedAt
+        };
+    }
+
+    private async Task UpsertChatUsersFromChatAsync(Models.Entities.Chat chat)
+    {
+        var chatUsers = chat.Participants
+            .Where(p => !string.IsNullOrWhiteSpace(p.UserId))
+            .Select(p => BuildChatUser(chat, p))
+            .ToList();
+
+        await _chatUserRepository.UpsertManyAsync(chatUsers);
     }
 
 }

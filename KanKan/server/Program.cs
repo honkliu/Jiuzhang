@@ -1,6 +1,6 @@
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.Azure.Cosmos;
+using MongoDB.Driver;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using KanKan.API.Hubs;
@@ -57,26 +57,32 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// Determine if we should use in-memory storage (for development without Cosmos DB)
-var useInMemory = builder.Configuration.GetValue<bool>("UseInMemoryStorage", true);
+// Determine storage mode from configuration
+// Supported values: "InMemory", "MongoDB"
+var storageMode = builder.Configuration["StorageMode"]?.ToLower() ?? "inmemory";
+var useInMemory = storageMode == "inmemory";
 
-if (!useInMemory)
+if (useInMemory)
 {
-    // Configure Cosmos DB for production
-    builder.Services.AddSingleton(sp =>
+    Console.WriteLine("🔧 Using IN-MEMORY storage (local development mode)");
+    Console.WriteLine("   ⚠️  Data will NOT persist after restart");
+}
+else if (storageMode == "mongodb")
+{
+    Console.WriteLine("🔧 Using MONGODB storage (persistent mode)");
+    // Configure MongoDB for persistent storage
+    builder.Services.AddSingleton<IMongoClient>(sp =>
     {
         var configuration = sp.GetRequiredService<IConfiguration>();
-        var endpoint = configuration["CosmosDb:Endpoint"] ?? throw new InvalidOperationException("Cosmos DB Endpoint not configured");
-        var key = configuration["CosmosDb:Key"] ?? throw new InvalidOperationException("Cosmos DB Key not configured");
-
-        return new CosmosClient(endpoint, key, new CosmosClientOptions
-        {
-            SerializerOptions = new CosmosSerializationOptions
-            {
-                PropertyNamingPolicy = CosmosPropertyNamingPolicy.CamelCase
-            }
-        });
+        var connectionString = configuration["MongoDB:ConnectionString"] ?? throw new InvalidOperationException("MongoDB ConnectionString not configured");
+        return new MongoClient(connectionString);
     });
+
+    builder.Services.AddHostedService<KanKan.API.Storage.MongoDbInitializer>();
+}
+else
+{
+    throw new InvalidOperationException($"Unsupported StorageMode: {storageMode}. Valid options are: InMemory, MongoDB");
 }
 
 // Configure JWT Authentication
@@ -142,20 +148,20 @@ builder.Services.AddSignalR();
 // Register Repositories and Services based on storage mode
 if (useInMemory)
 {
-    Console.WriteLine("🔧 Using IN-MEMORY storage (development mode)");
     builder.Services.AddSingleton<IUserRepository, InMemoryUserRepository>();
     builder.Services.AddSingleton<IChatRepository, InMemoryChatRepository>();
+    builder.Services.AddSingleton<IChatUserRepository, InMemoryChatUserRepository>();
     builder.Services.AddSingleton<IMessageRepository, InMemoryMessageRepository>();
     builder.Services.AddSingleton<IMomentRepository, InMemoryMomentRepository>();
     builder.Services.AddSingleton<IContactRepository, InMemoryContactRepository>();
     builder.Services.AddSingleton<INotificationRepository, InMemoryNotificationRepository>();
     builder.Services.AddScoped<IAuthService, InMemoryAuthService>();
 }
-else
+else if (storageMode == "mongodb")
 {
-    Console.WriteLine("🔧 Using COSMOS DB storage (production mode)");
     builder.Services.AddScoped<IUserRepository, UserRepository>();
     builder.Services.AddScoped<IChatRepository, ChatRepository>();
+    builder.Services.AddScoped<IChatUserRepository, ChatUserRepository>();
     builder.Services.AddScoped<IMessageRepository, MessageRepository>();
     builder.Services.AddScoped<IMomentRepository, MomentRepository>();
     builder.Services.AddScoped<IContactRepository, ContactRepository>();
@@ -179,6 +185,7 @@ if (useInMemory)
     using var scope = app.Services.CreateScope();
     var users = scope.ServiceProvider.GetRequiredService<IUserRepository>();
     var chats = scope.ServiceProvider.GetRequiredService<IChatRepository>();
+    var chatUsers = scope.ServiceProvider.GetRequiredService<IChatUserRepository>();
     var messages = scope.ServiceProvider.GetRequiredService<IMessageRepository>();
 
     var alice = await users.GetByEmailAsync("alice@example.com");
@@ -349,6 +356,24 @@ if (useInMemory)
         };
         chat.UpdatedAt = DateTime.UtcNow;
         await chats.UpdateAsync(chat);
+
+        var chatUserDocs = chat.Participants.Select(p => new KanKan.API.Models.Entities.ChatUser
+        {
+            Id = chat.Id,
+            ChatId = chat.Id,
+            UserId = p.UserId,
+            ChatType = chat.ChatType,
+            Participants = chat.Participants,
+            GroupName = chat.GroupName,
+            GroupAvatar = chat.GroupAvatar,
+            AdminIds = chat.AdminIds,
+            LastMessage = chat.LastMessage,
+            IsHidden = p.IsHidden,
+            ClearedAt = p.ClearedAt,
+            CreatedAt = chat.CreatedAt,
+            UpdatedAt = chat.UpdatedAt
+        }).ToList();
+        await chatUsers.UpsertManyAsync(chatUserDocs);
     }
 
     if (aliceUser != null && bobUser != null)
@@ -369,6 +394,24 @@ if (useInMemory)
                 UpdatedAt = DateTime.UtcNow,
             });
         }
+
+        var directChatUsers = existingDirect.Participants.Select(p => new KanKan.API.Models.Entities.ChatUser
+        {
+            Id = existingDirect.Id,
+            ChatId = existingDirect.Id,
+            UserId = p.UserId,
+            ChatType = existingDirect.ChatType,
+            Participants = existingDirect.Participants,
+            GroupName = existingDirect.GroupName,
+            GroupAvatar = existingDirect.GroupAvatar,
+            AdminIds = existingDirect.AdminIds,
+            LastMessage = existingDirect.LastMessage,
+            IsHidden = p.IsHidden,
+            ClearedAt = p.ClearedAt,
+            CreatedAt = existingDirect.CreatedAt,
+            UpdatedAt = existingDirect.UpdatedAt
+        }).ToList();
+        await chatUsers.UpsertManyAsync(directChatUsers);
 
         await SeedTextAsync(existingDirect, aliceUser, "Hi Bob 👋");
     }
@@ -394,6 +437,24 @@ if (useInMemory)
                 UpdatedAt = DateTime.UtcNow,
             });
         }
+
+        var groupChatUsers = group.Participants.Select(p => new KanKan.API.Models.Entities.ChatUser
+        {
+            Id = group.Id,
+            ChatId = group.Id,
+            UserId = p.UserId,
+            ChatType = group.ChatType,
+            Participants = group.Participants,
+            GroupName = group.GroupName,
+            GroupAvatar = group.GroupAvatar,
+            AdminIds = group.AdminIds,
+            LastMessage = group.LastMessage,
+            IsHidden = p.IsHidden,
+            ClearedAt = p.ClearedAt,
+            CreatedAt = group.CreatedAt,
+            UpdatedAt = group.UpdatedAt
+        }).ToList();
+        await chatUsers.UpsertManyAsync(groupChatUsers);
 
         await SeedTextAsync(group, carolUser, "Welcome to the group chat!" );
     }

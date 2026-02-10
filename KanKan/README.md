@@ -180,11 +180,14 @@ dotnet publish -c Release
 ### Cosmos DB Containers
 
 1. **Users** - User accounts and profiles
-2. **Messages** - Chat messages (partitioned by chatId)
-3. **Chats** - Chat metadata (direct and group)
-4. **Contacts** - User contacts and friend requests
-5. **Moments** - Social timeline posts
-6. **EmailVerifications** - Email verification codes (TTL: 10 min)
+2. **UserEmailLookup** - Email -> user id lookup
+3. **Messages** - Chat messages (partitioned by chatId)
+4. **Chats** - Chat metadata (direct and group)
+5. **ChatUsers** - Per-user chat summaries (partitioned by userId)
+6. **Contacts** - User contacts and friend requests
+7. **Moments** - Social timeline posts
+8. **EmailVerifications** - Email verification codes (TTL: 10 min)
+9. **Notifications** - Notifications (TTL enabled)
 
 See [Architecture.md](Architecture.md) for detailed data models.
 

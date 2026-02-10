@@ -1,4 +1,4 @@
-using Microsoft.Azure.Cosmos;
+using MongoDB.Driver;
 using KanKan.API.Models.Entities;
 using KanKan.API.Repositories.Interfaces;
 
@@ -6,75 +6,60 @@ namespace KanKan.API.Repositories.Implementations;
 
 public class NotificationRepository : INotificationRepository
 {
-    private readonly Container _container;
+    private readonly IMongoCollection<Notification> _collection;
 
-    public NotificationRepository(CosmosClient cosmosClient, IConfiguration configuration)
+    public NotificationRepository(IMongoClient mongoClient, IConfiguration configuration)
     {
-        var databaseName = configuration["CosmosDb:DatabaseName"] ?? "KanKanDB";
-        var containerName = configuration["CosmosDb:Containers:Notifications"] ?? "Notifications";
-        _container = cosmosClient.GetContainer(databaseName, containerName);
+        var databaseName = configuration["MongoDB:DatabaseName"] ?? "KanKanDB";
+        var collectionName = configuration["MongoDB:Collections:Notifications"] ?? "Notifications";
+        var database = mongoClient.GetDatabase(databaseName);
+        _collection = database.GetCollection<Notification>(collectionName);
     }
 
     public async Task<List<Notification>> GetUserNotificationsAsync(string userId, bool unreadOnly = false, int limit = 50, DateTime? before = null)
     {
-        var queryText = @"SELECT * FROM c
-WHERE c.userId = @userId AND c.type = 'notification'";
+        var filterBuilder = Builders<Notification>.Filter;
+        var filter = filterBuilder.And(
+            filterBuilder.Eq(n => n.UserId, userId),
+            filterBuilder.Eq(n => n.Type, "notification")
+        );
 
         if (unreadOnly)
         {
-            queryText += " AND (NOT IS_DEFINED(c.isRead) OR c.isRead = false)";
+            filter = filterBuilder.And(
+                filter,
+                filterBuilder.Or(
+                    filterBuilder.Exists(n => n.IsRead, false),
+                    filterBuilder.Eq(n => n.IsRead, false)
+                )
+            );
         }
 
         if (before.HasValue)
         {
-            queryText += " AND c.createdAt < @before";
+            filter = filterBuilder.And(
+                filter,
+                filterBuilder.Lt(n => n.CreatedAt, before.Value)
+            );
         }
 
-        queryText += " ORDER BY c.createdAt DESC OFFSET 0 LIMIT @limit";
-
-        var query = new QueryDefinition(queryText)
-            .WithParameter("@userId", userId)
-            .WithParameter("@limit", limit);
-
-        if (before.HasValue)
-        {
-            query = query.WithParameter("@before", before.Value);
-        }
-
-        var iterator = _container.GetItemQueryIterator<Notification>(query, requestOptions: new QueryRequestOptions
-        {
-            PartitionKey = new PartitionKey(userId)
-        });
-
-        var results = new List<Notification>();
-        while (iterator.HasMoreResults)
-        {
-            var response = await iterator.ReadNextAsync();
-            results.AddRange(response);
-        }
-
-        return results;
+        var sort = Builders<Notification>.Sort.Descending(n => n.CreatedAt);
+        return await _collection.Find(filter).Sort(sort).Limit(limit).ToListAsync();
     }
 
     public async Task<int> GetUnreadCountAsync(string userId)
     {
-        var query = new QueryDefinition(@"SELECT VALUE COUNT(1) FROM c
-WHERE c.userId = @userId AND c.type = 'notification' AND (NOT IS_DEFINED(c.isRead) OR c.isRead = false)")
-            .WithParameter("@userId", userId);
+        var filterBuilder = Builders<Notification>.Filter;
+        var filter = filterBuilder.And(
+            filterBuilder.Eq(n => n.UserId, userId),
+            filterBuilder.Eq(n => n.Type, "notification"),
+            filterBuilder.Or(
+                filterBuilder.Exists(n => n.IsRead, false),
+                filterBuilder.Eq(n => n.IsRead, false)
+            )
+        );
 
-        var iterator = _container.GetItemQueryIterator<int>(query, requestOptions: new QueryRequestOptions
-        {
-            PartitionKey = new PartitionKey(userId)
-        });
-
-        var total = 0;
-        while (iterator.HasMoreResults)
-        {
-            var response = await iterator.ReadNextAsync();
-            total += response.Resource.FirstOrDefault();
-        }
-
-        return total;
+        return (int)await _collection.CountDocumentsAsync(filter);
     }
 
     public async Task<Notification> CreateAsync(Notification notification)
@@ -82,32 +67,29 @@ WHERE c.userId = @userId AND c.type = 'notification' AND (NOT IS_DEFINED(c.isRea
         if (notification.CreatedAt == default)
             notification.CreatedAt = DateTime.UtcNow;
 
-        var response = await _container.CreateItemAsync(notification, new PartitionKey(notification.UserId));
-        return response.Resource;
+        await _collection.InsertOneAsync(notification);
+        return notification;
     }
 
     public async Task MarkReadAsync(string userId, string notificationId)
     {
-        try
+        var filter = Builders<Notification>.Filter.And(
+            Builders<Notification>.Filter.Eq(n => n.Id, notificationId),
+            Builders<Notification>.Filter.Eq(n => n.UserId, userId)
+        );
+
+        var notification = await _collection.Find(filter).FirstOrDefaultAsync();
+        if (notification != null)
         {
-            await _container.PatchItemAsync<Notification>(
-                id: notificationId,
-                partitionKey: new PartitionKey(userId),
-                patchOperations: new List<PatchOperation>
-                {
-                    PatchOperation.Set("/isRead", true),
-                    PatchOperation.Set("/readAt", DateTime.UtcNow)
-                });
-        }
-        catch (CosmosException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
-        {
-            // no-op
+            notification.IsRead = true;
+            notification.ReadAt = DateTime.UtcNow;
+            await _collection.ReplaceOneAsync(filter, notification);
         }
     }
 
     public async Task MarkAllReadAsync(string userId)
     {
-        // Cosmos doesn't support a simple bulk patch. We read a page of unread notifications and patch them.
+        // MongoDB doesn't support a simple bulk patch. We read a page of unread notifications and update them.
         var unread = await GetUserNotificationsAsync(userId, unreadOnly: true, limit: 200);
         foreach (var n in unread)
         {

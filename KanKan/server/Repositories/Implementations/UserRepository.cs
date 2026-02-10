@@ -1,4 +1,5 @@
-using Microsoft.Azure.Cosmos;
+using MongoDB.Driver;
+using KanKan.API.Models.Entities;
 using KanKan.API.Repositories.Interfaces;
 using UserEntity = KanKan.API.Models.Entities.User;
 
@@ -6,117 +7,133 @@ namespace KanKan.API.Repositories.Implementations;
 
 public class UserRepository : IUserRepository
 {
-    private readonly Container _container;
+    private readonly IMongoCollection<UserEntity> _collection;
+    private readonly IMongoCollection<UserEmailLookup> _emailLookupCollection;
 
-    public UserRepository(CosmosClient cosmosClient, IConfiguration configuration)
+    public UserRepository(IMongoClient mongoClient, IConfiguration configuration)
     {
-        var databaseName = configuration["CosmosDb:DatabaseName"] ?? "KanKanDB";
-        var containerName = configuration["CosmosDb:Containers:Users"] ?? "Users";
-        _container = cosmosClient.GetContainer(databaseName, containerName);
+        var databaseName = configuration["MongoDB:DatabaseName"] ?? "KanKanDB";
+        var collectionName = configuration["MongoDB:Collections:Users"] ?? "Users";
+        var emailLookupName = configuration["MongoDB:Collections:UserEmailLookup"] ?? "UserEmailLookup";
+        var database = mongoClient.GetDatabase(databaseName);
+        _collection = database.GetCollection<UserEntity>(collectionName);
+        _emailLookupCollection = database.GetCollection<UserEmailLookup>(emailLookupName);
     }
 
     public async Task<UserEntity?> GetByIdAsync(string id)
     {
-        try
-        {
-            var response = await _container.ReadItemAsync<UserEntity>(id, new PartitionKey(id));
-            return response.Resource;
-        }
-        catch (CosmosException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
-        {
-            return null;
-        }
+        var filter = Builders<UserEntity>.Filter.Eq(u => u.Id, id);
+        return await _collection.Find(filter).FirstOrDefaultAsync();
     }
 
     public async Task<UserEntity?> GetByEmailAsync(string email)
     {
-        var query = new QueryDefinition(
-            "SELECT * FROM c WHERE c.type = 'user' AND c.email = @email"
-        ).WithParameter("@email", email.ToLower());
+        var normalized = email.ToLower();
 
-        var iterator = _container.GetItemQueryIterator<UserEntity>(query);
-        var results = await iterator.ReadNextAsync();
-        return results.FirstOrDefault();
+        // Try to get from email lookup first
+        var lookupFilter = Builders<UserEmailLookup>.Filter.Eq(l => l.Email, normalized);
+        var lookup = await _emailLookupCollection.Find(lookupFilter).FirstOrDefaultAsync();
+
+        if (lookup != null && !string.IsNullOrWhiteSpace(lookup.UserId))
+        {
+            return await GetByIdAsync(lookup.UserId);
+        }
+
+        // Fallback to direct query
+        var filter = Builders<UserEntity>.Filter.And(
+            Builders<UserEntity>.Filter.Eq(u => u.Type, "user"),
+            Builders<UserEntity>.Filter.Eq(u => u.Email, normalized)
+        );
+
+        return await _collection.Find(filter).FirstOrDefaultAsync();
     }
 
     public async Task<UserEntity?> GetByRefreshTokenAsync(string token)
     {
-        var query = new QueryDefinition(
-            "SELECT * FROM c WHERE c.type = 'user' AND ARRAY_CONTAINS(c.refreshTokens, {'token': @token}, true)"
-        ).WithParameter("@token", token);
+        var filter = Builders<UserEntity>.Filter.And(
+            Builders<UserEntity>.Filter.Eq(u => u.Type, "user"),
+            Builders<UserEntity>.Filter.ElemMatch(u => u.RefreshTokens, rt => rt.Token == token)
+        );
 
-        var iterator = _container.GetItemQueryIterator<UserEntity>(query);
-        var results = await iterator.ReadNextAsync();
-        return results.FirstOrDefault();
+        return await _collection.Find(filter).FirstOrDefaultAsync();
     }
 
     public async Task<UserEntity> CreateAsync(UserEntity user)
     {
         user.CreatedAt = DateTime.UtcNow;
         user.UpdatedAt = DateTime.UtcNow;
-        var response = await _container.CreateItemAsync(user, new PartitionKey(user.Id));
-        return response.Resource;
+        await _collection.InsertOneAsync(user);
+
+        var lookup = new UserEmailLookup
+        {
+            Id = user.Email.ToLower(),
+            Email = user.Email.ToLower(),
+            UserId = user.Id,
+            CreatedAt = DateTime.UtcNow
+        };
+        await _emailLookupCollection.ReplaceOneAsync(
+            Builders<UserEmailLookup>.Filter.Eq(l => l.Email, lookup.Email),
+            lookup,
+            new ReplaceOptions { IsUpsert = true }
+        );
+
+        return user;
     }
 
     public async Task<UserEntity> UpdateAsync(UserEntity user)
     {
         user.UpdatedAt = DateTime.UtcNow;
-        var response = await _container.ReplaceItemAsync(user, user.Id, new PartitionKey(user.Id));
-        return response.Resource;
+        var filter = Builders<UserEntity>.Filter.Eq(u => u.Id, user.Id);
+        await _collection.ReplaceOneAsync(filter, user);
+        return user;
     }
 
     public async Task DeleteAsync(string id)
     {
-        await _container.DeleteItemAsync<UserEntity>(id, new PartitionKey(id));
+        var user = await GetByIdAsync(id);
+        var filter = Builders<UserEntity>.Filter.Eq(u => u.Id, id);
+        await _collection.DeleteOneAsync(filter);
+
+        if (user != null && !string.IsNullOrWhiteSpace(user.Email))
+        {
+            var email = user.Email.ToLower();
+            var emailFilter = Builders<UserEmailLookup>.Filter.Eq(l => l.Email, email);
+            await _emailLookupCollection.DeleteOneAsync(emailFilter);
+        }
     }
 
     public async Task<List<UserEntity>> SearchUsersAsync(string query, string excludeUserId, int limit = 20)
     {
-        var queryDefinition = new QueryDefinition(
-            @"SELECT * FROM c
-              WHERE c.type = 'user'
-              AND c.id != @excludeUserId
-              AND (CONTAINS(LOWER(c.email), @query) OR CONTAINS(LOWER(c.displayName), @query))
-              ORDER BY c.displayName
-              OFFSET 0 LIMIT @limit"
-        )
-        .WithParameter("@query", query.ToLower())
-        .WithParameter("@excludeUserId", excludeUserId)
-        .WithParameter("@limit", limit);
+        var lowerQuery = query.ToLower();
+        var filter = Builders<UserEntity>.Filter.And(
+            Builders<UserEntity>.Filter.Eq(u => u.Type, "user"),
+            Builders<UserEntity>.Filter.Ne(u => u.Id, excludeUserId),
+            Builders<UserEntity>.Filter.Or(
+                Builders<UserEntity>.Filter.Regex(u => u.Email, new MongoDB.Bson.BsonRegularExpression(lowerQuery, "i")),
+                Builders<UserEntity>.Filter.Regex(u => u.DisplayName, new MongoDB.Bson.BsonRegularExpression(lowerQuery, "i"))
+            )
+        );
 
-        var iterator = _container.GetItemQueryIterator<UserEntity>(queryDefinition);
-        var results = new List<UserEntity>();
+        var sort = Builders<UserEntity>.Sort.Ascending(u => u.DisplayName);
 
-        while (iterator.HasMoreResults)
-        {
-            var response = await iterator.ReadNextAsync();
-            results.AddRange(response);
-        }
-
-        return results;
+        return await _collection.Find(filter)
+            .Sort(sort)
+            .Limit(limit)
+            .ToListAsync();
     }
 
     public async Task<List<UserEntity>> GetAllUsersAsync(string excludeUserId, int limit = 100)
     {
-        var queryDefinition = new QueryDefinition(
-            @"SELECT * FROM c
-              WHERE c.type = 'user'
-              AND c.id != @excludeUserId
-              ORDER BY c.displayName
-              OFFSET 0 LIMIT @limit"
-        )
-        .WithParameter("@excludeUserId", excludeUserId)
-        .WithParameter("@limit", limit);
+        var filter = Builders<UserEntity>.Filter.And(
+            Builders<UserEntity>.Filter.Eq(u => u.Type, "user"),
+            Builders<UserEntity>.Filter.Ne(u => u.Id, excludeUserId)
+        );
 
-        var iterator = _container.GetItemQueryIterator<UserEntity>(queryDefinition);
-        var results = new List<UserEntity>();
+        var sort = Builders<UserEntity>.Sort.Ascending(u => u.DisplayName);
 
-        while (iterator.HasMoreResults)
-        {
-            var response = await iterator.ReadNextAsync();
-            results.AddRange(response);
-        }
-
-        return results;
+        return await _collection.Find(filter)
+            .Sort(sort)
+            .Limit(limit)
+            .ToListAsync();
     }
 }

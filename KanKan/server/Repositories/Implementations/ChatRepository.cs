@@ -1,4 +1,4 @@
-using Microsoft.Azure.Cosmos;
+using MongoDB.Driver;
 using KanKan.API.Models.Entities;
 using KanKan.API.Repositories.Interfaces;
 
@@ -6,81 +6,63 @@ namespace KanKan.API.Repositories.Implementations;
 
 public class ChatRepository : IChatRepository
 {
-    private readonly Container _container;
+    private readonly IMongoCollection<Chat> _collection;
 
-    public ChatRepository(CosmosClient cosmosClient, IConfiguration configuration)
+    public ChatRepository(IMongoClient mongoClient, IConfiguration configuration)
     {
-        var databaseName = configuration["CosmosDb:DatabaseName"] ?? "KanKanDB";
-        var containerName = configuration["CosmosDb:Containers:Chats"] ?? "Chats";
-        _container = cosmosClient.GetContainer(databaseName, containerName);
+        var databaseName = configuration["MongoDB:DatabaseName"] ?? "KanKanDB";
+        var collectionName = configuration["MongoDB:Collections:Chats"] ?? "Chats";
+        var database = mongoClient.GetDatabase(databaseName);
+        _collection = database.GetCollection<Chat>(collectionName);
     }
 
     public async Task<Chat?> GetByIdAsync(string id)
     {
-        try
-        {
-            var response = await _container.ReadItemAsync<Chat>(id, new PartitionKey(id));
-            return response.Resource;
-        }
-        catch (CosmosException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
-        {
-            return null;
-        }
+        var filter = Builders<Chat>.Filter.Eq(c => c.Id, id);
+        return await _collection.Find(filter).FirstOrDefaultAsync();
     }
 
     public async Task<List<Chat>> GetUserChatsAsync(string userId)
     {
-                var query = new QueryDefinition(
-                    @"SELECT VALUE c FROM c
-                            JOIN p IN c.participants
-                            WHERE c.type = 'chat'
-                            AND p.userId = @userId
-                            AND (NOT IS_DEFINED(p.isHidden) OR p.isHidden = false)
-                            ORDER BY c.updatedAt DESC"
-                ).WithParameter("@userId", userId);
+        var filter = Builders<Chat>.Filter.And(
+            Builders<Chat>.Filter.Eq(c => c.Type, "chat"),
+            Builders<Chat>.Filter.ElemMatch(c => c.Participants,
+                p => p.UserId == userId && (!p.IsHidden || p.IsHidden == false))
+        );
 
-        var iterator = _container.GetItemQueryIterator<Chat>(query);
-        var results = new List<Chat>();
+        var sort = Builders<Chat>.Sort.Descending(c => c.UpdatedAt);
 
-        while (iterator.HasMoreResults)
-        {
-            var response = await iterator.ReadNextAsync();
-            results.AddRange(response);
-        }
-
-        return results;
+        return await _collection.Find(filter)
+            .Sort(sort)
+            .ToListAsync();
     }
 
     public async Task<Chat?> GetDirectChatAsync(string userId1, string userId2)
     {
-        var query = new QueryDefinition(
-            @"SELECT * FROM c
-              WHERE c.type = 'chat'
-              AND c.chatType = 'direct'
-              AND ARRAY_CONTAINS(c.participants, {'userId': @userId1}, true)
-              AND ARRAY_CONTAINS(c.participants, {'userId': @userId2}, true)"
-        )
-        .WithParameter("@userId1", userId1)
-        .WithParameter("@userId2", userId2);
+        var filter = Builders<Chat>.Filter.And(
+            Builders<Chat>.Filter.Eq(c => c.Type, "chat"),
+            Builders<Chat>.Filter.Eq(c => c.ChatType, "direct"),
+            Builders<Chat>.Filter.ElemMatch(c => c.Participants, p => p.UserId == userId1),
+            Builders<Chat>.Filter.ElemMatch(c => c.Participants, p => p.UserId == userId2)
+        );
 
-        var iterator = _container.GetItemQueryIterator<Chat>(query);
-        var results = await iterator.ReadNextAsync();
-        return results.FirstOrDefault();
+        return await _collection.Find(filter).FirstOrDefaultAsync();
     }
 
     public async Task<Chat> CreateAsync(Chat chat)
     {
         chat.CreatedAt = DateTime.UtcNow;
         chat.UpdatedAt = DateTime.UtcNow;
-        var response = await _container.CreateItemAsync(chat, new PartitionKey(chat.Id));
-        return response.Resource;
+        await _collection.InsertOneAsync(chat);
+        return chat;
     }
 
     public async Task<Chat> UpdateAsync(Chat chat)
     {
         chat.UpdatedAt = DateTime.UtcNow;
-        var response = await _container.ReplaceItemAsync(chat, chat.Id, new PartitionKey(chat.Id));
-        return response.Resource;
+        var filter = Builders<Chat>.Filter.Eq(c => c.Id, chat.Id);
+        await _collection.ReplaceOneAsync(filter, chat);
+        return chat;
     }
 
     public async Task SetHiddenAsync(string chatId, string userId, bool isHidden)
@@ -91,14 +73,10 @@ public class ChatRepository : IChatRepository
         var idx = chat.Participants.FindIndex(p => p.UserId == userId);
         if (idx < 0) return;
 
-        await _container.PatchItemAsync<Chat>(
-            id: chatId,
-            partitionKey: new PartitionKey(chatId),
-            patchOperations: new[]
-            {
-                PatchOperation.Set($"/participants/{idx}/isHidden", isHidden)
-            }
-        );
+        chat.Participants[idx].IsHidden = isHidden;
+
+        var filter = Builders<Chat>.Filter.Eq(c => c.Id, chatId);
+        await _collection.ReplaceOneAsync(filter, chat);
     }
 
     public async Task ClearChatForUserAsync(string chatId, string userId, DateTime clearedAtUtc)
@@ -109,15 +87,11 @@ public class ChatRepository : IChatRepository
         var idx = chat.Participants.FindIndex(p => p.UserId == userId);
         if (idx < 0) return;
 
-        await _container.PatchItemAsync<Chat>(
-            id: chatId,
-            partitionKey: new PartitionKey(chatId),
-            patchOperations: new[]
-            {
-                PatchOperation.Set($"/participants/{idx}/isHidden", true),
-                PatchOperation.Set($"/participants/{idx}/clearedAt", clearedAtUtc)
-            }
-        );
+        chat.Participants[idx].IsHidden = true;
+        chat.Participants[idx].ClearedAt = clearedAtUtc;
+
+        var filter = Builders<Chat>.Filter.Eq(c => c.Id, chatId);
+        await _collection.ReplaceOneAsync(filter, chat);
     }
 
     public async Task PatchParticipantProfileAsync(
@@ -129,20 +103,20 @@ public class ChatRepository : IChatRepository
     {
         if (participantIndex < 0) return;
 
-        await _container.PatchItemAsync<Chat>(
-            id: chatId,
-            partitionKey: new PartitionKey(chatId),
-            patchOperations: new[]
-            {
-                PatchOperation.Set($"/participants/{participantIndex}/displayName", displayName ?? string.Empty),
-                PatchOperation.Set($"/participants/{participantIndex}/avatarUrl", avatarUrl ?? string.Empty),
-                PatchOperation.Set($"/participants/{participantIndex}/gender", gender ?? "male"),
-            }
-        );
+        var chat = await GetByIdAsync(chatId);
+        if (chat == null || participantIndex >= chat.Participants.Count) return;
+
+        chat.Participants[participantIndex].DisplayName = displayName ?? string.Empty;
+        chat.Participants[participantIndex].AvatarUrl = avatarUrl ?? string.Empty;
+        chat.Participants[participantIndex].Gender = gender ?? "male";
+
+        var filter = Builders<Chat>.Filter.Eq(c => c.Id, chatId);
+        await _collection.ReplaceOneAsync(filter, chat);
     }
 
     public async Task DeleteAsync(string id)
     {
-        await _container.DeleteItemAsync<Chat>(id, new PartitionKey(id));
+        var filter = Builders<Chat>.Filter.Eq(c => c.Id, id);
+        await _collection.DeleteOneAsync(filter);
     }
 }

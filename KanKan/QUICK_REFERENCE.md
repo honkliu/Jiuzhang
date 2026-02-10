@@ -54,10 +54,14 @@ npm run preview      # Preview production build
 ### Backend: `server/appsettings.json`
 ```json
 {
+  "UseInMemoryStorage": false,
   "CosmosDb": {
     "Endpoint": "https://localhost:8081",
     "Key": "C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==",
-    "DatabaseName": "KanKanDB"
+    "DatabaseName": "KanKanDB",
+    "Provisioning": {
+      "Enabled": true
+    }
   },
   "Jwt": {
     "Secret": "your-super-secret-jwt-key-at-least-32-chars"
@@ -75,11 +79,14 @@ VITE_API_URL=http://localhost:5001/api
 | Container | Partition Key | TTL | Purpose |
 |-----------|---------------|-----|---------|
 | Users | /id | - | User accounts |
+| UserEmailLookup | /email | - | Email lookup |
 | Messages | /chatId | - | Chat messages |
 | Chats | /id | - | Chat metadata |
+| ChatUsers | /userId | - | Per-user chat summaries |
 | Contacts | /userId | - | User contacts |
 | Moments | /userId | - | Timeline posts |
 | EmailVerifications | /email | 600s | Email codes |
+| Notifications | /userId | - | Notifications |
 
 ## 🎯 Key API Endpoints
 

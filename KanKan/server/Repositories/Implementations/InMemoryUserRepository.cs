@@ -9,6 +9,7 @@ namespace KanKan.API.Repositories.Implementations;
 public class InMemoryUserRepository : IUserRepository
 {
     private static readonly Dictionary<string, UserEntity> _users = new();
+    private static readonly Dictionary<string, string> _userIdByEmail = new();
     private static readonly object _lock = new();
 
     public Task<UserEntity?> GetByIdAsync(string id)
@@ -24,8 +25,14 @@ public class InMemoryUserRepository : IUserRepository
     {
         lock (_lock)
         {
-            var user = _users.Values.FirstOrDefault(u => u.Email.Equals(email, StringComparison.OrdinalIgnoreCase));
-            return Task.FromResult(user);
+            var normalized = email.ToLower();
+            if (_userIdByEmail.TryGetValue(normalized, out var userId) && _users.TryGetValue(userId, out var user))
+            {
+                return Task.FromResult<UserEntity?>(user);
+            }
+
+            var fallback = _users.Values.FirstOrDefault(u => u.Email.Equals(email, StringComparison.OrdinalIgnoreCase));
+            return Task.FromResult(fallback);
         }
     }
 
@@ -46,6 +53,10 @@ public class InMemoryUserRepository : IUserRepository
             user.CreatedAt = DateTime.UtcNow;
             user.UpdatedAt = DateTime.UtcNow;
             _users[user.Id] = user;
+            if (!string.IsNullOrWhiteSpace(user.Email))
+            {
+                _userIdByEmail[user.Email.ToLower()] = user.Id;
+            }
             return Task.FromResult(user);
         }
     }
@@ -64,6 +75,10 @@ public class InMemoryUserRepository : IUserRepository
     {
         lock (_lock)
         {
+            if (_users.TryGetValue(id, out var user) && !string.IsNullOrWhiteSpace(user.Email))
+            {
+                _userIdByEmail.Remove(user.Email.ToLower());
+            }
             _users.Remove(id);
             return Task.CompletedTask;
         }

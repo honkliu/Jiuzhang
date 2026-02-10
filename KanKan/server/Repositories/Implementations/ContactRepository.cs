@@ -1,4 +1,4 @@
-using Microsoft.Azure.Cosmos;
+using MongoDB.Driver;
 using KanKan.API.Models.Entities;
 using KanKan.API.Repositories.Interfaces;
 
@@ -6,81 +6,60 @@ namespace KanKan.API.Repositories.Implementations;
 
 public class ContactRepository : IContactRepository
 {
-    private readonly Container _container;
+    private readonly IMongoCollection<Contact> _collection;
 
-    public ContactRepository(CosmosClient cosmosClient, IConfiguration configuration)
+    public ContactRepository(IMongoClient mongoClient, IConfiguration configuration)
     {
-        var databaseName = configuration["CosmosDb:DatabaseName"] ?? "KanKanDB";
-        var containerName = configuration["CosmosDb:Containers:Contacts"] ?? "Contacts";
-        _container = cosmosClient.GetContainer(databaseName, containerName);
+        var databaseName = configuration["MongoDB:DatabaseName"] ?? "KanKanDB";
+        var collectionName = configuration["MongoDB:Collections:Contacts"] ?? "Contacts";
+        var database = mongoClient.GetDatabase(databaseName);
+        _collection = database.GetCollection<Contact>(collectionName);
     }
 
     public async Task<Contact?> GetByIdAsync(string id, string userId)
     {
-        try
-        {
-            var response = await _container.ReadItemAsync<Contact>(id, new PartitionKey(userId));
-            return response.Resource;
-        }
-        catch (CosmosException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
-        {
-            return null;
-        }
+        var filter = Builders<Contact>.Filter.And(
+            Builders<Contact>.Filter.Eq(c => c.Id, id),
+            Builders<Contact>.Filter.Eq(c => c.UserId, userId)
+        );
+        return await _collection.Find(filter).FirstOrDefaultAsync();
     }
 
     public async Task<Contact?> GetByUserAndContactAsync(string userId, string contactId)
     {
-        var query = new QueryDefinition(
-            @"SELECT * FROM c
-              WHERE c.type = 'contact'
-              AND c.userId = @userId
-              AND c.contactId = @contactId")
-            .WithParameter("@userId", userId)
-            .WithParameter("@contactId", contactId);
-
-        var iterator = _container.GetItemQueryIterator<Contact>(query, requestOptions: new QueryRequestOptions
-        {
-            PartitionKey = new PartitionKey(userId)
-        });
-
-        var results = await iterator.ReadNextAsync();
-        return results.FirstOrDefault();
+        var filter = Builders<Contact>.Filter.And(
+            Builders<Contact>.Filter.Eq(c => c.Type, "contact"),
+            Builders<Contact>.Filter.Eq(c => c.UserId, userId),
+            Builders<Contact>.Filter.Eq(c => c.ContactId, contactId)
+        );
+        return await _collection.Find(filter).FirstOrDefaultAsync();
     }
 
     public async Task<List<Contact>> GetContactsByStatusAsync(string userId, string status)
     {
-        var query = new QueryDefinition(
-            @"SELECT * FROM c
-              WHERE c.type = 'contact'
-              AND c.userId = @userId
-              AND c.status = @status
-              ORDER BY c.addedAt DESC")
-            .WithParameter("@userId", userId)
-            .WithParameter("@status", status);
-
-        var iterator = _container.GetItemQueryIterator<Contact>(query, requestOptions: new QueryRequestOptions
-        {
-            PartitionKey = new PartitionKey(userId)
-        });
-
-        var results = new List<Contact>();
-        while (iterator.HasMoreResults)
-        {
-            var response = await iterator.ReadNextAsync();
-            results.AddRange(response);
-        }
-
-        return results;
+        var filter = Builders<Contact>.Filter.And(
+            Builders<Contact>.Filter.Eq(c => c.Type, "contact"),
+            Builders<Contact>.Filter.Eq(c => c.UserId, userId),
+            Builders<Contact>.Filter.Eq(c => c.Status, status)
+        );
+        var sort = Builders<Contact>.Sort.Descending(c => c.AddedAt);
+        return await _collection.Find(filter).Sort(sort).ToListAsync();
     }
 
     public async Task<Contact> UpsertAsync(Contact contact)
     {
-        var response = await _container.UpsertItemAsync(contact, new PartitionKey(contact.UserId));
-        return response.Resource;
+        var filter = Builders<Contact>.Filter.Eq(c => c.Id, contact.Id);
+        var options = new ReplaceOptions { IsUpsert = true };
+        await _collection.ReplaceOneAsync(filter, contact, options);
+        return contact;
     }
 
     public async Task DeleteAsync(string id, string userId)
     {
-        await _container.DeleteItemAsync<Contact>(id, new PartitionKey(userId));
+        var filter = Builders<Contact>.Filter.And(
+            Builders<Contact>.Filter.Eq(c => c.Id, id),
+            Builders<Contact>.Filter.Eq(c => c.UserId, userId)
+        );
+        await _collection.DeleteOneAsync(filter);
     }
 }

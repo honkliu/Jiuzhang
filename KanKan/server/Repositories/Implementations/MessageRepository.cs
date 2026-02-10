@@ -1,4 +1,4 @@
-using Microsoft.Azure.Cosmos;
+using MongoDB.Driver;
 using KanKan.API.Models.Entities;
 using KanKan.API.Repositories.Interfaces;
 
@@ -6,80 +6,68 @@ namespace KanKan.API.Repositories.Implementations;
 
 public class MessageRepository : IMessageRepository
 {
-    private readonly Container _container;
+    private readonly IMongoCollection<Message> _collection;
 
-    public MessageRepository(CosmosClient cosmosClient, IConfiguration configuration)
+    public MessageRepository(IMongoClient mongoClient, IConfiguration configuration)
     {
-        var databaseName = configuration["CosmosDb:DatabaseName"] ?? "KanKanDB";
-        var containerName = configuration["CosmosDb:Containers:Messages"] ?? "Messages";
-        _container = cosmosClient.GetContainer(databaseName, containerName);
+        var databaseName = configuration["MongoDB:DatabaseName"] ?? "KanKanDB";
+        var collectionName = configuration["MongoDB:Collections:Messages"] ?? "Messages";
+        var database = mongoClient.GetDatabase(databaseName);
+        _collection = database.GetCollection<Message>(collectionName);
     }
 
     public async Task<Message?> GetByIdAsync(string id, string chatId)
     {
-        try
-        {
-            var response = await _container.ReadItemAsync<Message>(id, new PartitionKey(chatId));
-            return response.Resource;
-        }
-        catch (CosmosException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
-        {
-            return null;
-        }
+        var filter = Builders<Message>.Filter.And(
+            Builders<Message>.Filter.Eq(m => m.Id, id),
+            Builders<Message>.Filter.Eq(m => m.ChatId, chatId)
+        );
+
+        return await _collection.Find(filter).FirstOrDefaultAsync();
     }
 
     public async Task<List<Message>> GetChatMessagesAsync(string chatId, int limit = 50, DateTime? before = null)
     {
-        var queryText = @"SELECT * FROM c
-              WHERE c.chatId = @chatId
-              AND c.type = 'message'
-              AND c.isDeleted = false";
+        var filterBuilder = Builders<Message>.Filter;
+        var filter = filterBuilder.And(
+            filterBuilder.Eq(m => m.ChatId, chatId),
+            filterBuilder.Eq(m => m.Type, "message"),
+            filterBuilder.Eq(m => m.IsDeleted, false)
+        );
 
         if (before.HasValue)
         {
-            queryText += " AND c.timestamp < @before";
+            filter = filterBuilder.And(filter, filterBuilder.Lt(m => m.Timestamp, before.Value));
         }
 
-        queryText += " ORDER BY c.timestamp DESC OFFSET 0 LIMIT @limit";
+        var sort = Builders<Message>.Sort.Descending(m => m.Timestamp);
 
-        var query = new QueryDefinition(queryText)
-            .WithParameter("@chatId", chatId)
-            .WithParameter("@limit", limit);
-
-        if (before.HasValue)
-        {
-            query = query.WithParameter("@before", before.Value);
-        }
-
-        var iterator = _container.GetItemQueryIterator<Message>(query);
-        var results = new List<Message>();
-
-        while (iterator.HasMoreResults)
-        {
-            var response = await iterator.ReadNextAsync();
-            results.AddRange(response);
-        }
+        var messages = await _collection.Find(filter)
+            .Sort(sort)
+            .Limit(limit)
+            .ToListAsync();
 
         // Reverse to get chronological order (oldest first)
-        results.Reverse();
-        return results;
+        messages.Reverse();
+        return messages;
     }
 
     public async Task<Message> CreateAsync(Message message)
     {
         message.Timestamp = DateTime.UtcNow;
-        var response = await _container.CreateItemAsync(message, new PartitionKey(message.ChatId));
-        return response.Resource;
+        await _collection.InsertOneAsync(message);
+        return message;
     }
 
     public async Task<Message> UpdateAsync(Message message)
     {
-        var response = await _container.ReplaceItemAsync(
-            message,
-            message.Id,
-            new PartitionKey(message.ChatId)
+        var filter = Builders<Message>.Filter.And(
+            Builders<Message>.Filter.Eq(m => m.Id, message.Id),
+            Builders<Message>.Filter.Eq(m => m.ChatId, message.ChatId)
         );
-        return response.Resource;
+
+        await _collection.ReplaceOneAsync(filter, message);
+        return message;
     }
 
     public async Task DeleteAsync(string id, string chatId)

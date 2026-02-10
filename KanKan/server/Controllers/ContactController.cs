@@ -17,6 +17,7 @@ public class ContactController : ControllerBase
     private readonly IUserRepository _userRepository;
     private readonly IContactRepository _contactRepository;
     private readonly IChatRepository _chatRepository;
+    private readonly IChatUserRepository _chatUserRepository;
     private readonly IHubContext<ChatHub> _hubContext;
     private readonly ILogger<ContactController> _logger;
 
@@ -24,12 +25,14 @@ public class ContactController : ControllerBase
         IUserRepository userRepository,
         IContactRepository contactRepository,
         IChatRepository chatRepository,
+        IChatUserRepository chatUserRepository,
         IHubContext<ChatHub> hubContext,
         ILogger<ContactController> logger)
     {
         _userRepository = userRepository;
         _contactRepository = contactRepository;
         _chatRepository = chatRepository;
+        _chatUserRepository = chatUserRepository;
         _hubContext = hubContext;
         _logger = logger;
     }
@@ -379,14 +382,23 @@ public class ContactController : ControllerBase
             // even if the client missed the real-time SignalR event (e.g., user was on Profile page).
             try
             {
-                var chats = await _chatRepository.GetUserChatsAsync(user.Id);
-                foreach (var chat in chats)
+                var chatUsers = await _chatUserRepository.GetUserChatsAsync(user.Id, includeHidden: true);
+                foreach (var chatUser in chatUsers)
                 {
-                    var idx = chat.Participants.FindIndex(p => p.UserId == user.Id);
+                    var idx = chatUser.Participants.FindIndex(p => p.UserId == user.Id);
                     if (idx >= 0)
                     {
                         await _chatRepository.PatchParticipantProfileAsync(
-                            chatId: chat.Id,
+                            chatId: chatUser.ChatId,
+                            participantIndex: idx,
+                            displayName: user.DisplayName,
+                            avatarUrl: user.AvatarUrl ?? string.Empty,
+                            gender: user.Gender
+                        );
+
+                        await _chatUserRepository.PatchParticipantProfileAsync(
+                            userId: user.Id,
+                            chatId: chatUser.ChatId,
                             participantIndex: idx,
                             displayName: user.DisplayName,
                             avatarUrl: user.AvatarUrl ?? string.Empty,
