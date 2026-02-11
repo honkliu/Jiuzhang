@@ -13,9 +13,9 @@ import {
   Chip,
   Divider,
 } from '@mui/material';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { AppDispatch } from '@/store';
+import { AppDispatch, RootState } from '@/store';
 import { contactService, User, FriendRequest } from '@/services/contact.service';
 import { createChat } from '@/store/chatSlice';
 import { AppHeader } from '@/components/Shared/AppHeader';
@@ -29,6 +29,7 @@ export const ContactsPage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const { t } = useLanguage();
+  const currentUserId = useSelector((state: RootState) => state.auth.user?.id);
   const [users, setUsers] = useState<User[]>([]);
   const [contacts, setContacts] = useState<User[]>([]);
   const [requests, setRequests] = useState<FriendRequest[]>([]);
@@ -100,6 +101,19 @@ export const ContactsPage: React.FC = () => {
     }
   };
 
+  const handleRemoveFriend = async (userId: string) => {
+    const confirmed = window.confirm(t('contacts.removeConfirm'));
+    if (!confirmed) return;
+
+    setActionLoading(userId);
+    try {
+      await contactService.removeFriend(userId);
+      await loadUsers();
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const handleAccept = async (fromUserId: string) => {
     setActionLoading(fromUserId);
     try {
@@ -121,6 +135,9 @@ export const ContactsPage: React.FC = () => {
   };
 
   const isContact = (userId: string) => contacts.some((c) => c.id === userId);
+  const otherUsers = users.filter(
+    (user) => user.id !== currentUserId && !isContact(user.id)
+  );
 
   return (
     <BoxAny sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
@@ -211,8 +228,58 @@ export const ContactsPage: React.FC = () => {
               <List sx={{ mb: 2 }}>
                 {contacts.map((user) => (
                   <ListItem key={user.id} divider secondaryAction={
-                    <Button variant="contained" onClick={() => handleStartChat(user.id)}>
-                      {t('contacts.chat')}
+                    <BoxAny sx={{ display: 'flex', gap: 1 }}>
+                      <Button variant="contained" onClick={() => handleStartChat(user.id)}>
+                        {t('contacts.chat')}
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        color="error"
+                        onClick={() => handleRemoveFriend(user.id)}
+                        disabled={actionLoading === user.id}
+                      >
+                        {t('contacts.removeFriend')}
+                      </Button>
+                    </BoxAny>
+                  }>
+                    <ListItemAvatar>
+                      <UserAvatar
+                        src={user.avatarUrl}
+                        gender={user.gender}
+                        fallbackText={user.displayName}
+                      />
+                    </ListItemAvatar>
+                    <ListItemText
+                      primary={
+                        <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Typography fontWeight="bold">{user.displayName}</Typography>
+                          {user.isOnline && <Chip size="small" color="success" label={t('contacts.online')} />}
+                        </BoxAny>
+                      }
+                      secondary={`${user.email} · ${t('contacts.friend')}`}
+                    />
+                  </ListItem>
+                ))}
+              </List>
+            )}
+
+            <Divider sx={{ my: 2 }} />
+
+            <Typography variant="subtitle1" fontWeight="bold" sx={{ mb: 1 }}>
+              {t('contacts.others')}
+            </Typography>
+            {otherUsers.length === 0 ? (
+              <Typography color="text.secondary">{t('contacts.noUsers')}</Typography>
+            ) : (
+              <List>
+                {otherUsers.map((user) => (
+                  <ListItem key={user.id} divider secondaryAction={
+                    <Button
+                      variant="outlined"
+                      onClick={() => handleAddFriend(user.id)}
+                      disabled={actionLoading === user.id}
+                    >
+                      {t('contacts.addFriend')}
                     </Button>
                   }>
                     <ListItemAvatar>
@@ -229,53 +296,7 @@ export const ContactsPage: React.FC = () => {
                           {user.isOnline && <Chip size="small" color="success" label={t('contacts.online')} />}
                         </BoxAny>
                       }
-                      secondary={user.email}
-                    />
-                  </ListItem>
-                ))}
-              </List>
-            )}
-
-            <Divider sx={{ my: 2 }} />
-
-            <Typography variant="subtitle1" fontWeight="bold" sx={{ mb: 1 }}>
-              {t('contacts.discover')}
-            </Typography>
-            {users.length === 0 ? (
-              <Typography color="text.secondary">{t('contacts.noUsers')}</Typography>
-            ) : (
-              <List>
-                {users.map((user) => (
-                  <ListItem key={user.id} divider secondaryAction={
-                    isContact(user.id) ? (
-                      <Button variant="contained" onClick={() => handleStartChat(user.id)}>
-                        {t('contacts.chat')}
-                      </Button>
-                    ) : (
-                      <Button
-                        variant="outlined"
-                        onClick={() => handleAddFriend(user.id)}
-                        disabled={actionLoading === user.id}
-                      >
-                        {t('contacts.addFriend')}
-                      </Button>
-                    )
-                  }>
-                    <ListItemAvatar>
-                      <UserAvatar
-                        src={user.avatarUrl}
-                        gender={user.gender}
-                        fallbackText={user.displayName}
-                      />
-                    </ListItemAvatar>
-                    <ListItemText
-                      primary={
-                        <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Typography fontWeight="bold">{user.displayName}</Typography>
-                          {user.isOnline && <Chip size="small" color="success" label={t('contacts.online')} />}
-                        </BoxAny>
-                      }
-                      secondary={user.email}
+                      secondary={`${user.email} · ${t('contacts.notFriend')}`}
                     />
                   </ListItem>
                 ))}

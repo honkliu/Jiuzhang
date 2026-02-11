@@ -54,6 +54,10 @@ class ContactService {
     await apiClient.post(`/contact/requests/${fromUserId}/reject`);
   }
 
+  async removeFriend(userId: string): Promise<void> {
+    await apiClient.delete(`/contact/friends/${userId}`);
+  }
+
   async getUser(userId: string): Promise<User> {
     const response = await apiClient.get<User>(`/contact/${userId}`);
     return response.data;

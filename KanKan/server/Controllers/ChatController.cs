@@ -23,6 +23,7 @@ public class ChatController : ControllerBase
     private readonly IChatUserRepository _chatUserRepository;
     private readonly IMessageRepository _messageRepository;
     private readonly IUserRepository _userRepository;
+    private readonly IContactRepository _contactRepository;
     private readonly INotificationRepository _notificationRepository;
     private readonly IAgentService _agentService;
     private readonly IHubContext<ChatHub> _hubContext;
@@ -33,6 +34,7 @@ public class ChatController : ControllerBase
         IChatUserRepository chatUserRepository,
         IMessageRepository messageRepository,
         IUserRepository userRepository,
+        IContactRepository contactRepository,
         INotificationRepository notificationRepository,
         IAgentService agentService,
         IHubContext<ChatHub> hubContext,
@@ -42,6 +44,7 @@ public class ChatController : ControllerBase
         _chatUserRepository = chatUserRepository;
         _messageRepository = messageRepository;
         _userRepository = userRepository;
+        _contactRepository = contactRepository;
         _notificationRepository = notificationRepository;
         _agentService = agentService;
         _hubContext = hubContext;
@@ -50,6 +53,29 @@ public class ChatController : ControllerBase
 
     private string GetUserId() => User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
     private string GetUserName() => User.FindFirst(ClaimTypes.Name)?.Value ?? "";
+
+    private async Task<bool> IsFriendAsync(string userId, string otherUserId)
+    {
+        if (string.IsNullOrWhiteSpace(userId) || string.IsNullOrWhiteSpace(otherUserId))
+            return false;
+
+        if (otherUserId == ChatDomain.AgentUserId)
+            return true;
+
+        var contact = await _contactRepository.GetByUserAndContactAsync(userId, otherUserId);
+        return contact != null && contact.Status == "accepted";
+    }
+
+    private async Task<bool> AreAllFriendsAsync(string userId, IEnumerable<string> otherUserIds)
+    {
+        foreach (var otherUserId in otherUserIds)
+        {
+            if (!await IsFriendAsync(userId, otherUserId))
+                return false;
+        }
+
+        return true;
+    }
 
     /// <summary>
     /// Get all chats for the current user
@@ -133,8 +159,29 @@ public class ChatController : ControllerBase
             if (currentUser == null)
                 return BadRequest(new { message = "User not found" });
 
+            var isDirectRequest = (request.ChatType == "direct" || string.IsNullOrWhiteSpace(request.ChatType))
+                && request.ParticipantIds.Count == 1;
+
+            if (isDirectRequest)
+            {
+                var otherUserId = request.ParticipantIds[0];
+                if (!await IsFriendAsync(userId, otherUserId))
+                    return StatusCode(403, new { message = "Direct chats require friendship" });
+            }
+            else
+            {
+                var otherUserIds = request.ParticipantIds
+                    .Where(id => !string.IsNullOrWhiteSpace(id))
+                    .Where(id => id != userId)
+                    .Distinct()
+                    .ToList();
+
+                if (!await AreAllFriendsAsync(userId, otherUserIds))
+                    return StatusCode(403, new { message = "Group chats require friends" });
+            }
+
             // For direct chats, check if one already exists
-            if (request.ChatType == "direct" && request.ParticipantIds.Count == 1)
+            if (isDirectRequest)
             {
                 var otherUserId = request.ParticipantIds[0];
                 var existingChat = await _chatRepository.GetDirectChatAsync(userId, otherUserId);
@@ -519,6 +566,13 @@ public class ChatController : ControllerBase
 
             if (!chat.Participants.Any(p => p.UserId == userId))
                 return Forbid();
+
+            if (chat.ChatType == "direct")
+            {
+                var other = chat.Participants.FirstOrDefault(p => p.UserId != userId);
+                if (other != null && !await IsFriendAsync(userId, other.UserId))
+                    return StatusCode(403, new { message = "Direct chats require friendship" });
+            }
 
             request.ChatId = string.IsNullOrWhiteSpace(request.ChatId) ? chatId : request.ChatId;
             var user = await _userRepository.GetByIdAsync(userId);

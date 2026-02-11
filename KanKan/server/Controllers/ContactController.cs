@@ -322,6 +322,39 @@ public class ContactController : ControllerBase
     }
 
     /// <summary>
+    /// Remove a friend relationship
+    /// </summary>
+    [HttpDelete("friends/{friendUserId}")]
+    public async Task<IActionResult> RemoveFriend(string friendUserId)
+    {
+        try
+        {
+            var userId = GetUserId();
+            if (string.IsNullOrWhiteSpace(friendUserId))
+                return BadRequest(new { message = "Friend user id is required" });
+
+            var myContact = await _contactRepository.GetByUserAndContactAsync(userId, friendUserId);
+            if (myContact != null)
+            {
+                await _contactRepository.DeleteAsync(myContact.Id, userId);
+            }
+
+            var theirContact = await _contactRepository.GetByUserAndContactAsync(friendUserId, userId);
+            if (theirContact != null)
+            {
+                await _contactRepository.DeleteAsync(theirContact.Id, friendUserId);
+            }
+
+            return Ok(new { message = "Friend removed" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to remove friend {FriendUserId}", friendUserId);
+            return StatusCode(500, new { message = "Failed to remove friend" });
+        }
+    }
+
+    /// <summary>
     /// Get current user's profile
     /// </summary>
     [HttpGet("me")]

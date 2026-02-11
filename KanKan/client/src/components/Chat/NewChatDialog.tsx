@@ -17,12 +17,13 @@ import {
   InputAdornment,
 } from '@mui/material';
 import { Search as SearchIcon, Close as CloseIcon } from '@mui/icons-material';
-import { useDispatch } from 'react-redux';
-import { AppDispatch } from '@/store';
+import { useDispatch, useSelector } from 'react-redux';
+import { AppDispatch, RootState } from '@/store';
 import { createChat } from '@/store/chatSlice';
 import { contactService, User } from '@/services/contact.service';
 import { UserAvatar } from '@/components/Shared/UserAvatar';
 import { useLanguage } from '@/i18n/LanguageContext';
+import { WA_USER_ID } from '@/utils/chatParticipants';
 
 // Work around TS2590 (“union type too complex”) from MUI Box typings in some TS versions.
 const BoxAny = Box as any;
@@ -34,8 +35,10 @@ interface NewChatDialogProps {
 
 export const NewChatDialog: React.FC<NewChatDialogProps> = ({ open, onClose }) => {
   const dispatch = useDispatch<AppDispatch>();
+  const currentUserId = useSelector((state: RootState) => state.auth.user?.id);
   const [searchQuery, setSearchQuery] = useState('');
   const [users, setUsers] = useState<User[]>([]);
+  const [friends, setFriends] = useState<User[]>([]);
   const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -55,8 +58,12 @@ export const NewChatDialog: React.FC<NewChatDialogProps> = ({ open, onClose }) =
   const loadUsers = async () => {
     setLoading(true);
     try {
-      const allUsers = await contactService.getAllUsers();
+      const [allUsers, contacts] = await Promise.all([
+        contactService.getAllUsers(),
+        contactService.getContacts(),
+      ]);
       setUsers(allUsers);
+      setFriends(contacts);
     } catch (error) {
       console.error('Failed to load users:', error);
     } finally {
@@ -82,6 +89,9 @@ export const NewChatDialog: React.FC<NewChatDialogProps> = ({ open, onClose }) =
   };
 
   const handleSelectUser = (user: User) => {
+    if (!isSelectable(user.id)) {
+      return;
+    }
     if (selectedUsers.some((u) => u.id === user.id)) {
       setSelectedUsers(selectedUsers.filter((u) => u.id !== user.id));
     } else {
@@ -90,7 +100,7 @@ export const NewChatDialog: React.FC<NewChatDialogProps> = ({ open, onClose }) =
   };
 
   const handleCreateChat = async () => {
-    if (selectedUsers.length === 0) return;
+    if (selectedUsers.length === 0 || !canCreateChat) return;
 
     setCreating(true);
     try {
@@ -116,6 +126,32 @@ export const NewChatDialog: React.FC<NewChatDialogProps> = ({ open, onClose }) =
       user.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const baseUsers = filteredUsers.filter((u) => u.id !== currentUserId);
+
+  const isFriend = (userId: string) => friends.some((f) => f.id === userId);
+  const isSelectable = (userId: string) => userId === WA_USER_ID || isFriend(userId);
+
+  const waUser: User = {
+    id: WA_USER_ID,
+    email: 'wa@assistant.local',
+    handle: 'assistant_1003',
+    displayName: t('Wa'),
+    avatarUrl: '',
+    gender: 'female',
+    bio: 'AI assistant',
+    isOnline: true,
+    lastSeen: new Date().toISOString(),
+  };
+
+  const listWithWa = baseUsers.some((u) => u.id === WA_USER_ID)
+    ? baseUsers
+    : [waUser, ...baseUsers];
+
+  const selectedDirectTarget = selectedUsers.length === 1 ? selectedUsers[0] : null;
+  const canCreateDirect = !!selectedDirectTarget && isSelectable(selectedDirectTarget.id);
+  const canCreateGroup = selectedUsers.length > 1 && selectedUsers.every((u) => isSelectable(u.id));
+  const canCreateChat = canCreateDirect || canCreateGroup;
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
@@ -157,24 +193,31 @@ export const NewChatDialog: React.FC<NewChatDialogProps> = ({ open, onClose }) =
           <BoxAny sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
             <CircularProgress />
           </BoxAny>
-        ) : filteredUsers.length === 0 ? (
+        ) : listWithWa.length === 0 ? (
           <Typography color="text.secondary" align="center" sx={{ py: 4 }}>
             {t('common.noUsersFound')}
           </Typography>
         ) : (
           <List sx={{ maxHeight: 300, overflow: 'auto' }}>
-            {filteredUsers.map((user) => (
+            {listWithWa.map((user) => (
               <ListItemButton
                 key={user.id}
                 onClick={() => handleSelectUser(user)}
                 selected={selectedUsers.some((u) => u.id === user.id)}
+                disabled={!isSelectable(user.id)}
               >
                 <ListItemAvatar>
                   <UserAvatar src={user.avatarUrl} gender={user.gender} fallbackText={user.displayName} />
                 </ListItemAvatar>
                 <ListItemText
                   primary={user.displayName}
-                  secondary={user.email}
+                  secondary={
+                    user.id === WA_USER_ID
+                      ? t('chat.new.alwaysAvailable')
+                      : isFriend(user.id)
+                        ? `${user.email} · ${t('contacts.friend')}`
+                        : `${user.email} · ${t('contacts.notFriend')}`
+                  }
                 />
               </ListItemButton>
             ))}
@@ -186,11 +229,18 @@ export const NewChatDialog: React.FC<NewChatDialogProps> = ({ open, onClose }) =
         <Button
           variant="contained"
           onClick={handleCreateChat}
-          disabled={selectedUsers.length === 0 || creating}
+          disabled={!canCreateChat || creating}
         >
           {creating ? <CircularProgress size={24} /> : t('chat.new.start')}
         </Button>
       </DialogActions>
+      {selectedDirectTarget && !canCreateDirect && (
+        <BoxAny sx={{ px: 3, pb: 2 }}>
+          <Typography variant="body2" color="text.secondary">
+            {t('chat.new.onlyFriendsDirect')}
+          </Typography>
+        </BoxAny>
+      )}
     </Dialog>
   );
 };
