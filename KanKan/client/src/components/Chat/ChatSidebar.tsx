@@ -27,6 +27,7 @@ import { chatService, Chat } from '@/services/chat.service';
 import { GroupAvatar } from '@/components/Shared/GroupAvatar';
 import { UserAvatar } from '@/components/Shared/UserAvatar';
 import { getDirectDisplayParticipant, getOtherRealParticipants, isRealGroupChat, WA_USER_ID } from '@/utils/chatParticipants';
+import { useLanguage } from '@/i18n/LanguageContext';
 
 // Work around TS2590 (“union type too complex”) from MUI Box typings in some TS versions.
 const BoxAny = Box as any;
@@ -41,6 +42,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
   const dispatch = useDispatch<AppDispatch>();
   const { chats, activeChat, loading } = useSelector((state: RootState) => state.chat);
   const { user } = useSelector((state: RootState) => state.auth);
+  const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = React.useState('');
 
   const filteredChats = chats.filter((chat) =>
@@ -54,14 +56,14 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
   };
 
   const handleClearChat = async (chat: Chat) => {
-    const label = 'Clear this chat?\n\nThis will hide previous messages. The chat will reappear when a new message arrives.';
+    const label = t('chat.clearConfirm');
     if (!window.confirm(label)) return;
     try {
       await chatService.clearChat(chat.id);
       dispatch(removeChat(chat.id));
     } catch (e) {
       console.error('Failed to clear chat', e);
-      alert('Failed to clear chat. Please try again.');
+      alert(t('chat.clearFailed'));
     }
   };
 
@@ -72,9 +74,9 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
   };
 
   const getLastMessagePreview = (chat: Chat) => {
-    if (!chat.lastMessage) return 'No messages yet';
+    if (!chat.lastMessage) return t('chat.noMessagesShort');
     const senderPrefix = chat.lastMessage.senderName === user?.displayName
-      ? 'You: '
+      ? `${t('chat.you')}: `
       : `${chat.lastMessage.senderName}: `;
     return truncateText(`${senderPrefix}${chat.lastMessage.text || ''}`, 44);
   };
@@ -100,20 +102,20 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
       if (!Number.isFinite(ms) || ms < 0) return '';
 
       const totalMinutes = Math.floor(ms / 60000);
-      if (totalMinutes < 1) return '1 m. ago';
-      if (totalMinutes < 60) return `${totalMinutes} m. ago`;
+      if (totalMinutes < 1) return t('time.justNow');
+      if (totalMinutes < 60) return `${totalMinutes} ${t('time.minute')}`;
 
       const totalHours = Math.floor(totalMinutes / 60);
-      if (totalHours < 24) return `${totalHours} h. ago`;
+      if (totalHours < 24) return `${totalHours} ${t('time.hour')}`;
 
       const totalDays = Math.floor(totalHours / 24);
-      if (totalDays < 7) return `${totalDays} d. ago`;
+      if (totalDays < 7) return `${totalDays} ${t('time.day')}`;
 
       const totalWeeks = Math.floor(totalDays / 7);
-      if (totalWeeks < 52) return `${totalWeeks} w. ago`;
+      if (totalWeeks < 52) return `${totalWeeks} ${t('time.week')}`;
 
       const totalYears = Math.max(1, Math.floor(totalDays / 365));
-      return `${totalYears} y. ago`;
+      return `${totalYears} ${t('time.year')}`;
     } catch {
       return '';
     }
@@ -136,15 +138,15 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
       <AppBar position="static" color="default" elevation={0}>
         <Toolbar sx={{ justifyContent: 'space-between' }}>
           <Typography variant="subtitle1" fontWeight="bold">
-            Chat
+            {t('chat.title')}
           </Typography>
           <BoxAny>
             {onCollapse && (
-              <IconButton onClick={onCollapse} title="Collapse" size="small">
+              <IconButton onClick={onCollapse} title={t('nav.collapse')} size="small">
                 <KeyboardDoubleArrowLeftIcon />
               </IconButton>
             )}
-            <IconButton color="primary" onClick={onNewChat} title="New Chat">
+            <IconButton color="primary" onClick={onNewChat} title={t('nav.newChat')}>
               <AddIcon />
             </IconButton>
           </BoxAny>
@@ -165,7 +167,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
         >
           <SearchIcon sx={{ color: 'text.secondary', mr: 1 }} />
           <InputBase
-            placeholder="Search chats..."
+            placeholder={t('chat.search')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             fullWidth
@@ -178,12 +180,12 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
       <List sx={{ flexGrow: 1, overflow: 'auto', py: 0 }}>
         {loading && chats.length === 0 ? (
           <BoxAny sx={{ p: 3, textAlign: 'center' }}>
-            <Typography color="text.secondary">Loading chats...</Typography>
+            <Typography color="text.secondary">{t('chat.loading')}</Typography>
           </BoxAny>
         ) : filteredChats.length === 0 ? (
           <BoxAny sx={{ p: 3, textAlign: 'center' }}>
             <Typography color="text.secondary">
-              {searchQuery ? 'No chats found' : 'No chats yet. Start a new conversation!'}
+              {searchQuery ? t('chat.emptySearch') : t('chat.empty')}
             </Typography>
           </BoxAny>
         ) : (
@@ -293,7 +295,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
                             fontWeight: 700,
                             lineHeight: 1,
                           }}
-                          title={`${chat.unreadCount} new message${chat.unreadCount === 1 ? '' : 's'}`}
+                          title={`${chat.unreadCount} ${t('chat.message.unread')}`}
                         >
                           {chat.unreadCount > 99 ? '99+' : chat.unreadCount}
                         </BoxAny>
@@ -313,7 +315,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
                       <BoxAny className="chatRowActions" sx={{ display: 'flex', alignItems: 'center' }}>
                         <IconButton
                           size="small"
-                          title="Clear"
+                          title={t('chat.clear')}
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();

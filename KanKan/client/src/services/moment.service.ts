@@ -39,6 +39,20 @@ class MomentService {
     const response = await apiClient.post<Moment>('/pa', request);
     return response.data;
   }
+
+  async deleteMoment(momentId: string): Promise<void> {
+    await apiClient.delete(`/pa/${momentId}`);
+  }
+
+  async toggleLike(momentId: string): Promise<Moment> {
+    const response = await apiClient.post<Moment>(`/pa/${momentId}/likes`, {});
+    return response.data;
+  }
+
+  async addComment(momentId: string, text: string): Promise<Moment> {
+    const response = await apiClient.post<Moment>(`/pa/${momentId}/comments`, { text });
+    return response.data;
+  }
 }
 
 export const momentService = new MomentService();

@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import type { Chat, Message } from '@/services/chat.service';
 import type { User } from '@/types';
 import { getDirectDisplayParticipant, getRealParticipants } from '@/utils/chatParticipants';
+import { useLanguage } from '@/i18n/LanguageContext';
 
 type TypingUser = { userId: string; userName: string };
 
@@ -31,7 +32,11 @@ const clampLine = (s: string, max = 42): string => {
   return `${normalized.slice(0, Math.max(0, max - 1))}…`;
 };
 
-const formatWallFeed = (messages: Message[], maxLines = 8): string => {
+const formatWallFeed = (
+  messages: Message[],
+  labels: { file: string; image: string },
+  maxLines = 8
+): string => {
   const items = messages
     .filter((m) => !m.isDeleted)
     .slice(-50)
@@ -40,7 +45,12 @@ const formatWallFeed = (messages: Message[], maxLines = 8): string => {
 
   return items
     .map((m) => {
-      const body = m.messageType === 'text' ? (m.text ?? '') : m.messageType === 'file' ? `[File] ${m.fileName ?? ''}` : '[Image]';
+      const body =
+        m.messageType === 'text'
+          ? (m.text ?? '')
+          : m.messageType === 'file'
+            ? `[${labels.file}] ${m.fileName ?? ''}`
+            : `[${labels.image}]`;
       return clampLine(`${m.senderName}: ${body}`);
     })
     .join('\n');
@@ -238,12 +248,23 @@ const RoomScene: React.FC<{
   meName: string;
   otherName: string;
   wallText: string;
+  sayHiText: string;
   meBubble?: string;
   otherBubble?: string;
   talkingId?: 'me' | 'other' | null;
   meAvatarUrl?: string;
   otherAvatarUrl?: string;
-}> = ({ meName, otherName, wallText, meBubble, otherBubble, talkingId, meAvatarUrl, otherAvatarUrl }) => {
+}> = ({
+  meName,
+  otherName,
+  wallText,
+  sayHiText,
+  meBubble,
+  otherBubble,
+  talkingId,
+  meAvatarUrl,
+  otherAvatarUrl,
+}) => {
   const referenceTexture = useReferenceTexture();
 
   return (
@@ -322,7 +343,7 @@ const RoomScene: React.FC<{
         maxWidth={1.35}
         lineHeight={1.15}
       >
-        {wallText || 'Say hi…'}
+        {wallText || sayHiText}
       </Text>
 
       {/* Avatars */}
@@ -349,6 +370,7 @@ const RoomScene: React.FC<{
 };
 
 export const ChatRoom3D: React.FC<ChatRoom3DProps> = ({ chat, me, messages, typingUsers }) => {
+  const { t, language } = useLanguage();
   const meId = me?.id;
   const meParticipant = useMemo(
     () => (meId ? chat.participants.find((p) => p.userId === meId) : undefined),
@@ -360,12 +382,16 @@ export const ChatRoom3D: React.FC<ChatRoom3DProps> = ({ chat, me, messages, typi
     [chat, meId]
   );
 
-  const meName = meParticipant?.displayName || me?.displayName || 'Me';
-  const otherName = otherParticipant?.displayName || chat.name || 'Friend';
+  const meName = meParticipant?.displayName || me?.displayName || t('chat.room.me');
+  const otherName = otherParticipant?.displayName || chat.name || t('chat.room.friend');
   const meAvatarUrl = meParticipant?.avatarUrl || me?.avatarUrl || undefined;
   const otherAvatarUrl = otherParticipant?.avatarUrl || undefined;
 
-  const wallText = useMemo(() => formatWallFeed(messages), [messages]);
+  const wallLabels = useMemo(
+    () => ({ file: t('chat.room.file'), image: t('chat.room.image') }),
+    [language, t]
+  );
+  const wallText = useMemo(() => formatWallFeed(messages, wallLabels), [messages, wallLabels]);
 
   const lastMessage = useMemo(() => {
     const list = messages.filter((m) => !m.isDeleted);
@@ -381,9 +407,9 @@ export const ChatRoom3D: React.FC<ChatRoom3DProps> = ({ chat, me, messages, typi
       lastMessage.messageType === 'text'
         ? (lastMessage.text ?? '').trim()
         : lastMessage.messageType === 'file'
-          ? `[File] ${lastMessage.fileName ?? ''}`
+          ? `[${t('chat.room.file')}] ${lastMessage.fileName ?? ''}`
           : lastMessage.messageType === 'image'
-            ? '[Image]'
+            ? `[${t('chat.room.image')}]`
             : `[${lastMessage.messageType}]`;
 
     const trimmed = clampLine(body, 60);
@@ -405,7 +431,7 @@ export const ChatRoom3D: React.FC<ChatRoom3DProps> = ({ chat, me, messages, typi
   }, [bubble, meId]);
 
   const otherBubble = useMemo(() => {
-    if (isOtherTyping) return '…';
+    if (isOtherTyping) return t('chat.room.typing');
     if (!bubble) return undefined;
 
     const otherId = otherParticipant?.userId;
@@ -452,6 +478,7 @@ export const ChatRoom3D: React.FC<ChatRoom3DProps> = ({ chat, me, messages, typi
               meName={meName}
               otherName={otherName}
               wallText={wallText}
+              sayHiText={t('chat.room.sayHi')}
               meBubble={meBubble}
               otherBubble={otherBubble}
               talkingId={talkingId}

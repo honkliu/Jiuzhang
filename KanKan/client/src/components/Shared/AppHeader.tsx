@@ -20,6 +20,7 @@ import { useLanguage } from '@/i18n/LanguageContext';
 import { fetchNotifications, fetchUnreadNotificationCount } from '@/store/notificationsSlice';
 import { UserAvatar } from '@/components/Shared/UserAvatar';
 import { formatDistanceToNow } from 'date-fns';
+import { enUS, zhCN } from 'date-fns/locale';
 
 // Work around TS2590 (“union type too complex”) from MUI Box typings in some TS versions.
 const BoxAny = Box as any;
@@ -56,7 +57,10 @@ export const AppHeader: React.FC = () => {
 
   const formatWhen = (iso: string) => {
     try {
-      return formatDistanceToNow(new Date(iso), { addSuffix: true });
+      return formatDistanceToNow(new Date(iso), {
+        addSuffix: true,
+        locale: language === 'zh' ? zhCN : enUS,
+      });
     } catch {
       return '';
     }
@@ -106,7 +110,7 @@ export const AppHeader: React.FC = () => {
           <Button onClick={toggleLanguage} variant="outlined" size="small">
             {language === 'en' ? '中文' : 'EN'}
           </Button>
-          <IconButton title="Notifications" onClick={handleOpenNotifications}>
+          <IconButton title={t('nav.notifications')} onClick={handleOpenNotifications}>
             <Badge
               color="error"
               badgeContent={unreadNotifications > 99 ? '99+' : unreadNotifications}
@@ -115,7 +119,7 @@ export const AppHeader: React.FC = () => {
               <NotificationsIcon />
             </Badge>
           </IconButton>
-          <IconButton onClick={handleLogout} title="Logout">
+          <IconButton onClick={handleLogout} title={t('nav.logout')}>
             <LogoutIcon />
           </IconButton>
         </BoxAny>
@@ -136,10 +140,10 @@ export const AppHeader: React.FC = () => {
         >
           <BoxAny sx={{ px: 2, py: 1.25, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <Typography variant="subtitle1" fontWeight="bold">
-              Notifications
+              {t('nav.notifications')}
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              {unreadNotifications > 0 ? `${unreadNotifications} unread` : 'All caught up'}
+              {unreadNotifications > 0 ? `${unreadNotifications} ${t('nav.unread')}` : t('nav.allCaughtUp')}
             </Typography>
           </BoxAny>
           <Divider />
@@ -157,7 +161,7 @@ export const AppHeader: React.FC = () => {
           ) : items.length === 0 ? (
             <BoxAny sx={{ px: 2, py: 2 }}>
               <Typography variant="body2" color="text.secondary">
-                No notifications
+                {t('nav.noNotifications')}
               </Typography>
             </BoxAny>
           ) : (

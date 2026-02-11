@@ -3,6 +3,7 @@ import { Canvas, useFrame } from '@react-three/fiber';
 import { Html, SoftShadows, Float, CameraControls, Sky, useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import avatarUrl from '../../assets/zodiac/avatar.glb?url';
+import { useLanguage } from '@/i18n/LanguageContext';
 
 // Model source (CC-BY 4.0): https://sketchfab.com/3d-models/room-6417cbc1870a4a1691cca06912ae0369
 function RoomModel(props) {
@@ -88,9 +89,10 @@ function ChairWithAvatar({ chair, material }) {
 }
 
 function Loading() {
+  const { t } = useLanguage();
   return (
     <Html center style={{ color: '#ffffff', fontSize: '14px' }}>
-      Loading…
+      {t('common.loading')}
     </Html>
   );
 }

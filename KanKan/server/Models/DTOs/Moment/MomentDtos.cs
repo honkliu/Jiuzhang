@@ -22,3 +22,8 @@ public class CreateMomentRequest
     public string? Location { get; set; }
     public string? Visibility { get; set; }
 }
+
+public class AddMomentCommentRequest
+{
+    public string Text { get; set; } = string.Empty;
+}

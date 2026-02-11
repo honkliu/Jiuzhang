@@ -94,6 +94,104 @@ public class MomentsController : ControllerBase
         }
     }
 
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteMoment(string id)
+    {
+        try
+        {
+            var userId = GetUserId();
+            var moment = await _momentRepository.GetByIdAsync(id);
+
+            if (moment == null)
+                return NotFound(new { message = "Moment not found" });
+
+            if (!string.Equals(moment.UserId, userId, StringComparison.Ordinal))
+                return Forbid();
+
+            await _momentRepository.DeleteAsync(id);
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to delete moment");
+            return StatusCode(500, new { message = "Failed to delete moment" });
+        }
+    }
+
+    [HttpPost("{id}/comments")]
+    public async Task<ActionResult<MomentDto>> AddComment(string id, [FromBody] AddMomentCommentRequest request)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(request.Text))
+                return BadRequest(new { message = "Comment text is required" });
+
+            var userId = GetUserId();
+            var userName = GetUserName();
+            var user = await _userRepository.GetByIdAsync(userId);
+            if (user == null)
+                return BadRequest(new { message = "User not found" });
+
+            var moment = await _momentRepository.GetByIdAsync(id);
+            if (moment == null)
+                return NotFound(new { message = "Moment not found" });
+
+            moment.Comments.Add(new MomentComment
+            {
+                Id = $"comment_{Guid.NewGuid():N}",
+                UserId = userId,
+                UserName = userName,
+                UserAvatar = user.AvatarUrl ?? string.Empty,
+                Text = request.Text.Trim(),
+                Timestamp = DateTime.UtcNow
+            });
+
+            var updated = await _momentRepository.UpdateAsync(moment);
+            return Ok(MapToMomentDto(updated));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to add moment comment");
+            return StatusCode(500, new { message = "Failed to add comment" });
+        }
+    }
+
+    [HttpPost("{id}/likes")]
+    public async Task<ActionResult<MomentDto>> ToggleLike(string id)
+    {
+        try
+        {
+            var userId = GetUserId();
+            var userName = GetUserName();
+            var moment = await _momentRepository.GetByIdAsync(id);
+            if (moment == null)
+                return NotFound(new { message = "Moment not found" });
+
+            var existing = moment.Likes.FirstOrDefault(l => l.UserId == userId);
+            if (existing != null)
+            {
+                moment.Likes.Remove(existing);
+            }
+            else
+            {
+                moment.Likes.Add(new MomentLike
+                {
+                    UserId = userId,
+                    UserName = userName,
+                    Timestamp = DateTime.UtcNow
+                });
+            }
+
+            var updated = await _momentRepository.UpdateAsync(moment);
+            return Ok(MapToMomentDto(updated));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to toggle moment like");
+            return StatusCode(500, new { message = "Failed to toggle like" });
+        }
+    }
+
     private static MomentDto MapToMomentDto(Moment moment)
     {
         return new MomentDto

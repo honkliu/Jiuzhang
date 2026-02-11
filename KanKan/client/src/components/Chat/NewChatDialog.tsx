@@ -22,6 +22,7 @@ import { AppDispatch } from '@/store';
 import { createChat } from '@/store/chatSlice';
 import { contactService, User } from '@/services/contact.service';
 import { UserAvatar } from '@/components/Shared/UserAvatar';
+import { useLanguage } from '@/i18n/LanguageContext';
 
 // Work around TS2590 (“union type too complex”) from MUI Box typings in some TS versions.
 const BoxAny = Box as any;
@@ -38,6 +39,7 @@ export const NewChatDialog: React.FC<NewChatDialogProps> = ({ open, onClose }) =
   const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
+  const { t } = useLanguage();
 
   useEffect(() => {
     if (open) {
@@ -117,7 +119,7 @@ export const NewChatDialog: React.FC<NewChatDialogProps> = ({ open, onClose }) =
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>New Chat</DialogTitle>
+      <DialogTitle>{t('chat.new.title')}</DialogTitle>
       <DialogContent>
         {/* Selected Users */}
         {selectedUsers.length > 0 && (
@@ -137,7 +139,7 @@ export const NewChatDialog: React.FC<NewChatDialogProps> = ({ open, onClose }) =
         {/* Search */}
         <TextField
           fullWidth
-          placeholder="Search users by name or email..."
+          placeholder={t('common.searchUsers')}
           value={searchQuery}
           onChange={(e) => handleSearch(e.target.value)}
           InputProps={{
@@ -157,7 +159,7 @@ export const NewChatDialog: React.FC<NewChatDialogProps> = ({ open, onClose }) =
           </BoxAny>
         ) : filteredUsers.length === 0 ? (
           <Typography color="text.secondary" align="center" sx={{ py: 4 }}>
-            No users found
+            {t('common.noUsersFound')}
           </Typography>
         ) : (
           <List sx={{ maxHeight: 300, overflow: 'auto' }}>
@@ -180,13 +182,13 @@ export const NewChatDialog: React.FC<NewChatDialogProps> = ({ open, onClose }) =
         )}
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
+        <Button onClick={onClose}>{t('common.cancel')}</Button>
         <Button
           variant="contained"
           onClick={handleCreateChat}
           disabled={selectedUsers.length === 0 || creating}
         >
-          {creating ? <CircularProgress size={24} /> : 'Start Chat'}
+          {creating ? <CircularProgress size={24} /> : t('chat.new.start')}
         </Button>
       </DialogActions>
     </Dialog>

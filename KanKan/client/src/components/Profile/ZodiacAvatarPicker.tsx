@@ -1,5 +1,6 @@
 import React from 'react';
 import { Box, Typography } from '@mui/material';
+import { useLanguage } from '@/i18n/LanguageContext';
 
 // Work around TS2590 (“union type too complex”) from MUI Box typings in some TS versions.
 const BoxAny = Box as any;
@@ -139,12 +140,13 @@ export const ZodiacAvatarPicker: React.FC<ZodiacAvatarPickerProps> = ({
   value,
   onChange,
 }) => {
+  const { t } = useLanguage();
   // We serve zodiac images from the API's static files folder: /zodiac/*.png
   // This keeps URLs stable (unlike Vite hashed asset paths).
   return (
     <BoxAny>
       <Typography variant="subtitle2" sx={{ mb: 1 }}>
-        Choose Zodiac Avatar
+        {t('profile.zodiacTitle')}
       </Typography>
 
       <BoxAny

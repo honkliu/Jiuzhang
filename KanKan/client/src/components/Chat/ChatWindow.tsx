@@ -41,6 +41,7 @@ import {
   WA_USER_ID,
 } from '@/utils/chatParticipants';
 import { ChatRoom3D } from './ChatRoom3D';
+import { useLanguage } from '@/i18n/LanguageContext';
 
 // Work around TS2590 (“union type too complex”) from MUI Box typings in some TS versions.
 const BoxAny = Box as any;
@@ -57,6 +58,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
     (state: RootState) => state.chat
   );
   const { user } = useSelector((state: RootState) => state.auth);
+  const { t } = useLanguage();
   const [messageText, setMessageText] = useState('');
   const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -107,7 +109,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
     if (activeChat.chatType !== 'group') return;
     if (!user?.id || !activeChat.adminIds?.includes(user.id)) return;
 
-    const next = window.prompt('Group name', activeChat.name);
+    const next = window.prompt(t('chat.renamePrompt'), activeChat.name);
     if (!next) return;
 
     try {
@@ -115,18 +117,19 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
       dispatch(updateChat(updated));
     } catch (e) {
       console.error('Failed to rename group', e);
-      alert('Failed to rename group. Please try again.');
+      alert(t('chat.renameFailed'));
     }
   };
 
   type ChatCommandId = '/w' | '/wa' | '/h' | '/b' | '/i' | '/r';
+  const exampleText = t('chat.command.exampleText');
   const CHAT_COMMANDS: Array<{ id: ChatCommandId; description: string; example: string }> = [
-    { id: '/w', description: 'List real participants in this chat (excluding Wa)', example: '/w' },
-    { id: '/wa', description: 'List active (online) real participants (excluding Wa)', example: '/wa' },
-    { id: '/h', description: 'Show command help', example: '/h' },
-    { id: '/b', description: 'Send the rest of your input in bold', example: '/b hello' },
-    { id: '/i', description: 'Send the rest of your input in italic', example: '/i hello' },
-    { id: '/r', description: 'Send the rest of your input in red', example: '/r hello' },
+    { id: '/w', description: t('chat.command.desc.w'), example: '/w' },
+    { id: '/wa', description: t('chat.command.desc.wa'), example: '/wa' },
+    { id: '/h', description: t('chat.command.desc.h'), example: '/h' },
+    { id: '/b', description: t('chat.command.desc.b'), example: `/b ${exampleText}` },
+    { id: '/i', description: t('chat.command.desc.i'), example: `/i ${exampleText}` },
+    { id: '/r', description: t('chat.command.desc.r'), example: `/r ${exampleText}` },
   ];
 
   const isCommandMode = messageText.startsWith('/');
@@ -178,10 +181,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
     if (!known || cmd === '/' || cmd.length === 0) {
       addLocalInfoMessage(
         [
-          'Available commands:',
+          t('chat.command.available'),
           ...CHAT_COMMANDS.map((c) => `  ${c.example}  — ${c.description}`),
           '',
-          "Tip: commands only work when '/' is the first character.",
+          t('chat.command.tip'),
         ].join('\n')
       );
       return;
@@ -190,13 +193,13 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
     switch (cmd as ChatCommandId) {
       case '/h':
         addLocalInfoMessage(
-          ['Available commands:', ...CHAT_COMMANDS.map((c) => `  ${c.example}  — ${c.description}`)].join('\n')
+          [t('chat.command.available'), ...CHAT_COMMANDS.map((c) => `  ${c.example}  — ${c.description}`)].join('\n')
         );
         return;
 
       case '/w': {
         const names = getRealParticipants(activeChat.participants).map((p) => p.displayName);
-        addLocalInfoMessage(`Participants (${names.length}):\n  ${names.join('\n  ')}`);
+        addLocalInfoMessage(`${t('chat.command.participants')} (${names.length}):\n  ${names.join('\n  ')}`);
         return;
       }
 
@@ -205,15 +208,15 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
         const names = active.map((p) => p.displayName);
         addLocalInfoMessage(
           active.length === 0
-            ? 'No active (online) participants right now.'
-            : `Active participants (${names.length}):\n  ${names.join('\n  ')}`
+            ? t('chat.command.noActive')
+            : `${t('chat.command.activeParticipants')} (${names.length}):\n  ${names.join('\n  ')}`
         );
         return;
       }
 
       case '/r': {
         if (!rest) {
-          addLocalInfoMessage('Usage: /r <text>');
+          addLocalInfoMessage(t('chat.command.usage.r'));
           return;
         }
         const formatted = `[red]${rest}[/red]`;
@@ -227,7 +230,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
 
       case '/b': {
         if (!rest) {
-          addLocalInfoMessage("Usage: /b <text>");
+          addLocalInfoMessage(t('chat.command.usage.b'));
           return;
         }
         const formatted = `**${rest}**`;
@@ -241,7 +244,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
 
       case '/i': {
         if (!rest) {
-          addLocalInfoMessage('Usage: /i <text>');
+          addLocalInfoMessage(t('chat.command.usage.i'));
           return;
         }
         const formatted = `*${rest}*`;
@@ -370,7 +373,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
       dispatch(addMessage(message));
     } catch (error) {
       console.error('Failed to upload/send file:', error);
-      alert('Failed to send file. Please try again.');
+      alert(t('chat.sendFileFailed'));
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -424,10 +427,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
         }}
       >
         <Typography variant="h6" color="text.secondary">
-          Select a chat to start messaging
+          {t('chat.selectPrompt')}
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-          or start a new conversation
+          {t('chat.selectHint')}
         </Typography>
       </BoxAny>
     );
@@ -484,22 +487,22 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
             </Typography>
             <Typography variant="caption" color="text.secondary">
               {chatTypingUsers.length > 0
-                ? `${chatTypingUsers.map((u) => u.userName).join(', ')} is typing...`
+                ? `${chatTypingUsers.map((u) => u.userName).join(', ')} ${t('chat.typing')}`
                 : displayParticipant?.isOnline && displayParticipant.userId !== WA_USER_ID
-                ? 'Online'
+                ? t('chat.online')
                 : isGroup
-                ? `${groupMembersCount} members`
-                : 'Offline'}
+                ? `${groupMembersCount} ${t('chat.members')}`
+                : t('chat.offline')}
             </Typography>
           </BoxAny>
 
           {activeChat.chatType === 'group' && user?.id && activeChat.adminIds?.includes(user.id) && (
-            <IconButton edge="end" onClick={handleRenameGroup} title="Rename group">
+            <IconButton edge="end" onClick={handleRenameGroup} title={t('chat.renameTitle')}>
               <EditIcon />
             </IconButton>
           )}
 
-          <Tooltip title={isRoom3D ? 'Exit 3D room' : 'Enter 3D room'}>
+          <Tooltip title={isRoom3D ? t('chat.exit3d') : t('chat.enter3d')}>
             <span>
               <IconButton
                 edge="end"
@@ -512,7 +515,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
                   });
                 }}
                 color={isRoom3D ? 'primary' : 'default'}
-                aria-label="Toggle 3D room"
+                aria-label={t('chat.toggle3d')}
               >
                 <ViewInArIcon />
               </IconButton>
@@ -557,7 +560,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
             </BoxAny>
           ) : mergedMessages.length === 0 ? (
             <BoxAny sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-              <Typography color="text.secondary">No messages yet. Say hello! 👋</Typography>
+              <Typography color="text.secondary">{t('chat.noMessages')}</Typography>
             </BoxAny>
           ) : (
             mergedMessages.map((message, index) => {
@@ -601,8 +604,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
             size="small"
             onClick={handlePickFile}
             disabled={uploading || sending}
-            title="Attach"
-            aria-label="Attach"
+            title={t('chat.attach')}
+            aria-label={t('chat.attach')}
           >
             {uploading ? <CircularProgress size={18} /> : <AttachFileIcon />}
           </IconButton>
@@ -611,7 +614,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
             fullWidth
             multiline
             maxRows={4}
-            placeholder="Type a message..."
+            placeholder={t('chat.typeMessage')}
             value={messageText}
             onChange={(e) => {
               const nextValue = e.target.value;

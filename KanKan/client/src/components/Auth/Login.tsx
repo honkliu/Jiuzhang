@@ -15,6 +15,7 @@ import {
 import { authService } from '@/services/auth.service';
 import { useDispatch } from 'react-redux';
 import { setAuth } from '@/store/authSlice';
+import { useLanguage } from '@/i18n/LanguageContext';
 
 export const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -22,6 +23,7 @@ export const Login: React.FC = () => {
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
@@ -44,7 +46,7 @@ export const Login: React.FC = () => {
       // Redirect to main app
       navigate('/chats');
     } catch (err: any) {
-      setError(err.message || 'Login failed');
+      setError(err.message || t('auth.login.failed'));
     } finally {
       setLoading(false);
     }
@@ -59,7 +61,7 @@ export const Login: React.FC = () => {
       dispatch(setAuth(response));
       navigate('/chats');
     } catch (err: any) {
-      setError(err.message || 'Login failed');
+      setError(err.message || t('auth.login.failed'));
     } finally {
       setLoading(false);
     }
@@ -77,11 +79,11 @@ export const Login: React.FC = () => {
       <div style={containerStyle}>
         <Paper elevation={3} sx={{ p: 4, width: '100%' }}>
           <Typography component="h1" variant="h4" align="center" gutterBottom>
-            Welcome Back
+            {t('auth.login.title')}
           </Typography>
 
           <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 3 }}>
-            Sign in to continue to KanKan
+            {t('auth.login.subtitle')}
           </Typography>
 
           {error && (
@@ -96,7 +98,7 @@ export const Login: React.FC = () => {
               required
               fullWidth
               id="email"
-              label="Email Address"
+              label={t('auth.login.email')}
               name="email"
               autoComplete="email"
               autoFocus
@@ -111,7 +113,7 @@ export const Login: React.FC = () => {
               required
               fullWidth
               name="password"
-              label="Password"
+              label={t('auth.login.password')}
               type="password"
               id="password"
               autoComplete="current-password"
@@ -137,7 +139,7 @@ export const Login: React.FC = () => {
                     disabled={loading}
                   />
                 }
-                label="Remember me"
+                label={t('auth.login.remember')}
               />
               <Link
                 to="/forgot-password"
@@ -147,7 +149,7 @@ export const Login: React.FC = () => {
                   fontSize: '0.875rem',
                 }}
               >
-                Forgot password?
+                {t('auth.login.forgot')}
               </Link>
             </div>
 
@@ -159,12 +161,12 @@ export const Login: React.FC = () => {
               sx={{ mt: 3, mb: 2 }}
               disabled={loading}
             >
-              {loading ? <CircularProgress size={24} /> : 'Sign In'}
+              {loading ? <CircularProgress size={24} /> : t('auth.login.signIn')}
             </Button>
 
             <Divider sx={{ my: 2 }}>
               <Typography variant="body2" color="text.secondary">
-                OR
+                {t('auth.login.or')}
               </Typography>
             </Divider>
 
@@ -197,9 +199,9 @@ export const Login: React.FC = () => {
 
             <div style={{ textAlign: 'center' }}>
               <Typography variant="body2" color="text.secondary">
-                Don't have an account?{' '}
+                {t('auth.login.noAccount')}{' '}
                 <Link to="/register" style={{ color: '#1976d2', textDecoration: 'none', fontWeight: 500 }}>
-                  Create one
+                  {t('auth.login.create')}
                 </Link>
               </Typography>
             </div>

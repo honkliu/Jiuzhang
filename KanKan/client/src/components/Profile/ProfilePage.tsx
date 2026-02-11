@@ -19,6 +19,7 @@ import { updateUser } from '@/store/authSlice';
 import { mediaService } from '@/services/media.service';
 import { UserAvatar } from '@/components/Shared/UserAvatar';
 import { ZodiacAvatarPicker } from './ZodiacAvatarPicker';
+import { useLanguage } from '@/i18n/LanguageContext';
 
 // Work around TS2590 (“union type too complex”) from MUI Box typings in some TS versions.
 const BoxAny = Box as any;
@@ -35,6 +36,7 @@ export const ProfilePage: React.FC = () => {
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const { t } = useLanguage();
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -47,7 +49,7 @@ export const ProfilePage: React.FC = () => {
         setGender((currentUser.gender as any) || 'male');
         dispatch(updateUser(currentUser));
       } catch (err: any) {
-        setError(err.message || 'Failed to load profile');
+        setError(err.message || t('profile.loadFailed'));
       } finally {
         setLoading(false);
       }
@@ -64,9 +66,9 @@ export const ProfilePage: React.FC = () => {
     try {
       const updated = await contactService.updateProfile({ displayName, bio, avatarUrl, gender });
       dispatch(updateUser(updated));
-      setMessage('Profile updated successfully');
+      setMessage(t('profile.updateSuccess'));
     } catch (err: any) {
-      setError(err.message || 'Failed to update profile');
+      setError(err.message || t('profile.updateFailed'));
     } finally {
       setSaving(false);
     }
@@ -80,9 +82,9 @@ export const ProfilePage: React.FC = () => {
       const upload = await mediaService.upload(file);
       setAvatarUrl(upload.url);
       // If user uploads a custom avatar, it supersedes zodiac selection
-      setMessage('Avatar uploaded. Click Save Changes to apply.');
+      setMessage(t('profile.avatarUploaded'));
     } catch (err: any) {
-      setError(err.message || 'Failed to upload avatar');
+      setError(err.message || t('profile.uploadFailed'));
     } finally {
       setUploading(false);
     }
@@ -93,7 +95,7 @@ export const ProfilePage: React.FC = () => {
       <AppHeader />
       <Container sx={{ py: 3, pt: 10 }} maxWidth="sm">
         <Typography variant="h5" fontWeight="bold" gutterBottom>
-          Profile
+          {t('profile.title')}
         </Typography>
 
         {loading ? (
@@ -126,7 +128,7 @@ export const ProfilePage: React.FC = () => {
                   component="label"
                   disabled={uploading || saving}
                 >
-                  {uploading ? <CircularProgress size={18} /> : 'Upload Avatar'}
+                  {uploading ? <CircularProgress size={18} /> : t('profile.uploadAvatar')}
                   <input
                     hidden
                     type="file"
@@ -139,7 +141,7 @@ export const ProfilePage: React.FC = () => {
                   disabled={uploading || saving || !avatarUrl}
                   onClick={() => setAvatarUrl('')}
                 >
-                  Remove Avatar
+                  {t('profile.removeAvatar')}
                 </Button>
               </Stack>
             </Stack>
@@ -150,21 +152,21 @@ export const ProfilePage: React.FC = () => {
                 value={avatarUrl}
                 onChange={(url) => {
                   setAvatarUrl(url);
-                  setMessage('Zodiac avatar selected. Click Save Changes to apply.');
+                  setMessage(t('profile.zodiacSelected'));
                 }}
               />
             </BoxAny>
 
             <TextField
               fullWidth
-              label="Display Name"
+              label={t('profile.displayName')}
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               sx={{ mb: 2 }}
             />
             <TextField
               fullWidth
-              label="Bio"
+              label={t('profile.bio')}
               value={bio}
               onChange={(e) => setBio(e.target.value)}
               multiline
@@ -174,7 +176,7 @@ export const ProfilePage: React.FC = () => {
 
             <BoxAny sx={{ mb: 2 }}>
               <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                Gender
+                {t('profile.gender')}
               </Typography>
               <ToggleButtonGroup
                 value={gender}
@@ -184,13 +186,13 @@ export const ProfilePage: React.FC = () => {
                 }}
                 size="small"
               >
-                <ToggleButton value="male">Male</ToggleButton>
-                <ToggleButton value="female">Female</ToggleButton>
+                <ToggleButton value="male">{t('profile.male')}</ToggleButton>
+                <ToggleButton value="female">{t('profile.female')}</ToggleButton>
               </ToggleButtonGroup>
             </BoxAny>
 
             <Button variant="contained" onClick={handleSave} disabled={saving}>
-              {saving ? <CircularProgress size={24} /> : 'Save Changes'}
+              {saving ? <CircularProgress size={24} /> : t('profile.saveChanges')}
             </Button>
           </>
         )}

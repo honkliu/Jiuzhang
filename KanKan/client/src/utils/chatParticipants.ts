@@ -19,6 +19,13 @@ export const getOtherRealParticipants = (chat: Chat, myUserId?: string | null): 
 };
 
 export const isRealGroupChat = (chat: Chat, myUserId?: string | null): boolean => {
+  const realCount = getRealParticipants(chat.participants).length;
+  if (realCount >= 3) return true;
+
+  if (!myUserId) {
+    return false;
+  }
+
   return getOtherRealParticipants(chat, myUserId).length >= 2;
 };
 

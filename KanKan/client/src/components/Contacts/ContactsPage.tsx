@@ -127,7 +127,7 @@ export const ContactsPage: React.FC = () => {
       <AppHeader />
       <Container sx={{ py: 3, flexGrow: 1, pt: 10 }} maxWidth="md">
         <Typography variant="h5" fontWeight="bold" gutterBottom>
-          Contacts
+          {t('contacts.title')}
         </Typography>
 
         <BoxAny sx={{ mb: 2 }}>
@@ -138,7 +138,7 @@ export const ContactsPage: React.FC = () => {
 
         <TextField
           fullWidth
-          placeholder="Search users by name or email..."
+          placeholder={t('common.searchUsers')}
           value={searchQuery}
           onChange={(e) => handleSearch(e.target.value)}
           sx={{ mb: 2 }}
@@ -151,11 +151,11 @@ export const ContactsPage: React.FC = () => {
         ) : (
           <>
             <Typography variant="subtitle1" fontWeight="bold" sx={{ mb: 1 }}>
-              Friend Requests
+              {t('contacts.friendRequests')}
             </Typography>
             {requests.length === 0 ? (
               <Typography color="text.secondary" sx={{ mb: 2 }}>
-                No pending requests.
+                {t('contacts.noRequests')}
               </Typography>
             ) : (
               <List sx={{ mb: 2 }}>
@@ -170,14 +170,14 @@ export const ContactsPage: React.FC = () => {
                           onClick={() => handleAccept(req.fromUserId)}
                           disabled={actionLoading === req.fromUserId}
                         >
-                          Accept
+                          {t('contacts.accept')}
                         </Button>
                         <Button
                           variant="outlined"
                           onClick={() => handleReject(req.fromUserId)}
                           disabled={actionLoading === req.fromUserId}
                         >
-                          Reject
+                          {t('contacts.reject')}
                         </Button>
                       </BoxAny>
                     }
@@ -201,18 +201,18 @@ export const ContactsPage: React.FC = () => {
             <Divider sx={{ my: 2 }} />
 
             <Typography variant="subtitle1" fontWeight="bold" sx={{ mb: 1 }}>
-              Contacts
+              {t('contacts.contacts')}
             </Typography>
             {contacts.length === 0 ? (
               <Typography color="text.secondary" sx={{ mb: 2 }}>
-                No contacts yet.
+                {t('contacts.noContacts')}
               </Typography>
             ) : (
               <List sx={{ mb: 2 }}>
                 {contacts.map((user) => (
                   <ListItem key={user.id} divider secondaryAction={
                     <Button variant="contained" onClick={() => handleStartChat(user.id)}>
-                      Chat
+                      {t('contacts.chat')}
                     </Button>
                   }>
                     <ListItemAvatar>
@@ -226,7 +226,7 @@ export const ContactsPage: React.FC = () => {
                       primary={
                         <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <Typography fontWeight="bold">{user.displayName}</Typography>
-                          {user.isOnline && <Chip size="small" color="success" label="Online" />}
+                          {user.isOnline && <Chip size="small" color="success" label={t('contacts.online')} />}
                         </BoxAny>
                       }
                       secondary={user.email}
@@ -239,17 +239,17 @@ export const ContactsPage: React.FC = () => {
             <Divider sx={{ my: 2 }} />
 
             <Typography variant="subtitle1" fontWeight="bold" sx={{ mb: 1 }}>
-              Discover Users
+              {t('contacts.discover')}
             </Typography>
             {users.length === 0 ? (
-              <Typography color="text.secondary">No users found.</Typography>
+              <Typography color="text.secondary">{t('contacts.noUsers')}</Typography>
             ) : (
               <List>
                 {users.map((user) => (
                   <ListItem key={user.id} divider secondaryAction={
                     isContact(user.id) ? (
                       <Button variant="contained" onClick={() => handleStartChat(user.id)}>
-                        Chat
+                        {t('contacts.chat')}
                       </Button>
                     ) : (
                       <Button
@@ -257,7 +257,7 @@ export const ContactsPage: React.FC = () => {
                         onClick={() => handleAddFriend(user.id)}
                         disabled={actionLoading === user.id}
                       >
-                        Add Friend
+                        {t('contacts.addFriend')}
                       </Button>
                     )
                   }>
@@ -272,7 +272,7 @@ export const ContactsPage: React.FC = () => {
                       primary={
                         <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <Typography fontWeight="bold">{user.displayName}</Typography>
-                          {user.isOnline && <Chip size="small" color="success" label="Online" />}
+                          {user.isOnline && <Chip size="small" color="success" label={t('contacts.online')} />}
                         </BoxAny>
                       }
                       secondary={user.email}

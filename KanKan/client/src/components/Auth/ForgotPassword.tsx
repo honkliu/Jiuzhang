@@ -13,8 +13,7 @@ import {
   StepLabel,
 } from '@mui/material';
 import { authService } from '@/services/auth.service';
-
-const steps = ['Enter Email', 'Reset Password'];
+import { useLanguage } from '@/i18n/LanguageContext';
 
 export const ForgotPassword: React.FC = () => {
   const [activeStep, setActiveStep] = useState(0);
@@ -25,7 +24,10 @@ export const ForgotPassword: React.FC = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [info, setInfo] = useState('');
+  const { t } = useLanguage();
   const navigate = useNavigate();
+
+  const steps = [t('auth.forgot.steps.email'), t('auth.forgot.steps.reset')];
 
   const handleSendCode = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,7 +40,7 @@ export const ForgotPassword: React.FC = () => {
       setInfo(response.message);
       setActiveStep(1);
     } catch (err: any) {
-      setError(err.message || 'Failed to send reset code');
+      setError(err.message || t('auth.forgot.sendFailed'));
     } finally {
       setLoading(false);
     }
@@ -50,17 +52,17 @@ export const ForgotPassword: React.FC = () => {
     setInfo('');
 
     if (code.length !== 6) {
-      setError('Please enter the 6-digit code');
+      setError(t('auth.forgot.codeRequired'));
       return;
     }
 
     if (newPassword.length < 8) {
-      setError('Password must be at least 8 characters');
+      setError(t('auth.register.passwordLength'));
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      setError('Passwords do not match');
+      setError(t('auth.register.passwordMismatch'));
       return;
     }
 
@@ -75,7 +77,7 @@ export const ForgotPassword: React.FC = () => {
       setInfo(response.message);
       navigate('/login');
     } catch (err: any) {
-      setError(err.message || 'Password reset failed');
+      setError(err.message || t('auth.forgot.resetFailed'));
     } finally {
       setLoading(false);
     }
@@ -86,7 +88,7 @@ export const ForgotPassword: React.FC = () => {
       <div style={{ marginTop: 64, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         <Paper elevation={3} sx={{ p: 4, width: '100%' }}>
           <Typography component="h1" variant="h4" align="center" gutterBottom>
-            Reset Password
+            {t('auth.forgot.title')}
           </Typography>
 
           <Stepper activeStep={activeStep} sx={{ pt: 3, pb: 5 }}>
@@ -116,7 +118,7 @@ export const ForgotPassword: React.FC = () => {
                 required
                 fullWidth
                 id="email"
-                label="Email Address"
+                label={t('auth.login.email')}
                 name="email"
                 autoComplete="email"
                 autoFocus
@@ -134,14 +136,14 @@ export const ForgotPassword: React.FC = () => {
                 sx={{ mt: 3, mb: 2 }}
                 disabled={loading}
               >
-                {loading ? <CircularProgress size={24} /> : 'Send Reset Code'}
+                {loading ? <CircularProgress size={24} /> : t('auth.forgot.send')}
               </Button>
 
               <div style={{ textAlign: 'center', marginTop: 16 }}>
                 <Typography variant="body2" color="text.secondary">
-                  Remembered your password?{' '}
+                  {t('auth.forgot.remembered')}{' '}
                   <Link to="/login" style={{ color: '#1976d2', textDecoration: 'none' }}>
-                    Sign in
+                    {t('auth.login.signIn')}
                   </Link>
                 </Typography>
               </div>
@@ -149,7 +151,7 @@ export const ForgotPassword: React.FC = () => {
           ) : (
             <form onSubmit={handleResetPassword}>
               <Alert severity="info" sx={{ mb: 2 }}>
-                We sent a 6-digit code to {email}
+                {t('auth.register.verifyInfo')} {email}
               </Alert>
 
               <TextField
@@ -157,7 +159,7 @@ export const ForgotPassword: React.FC = () => {
                 required
                 fullWidth
                 id="code"
-                label="Reset Code"
+                label={t('auth.forgot.resetCode')}
                 name="code"
                 autoFocus
                 value={code}
@@ -171,14 +173,14 @@ export const ForgotPassword: React.FC = () => {
                 required
                 fullWidth
                 name="newPassword"
-                label="New Password"
+                label={t('auth.forgot.newPassword')}
                 type="password"
                 id="newPassword"
                 autoComplete="new-password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 disabled={loading}
-                helperText="Minimum 8 characters"
+                helperText={t('auth.register.passwordHint')}
               />
 
               <TextField
@@ -186,7 +188,7 @@ export const ForgotPassword: React.FC = () => {
                 required
                 fullWidth
                 name="confirmPassword"
-                label="Confirm New Password"
+                label={t('auth.forgot.confirmNewPassword')}
                 type="password"
                 id="confirmPassword"
                 value={confirmPassword}
@@ -202,7 +204,7 @@ export const ForgotPassword: React.FC = () => {
                 sx={{ mt: 3, mb: 2 }}
                 disabled={loading}
               >
-                {loading ? <CircularProgress size={24} /> : 'Reset Password'}
+                {loading ? <CircularProgress size={24} /> : t('auth.forgot.reset')}
               </Button>
 
               <Button
@@ -211,7 +213,7 @@ export const ForgotPassword: React.FC = () => {
                 onClick={() => setActiveStep(0)}
                 disabled={loading}
               >
-                Change Email
+                {t('auth.forgot.changeEmail')}
               </Button>
             </form>
           )}

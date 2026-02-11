@@ -199,7 +199,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
             variant="body2"
             sx={{ fontStyle: 'italic', opacity: 0.7 }}
           >
-            This message was deleted
+            {t('chat.message.deleted')}
           </Typography>
         ) : message.messageType === 'text' ? (
           <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
@@ -209,7 +209,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
           <BoxAny
             component="img"
             src={message.mediaUrl}
-            alt="Image"
+            alt={t('chat.message.image')}
             sx={{
               maxWidth: '100%',
               maxHeight: 300,
@@ -228,7 +228,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         ) : message.messageType === 'file' ? (
           <Typography variant="body2">
             <a href={message.mediaUrl} target="_blank" rel="noreferrer">
-              {message.fileName || 'Download file'}
+              {message.fileName || t('chat.message.download')}
             </a>
           </Typography>
         ) : (
@@ -251,7 +251,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
           {isOwn && !isAgent && !isDraft && message.readBy.length === 0 && (
             <FiberManualRecordIcon
               sx={{ fontSize: 10, color: 'error.main' }}
-              titleAccess="Unread"
+              titleAccess={t('chat.message.unread')}
             />
           )}
         </BoxAny>

@@ -15,8 +15,7 @@ import {
 import { authService } from '@/services/auth.service';
 import { useDispatch } from 'react-redux';
 import { setAuth } from '@/store/authSlice';
-
-const steps = ['Enter Email', 'Verify & Complete'];
+import { useLanguage } from '@/i18n/LanguageContext';
 
 export const Register: React.FC = () => {
   const [activeStep, setActiveStep] = useState(0);
@@ -27,8 +26,11 @@ export const Register: React.FC = () => {
   const [displayName, setDisplayName] = useState('');
   const [error, setErrorState] = useState('');
   const [loading, setLoading] = useState(false);
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const dispatch = useDispatch();
+
+  const steps = [t('auth.register.steps.email'), t('auth.register.steps.verify')];
 
   const handleSendCode = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,7 +41,7 @@ export const Register: React.FC = () => {
       await authService.register({ email });
       setActiveStep(1);
     } catch (err: any) {
-      setErrorState(err.message || 'Failed to send verification code');
+      setErrorState(err.message || t('auth.register.sendFailed'));
     } finally {
       setLoading(false);
     }
@@ -51,17 +53,17 @@ export const Register: React.FC = () => {
 
     // Validation
     if (password !== confirmPassword) {
-      setErrorState('Passwords do not match');
+      setErrorState(t('auth.register.passwordMismatch'));
       return;
     }
 
     if (password.length < 8) {
-      setErrorState('Password must be at least 8 characters');
+      setErrorState(t('auth.register.passwordLength'));
       return;
     }
 
     if (displayName.length < 2) {
-      setErrorState('Display name must be at least 2 characters');
+      setErrorState(t('auth.register.displayNameLength'));
       return;
     }
 
@@ -82,7 +84,7 @@ export const Register: React.FC = () => {
       // Redirect to main app
       navigate('/chats');
     } catch (err: any) {
-      setErrorState(err.message || 'Verification failed');
+      setErrorState(err.message || t('auth.register.verifyFailed'));
     } finally {
       setLoading(false);
     }
@@ -93,7 +95,7 @@ export const Register: React.FC = () => {
       <div style={{ marginTop: 64, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         <Paper elevation={3} sx={{ p: 4, width: '100%' }}>
           <Typography component="h1" variant="h4" align="center" gutterBottom>
-            Create Account
+            {t('auth.register.title')}
           </Typography>
 
           <Stepper activeStep={activeStep} sx={{ pt: 3, pb: 5 }}>
@@ -117,7 +119,7 @@ export const Register: React.FC = () => {
                 required
                 fullWidth
                 id="email"
-                label="Email Address"
+                label={t('auth.login.email')}
                 name="email"
                 autoComplete="email"
                 autoFocus
@@ -135,14 +137,14 @@ export const Register: React.FC = () => {
                 sx={{ mt: 3, mb: 2 }}
                 disabled={loading}
               >
-                {loading ? <CircularProgress size={24} /> : 'Send Verification Code'}
+                {loading ? <CircularProgress size={24} /> : t('auth.register.sendCode')}
               </Button>
 
               <div style={{ textAlign: 'center', marginTop: 16 }}>
                 <Typography variant="body2" color="text.secondary">
-                  Already have an account?{' '}
+                  {t('auth.register.haveAccount')}{' '}
                   <Link to="/login" style={{ color: '#1976d2', textDecoration: 'none' }}>
-                    Sign in
+                    {t('auth.login.signIn')}
                   </Link>
                 </Typography>
               </div>
@@ -150,7 +152,7 @@ export const Register: React.FC = () => {
           ) : (
             <form onSubmit={handleVerifyAndRegister}>
               <Alert severity="info" sx={{ mb: 2 }}>
-                We sent a 6-digit code to {email}
+                {t('auth.register.verifyInfo')} {email}
               </Alert>
 
               <TextField
@@ -158,7 +160,7 @@ export const Register: React.FC = () => {
                 required
                 fullWidth
                 id="code"
-                label="Verification Code"
+                label={t('auth.register.code')}
                 name="code"
                 autoFocus
                 value={code}
@@ -172,7 +174,7 @@ export const Register: React.FC = () => {
                 required
                 fullWidth
                 id="displayName"
-                label="Display Name"
+                label={t('auth.register.displayName')}
                 name="displayName"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
@@ -184,14 +186,14 @@ export const Register: React.FC = () => {
                 required
                 fullWidth
                 name="password"
-                label="Password"
+                label={t('auth.register.password')}
                 type="password"
                 id="password"
                 autoComplete="new-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={loading}
-                helperText="Minimum 8 characters"
+                helperText={t('auth.register.passwordHint')}
               />
 
               <TextField
@@ -199,7 +201,7 @@ export const Register: React.FC = () => {
                 required
                 fullWidth
                 name="confirmPassword"
-                label="Confirm Password"
+                label={t('auth.register.confirmPassword')}
                 type="password"
                 id="confirmPassword"
                 value={confirmPassword}
@@ -215,7 +217,7 @@ export const Register: React.FC = () => {
                 sx={{ mt: 3, mb: 2 }}
                 disabled={loading}
               >
-                {loading ? <CircularProgress size={24} /> : 'Create Account'}
+                {loading ? <CircularProgress size={24} /> : t('auth.register.create')}
               </Button>
 
               <Button
@@ -224,7 +226,7 @@ export const Register: React.FC = () => {
                 onClick={() => setActiveStep(0)}
                 disabled={loading}
               >
-                Change Email
+                {t('auth.register.changeEmail')}
               </Button>
             </form>
           )}
