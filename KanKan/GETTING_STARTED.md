@@ -186,7 +186,7 @@ dotnet restore
 dotnet run
 ```
 
-The API will be available at: `http://localhost:5001`
+The API will be available at: `http://localhost:5000`
 
 ### 2. Frontend Setup
 
@@ -372,7 +372,7 @@ No code changes needed - just configuration!
 
 ### 3. Test API with Swagger
 
-1. Open `http://localhost:5001`
+1. Open `http://localhost:5000`
 2. Explore available endpoints
 3. Test authentication flow:
    - POST `/api/auth/register` - Send email
@@ -420,7 +420,7 @@ No code changes needed - just configuration!
 ### Frontend Issues
 
 **Issue: "Network Error" when calling API**
-- Ensure backend is running on `http://localhost:5001`
+- Ensure backend is running on `http://localhost:5000`
 - Check CORS configuration in backend `Program.cs`
 - Verify `VITE_API_URL` in `.env` file
 
@@ -465,7 +465,7 @@ No code changes needed - just configuration!
 
 ## 💡 Development Tips
 
-1. **Use Swagger** for API testing: `http://localhost:5001`
+1. **Use Swagger** for API testing: `http://localhost:5000`
 2. **Check Console Logs** for verification codes when email is not configured
 3. **Use Redux DevTools** to inspect application state
 4. **Enable Hot Reload** - Both frontend (Vite) and backend (dotnet watch) support hot reload

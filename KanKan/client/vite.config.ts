@@ -18,22 +18,23 @@ export default defineConfig({
   },
   server: {
     port: 3000,
+    allowedHosts: true,
     proxy: {
       '/api': {
-        target: 'http://localhost:5001',
+        target: 'http://localhost:5000',
         changeOrigin: true,
       },
       '/hub': {
-        target: 'http://localhost:5001',
+        target: 'http://localhost:5000',
         changeOrigin: true,
         ws: true,
       },
       '/uploads': {
-        target: 'http://localhost:5001',
+        target: 'http://localhost:5000',
         changeOrigin: true,
       },
       '/zodiac': {
-        target: 'http://localhost:5001',
+        target: 'http://localhost:5000',
         changeOrigin: true,
       },
     },

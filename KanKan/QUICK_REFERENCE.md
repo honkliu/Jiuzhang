@@ -5,17 +5,23 @@
 
  
 ```bash
-In the Host: 
-  cd Jiuzhang/Kankan & docker run --rm -it -p 5000:5000 -v "$(pwd):/src" -w /src mcr.microsoft.com/dotnet/sdk:8.0 bash
-Inside the docker:
-  dotnet restore server/KanKan.API.csproj
-  dotnet run --project server/KanKan.API.csproj --urls http://0.0.0.0:5000
+In the host:
+  docker network create kankan-net
+  docker run -d --name kanapi --network kankan-net \
+    -v "$(pwd)/server:/server" -w /server \
+    mcr.microsoft.com/dotnet/sdk:9.0 \
+    bash -lc "dotnet restore && dotnet run --urls http://0.0.0.0:5000"
+
+  docker run -it --rm --name kanui --network kankan-net -p 80:3000 \
+    -v "$(pwd)/client:/app" -w /app \
+    node:20-bookworm-slim \
+    bash -lc "npm install && npm run dev -- --host 0.0.0.0 --port 3000"
 ```
 ### Backend
 ```bash
 cd server
 dotnet restore        # Install dependencies
-dotnet run           # Start server (http://localhost:5001)
+dotnet run           # Start server (http://localhost:5000)
 dotnet watch run     # Start with hot reload
 ```
 
@@ -31,8 +37,8 @@ npm run preview      # Preview production build
 ## 🔗 Important URLs
 
 - **Frontend:** http://localhost:3000
-- **Backend API:** http://localhost:5001
-- **Swagger Docs:** http://localhost:5001
+- **Backend API:** http://localhost:5000
+- **Swagger Docs:** http://localhost:5000
 - **MongoDB Compass:** mongodb://localhost:27017
 
 ## 📋 Default Test Flow
@@ -67,7 +73,7 @@ npm run preview      # Preview production build
 
 ### Frontend: `client/.env`
 ```env
-VITE_API_URL=http://localhost:5001/api
+VITE_API_URL=http://localhost:5000/api
 ```
 
 ## 📊 Database Collections
@@ -182,7 +188,7 @@ npm install
 ## 🧪 Testing
 
 ### Manual Testing
-1. Open Swagger UI: http://localhost:5001
+1. Open Swagger UI: http://localhost:5000
 2. Test endpoints directly
 3. Use browser DevTools to inspect network requests
 

@@ -173,7 +173,7 @@ KanKan/
 cd server
 dotnet restore
 dotnet run
-# API available at http://localhost:5001
+# API available at http://localhost:5000
 ```
 
 ### 2. Frontend
@@ -250,7 +250,7 @@ The foundation is ready. Next steps:
 
 4. **CORS:** Configured to allow localhost:3000 for development.
 
-5. **API Documentation:** Swagger UI available at http://localhost:5001
+5. **API Documentation:** Swagger UI available at http://localhost:5000
 
 ## ✨ Quality Features
 

@@ -91,8 +91,8 @@ KanKan/
 
 #### Client (.env)
 ```env
-VITE_API_URL=http://localhost:5001/api
-VITE_SIGNALR_URL=http://localhost:5001/hub/chat
+VITE_API_URL=http://localhost:5000/api
+VITE_SIGNALR_URL=http://localhost:5000/hub/chat
 ```
 
 #### Server (appsettings.json)
@@ -145,7 +145,7 @@ dotnet restore
 ```bash
 cd server
 dotnet run
-# API will run on http://localhost:5001
+# API will run on http://localhost:5000
 ```
 
 **Terminal 2 - Start Frontend:**
@@ -155,6 +155,24 @@ npm install
 npm run dev
 npm start
 # UI will run on http://localhost:3000
+```
+
+#### Docker (Linux, user-defined network)
+
+```bash
+docker pull mcr.microsoft.com/dotnet/sdk:9.0
+docker pull node:20-bookworm-slim
+docker network create kankan-net
+
+docker run -d --name kanapi --network kankan-net \
+   -v /mnt/data/Jiuzhang/KanKan/server:/server -w /server \
+   mcr.microsoft.com/dotnet/sdk:9.0 \
+   bash -lc "dotnet restore && dotnet run --urls http://0.0.0.0:5000"
+
+docker run -it --rm --name kanui --network kankan-net -p 80:3000 \
+   -v /mnt/data/Jiuzhang/KanKan/client:/app -w /app \
+   node:20-bookworm-slim \
+   bash -lc "npm install && npm run dev -- --host 0.0.0.0 --port 3000"
 ```
 
 #### Production Build
