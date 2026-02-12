@@ -39,7 +39,8 @@ public class InMemoryChatRepository : IChatRepository
             var chat = _chats.Values.FirstOrDefault(c =>
                 c.ChatType == "direct" &&
                 c.Participants.Any(p => p.UserId == userId1) &&
-                c.Participants.Any(p => p.UserId == userId2));
+                c.Participants.Any(p => p.UserId == userId2) &&
+                c.Participants.All(p => p.UserId == userId1 || p.UserId == userId2));
             return Task.FromResult(chat);
         }
     }

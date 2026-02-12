@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.DependencyInjection;
 using System.Security.Claims;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -28,7 +29,9 @@ public class ChatController : ControllerBase
     private readonly IAgentService _agentService;
     private readonly IHubContext<ChatHub> _hubContext;
     private readonly ILogger<ChatController> _logger;
+    private readonly IServiceScopeFactory _scopeFactory;
 
+    [ActivatorUtilitiesConstructor]
     public ChatController(
         IChatRepository chatRepository,
         IChatUserRepository chatUserRepository,
@@ -38,6 +41,7 @@ public class ChatController : ControllerBase
         INotificationRepository notificationRepository,
         IAgentService agentService,
         IHubContext<ChatHub> hubContext,
+        IServiceScopeFactory scopeFactory,
         ILogger<ChatController> logger)
     {
         _chatRepository = chatRepository;
@@ -48,6 +52,7 @@ public class ChatController : ControllerBase
         _notificationRepository = notificationRepository;
         _agentService = agentService;
         _hubContext = hubContext;
+        _scopeFactory = scopeFactory;
         _logger = logger;
     }
 
@@ -667,85 +672,10 @@ public class ChatController : ControllerBase
             // Add participants based on @mentions (e.g., @carol)
             await TryAddMentionedParticipantsAsync(chat, message, userId);
 
-            // AI agent response if mentioned
+            // AI agent response if mentioned (run in background so this request returns immediately)
             if (ShouldTriggerAgent(chat, message))
             {
-                await EnsureAgentParticipantAsync(chat);
-                var agentMessageId = $"msg_{Guid.NewGuid()}";
-                var agentUser = await _userRepository.GetByIdAsync(ChatDomain.AgentUserId);
-                var agentAvatar = agentUser?.AvatarUrl ?? string.Empty;
-                var agentGender = agentUser?.Gender ?? "male";
-
-                await _hubContext.Clients.Group(chatId).SendAsync("AgentMessageStart", new
-                {
-                    id = agentMessageId,
-                    chatId = chat.Id,
-                    senderId = ChatDomain.AgentUserId,
-                    senderName = ChatDomain.AgentDisplayName,
-                    senderAvatar = agentAvatar,
-                    senderGender = agentGender,
-                    messageType = "text",
-                    text = "",
-                    timestamp = DateTime.UtcNow,
-                    deliveredTo = new List<string>(),
-                    readBy = new List<string>(),
-                    reactions = new Dictionary<string, string>(),
-                    isDeleted = false
-                });
-
-                var fullText = new StringBuilder();
-                var prompt = await BuildAgentPromptAsync(message);
-                var history = await BuildHistoryAsync(chat.Id);
-
-                try
-                {
-                    await foreach (var chunk in _agentService.StreamReplyAsync(chat.Id, prompt, history))
-                    {
-                        fullText.Append(chunk);
-                        await _hubContext.Clients.Group(chatId).SendAsync("AgentMessageChunk", chat.Id, agentMessageId, chunk);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Agent streaming failed for chat {ChatId}", chat.Id);
-                    fullText.Append("Sorry, I'm having trouble responding right now.");
-                }
-
-                var reply = fullText.ToString();
-                if (!string.IsNullOrWhiteSpace(reply))
-                {
-                    var agentMessage = new Message
-                    {
-                        Id = agentMessageId,
-                        ChatId = chat.Id,
-                        SenderId = ChatDomain.AgentUserId,
-                        SenderName = ChatDomain.AgentDisplayName,
-                        SenderAvatar = agentAvatar,
-                        MessageType = "text",
-                        Content = new MessageContent { Text = reply },
-                        Timestamp = DateTime.UtcNow,
-                        DeliveredTo = new List<string>(),
-                        ReadBy = new List<string>(),
-                        Reactions = new Dictionary<string, string>(),
-                        IsDeleted = false
-                    };
-
-                    await _messageRepository.CreateAsync(agentMessage);
-
-                    chat.LastMessage = new ChatLastMessage
-                    {
-                        Text = reply,
-                        SenderId = ChatDomain.AgentUserId,
-                        SenderName = ChatDomain.AgentDisplayName,
-                        MessageType = "text",
-                        Timestamp = DateTime.UtcNow
-                    };
-                    chat.UpdatedAt = DateTime.UtcNow;
-                    await _chatRepository.UpdateAsync(chat);
-                    await UpsertChatUsersFromChatAsync(chat);
-
-                    await _hubContext.Clients.Group(chatId).SendAsync("AgentMessageComplete", chat.Id, agentMessageId, reply);
-                }
+                _ = Task.Run(async () => await RunAgentReplyAsync(chatId, message.Id));
             }
 
             return CreatedAtAction(nameof(GetMessages), new { chatId }, messageDto);
@@ -960,13 +890,13 @@ public class ChatController : ControllerBase
         if (chat.ChatType == "direct")
         {
             // Wa can be present in a 1–1 chat, but is not counted as a participant.
-            // Only convert a direct chat into a group when there are 2+ real participants besides the current user.
+            // Convert a direct chat into a group when any real participant besides the current user is added.
             var realOtherCount = chat.Participants.Count(p =>
                 p.UserId != currentUserId &&
                 p.UserId != ChatDomain.AgentUserId &&
                 !string.IsNullOrWhiteSpace(p.UserId));
 
-            if (realOtherCount >= 2)
+            if (realOtherCount >= 1)
             {
                 chat.ChatType = "group";
                 if (chat.AdminIds == null || chat.AdminIds.Count == 0)
@@ -1118,6 +1048,152 @@ public class ChatController : ControllerBase
             .Select(m => (m.SenderName, m.Content.Text ?? string.Empty))
             .Where(h => !string.IsNullOrWhiteSpace(h.Item2))
             .ToList();
+    }
+
+    private async Task RunAgentReplyAsync(string chatId, string messageId)
+    {
+        try
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var chatRepository = scope.ServiceProvider.GetRequiredService<IChatRepository>();
+            var chatUserRepository = scope.ServiceProvider.GetRequiredService<IChatUserRepository>();
+            var messageRepository = scope.ServiceProvider.GetRequiredService<IMessageRepository>();
+            var userRepository = scope.ServiceProvider.GetRequiredService<IUserRepository>();
+            var agentService = scope.ServiceProvider.GetRequiredService<IAgentService>();
+
+            var chat = await chatRepository.GetByIdAsync(chatId);
+            if (chat == null)
+                return;
+
+            var message = await messageRepository.GetByIdAsync(messageId, chatId);
+            if (message == null)
+                return;
+
+            if (!ShouldTriggerAgent(chat, message))
+                return;
+
+            async Task UpsertChatUsersFromChatAsync(Chat source)
+            {
+                var chatUsers = source.Participants
+                    .Where(p => !string.IsNullOrWhiteSpace(p.UserId))
+                    .Select(p => BuildChatUser(source, p))
+                    .ToList();
+
+                await chatUserRepository.UpsertManyAsync(chatUsers);
+            }
+
+            async Task EnsureAgentParticipantAsync(Chat source)
+            {
+                if (source.Participants.Any(p => p.UserId == ChatDomain.AgentUserId))
+                    return;
+
+                var agent = await userRepository.GetByIdAsync(ChatDomain.AgentUserId);
+                if (agent == null)
+                    return;
+
+                source.Participants.Add(new ChatParticipant
+                {
+                    UserId = agent.Id,
+                    DisplayName = agent.DisplayName,
+                    AvatarUrl = agent.AvatarUrl ?? string.Empty,
+                    JoinedAt = DateTime.UtcNow
+                });
+                source.UpdatedAt = DateTime.UtcNow;
+                await chatRepository.UpdateAsync(source);
+                await UpsertChatUsersFromChatAsync(source);
+            }
+
+            async Task<List<(string SenderName, string Message)>> BuildHistoryAsync(string targetChatId)
+            {
+                var historyMessages = await messageRepository.GetChatMessagesAsync(targetChatId, 10);
+                return historyMessages
+                    .Where(m => !m.IsDeleted)
+                    .Select(m => (m.SenderName, m.Content.Text ?? string.Empty))
+                    .Where(h => !string.IsNullOrWhiteSpace(h.Item2))
+                    .ToList();
+            }
+
+            await EnsureAgentParticipantAsync(chat);
+            var agentMessageId = $"msg_{Guid.NewGuid()}";
+            var agentUser = await userRepository.GetByIdAsync(ChatDomain.AgentUserId);
+            var agentAvatar = agentUser?.AvatarUrl ?? string.Empty;
+            var agentGender = agentUser?.Gender ?? "male";
+
+            await _hubContext.Clients.Group(chatId).SendAsync("AgentMessageStart", new
+            {
+                id = agentMessageId,
+                chatId = chat.Id,
+                senderId = ChatDomain.AgentUserId,
+                senderName = ChatDomain.AgentDisplayName,
+                senderAvatar = agentAvatar,
+                senderGender = agentGender,
+                messageType = "text",
+                text = "",
+                timestamp = DateTime.UtcNow,
+                deliveredTo = new List<string>(),
+                readBy = new List<string>(),
+                reactions = new Dictionary<string, string>(),
+                isDeleted = false
+            });
+
+            var fullText = new StringBuilder();
+            var prompt = await BuildAgentPromptAsync(message);
+            var history = await BuildHistoryAsync(chat.Id);
+
+            try
+            {
+                await foreach (var chunk in agentService.StreamReplyAsync(chat.Id, prompt, history))
+                {
+                    fullText.Append(chunk);
+                    await _hubContext.Clients.Group(chatId).SendAsync("AgentMessageChunk", chat.Id, agentMessageId, chunk);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Agent streaming failed for chat {ChatId}", chat.Id);
+                fullText.Append("Sorry, I'm having trouble responding right now.");
+            }
+
+            var reply = fullText.ToString();
+            if (string.IsNullOrWhiteSpace(reply))
+                return;
+
+            var agentMessage = new Message
+            {
+                Id = agentMessageId,
+                ChatId = chat.Id,
+                SenderId = ChatDomain.AgentUserId,
+                SenderName = ChatDomain.AgentDisplayName,
+                SenderAvatar = agentAvatar,
+                MessageType = "text",
+                Content = new MessageContent { Text = reply },
+                Timestamp = DateTime.UtcNow,
+                DeliveredTo = new List<string>(),
+                ReadBy = new List<string>(),
+                Reactions = new Dictionary<string, string>(),
+                IsDeleted = false
+            };
+
+            await messageRepository.CreateAsync(agentMessage);
+
+            chat.LastMessage = new ChatLastMessage
+            {
+                Text = reply,
+                SenderId = ChatDomain.AgentUserId,
+                SenderName = ChatDomain.AgentDisplayName,
+                MessageType = "text",
+                Timestamp = DateTime.UtcNow
+            };
+            chat.UpdatedAt = DateTime.UtcNow;
+            await chatRepository.UpdateAsync(chat);
+            await UpsertChatUsersFromChatAsync(chat);
+
+            await _hubContext.Clients.Group(chatId).SendAsync("AgentMessageComplete", chat.Id, agentMessageId, reply);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Agent response failed for chat {ChatId}", chatId);
+        }
     }
 }
 

@@ -162,6 +162,11 @@ const chatSlice = createSlice({
         state.drafts[chatId][userId] = { userName, text };
       }
     },
+    clearDraftForUser: (state, action: PayloadAction<{ chatId: string; userId: string }>) => {
+      const { chatId, userId } = action.payload;
+      if (!state.drafts[chatId]) return;
+      delete state.drafts[chatId][userId];
+    },
     updateUserOnlineStatus: (state, action: PayloadAction<{ userId: string; isOnline: boolean }>) => {
       const { userId, isOnline } = action.payload;
       state.chats.forEach((chat) => {
@@ -323,6 +328,7 @@ export const {
   appendAgentMessageChunk,
   finalizeAgentMessage,
   setDraft,
+  clearDraftForUser,
   clearMessages,
   clearChat,
 } = chatSlice.actions;

@@ -301,7 +301,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
     const raw = messageText;
     if (raw.startsWith('/')) {
       setMessageText('');
-      signalRService.sendDraftChanged(activeChat.id, '');
       setSending(true);
 
       try {
@@ -322,7 +321,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
 
     const text = raw.trim();
     setMessageText('');
-    signalRService.sendDraftChanged(activeChat.id, '');
     setSending(true);
 
     try {
@@ -670,7 +668,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
             onClick={handleSendMessage}
             disabled={!messageText.trim() || sending || uploading}
           >
-            {sending ? <CircularProgress size={24} /> : <SendIcon />}
+            <SendIcon />
           </IconButton>
         </BoxAny>
       </BoxAny>

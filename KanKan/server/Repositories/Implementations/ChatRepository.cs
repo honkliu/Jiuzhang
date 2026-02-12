@@ -43,7 +43,11 @@ public class ChatRepository : IChatRepository
             Builders<Chat>.Filter.Eq(c => c.Type, "chat"),
             Builders<Chat>.Filter.Eq(c => c.ChatType, "direct"),
             Builders<Chat>.Filter.ElemMatch(c => c.Participants, p => p.UserId == userId1),
-            Builders<Chat>.Filter.ElemMatch(c => c.Participants, p => p.UserId == userId2)
+            Builders<Chat>.Filter.ElemMatch(c => c.Participants, p => p.UserId == userId2),
+            Builders<Chat>.Filter.Not(
+                Builders<Chat>.Filter.ElemMatch(
+                    c => c.Participants,
+                    p => p.UserId != userId1 && p.UserId != userId2))
         );
 
         return await _collection.Find(filter).FirstOrDefaultAsync();

@@ -23,6 +23,7 @@ import {
   appendAgentMessageChunk,
   finalizeAgentMessage,
   setDraft,
+  clearDraftForUser,
 } from '@/store/chatSlice';
 import { addNotification, fetchUnreadNotificationCount } from '@/store/notificationsSlice';
 import { chatService } from '@/services/chat.service';
@@ -74,6 +75,7 @@ export const ChatLayout: React.FC = () => {
 
     // Set up SignalR event handlers
     const unsubMessage = signalRService.onMessage((message) => {
+      dispatch(clearDraftForUser({ chatId: message.chatId, userId: message.senderId }));
       dispatch(addMessage(message));
 
       // New message indicator: increment unread for inactive chats.

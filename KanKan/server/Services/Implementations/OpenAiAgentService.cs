@@ -7,13 +7,16 @@ namespace KanKan.API.Services.Implementations;
 
 public class OpenAiAgentService : IAgentService
 {
-    private readonly HttpClient _httpClient;
+    private readonly IHttpClientFactory _httpClientFactory;
     private readonly IConfiguration _configuration;
     private readonly ILogger<OpenAiAgentService> _logger;
 
-    public OpenAiAgentService(HttpClient httpClient, IConfiguration configuration, ILogger<OpenAiAgentService> logger)
+    public OpenAiAgentService(
+        IHttpClientFactory httpClientFactory,
+        IConfiguration configuration,
+        ILogger<OpenAiAgentService> logger)
     {
-        _httpClient = httpClient;
+        _httpClientFactory = httpClientFactory;
         _configuration = configuration;
         _logger = logger;
     }
@@ -49,7 +52,8 @@ public class OpenAiAgentService : IAgentService
 
         try
         {
-            var response = await _httpClient.SendAsync(request);
+            var httpClient = _httpClientFactory.CreateClient();
+            var response = await httpClient.SendAsync(request);
             response.EnsureSuccessStatusCode();
 
             var json = await response.Content.ReadAsStringAsync();
@@ -100,7 +104,8 @@ public class OpenAiAgentService : IAgentService
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
         request.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
 
-        using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+        var httpClient = _httpClientFactory.CreateClient();
+        using var response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
         response.EnsureSuccessStatusCode();
 
         using var stream = await response.Content.ReadAsStreamAsync();

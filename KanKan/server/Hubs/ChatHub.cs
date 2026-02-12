@@ -606,13 +606,13 @@ public class ChatHub : Hub
         if (chat.ChatType == "direct")
         {
             // Wa can be present in a 1–1 chat, but is not counted as a participant.
-            // Only convert a direct chat into a group when there are 2+ real participants besides the current user.
+            // Convert a direct chat into a group when any real participant besides the current user is added.
             var realOtherCount = chat.Participants.Count(p =>
                 p.UserId != currentUserId &&
                 p.UserId != ChatDomain.AgentUserId &&
                 !string.IsNullOrWhiteSpace(p.UserId));
 
-            if (realOtherCount >= 2)
+            if (realOtherCount >= 1)
             {
                 chat.ChatType = "group";
                 if (chat.AdminIds == null || chat.AdminIds.Count == 0)
