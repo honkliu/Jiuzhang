@@ -84,7 +84,7 @@ interface MessageBubbleProps {
   showAvatar: boolean;
 }
 
-export const MessageBubble: React.FC<MessageBubbleProps> = ({
+export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({ 
   message,
   isOwn,
   showAvatar,
@@ -258,4 +258,4 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
       </Paper>
     </BoxAny>
   );
-};
+});

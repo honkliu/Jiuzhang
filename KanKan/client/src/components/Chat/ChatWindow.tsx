@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Box,
   AppBar,
@@ -67,34 +67,40 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const draftDebounceRef = useRef<number | null>(null);
+  const lastDraftRef = useRef<string>('');
 
   const chatMessages = activeChat ? messages[activeChat.id] || [] : [];
   const chatTypingUsers = activeChat ? typingUsers[activeChat.id] || [] : [];
   const chatDrafts = activeChat ? drafts[activeChat.id] || {} : {};
 
-  const draftMessages = activeChat
-    ? Object.entries(chatDrafts)
-        .filter(([userId]) => userId !== user?.id)
-        .map(([userId, draft]) => {
-          const participant = activeChat.participants.find((p) => p.userId === userId);
-          return {
-            id: `draft_${activeChat.id}_${userId}`,
-            chatId: activeChat.id,
-            senderId: userId,
-            senderName: participant?.displayName || draft.userName,
-            senderAvatar: participant?.avatarUrl || '',
-            messageType: 'text',
-            text: draft.text,
-            timestamp: new Date().toISOString(),
-            deliveredTo: [],
-            readBy: [],
-            reactions: {},
-            isDeleted: false,
-          };
-        })
-    : [];
+  const draftMessages = useMemo(() => {
+    if (!activeChat) return [];
+    return Object.entries(chatDrafts)
+      .filter(([userId]) => userId !== user?.id)
+      .map(([userId, draft]) => {
+        const participant = activeChat.participants.find((p) => p.userId === userId);
+        return {
+          id: `draft_${activeChat.id}_${userId}`,
+          chatId: activeChat.id,
+          senderId: userId,
+          senderName: participant?.displayName || draft.userName,
+          senderAvatar: participant?.avatarUrl || '',
+          messageType: 'text',
+          text: draft.text,
+          timestamp: new Date().toISOString(),
+          deliveredTo: [],
+          readBy: [],
+          reactions: {},
+          isDeleted: false,
+        };
+      });
+  }, [activeChat, chatDrafts, user?.id]);
 
-  const mergedMessages = [...chatMessages, ...draftMessages];
+  const mergedMessages = useMemo(
+    () => [...chatMessages, ...draftMessages],
+    [chatMessages, draftMessages]
+  );
 
   const room3DStorageKey = activeChat ? `kankan.chat.3d:${activeChat.id}` : null;
 
@@ -148,6 +154,15 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
   useEffect(() => {
     setCommandSelectedIndex(0);
   }, [commandToken]);
+
+  useEffect(() => {
+    return () => {
+      if (draftDebounceRef.current) {
+        window.clearTimeout(draftDebounceRef.current);
+        draftDebounceRef.current = null;
+      }
+    };
+  }, []);
 
   const addLocalInfoMessage = (text: string) => {
     if (!activeChat) return;
@@ -347,10 +362,25 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
     return 'file';
   };
 
-  const handlePickFile = () => {
+  const handlePickFile = useCallback(() => {
     if (uploading || sending) return;
     fileInputRef.current?.click();
-  };
+  }, [uploading, sending]);
+
+  const scheduleDraftSend = useCallback(
+    (chatId: string, text: string) => {
+      if (draftDebounceRef.current) {
+        window.clearTimeout(draftDebounceRef.current);
+      }
+
+      draftDebounceRef.current = window.setTimeout(() => {
+        if (lastDraftRef.current === text) return;
+        lastDraftRef.current = text;
+        signalRService.sendDraftChanged(chatId, text);
+      }, 200);
+    },
+    []
+  );
 
   const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -618,7 +648,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
               const nextValue = e.target.value;
               setMessageText(nextValue);
               if (activeChat) {
-                signalRService.sendDraftChanged(activeChat.id, nextValue);
+                scheduleDraftSend(activeChat.id, nextValue);
               }
             }}
             onKeyPress={handleKeyPress}
