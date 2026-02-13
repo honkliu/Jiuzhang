@@ -13,6 +13,10 @@ const WA_USER_ID = 'user_ai_wa';
 const DEFAULT_BASE_URL = 'http://localhost:5001/api';
 const CONFIG_PATH = path.join(os.homedir(), '.bbtalk.json');
 const HISTORY_LIMIT = 50;
+const HELP_MIN_LINES = 2;
+const HELP_MAX_LINES = 10;
+const HELP_BODY_LINES = 9;
+const HELP_GAP = 2;
 
 const program = new Command();
 program.name('bbtalk').description('KanKan CLI chat client').version('0.6.0');
@@ -207,25 +211,51 @@ const normalizeHelpContent = (lines) => {
   return lines[lines.length - 1] === '' ? lines : [...lines, ''];
 };
 
+const truncateToWidth = (text, width) => {
+  if (width <= 0) return '';
+  const raw = String(text || '');
+  if (stringDisplayWidth(raw) <= width) return raw;
+  if (width <= 3) return '.'.repeat(width);
+  let out = '';
+  let w = 0;
+  for (const ch of raw) {
+    const chWidth = charDisplayWidth(ch);
+    if (w + chWidth > width - 3) break;
+    out += ch;
+    w += chWidth;
+  }
+  return `${out}...`;
+};
+
+const padToWidth = (text, width, alignRight = false) => {
+  const trimmed = truncateToWidth(text, width);
+  const w = stringDisplayWidth(trimmed);
+  const pad = Math.max(0, width - w);
+  if (pad === 0) return trimmed;
+  const padStr = ' '.repeat(pad);
+  return alignRight ? `${padStr}${trimmed}` : `${trimmed}${padStr}`;
+};
+
 const buildHelpRenderLines = (state) => {
-  const minLines = 2;
-  const content = state.helpContent || [];
+  const minLines = Math.max(HELP_MIN_LINES, state.helpVisibleLines || HELP_MIN_LINES);
+  let content = state.helpContent || [];
 
-  // If no help content, show hint
   if (content.length === 0) {
-    return ['  ? for shortcuts', ''];
+    content = ['  ? for shortcuts'];
   }
 
-  // Show help content, ensuring at least minLines
-  if (content.length < minLines) {
-    return content.concat(Array(minLines - content.length).fill(''));
+  let lines = state.helpMode === 'slash' ? [...content] : normalizeHelpContent(content);
+  if (lines.length > minLines) {
+    lines = lines.slice(0, minLines);
   }
-
-  return content;
+  while (lines.length < minLines) {
+    lines.push('');
+  }
+  return lines;
 };
 
 const getHelpLines = (state) => {
-  return buildHelpRenderLines(state).length;
+  return Math.max(HELP_MIN_LINES, state.helpVisibleLines || HELP_MIN_LINES);
 };
 
 const getInputLineCount = (state, width) => {
@@ -249,25 +279,116 @@ const wrapInputText = (text, width) => {
   return lines.length > 0 ? lines : [''];
 };
 
-// Simplified help area management - only two real states: showing or hidden
-const hideHelpArea = (state) => {
-  state.helpContent = [];
-  state.helpMinLines = 2;
+const setHelpContent = (state, lines, options = {}) => {
+  const { expand = false, preserveSize = false, maxLines = HELP_MAX_LINES, normalize = true } = options;
+  state.helpContent = normalize ? normalizeHelpContent(lines) : lines;
+
+  if (expand) {
+    state.helpExpanded = true;
+    const desired = Math.min(maxLines, state.helpContent.length);
+    if (!preserveSize || state.helpVisibleLines == null) {
+      state.helpVisibleLines = Math.max(desired, HELP_MIN_LINES);
+    } else if (state.helpVisibleLines < desired) {
+      state.helpVisibleLines = desired;
+    }
+  } else if (!state.helpExpanded) {
+    state.helpVisibleLines = HELP_MIN_LINES;
+  }
+
   state.lastLayoutKey = null;
   redrawInputArea(state);
 };
 
-const showHelpArea = (state, lines) => {
-  state.helpContent = lines;
-  state.helpMinLines = Math.max(2, lines.length);
+const hideHelpArea = (state) => {
+  state.helpContent = [];
+  state.helpExpanded = false;
+  state.helpVisibleLines = HELP_MIN_LINES;
+  state.helpMode = 'none';
+  state.helpShrinkEnabled = false;
+  state.helpForceShrink = false;
   state.lastLayoutKey = null;
   redrawInputArea(state);
+};
+
+const showHelpArea = (state, lines, options = {}) => {
+  setHelpContent(state, lines, options);
 };
 
 const getInputAreaTotalLines = (state, width) => {
   const helpLines = getHelpLines(state);
   const inputLines = getInputLineCount(state, width);
   return 2 + inputLines + helpLines; // top separator + input lines + bottom separator + help
+};
+
+const getContentHeight = (state) => {
+  const rows = process.stdout.rows || 24;
+  return Math.max(1, rows - getInputAreaTotalLines(state, getTerminalWidth()));
+};
+
+const maybeShrinkHelpForNewLine = (state) => {
+  if (!state.helpExpanded) return false;
+  if (!state.helpShrinkEnabled) return false;
+  if (state.helpVisibleLines <= HELP_MIN_LINES) return false;
+  const contentHeight = getContentHeight(state);
+  const wasContentFull = state.contentLineCount >= contentHeight;
+  if (!state.helpForceShrink && !wasContentFull) return false;
+  const prevInputStartRow = state.lastInputStartRow;
+  const prevInputAreaLines = state.lastInputAreaLines;
+  state.helpVisibleLines -= 1;
+  if (state.helpVisibleLines <= HELP_MIN_LINES) {
+    state.helpForceShrink = false;
+  }
+  state.lastLayoutKey = null;
+  if (prevInputStartRow != null && prevInputAreaLines != null) {
+    const rows = process.stdout.rows || 24;
+    const newTotalLines = getInputAreaTotalLines(state, getTerminalWidth());
+    const newInputStartRow = rows - newTotalLines + 1;
+    if (newInputStartRow > prevInputStartRow) {
+      for (let row = prevInputStartRow; row < newInputStartRow; row += 1) {
+        if (row > 0 && row <= rows) {
+          process.stdout.write(`\x1b[${row};1H`);
+          process.stdout.write('\x1b[2K');
+        }
+      }
+    }
+  }
+  return true;
+};
+
+const prepareContentLine = (state, options = {}) => {
+  const { allowShrink = true } = options;
+  const shrunk = allowShrink ? maybeShrinkHelpForNewLine(state) : false;
+  setupScrollRegion(state);
+  const totalLines = getInputAreaTotalLines(state, getTerminalWidth());
+  const scrollBottom = process.stdout.rows - totalLines;
+  process.stdout.write(`\x1b[${scrollBottom};1H`);
+  process.stdout.write('\n');
+  state.contentLineCount += 1;
+  const visibleHeight = getContentHeight(state);
+  if (state.contentLineCount > visibleHeight) {
+    state.contentLineCount = visibleHeight;
+  }
+  return shrunk;
+};
+
+const writeContentLine = (state, line, options = {}) => {
+  const { redraw = true, allowShrink = true } = options;
+  const shrunk = prepareContentLine(state, { allowShrink });
+  if (line) {
+    process.stdout.write(line);
+  }
+  if (!redraw && shrunk) {
+    redrawInputArea(state);
+  }
+  if (redraw) {
+    redrawInputArea(state);
+  }
+};
+
+const printContentLines = (state, lines, options = {}) => {
+  const { allowShrink = true } = options;
+  lines.forEach((line) => writeContentLine(state, line, { redraw: false, allowShrink }));
+  redrawInputArea(state);
 };
 
 const setupScrollRegion = (state) => {
@@ -302,12 +423,11 @@ const redrawInputArea = (state) => {
     state.lastInputAreaLines !== totalLines ||
     state.lastRows !== rows ||
     state.lastLayoutKey !== layoutKey;
+  const prevInputStartRow = state.lastInputStartRow;
+  const prevInputAreaLines = state.lastInputAreaLines;
 
   if (layoutChanged) {
     setupScrollRegion(state);
-    state.lastInputAreaLines = totalLines;
-    state.lastRows = rows;
-    state.lastLayoutKey = layoutKey;
   }
 
   // Save cursor, move to input area, and redraw
@@ -346,6 +466,10 @@ const redrawInputArea = (state) => {
     helpRenderLines.forEach((line) => {
       process.stdout.write(chalk.gray(line) + '\n');
     });
+    state.lastInputStartRow = inputStartRow;
+    state.lastInputAreaLines = totalLines;
+    state.lastRows = rows;
+    state.lastLayoutKey = layoutKey;
   } else {
     // Only redraw input lines when layout is unchanged
     wrappedLines.forEach((line, index) => {
@@ -371,62 +495,35 @@ const printMessage = (state, role, text) => {
   const width = getTerminalWidth() - 4; // Leave margin
   const prefix = role === 'user' ? chalk.cyan('>') : chalk.cyan('✦');
   const lines = wrapText(text, width);
+  const output = [''];
 
-  setupScrollRegion(state);
-  const totalLines = getInputAreaTotalLines(state, getTerminalWidth());
-  const scrollBottom = process.stdout.rows - totalLines;
-
-  // Move to bottom of scroll region
-  process.stdout.write(`\x1b[${scrollBottom};1H`);
-
-  // Print blank line and message - will scroll content up
-  process.stdout.write('\n');
   lines.forEach((line, idx) => {
     if (idx === 0) {
-      console.log(`  ${prefix} ${line}`);
+      output.push(`  ${prefix} ${line}`);
     } else {
-      console.log(`    ${line}`);
+      output.push(`    ${line}`);
     }
   });
 
-  // Redraw input area after printing
-  redrawInputArea(state);
+  printContentLines(state, output, { allowShrink: role !== 'user' });
 };
 
 const printSystem = (state, text) => {
-  setupScrollRegion(state);
-  const totalLines = getInputAreaTotalLines(state, getTerminalWidth());
-  const scrollBottom = process.stdout.rows - totalLines;
-
-  process.stdout.write(`\x1b[${scrollBottom};1H`);
-  console.log();
-  console.log(chalk.gray(`  ${text}`));
-  redrawInputArea(state);
+  printContentLines(state, ['', chalk.gray(`  ${text}`)], { allowShrink: false });
 };
 
 const printError = (state, text) => {
-  setupScrollRegion(state);
-  const totalLines = getInputAreaTotalLines(state, getTerminalWidth());
-  const scrollBottom = process.stdout.rows - totalLines;
-
-  process.stdout.write(`\x1b[${scrollBottom};1H`);
-  console.log();
-  console.log(chalk.red(`  ✗ ${text}`));
-  redrawInputArea(state);
+  printContentLines(state, ['', chalk.red(`  ✗ ${text}`)], { allowShrink: false });
 };
 
 const printSuccess = (state, text) => {
-  setupScrollRegion(state);
-  const totalLines = getInputAreaTotalLines(state, getTerminalWidth());
-  const scrollBottom = process.stdout.rows - totalLines;
-
-  process.stdout.write(`\x1b[${scrollBottom};1H`);
-  console.log();
-  console.log(chalk.green(`  ✓ ${text}`));
-  redrawInputArea(state);
+  printContentLines(state, ['', chalk.green(`  ✓ ${text}`)], { allowShrink: false });
 };
 
 const showHelp = (state) => {
+  state.helpMode = 'help';
+  state.helpShrinkEnabled = false;
+  state.helpForceShrink = false;
   const lines = [
     '  Chat Commands:',
     '    /cl              List all chats',
@@ -448,10 +545,146 @@ const showHelp = (state) => {
     '    /quit            Exit application',
     '',
   ];
-  showHelpArea(state, lines);
+  showHelpArea(state, lines, { expand: true, preserveSize: state.helpExpanded });
+};
+
+const COMMAND_HINTS = [
+  { cmd: '/cl', desc: 'List all chats' },
+  { cmd: '/cj <n>', desc: 'Join chat by number' },
+  { cmd: '/cn', desc: 'Show current chat name' },
+  { cmd: '/cq', desc: 'Quit current chat' },
+  { cmd: '/cd', desc: 'Clear/delete current chat' },
+  { cmd: '/ul', desc: 'List users' },
+  { cmd: '/ua <n>', desc: 'Add user by number' },
+  { cmd: '/ur', desc: 'List friend requests' },
+  { cmd: '/help', desc: 'Show help' },
+];
+
+const formatChatEntry = (chat, idx) => {
+  const label = chat.chatType === 'group' ? '[GROUP]' : '[DM]';
+  const name = chat.name || '(no name)';
+  return `${idx + 1}. ${label} ${name}`.trimEnd();
+};
+
+const formatUserEntry = (user, idx) => {
+  const status = user.isOnline ? '●' : '○';
+  const name = user.displayName || user.handle || user.email || user.id;
+  const handle = user.handle ? `@${user.handle}` : '';
+  return `${idx + 1}. ${status} ${name} ${handle}`.trimEnd();
+};
+
+const computeHelpColumns = (width) => {
+  const minChat = 24;
+  const minUser = 24;
+  const minCmd = 20;
+  const available = width - HELP_GAP * 2;
+  const minTotal = minChat + minUser + minCmd;
+
+  if (available >= minTotal) {
+    const chatWidth = Math.floor(available * 0.46);
+    const userWidth = Math.floor(available * 0.34);
+    const cmdWidth = Math.max(minCmd, available - chatWidth - userWidth);
+    return { columns: 3, widths: [chatWidth, userWidth, cmdWidth] };
+  }
+
+  const availableTwo = width - HELP_GAP;
+  const chatWidth = Math.max(minChat, Math.floor(availableTwo * 0.55));
+  const userWidth = Math.max(10, availableTwo - chatWidth);
+  return { columns: 2, widths: [chatWidth, userWidth] };
+};
+
+const buildSlashHelpLines = (state) => {
+  const width = getTerminalWidth();
+  const chats = state.chats || [];
+  const users = state.users || [];
+  const chatLines = chats.map(formatChatEntry);
+  const userLines = users.map(formatUserEntry);
+  const cmdLines = COMMAND_HINTS.map((c) => `${c.cmd.padEnd(8)} ${c.desc}`);
+
+  const bodyCount = Math.min(
+    HELP_BODY_LINES,
+    Math.max(chatLines.length, userLines.length, cmdLines.length)
+  );
+
+  const { columns, widths } = computeHelpColumns(width);
+  const gap = ' '.repeat(HELP_GAP);
+  const lines = [];
+
+  for (let i = 0; i < bodyCount; i += 1) {
+    const left = chatLines[i] || '';
+    const middle = userLines[i] || '';
+    const right = cmdLines[i] || '';
+
+    if (columns === 3) {
+      const line =
+        padToWidth(left, widths[0]) +
+        gap +
+        padToWidth(middle, widths[1]) +
+        gap +
+        padToWidth(right, widths[2]);
+      lines.push(line);
+    } else {
+      const rightCombined = [middle, right].filter(Boolean).join('  ');
+      const line = padToWidth(left, widths[0]) + gap + padToWidth(rightCombined, widths[1]);
+      lines.push(line);
+    }
+  }
+
+  const showArrow = chatLines.length > HELP_BODY_LINES || userLines.length > HELP_BODY_LINES;
+  if (showArrow) {
+    const leftArrow = chatLines.length > HELP_BODY_LINES ? `▼(1/${chatLines.length})` : '';
+    const middleArrow = userLines.length > HELP_BODY_LINES ? `▼(1/${userLines.length})` : '';
+    const rightArrow = cmdLines.length > HELP_BODY_LINES ? `▼(1/${cmdLines.length})` : '';
+
+    if (columns === 3) {
+      lines.push(
+        padToWidth(leftArrow, widths[0], true) +
+          gap +
+          padToWidth(middleArrow, widths[1], true) +
+          gap +
+          padToWidth(rightArrow, widths[2], true)
+      );
+    } else {
+      const rightCombined = [middleArrow, rightArrow].filter(Boolean).join(' ');
+      lines.push(padToWidth(leftArrow, widths[0], true) + gap + padToWidth(rightCombined, widths[1], true));
+    }
+  }
+
+  return lines;
+};
+
+const showSlashHelp = async (state) => {
+  state.helpMode = 'slash';
+  state.helpShrinkEnabled = false;
+  state.helpForceShrink = false;
+  const requestId = (state.slashHelpRequestId || 0) + 1;
+  state.slashHelpRequestId = requestId;
+
+  showHelpArea(state, ['  Loading chats/users...'], { expand: true, preserveSize: state.helpExpanded, normalize: false });
+
+  try {
+    await Promise.all([loadChats(state), loadUsers(state)]);
+    state.lastChatList = state.chats;
+    state.lastUserList = state.users;
+  } catch (err) {
+    const msg = err?.response?.data?.message || err.message || String(err);
+    showHelpArea(state, [`  Failed to load lists: ${msg}`], { expand: true, preserveSize: true, normalize: false });
+    return;
+  }
+
+  if (state.slashHelpRequestId !== requestId) return;
+  if (state.inputBuffer !== '/') return;
+
+  const lines = buildSlashHelpLines(state);
+  state.helpExpanded = true;
+  state.helpVisibleLines = Math.max(HELP_MIN_LINES, Math.min(HELP_MAX_LINES, lines.length));
+  showHelpArea(state, lines, { expand: true, preserveSize: false, normalize: false });
 };
 
 const showCommandSuggestions = (state, prefix) => {
+  state.helpMode = 'suggestions';
+  state.helpShrinkEnabled = false;
+  state.helpForceShrink = false;
   const matches = getMatchingCommands(prefix);
 
   if (matches.length === 0) {
@@ -465,11 +698,14 @@ const showCommandSuggestions = (state, prefix) => {
     '',
   ];
 
-  showHelpArea(state, lines);
+  showHelpArea(state, lines, { expand: true, preserveSize: state.helpExpanded });
 };
 
 const showCommandOutput = (state, lines) => {
-  showHelpArea(state, [...lines, '']);
+  state.helpMode = 'output';
+  state.helpShrinkEnabled = false;
+  state.helpForceShrink = false;
+  showHelpArea(state, [...lines, ''], { expand: true, preserveSize: state.helpExpanded });
 };
 
 const normalizeNameToken = (value) => String(value || '').trim();
@@ -509,12 +745,12 @@ const getMatchingCommands = (prefix) => {
   return allCommands.filter((c) => c.cmd.startsWith(trimmed));
 };
 
-const updateCommandMode = (state) => {
+const updateCommandMode = async (state) => {
   const isCommand = state.inputBuffer.startsWith('/');
 
   // Show full help when typing just "/"
   if (state.inputBuffer === '/') {
-    showHelp(state);
+    await showSlashHelp(state);
     return true;
   }
 
@@ -524,23 +760,23 @@ const updateCommandMode = (state) => {
     return true;
   }
 
-  // Hide help when user stops typing commands or starts typing regular text
-  if (!isCommand && state.helpContent.length > 0) {
-    hideHelpArea(state);
-    return true;
+  // Enable gradual shrink when user starts typing normal text
+  if (!isCommand && (state.helpExpanded || state.helpContent.length > 0)) {
+    state.helpShrinkEnabled = true;
+    state.helpForceShrink = true;
   }
 
   return false;
 };
 
 const formatIndexedList = (items, formatter) => {
-  return items.slice(0, 10).map((item, idx) => `  ${idx}. ${formatter(item)}`);
+  return items.slice(0, 10).map((item, idx) => `  ${idx + 1}. ${formatter(item)}`);
 };
 
 const getIndexedItem = (items, token) => {
   const idx = Number.parseInt(String(token || '').trim(), 10);
-  if (Number.isNaN(idx) || idx < 0 || idx >= items.length) return null;
-  return items[idx];
+  if (Number.isNaN(idx) || idx < 1 || idx > items.length) return null;
+  return items[idx - 1];
 };
 
 const joinChatRealtime = async (state, chatId) => {
@@ -583,6 +819,9 @@ const attachRealtime = async (state) => {
       state.messages[message.chatId].push(message);
     }
     if (state.currentChat?.id === message.chatId) {
+      if (state.helpExpanded) {
+        state.helpShrinkEnabled = true;
+      }
       const formatted = formatInboundMessage(message, state.meId);
       if (formatted) {
         // Check if text already includes the name prefix to avoid duplication
@@ -599,83 +838,23 @@ const attachRealtime = async (state) => {
       chatId: message.chatId,
       id: message.id,
       text: '',
-      started: false,
-      atLineStart: false,
-      lineLen: 0,
     };
-    // Hide help area when streaming begins
-    hideHelpArea(state);
+    if (state.helpExpanded) {
+      state.helpShrinkEnabled = true;
+    }
   });
 
   connection.on('AgentMessageChunk', (chatId, messageId, chunk) => {
     if (!state.streamingMessage || state.streamingMessage.id !== messageId) return;
     state.streamingMessage.text += chunk;
-    if (state.currentChat?.id === chatId) {
-      if (!state.streamingMessage.started) {
-        // Setup scroll region and position at bottom of scrollable area
-        setupScrollRegion(state);
-
-        const totalLines = getInputAreaTotalLines(state, getTerminalWidth());
-        const scrollBottom = process.stdout.rows - totalLines;
-
-        // Move to the bottom of scrollable area
-        process.stdout.write(`\x1b[${scrollBottom};1H`);
-
-        // Print blank line and prefix - this will scroll content up
-        process.stdout.write('\n');
-        process.stdout.write(chalk.cyan('  ✦ '));
-        state.streamingMessage.started = true;
-        state.streamingMessage.atLineStart = false;
-        state.streamingMessage.lineLen = 0;
-      }
-      const maxLineWidth = Math.max(1, getTerminalWidth() - 4);
-      const text = String(chunk);
-
-      for (let i = 0; i < text.length; i += 1) {
-        const ch = text[i];
-
-        // Handle Windows line endings: skip \r
-        if (ch === '\r') {
-          continue;
-        }
-
-        // Handle newlines - respect all newlines from OpenAI
-        if (ch === '\n') {
-          process.stdout.write('\n');
-          state.streamingMessage.atLineStart = true;
-          state.streamingMessage.lineLen = 0;
-          continue;
-        }
-
-        if (state.streamingMessage.atLineStart) {
-          process.stdout.write('    ');
-          state.streamingMessage.atLineStart = false;
-        }
-
-        const chWidth = charDisplayWidth(ch);
-        if (state.streamingMessage.lineLen + chWidth > maxLineWidth) {
-          process.stdout.write('\n');
-          process.stdout.write('    ');
-          state.streamingMessage.lineLen = 0;
-        }
-
-        process.stdout.write(ch);
-        state.streamingMessage.lineLen += chWidth;
-      }
-    }
   });
 
   connection.on('AgentMessageComplete', (chatId, messageId) => {
     if (!state.streamingMessage || state.streamingMessage.id !== messageId) return;
+    const { text } = state.streamingMessage;
     state.streamingMessage = null;
     if (state.currentChat?.id === chatId) {
-      // End the line
-      process.stdout.write('\n');
-
-      // Reset scroll region and redraw input
-      resetScrollRegion();
-      setupScrollRegion(state);
-      redrawInputArea(state);
+      printMessage(state, 'assistant', text || '');
     }
   });
 
@@ -699,6 +878,7 @@ const selectChatByIndex = async (state, idx) => {
   state.currentChat = chat;
 
   console.clear();
+  state.contentLineCount = 0;
   state.lastLayoutKey = null;
   printSuccess(state, `Joined: ${chat.name}`);
 
@@ -945,12 +1125,20 @@ const startInteractive = async () => {
     streamingMessage: null,
     inputBuffer: '',
     helpContent: [],  // Simplified: just content lines or empty array
-    helpMinLines: 2,
+    helpExpanded: false,
+    helpVisibleLines: HELP_MIN_LINES,
+    helpMode: 'none',
+    helpShrinkEnabled: false,
+    helpForceShrink: false,
+    slashHelpRequestId: 0,
     lastChatList: [],
     lastUserList: [],
     lastInputAreaLines: null,
+    lastInputStartRow: null,
     lastRows: null,
     lastLayoutKey: null,
+    contentLineCount: 0,
+    lastVisibleHeight: null,
   };
 
   try {
@@ -1012,12 +1200,13 @@ const startInteractive = async () => {
       state.commandMode = false;
 
       if (text === '/') {
-        showHelp(state);
+        state.inputBuffer = '/';
+        await showSlashHelp(state);
         return;
       }
 
-      if (state.showingHelp) {
-        hideHelp(state);
+      if (state.helpExpanded || state.helpContent.length > 0) {
+        state.helpShrinkEnabled = true;
       }
 
       if (!text) {
@@ -1057,7 +1246,7 @@ const startInteractive = async () => {
     if (key.name === 'backspace') {
       if (state.inputBuffer.length > 0) {
         state.inputBuffer = state.inputBuffer.slice(0, -1);
-        const redrew = updateCommandMode(state);
+        const redrew = await updateCommandMode(state);
         if (!redrew) {
           redrawInputArea(state);
         }
@@ -1069,8 +1258,8 @@ const startInteractive = async () => {
     if (key.name === 'escape') {
       state.inputBuffer = '';
       state.commandMode = false;
-      if (state.showingHelp) {
-        hideHelp(state);
+      if (state.helpExpanded || state.helpContent.length > 0) {
+        hideHelpArea(state);
       } else {
         redrawInputArea(state);
       }
@@ -1080,7 +1269,7 @@ const startInteractive = async () => {
     // Handle regular character input
     if (str && !key.ctrl && !key.meta) {
       state.inputBuffer += str;
-      const redrew = updateCommandMode(state);
+      const redrew = await updateCommandMode(state);
       if (!redrew) {
         redrawInputArea(state);
       }

@@ -32,7 +32,7 @@ public class OpenAiAgentService : IAgentService
             new
             {
                 role = "system",
-                content = "You are Nuwa, a helpful assistant inside a chat app. Use a concise, factual tone. Avoid poetic or flowery language. Keep responses brief and to the point."
+                content = "You are Nuwa, a helpful assistant inside a chat app."
             }
         };
 
@@ -89,7 +89,7 @@ public class OpenAiAgentService : IAgentService
             new
             {
                 role = "system",
-                content = "You are Nuwa, a helpful assistant inside a chat app. Use a concise, factual tone. Avoid poetic or flowery language. Keep responses brief and to the point."
+                content = "You are Nuwa, a helpful assistant inside a chat app."
             }
         };
 

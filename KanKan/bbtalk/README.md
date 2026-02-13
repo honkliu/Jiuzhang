@@ -5,11 +5,10 @@ A polished command-line chat client for the KanKan messaging system, inspired by
 ## Features
 
 ✨ **Modern Terminal UI**
-- Full-screen blessed-based interface with proper cursor management
-- Scrollable message history with scrollbar
-- Status bar showing current chat and user info
-- Clean input box with border highlighting
-- Proper keyboard navigation (arrow keys, page up/down)
+- Full-screen ANSI interface with cursor and scroll-region management
+- Scrollable message history (content area excludes input/help)
+- Clean input box with separators and wrapped input lines
+- Inline help/command suggestion area below the input
 
 🎨 **Beautiful Display**
 - Color-coded messages (cyan for other users, white for you)
@@ -20,10 +19,8 @@ A polished command-line chat client for the KanKan messaging system, inspired by
 
 ⌨️ **Intuitive Controls**
 - **Enter**: Send message
-- **Ctrl+C/Escape**: Quit application
-- **Ctrl+U**: Clear input line
-- **Up/Down**: Scroll message history
-- **PageUp/PageDown**: Fast scroll through messages
+- **Ctrl+C**: Quit application
+- **Escape**: Clear input and hide help
 - **/** prefix: Run commands
 
 ## Setup
@@ -93,39 +90,31 @@ BBTALK_BASE_URL=http://localhost:5001/api node index.js
 ## Technical Details
 
 ### Architecture
-- **blessed**: Terminal UI framework for rich interface elements
+- **ANSI escape codes**: Terminal UI layout (scroll region, cursor movement)
 - **SignalR**: Real-time WebSocket communication
 - **axios**: HTTP API client
 - **chalk**: Terminal color support
 - **commander**: CLI argument parsing
 
-### Key Improvements Over Previous Version
-1. **Fixed cursor positioning** - Uses blessed's built-in cursor management instead of raw ANSI escapes
-2. **Better input handling** - Native textbox component with proper editing support
-3. **Scrollable history** - Can scroll through unlimited message history with keyboard
-4. **Professional help screen** - Formatted like Claude with organized sections and color coding
-5. **Status bar** - Always visible context about current state (chat name, user, shortcuts)
-6. **Real-time streaming** - Properly handles token-by-token message streaming with live updates
-7. **Keyboard shortcuts** - Full set of intuitive controls (Ctrl+U, PageUp/Down, etc.)
-8. **Error handling** - Graceful error display with color coding and helpful messages
-9. **Auto-scrolling** - Always scrolls to bottom when new messages arrive
-10. **Message persistence** - Maintains message history during session
+### Key Behaviors
+1. **Scroll region** - Content area scrolls independently from the input/help area
+2. **Wrapped input** - Input text wraps across multiple lines with a fixed prompt prefix
+3. **Help/commands** - Typing `/` shows help; typing `/x` shows suggestions
+4. **Streaming output** - Agent responses stream inline and preserve newlines
+5. **Color cues** - User messages use `>`, assistant messages use `✦`
+6. **History load** - Joins a chat and prints the latest history on entry
 
 ### UI Layout
 
 ```
-┌─────────────────────────────────────────────┐
-│  Message History (scrollable)               │
-│  ✦ Wa: Hello!                               │
-│  > Your message here                        │
-│  ...                                        │
-│                                             │
-│                                             │
-└─────────────────────────────────────────────┘
- Chat: Room Name | User: Alice | Commands: /
-┌─────────────────────────────────────────────┐
-│ > Your input here...                        │
-└─────────────────────────────────────────────┘
+<scrolling content area>
+  ✦ Wa: Hello!
+  > Your message here
+  ...
+──────────────────────────────────────────────
+> input wraps across multiple lines...
+──────────────────────────────────────────────
+  ? for shortcuts
 ```
 
 ## Requirements
