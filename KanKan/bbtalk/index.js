@@ -14,8 +14,8 @@ const DEFAULT_BASE_URL = 'http://localhost:5001/api';
 const CONFIG_PATH = path.join(os.homedir(), '.bbtalk.json');
 const HISTORY_LIMIT = 50;
 const HELP_MIN_LINES = 2;
-const HELP_MAX_LINES = 10;
-const HELP_BODY_LINES = 9;
+const HELP_MAX_LINES = 9;
+const HELP_BODY_LINES = 8;
 const HELP_GAP = 2;
 
 const program = new Command();
@@ -78,6 +78,12 @@ const loadChats = async (state) => {
 const loadUsers = async (state) => {
   const res = await state.api.get('/contact');
   state.users = res.data || [];
+};
+
+const loadContacts = async (state) => {
+  const res = await state.api.get('/contact/contacts');
+  state.contacts = res.data || [];
+  state.friendIds = new Set(state.contacts.map((c) => c.id));
 };
 
 const loadRequests = async (state) => {
@@ -184,7 +190,7 @@ const wrapText = (text, maxWidth) => {
           remaining = rest.join('');
         } else {
           lines.push(candidate);
-          remaining = remaining.slice(breakPoint).trimStart();
+          remaining = remaining.slice(breakPoint);
         }
       }
     }
@@ -328,6 +334,10 @@ const getContentHeight = (state) => {
 const maybeShrinkHelpForNewLine = (state) => {
   if (!state.helpExpanded) return false;
   if (!state.helpShrinkEnabled) return false;
+  if (state.inputBuffer?.startsWith('/')) return false;
+  if (state.helpMode === 'slash' || state.helpMode === 'suggestions' || state.helpMode === 'output') {
+    return false;
+  }
   if (state.helpVisibleLines <= HELP_MIN_LINES) return false;
   const contentHeight = getContentHeight(state);
   const wasContentFull = state.contentLineCount >= contentHeight;
@@ -436,7 +446,8 @@ const redrawInputArea = (state) => {
   // Hide cursor while redrawing to prevent visible jumps
   process.stdout.write('\x1b[?25l');
 
-  const prompt = chalk.cyan('> ');
+  const prompt = chalk.gray('> ');
+  const continuationPrefix = chalk.gray('  ');
 
   if (layoutChanged) {
     // Clear the entire input area lines to avoid leftover artifacts
@@ -453,8 +464,8 @@ const redrawInputArea = (state) => {
 
     // Draw input lines
     wrappedLines.forEach((line, index) => {
-      const prefix = index === 0 ? prompt : '  ';
-      process.stdout.write(prefix + line);
+      const prefix = index === 0 ? prompt : continuationPrefix;
+      process.stdout.write(prefix + chalk.gray(line));
       process.stdout.write('\x1b[K');
       process.stdout.write('\n');
     });
@@ -473,10 +484,10 @@ const redrawInputArea = (state) => {
   } else {
     // Only redraw input lines when layout is unchanged
     wrappedLines.forEach((line, index) => {
-      const prefix = index === 0 ? prompt : '  ';
+      const prefix = index === 0 ? prompt : continuationPrefix;
       process.stdout.write(`\x1b[${inputStartRow + 1 + index};1H`);
       process.stdout.write('\x1b[2K');
-      process.stdout.write(prefix + line);
+      process.stdout.write(prefix + chalk.gray(line));
       process.stdout.write('\x1b[K');
     });
   }
@@ -492,25 +503,45 @@ const redrawInputArea = (state) => {
 };
 
 const printMessage = (state, role, text, options = {}) => {
-  const { suppressPrefix = false, omitLeadingBlank = false } = options;
+  const { suppressPrefix = false, omitLeadingBlank = false, noWrap = false } = options;
   const width = getTerminalWidth() - 4; // Leave margin
-  const prefix = role === 'user' ? chalk.cyan('>') : chalk.cyan('✦');
-  const lines = wrapText(text, width);
+  const isUser = role === 'user';
+  const otherColor = chalk.hex('#c0c0c0');
+  const color = isUser ? chalk.gray : otherColor;
+  const prefixSymbol = isUser ? '>' : '✦';
+  const prefix = isUser ? chalk.gray(prefixSymbol) : chalk.cyan(prefixSymbol);
+  let nameLabel = null;
+  let bodyText = text;
+  if (!isUser && !suppressPrefix) {
+    const match = String(text || '').match(/^([^:]{1,64}):\s*(.*)$/s);
+    if (match) {
+      nameLabel = match[1];
+      bodyText = match[2] || '';
+    }
+  }
+  const lines = noWrap ? String(bodyText || '').split('\n') : wrapText(bodyText, width);
   const output = [];
 
   if (!omitLeadingBlank) {
     output.push('');
   }
 
+  const continuationIndent = suppressPrefix ? '  ' : '    ';
+
   lines.forEach((line, idx) => {
     if (idx === 0) {
       if (suppressPrefix) {
-        output.push(`    ${line}`);
+        output.push(color(`${continuationIndent}${line}`));
       } else {
-        output.push(`  ${prefix} ${line}`);
+        if (nameLabel && !isUser) {
+          const nameText = chalk.cyan(`${nameLabel}:`);
+          output.push(`  ${prefix} ${nameText} ${color(line)}`);
+        } else {
+          output.push(color(`  ${prefix} ${line}`));
+        }
       }
     } else {
-      output.push(`    ${line}`);
+      output.push(color(`${continuationIndent}${line}`));
     }
   });
 
@@ -563,23 +594,35 @@ const COMMAND_HINTS = [
   { cmd: '/cn', desc: 'Show current chat name' },
   { cmd: '/cq', desc: 'Quit current chat' },
   { cmd: '/cd', desc: 'Clear/delete current chat' },
+  { cmd: '/c <n>', desc: 'Start a chat with user' },
   { cmd: '/ul', desc: 'List users' },
   { cmd: '/ua <n>', desc: 'Add user by number' },
   { cmd: '/ur', desc: 'List friend requests' },
+  { cmd: '/urc [n]', desc: 'Accept request' },
+  { cmd: '/urd [n]', desc: 'Decline request' },
   { cmd: '/help', desc: 'Show help' },
+  { cmd: '/quit', desc: 'Exit application' },
 ];
 
-const formatChatEntry = (chat, idx) => {
+const formatChatEntry = (chat, idx, currentChatId) => {
   const label = chat.chatType === 'group' ? '[GROUP]' : '[DM]';
   const name = chat.name || '(no name)';
   return `${idx + 1}. ${label} ${name}`.trimEnd();
 };
 
-const formatUserEntry = (user, idx) => {
+const formatUserLine = (user) => {
   const status = user.isOnline ? '●' : '○';
   const name = user.displayName || user.handle || user.email || user.id;
-  const handle = user.handle ? `@${user.handle}` : '';
-  return `${idx + 1}. ${status} ${name} ${handle}`.trimEnd();
+  return `${status} ${name}`.trimEnd();
+};
+
+const formatUserEntry = (user, idx) => {
+  return `${idx + 1}. ${formatUserLine(user)}`.trimEnd();
+};
+
+const isFriend = (state, user) => {
+  if (!state.friendIds || !user?.id) return false;
+  return state.friendIds.has(user.id);
 };
 
 const computeHelpColumns = (width) => {
@@ -590,14 +633,14 @@ const computeHelpColumns = (width) => {
   const minTotal = minChat + minUser + minCmd;
 
   if (available >= minTotal) {
-    const chatWidth = Math.floor(available * 0.46);
-    const userWidth = Math.floor(available * 0.34);
+    const chatWidth = Math.floor(available * 0.31);
+    const userWidth = Math.floor(available * 0.28);
     const cmdWidth = Math.max(minCmd, available - chatWidth - userWidth);
     return { columns: 3, widths: [chatWidth, userWidth, cmdWidth] };
   }
 
   const availableTwo = width - HELP_GAP;
-  const chatWidth = Math.max(minChat, Math.floor(availableTwo * 0.55));
+  const chatWidth = Math.max(minChat, Math.floor(availableTwo * (2 / 3)));
   const userWidth = Math.max(10, availableTwo - chatWidth);
   return { columns: 2, widths: [chatWidth, userWidth] };
 };
@@ -606,9 +649,35 @@ const buildSlashHelpLines = (state) => {
   const width = getTerminalWidth();
   const chats = state.chats || [];
   const users = state.users || [];
-  const chatLines = chats.map(formatChatEntry);
-  const userLines = users.map(formatUserEntry);
-  const cmdLines = COMMAND_HINTS.map((c) => `${c.cmd.padEnd(8)} ${c.desc}`);
+  const chatLinesRaw = chats.map((chat, idx) => formatChatEntry(chat, idx, state.currentChat?.id));
+  const activeChatId = state.currentChat?.id || null;
+  const activeChatIndexRaw = activeChatId ? chats.findIndex((chat) => chat.id === activeChatId) : -1;
+  const userLinesRaw = users.map(formatUserEntry);
+  const friendFlagsRaw = users.map((user) => isFriend(state, user));
+  const cmdLinesRaw = COMMAND_HINTS.map((c) => `${c.cmd.padEnd(8)} ${c.desc}`);
+
+  const pageIndex = Math.max(0, state.slashHelpPage || 0);
+  const getTotalPages = (length) => Math.max(1, Math.ceil(length / HELP_BODY_LINES));
+  const clampPage = (page, totalPages) => Math.min(Math.max(page, 0), totalPages - 1);
+
+  const chatTotalPages = getTotalPages(chatLinesRaw.length);
+  const userTotalPages = getTotalPages(userLinesRaw.length);
+  const cmdTotalPages = getTotalPages(cmdLinesRaw.length);
+
+  const chatPage = clampPage(pageIndex, chatTotalPages);
+  const userPage = clampPage(pageIndex, userTotalPages);
+  const cmdPage = clampPage(pageIndex, cmdTotalPages);
+
+  const chatStart = chatPage * HELP_BODY_LINES;
+  const userStart = userPage * HELP_BODY_LINES;
+  const cmdStart = cmdPage * HELP_BODY_LINES;
+
+  const chatLines = chatLinesRaw.slice(chatStart, chatStart + HELP_BODY_LINES);
+  const userLines = userLinesRaw.slice(userStart, userStart + HELP_BODY_LINES);
+  const friendFlags = friendFlagsRaw.slice(userStart, userStart + HELP_BODY_LINES);
+  const cmdLines = cmdLinesRaw.slice(cmdStart, cmdStart + HELP_BODY_LINES);
+
+  const activeChatIndex = activeChatIndexRaw >= 0 ? activeChatIndexRaw - chatStart : -1;
 
   const bodyCount = Math.min(
     HELP_BODY_LINES,
@@ -620,30 +689,40 @@ const buildSlashHelpLines = (state) => {
   const lines = [];
 
   for (let i = 0; i < bodyCount; i += 1) {
-    const left = chatLines[i] || '';
-    const middle = userLines[i] || '';
+    const leftRaw = chatLines[i] || '';
+    const middleRaw = userLines[i] || '';
+    const isFriendRow = friendFlags[i];
     const right = cmdLines[i] || '';
 
     if (columns === 3) {
-      const line =
-        padToWidth(left, widths[0]) +
-        gap +
-        padToWidth(middle, widths[1]) +
-        gap +
-        padToWidth(right, widths[2]);
+      const leftPadded = padToWidth(leftRaw, widths[0]);
+      const left = i === activeChatIndex ? chalk.cyan(leftPadded) : leftPadded;
+      const middlePadded = padToWidth(middleRaw, widths[1]);
+      const middle = isFriendRow ? chalk.cyan(middlePadded) : middlePadded;
+      const line = left + gap + middle + gap + padToWidth(right, widths[2]);
       lines.push(line);
     } else {
-      const rightCombined = [middle, right].filter(Boolean).join('  ');
-      const line = padToWidth(left, widths[0]) + gap + padToWidth(rightCombined, widths[1]);
+      const rightCombined = [middleRaw, right].filter(Boolean).join('  ');
+      const leftPadded = padToWidth(leftRaw, widths[0]);
+      const left = i === activeChatIndex ? chalk.cyan(leftPadded) : leftPadded;
+      const rightPadded = padToWidth(rightCombined, widths[1]);
+      const rightColored = isFriendRow ? chalk.cyan(rightPadded) : rightPadded;
+      const line = left + gap + rightColored;
       lines.push(line);
     }
   }
 
-  const showArrow = chatLines.length > HELP_BODY_LINES || userLines.length > HELP_BODY_LINES;
+  const showArrow =
+    chatLinesRaw.length > HELP_BODY_LINES ||
+    userLinesRaw.length > HELP_BODY_LINES ||
+    cmdLinesRaw.length > HELP_BODY_LINES;
   if (showArrow) {
-    const leftArrow = chatLines.length > HELP_BODY_LINES ? `▼(1/${chatLines.length})` : '';
-    const middleArrow = userLines.length > HELP_BODY_LINES ? `▼(1/${userLines.length})` : '';
-    const rightArrow = cmdLines.length > HELP_BODY_LINES ? `▼(1/${cmdLines.length})` : '';
+    const leftArrow =
+      chatLinesRaw.length > HELP_BODY_LINES ? `▼(${chatPage + 1}/${chatTotalPages})` : '';
+    const middleArrow =
+      userLinesRaw.length > HELP_BODY_LINES ? `▼(${userPage + 1}/${userTotalPages})` : '';
+    const rightArrow =
+      cmdLinesRaw.length > HELP_BODY_LINES ? `▼(${cmdPage + 1}/${cmdTotalPages})` : '';
 
     if (columns === 3) {
       lines.push(
@@ -662,17 +741,38 @@ const buildSlashHelpLines = (state) => {
   return lines;
 };
 
+const updateSlashHelpPage = (state, delta) => {
+  if (state.helpMode !== 'slash') return false;
+  const chats = state.chats || [];
+  const users = state.users || [];
+  const cmdLines = COMMAND_HINTS;
+  const maxPages = Math.max(
+    1,
+    Math.ceil(chats.length / HELP_BODY_LINES),
+    Math.ceil(users.length / HELP_BODY_LINES),
+    Math.ceil(cmdLines.length / HELP_BODY_LINES)
+  );
+  const next = Math.min(Math.max((state.slashHelpPage || 0) + delta, 0), maxPages - 1);
+  if (next === (state.slashHelpPage || 0)) return false;
+  state.slashHelpPage = next;
+  const lines = buildSlashHelpLines(state);
+  state.helpExpanded = true;
+  showHelpArea(state, lines, { expand: true, preserveSize: true, normalize: false });
+  return true;
+};
+
 const showSlashHelp = async (state) => {
   state.helpMode = 'slash';
   state.helpShrinkEnabled = false;
   state.helpForceShrink = false;
+  state.slashHelpPage = 0;
   const requestId = (state.slashHelpRequestId || 0) + 1;
   state.slashHelpRequestId = requestId;
 
   showHelpArea(state, ['  Loading chats/users...'], { expand: true, preserveSize: state.helpExpanded, normalize: false });
 
   try {
-    await Promise.all([loadChats(state), loadUsers(state)]);
+    await Promise.all([loadChats(state), loadUsers(state), loadContacts(state)]);
     state.lastChatList = state.chats;
     state.lastUserList = state.users;
   } catch (err) {
@@ -694,10 +794,15 @@ const showCommandSuggestions = (state, prefix) => {
   state.helpMode = 'suggestions';
   state.helpShrinkEnabled = false;
   state.helpForceShrink = false;
+  state.helpExpanded = true;
   const matches = getMatchingCommands(prefix);
 
   if (matches.length === 0) {
-    hideHelpArea(state);
+    if (state.helpContent.length > 0) {
+      showHelpArea(state, state.helpContent, { expand: true, preserveSize: true, normalize: false });
+    } else {
+      showHelpArea(state, [''], { expand: true, preserveSize: true });
+    }
     return;
   }
 
@@ -707,7 +812,7 @@ const showCommandSuggestions = (state, prefix) => {
     '',
   ];
 
-  showHelpArea(state, lines, { expand: true, preserveSize: state.helpExpanded });
+  showHelpArea(state, lines, { expand: true, preserveSize: true });
 };
 
 const showCommandOutput = (state, lines) => {
@@ -765,6 +870,16 @@ const updateCommandMode = async (state) => {
 
   // Show command suggestions when typing a command
   if (isCommand && state.inputBuffer.length > 1) {
+    state.helpShrinkEnabled = false;
+    state.helpForceShrink = false;
+    if (state.inputBuffer.startsWith('//')) {
+      if (!state.helpExpanded && state.helpContent.length === 0) {
+        await showSlashHelp(state);
+      } else {
+        showHelpArea(state, state.helpContent, { expand: true, preserveSize: true, normalize: false });
+      }
+      return true;
+    }
     showCommandSuggestions(state, state.inputBuffer);
     return true;
   }
@@ -863,7 +978,9 @@ const attachRealtime = async (state) => {
     const { text } = state.streamingMessage;
     state.streamingMessage = null;
     if (state.currentChat?.id === chatId) {
-      printMessage(state, 'assistant', text || '');
+      const rawText = String(text ?? '');
+      const displayText = rawText.startsWith('Wa: ') ? rawText : `Wa: ${rawText}`;
+      printMessage(state, 'assistant', displayText, { noWrap: true });
     }
   });
 
@@ -924,9 +1041,10 @@ const handleCommand = async (state, line) => {
         state.lastChatList = state.chats.slice(0, 10);
         showCommandOutput(state, [
           '  Available Chats:',
-          ...formatIndexedList(state.lastChatList, (chat) => {
+          ...formatIndexedList(state.lastChatList, (chat, idx) => {
             const label = chat.chatType === 'group' ? '[GROUP]' : '[DM]';
-            return `${label} ${chat.name}`;
+            const line = `${label} ${chat.name}`;
+            return state.currentChat?.id === chat.id ? chalk.cyan(line) : line;
           }),
           '  Use /cj <n> to join a chat',
         ]);
@@ -952,15 +1070,13 @@ const handleCommand = async (state, line) => {
         return;
 
       case '/ul':
-        await loadUsers(state);
+        await Promise.all([loadUsers(state), loadContacts(state)]);
         state.lastUserList = state.users.slice(0, 10);
         showCommandOutput(state, [
           '  Users:',
           ...formatIndexedList(state.lastUserList, (user) => {
-            const status = user.isOnline ? '●' : '○';
-            const name = user.displayName || user.handle || user.email || user.id;
-            const handle = user.handle ? `@${user.handle}` : '';
-            return `${status} ${name} ${handle}`.trimEnd();
+            const line = formatUserLine(user);
+            return isFriend(state, user) ? chalk.cyan(line) : line;
           }),
           '  Use /ua <user> to send a friend request',
         ]);
@@ -1127,6 +1243,8 @@ const startInteractive = async () => {
     meName: cfg.userName || cfg.userId,
     chats: [],
     users: [],
+    contacts: [],
+    friendIds: new Set(),
     pendingRequests: [],
     messages: {},
     currentChat: null,
@@ -1140,6 +1258,7 @@ const startInteractive = async () => {
     helpShrinkEnabled: false,
     helpForceShrink: false,
     slashHelpRequestId: 0,
+    slashHelpPage: 0,
     lastChatList: [],
     lastUserList: [],
     lastInputAreaLines: null,
@@ -1189,6 +1308,24 @@ const startInteractive = async () => {
   process.stdin.on('keypress', async (str, key) => {
     if (!key) return;
 
+    const pageUpPressed =
+      key.name === 'pageup' ||
+      key.name === 'prior' ||
+      key.sequence === '\x1b[5~';
+    const pageDownPressed =
+      key.name === 'pagedown' ||
+      key.name === 'next' ||
+      key.sequence === '\x1b[6~';
+
+    if (pageUpPressed) {
+      if (updateSlashHelpPage(state, -1)) return;
+    }
+
+    if (pageDownPressed) {
+      if (updateSlashHelpPage(state, 1)) return;
+    }
+
+
     // Handle Ctrl+C
     if (key.ctrl && key.name === 'c') {
       if (state.currentChat) {
@@ -1214,10 +1351,6 @@ const startInteractive = async () => {
         return;
       }
 
-      if (state.helpExpanded || state.helpContent.length > 0) {
-        state.helpShrinkEnabled = true;
-      }
-
       if (!text) {
         redrawInputArea(state);
         return;
@@ -1226,6 +1359,10 @@ const startInteractive = async () => {
       if (text.startsWith('/')) {
         await handleCommand(state, text);
         return;
+      }
+
+      if (state.helpExpanded || state.helpContent.length > 0) {
+        state.helpShrinkEnabled = true;
       }
 
       if (!state.currentChat) {
@@ -1287,6 +1424,13 @@ const startInteractive = async () => {
 
   // Handle terminal resize
   process.stdout.on('resize', () => {
+    process.stdout.write('\x1b[2J\x1b[H');
+    resetScrollRegion();
+    setupScrollRegion(state);
+    state.contentLineCount = 0;
+    state.lastLayoutKey = null;
+    state.lastInputAreaLines = null;
+    state.lastInputStartRow = null;
     redrawInputArea(state);
   });
 };
@@ -1320,7 +1464,8 @@ program
       console.log(chalk.gray(`  User: ${next.userName}`));
       console.log(chalk.gray(`  Server: ${next.baseUrl}`));
       console.log('');
-      console.log(chalk.cyan('Run "bbtalk" to start chatting.'));
+      console.log(chalk.cyan('Starting chat...'));
+      await startInteractive();
     } catch (err) {
       const msg = err?.response?.data?.message || err.message;
       console.error(chalk.red(`✗ Login failed: ${msg}`));

@@ -219,14 +219,22 @@ export const ChatLayout: React.FC = () => {
     setShowSidebar(true);
   };
 
+  const appHeaderHeight = isMobile ? 56 : 64;
+
   return (
     <BoxAny sx={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
-      <AppHeader />
+      <AppHeader onToggleSidebar={() => setShowSidebar((prev) => !prev)} sidebarOpen={showSidebar} />
       <BoxAny
         sx={{
           display: 'flex',
-          height: 'calc(100vh - 64px)',
-          mt: '64px',
+          height: {
+            xs: `calc(100vh - ${appHeaderHeight}px - env(safe-area-inset-top))`,
+            sm: `calc(100vh - 64px - env(safe-area-inset-top))`,
+          },
+          mt: {
+            xs: `calc(${appHeaderHeight}px + env(safe-area-inset-top))`,
+            sm: 'calc(64px + env(safe-area-inset-top))',
+          },
           bgcolor: 'background.default',
           overflow: 'hidden',
           minHeight: 0,

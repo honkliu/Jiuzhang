@@ -26,7 +26,13 @@ import { setActiveChat, fetchMessages, clearUnread, removeChat } from '@/store/c
 import { chatService, Chat } from '@/services/chat.service';
 import { GroupAvatar } from '@/components/Shared/GroupAvatar';
 import { UserAvatar } from '@/components/Shared/UserAvatar';
-import { getDirectDisplayParticipant, getOtherRealParticipants, isRealGroupChat, WA_USER_ID } from '@/utils/chatParticipants';
+import {
+  getDirectDisplayParticipant,
+  getOtherRealParticipants,
+  getRealParticipants,
+  isRealGroupChat,
+  WA_USER_ID,
+} from '@/utils/chatParticipants';
 import { useLanguage } from '@/i18n/LanguageContext';
 
 // Work around TS2590 (“union type too complex”) from MUI Box typings in some TS versions.
@@ -192,6 +198,11 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
           filteredChats.map((chat) => {
             const meId = user?.id;
             const isGroup = isRealGroupChat(chat, meId);
+            const hasWa = (chat.participants || []).some((p) => p.userId === WA_USER_ID);
+            const realParticipants = getRealParticipants(chat.participants);
+            const otherRealParticipants = getOtherRealParticipants(chat, meId);
+            const isWaOnlyChat = !isGroup && hasWa && realParticipants.length <= 1;
+            const showUnread = chat.unreadCount > 0 && !isWaOnlyChat;
 
             return (
             <ListItemButton
@@ -215,11 +226,17 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
                   opacity: 1,
                   pointerEvents: 'auto',
                 },
-                ...(chat.unreadCount > 0 && activeChat?.id !== chat.id
+                ...(showUnread && activeChat?.id !== chat.id
                   ? { bgcolor: 'rgba(25, 118, 210, 0.06)' }
                   : null),
                 '&.Mui-selected': {
                   bgcolor: 'action.selected',
+                },
+                '&.Mui-selected .MuiTypography-root': {
+                  color: 'primary.main',
+                },
+                '&.Mui-selected .MuiTypography-root.MuiTypography-caption': {
+                  color: 'primary.main',
                 },
               }}
             >
@@ -271,15 +288,15 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
                     <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0, flex: 1 }}>
                       <Typography
                         variant="subtitle2"
-                        fontWeight={chat.unreadCount > 0 ? 'bold' : 'medium'}
+                        fontWeight={showUnread ? 'bold' : 'medium'}
                         noWrap
                         sx={{ minWidth: 0, flex: 1 }}
                       >
-                        {chat.name}
+                        {activeChat?.id === chat.id ? `${chat.name} *` : chat.name}
                       </Typography>
                     </BoxAny>
                     <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexShrink: 0, justifyContent: 'flex-end' }}>
-                      {chat.unreadCount > 0 && (
+                      {showUnread && (
                         <BoxAny
                           sx={{
                             minWidth: 20,
@@ -347,7 +364,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
                         noWrap
                         sx={{
                           maxWidth: 220,
-                          fontWeight: chat.unreadCount > 0 ? 'bold' : 'normal',
+                          fontWeight: showUnread ? 'bold' : 'normal',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
                           whiteSpace: 'nowrap',

@@ -8,10 +8,19 @@ import {
   IconButton,
   Badge,
   Menu,
+  MenuItem,
   Divider,
   CircularProgress,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
-import { Logout as LogoutIcon, Notifications as NotificationsIcon } from '@mui/icons-material';
+import {
+  Logout as LogoutIcon,
+  Notifications as NotificationsIcon,
+  Menu as MenuIcon,
+  Close as CloseIcon,
+  MoreVert as MoreVertIcon,
+} from '@mui/icons-material';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState, AppDispatch } from '@/store';
@@ -32,7 +41,14 @@ const navItems = [
   { label: 'Profile', path: '/profile' },
 ];
 
-export const AppHeader: React.FC = () => {
+interface AppHeaderProps {
+  onToggleSidebar?: () => void;
+  sidebarOpen?: boolean;
+}
+
+export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleSidebar, sidebarOpen }) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useDispatch<AppDispatch>();
@@ -42,8 +58,10 @@ export const AppHeader: React.FC = () => {
   );
   const { t, toggleLanguage, language } = useLanguage();
   const [notificationsAnchorEl, setNotificationsAnchorEl] = React.useState<null | HTMLElement>(null);
+  const [navAnchorEl, setNavAnchorEl] = React.useState<null | HTMLElement>(null);
 
   const notificationsOpen = Boolean(notificationsAnchorEl);
+  const navOpen = Boolean(navAnchorEl);
 
   const handleOpenNotifications = (e: React.MouseEvent<HTMLElement>) => {
     setNotificationsAnchorEl(e.currentTarget);
@@ -53,6 +71,14 @@ export const AppHeader: React.FC = () => {
 
   const handleCloseNotifications = () => {
     setNotificationsAnchorEl(null);
+  };
+
+  const handleOpenNav = (e: React.MouseEvent<HTMLElement>) => {
+    setNavAnchorEl(e.currentTarget);
+  };
+
+  const handleCloseNav = () => {
+    setNavAnchorEl(null);
   };
 
   const formatWhen = (iso: string) => {
@@ -75,14 +101,30 @@ export const AppHeader: React.FC = () => {
     navigate('/login');
   };
 
+  const showChatToggle = location.pathname.startsWith('/chats') && Boolean(onToggleSidebar);
+
   return (
-    <AppBar position="fixed" color="default" elevation={0}>
-      <Toolbar sx={{ gap: 2 }}>
+    <AppBar position="fixed" color="default" elevation={0} sx={{ pt: 'env(safe-area-inset-top)' }}>
+      <Toolbar sx={{ gap: 1.5, minHeight: { xs: 56, sm: 64 } }}>
         <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1, flexGrow: 1, minWidth: 0 }}>
-          <Typography variant="subtitle1" fontWeight="bold" sx={{ mr: 1, whiteSpace: 'nowrap' }}>
+          {showChatToggle && isMobile && (
+            <IconButton
+              onClick={onToggleSidebar}
+              title="Toggle chat list"
+              size="small"
+              edge="start"
+            >
+              {sidebarOpen ? <CloseIcon /> : <MenuIcon />}
+            </IconButton>
+          )}
+          <Typography
+            variant="subtitle1"
+            fontWeight="bold"
+            sx={{ mr: 1, whiteSpace: 'nowrap', fontSize: { xs: '0.95rem', sm: '1rem' } }}
+          >
             {t('appName')}
           </Typography>
-          <BoxAny sx={{ display: 'flex', gap: 1, overflow: 'hidden' }}>
+          <BoxAny sx={{ display: { xs: 'none', md: 'flex' }, gap: 1, overflow: 'hidden' }}>
             {navItems.map((item) => (
               <Button
                 key={item.path}
@@ -97,16 +139,27 @@ export const AppHeader: React.FC = () => {
 
         <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 0.5 }}>
-              <UserAvatar src={user?.avatarUrl} gender={user?.gender} variant="rounded" sx={{ width: 32, height: 32 }} />
+            <UserAvatar src={user?.avatarUrl} gender={user?.gender} variant="rounded" sx={{ width: 32, height: 32 }} />
             <Typography
               variant="subtitle2"
               fontWeight="bold"
-              sx={{ maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+              sx={{
+                maxWidth: 160,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                display: { xs: 'none', sm: 'block' },
+              }}
             >
               {user?.displayName || ''}
             </Typography>
           </BoxAny>
 
+          {isMobile && (
+            <IconButton onClick={handleOpenNav} title={t('nav.menu')}>
+              <MoreVertIcon />
+            </IconButton>
+          )}
           <Button onClick={toggleLanguage} variant="outlined" size="small">
             {language === 'en' ? '中文' : 'EN'}
           </Button>
@@ -123,6 +176,27 @@ export const AppHeader: React.FC = () => {
             <LogoutIcon />
           </IconButton>
         </BoxAny>
+
+        <Menu
+          anchorEl={navAnchorEl}
+          open={navOpen}
+          onClose={handleCloseNav}
+          transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        >
+          {navItems.map((item) => (
+            <MenuItem
+              key={item.path}
+              selected={location.pathname.startsWith(item.path)}
+              onClick={() => {
+                handleCloseNav();
+                navigate(item.path);
+              }}
+            >
+              {t(item.label)}
+            </MenuItem>
+          ))}
+        </Menu>
 
         <Menu
           anchorEl={notificationsAnchorEl}

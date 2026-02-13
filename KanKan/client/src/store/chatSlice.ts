@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { chatService, Chat, Message } from '@/services/chat.service';
+import { WA_USER_ID } from '@/utils/chatParticipants';
 
 interface ChatState {
   chats: Chat[];
@@ -19,6 +20,13 @@ const initialState: ChatState = {
   error: null,
   typingUsers: {},
   drafts: {},
+};
+
+const isWaOnlyChat = (chat: Chat): boolean => {
+  const participants = chat.participants ?? [];
+  const hasWa = participants.some((p) => p.userId === WA_USER_ID);
+  const realParticipants = participants.filter((p) => p.userId && p.userId !== WA_USER_ID);
+  return hasWa && realParticipants.length <= 1;
 };
 
 // Async thunks
@@ -53,6 +61,7 @@ const chatSlice = createSlice({
       const inc = by ?? 1;
       const idx = state.chats.findIndex((c) => c.id === chatId);
       if (idx !== -1) {
+        if (isWaOnlyChat(state.chats[idx])) return;
         state.chats[idx].unreadCount = (state.chats[idx].unreadCount || 0) + inc;
       }
     },
@@ -104,7 +113,9 @@ const chatSlice = createSlice({
       const existingUnread = state.chats[index].unreadCount || 0;
       const merged: Chat = {
         ...incoming,
-        unreadCount: Math.max(existingUnread, incoming.unreadCount || 0),
+        unreadCount: isWaOnlyChat(incoming)
+          ? 0
+          : Math.max(existingUnread, incoming.unreadCount || 0),
       };
 
       state.chats.splice(index, 1);
@@ -116,7 +127,9 @@ const chatSlice = createSlice({
         const existingUnread = state.chats[index].unreadCount || 0;
         state.chats[index] = {
           ...action.payload,
-          unreadCount: Math.max(existingUnread, action.payload.unreadCount || 0),
+          unreadCount: isWaOnlyChat(action.payload)
+            ? 0
+            : Math.max(existingUnread, action.payload.unreadCount || 0),
         };
       }
       if (state.activeChat?.id === action.payload.id) {
@@ -280,7 +293,9 @@ const chatSlice = createSlice({
         const unreadById = new Map(state.chats.map((c) => [c.id, c.unreadCount || 0] as const));
         state.chats = action.payload.map((chat) => ({
           ...chat,
-          unreadCount: Math.max(unreadById.get(chat.id) || 0, chat.unreadCount || 0),
+          unreadCount: isWaOnlyChat(chat)
+            ? 0
+            : Math.max(unreadById.get(chat.id) || 0, chat.unreadCount || 0),
         }));
       })
       .addCase(fetchChats.rejected, (state, action) => {
