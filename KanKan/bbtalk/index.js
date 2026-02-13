@@ -491,15 +491,24 @@ const redrawInputArea = (state) => {
   process.stdout.write('\x1b[?25h');
 };
 
-const printMessage = (state, role, text) => {
+const printMessage = (state, role, text, options = {}) => {
+  const { suppressPrefix = false, omitLeadingBlank = false } = options;
   const width = getTerminalWidth() - 4; // Leave margin
   const prefix = role === 'user' ? chalk.cyan('>') : chalk.cyan('✦');
   const lines = wrapText(text, width);
-  const output = [''];
+  const output = [];
+
+  if (!omitLeadingBlank) {
+    output.push('');
+  }
 
   lines.forEach((line, idx) => {
     if (idx === 0) {
-      output.push(`  ${prefix} ${line}`);
+      if (suppressPrefix) {
+        output.push(`    ${line}`);
+      } else {
+        output.push(`  ${prefix} ${line}`);
+      }
     } else {
       output.push(`    ${line}`);
     }

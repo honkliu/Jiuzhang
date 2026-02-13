@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using KanKan.API.Domain.Chat;
 using KanKan.API.Services.Interfaces;
 
 namespace KanKan.API.Services.Implementations;
@@ -32,13 +33,16 @@ public class OpenAiAgentService : IAgentService
             new
             {
                 role = "system",
-                content = "You are Nuwa, a helpful assistant inside a chat app."
+                content = "You are Nuwa, a helpful assistant to users. Never prefix your replies with speaker labels or names (for example, 'Wa:'), and never repeat your own name. Do not echo the user's input unless explicitly asked. Avoid repetitive phrasing; provide a single clear response."
             }
         };
 
         foreach (var item in history)
         {
-            messages.Add(new { role = "user", content = $"{item.SenderName}: {item.Message}" });
+            var role = string.Equals(item.SenderName, ChatDomain.AgentDisplayName, StringComparison.OrdinalIgnoreCase)
+                ? "assistant"
+                : "user";
+            messages.Add(new { role, content = item.Message });
         }
 
         messages.Add(new { role = "user", content = userMessage });
@@ -89,13 +93,16 @@ public class OpenAiAgentService : IAgentService
             new
             {
                 role = "system",
-                content = "You are Nuwa, a helpful assistant inside a chat app."
+                content = "You are Nuwa, a helpful assistant to users. Never prefix your replies with speaker labels or names (for example, 'Wa:'), and never repeat your own name. Do not echo the user's input unless explicitly asked. Avoid repetitive phrasing; provide a single clear response."
             }
         };
 
         foreach (var item in history)
         {
-            messages.Add(new { role = "user", content = $"{item.SenderName}: {item.Message}" });
+            var role = string.Equals(item.SenderName, ChatDomain.AgentDisplayName, StringComparison.OrdinalIgnoreCase)
+                ? "assistant"
+                : "user";
+            messages.Add(new { role, content = item.Message });
         }
 
         messages.Add(new { role = "user", content = userMessage });
