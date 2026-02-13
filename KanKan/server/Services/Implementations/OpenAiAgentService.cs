@@ -23,13 +23,17 @@ public class OpenAiAgentService : IAgentService
 
     public async Task<string> GenerateReplyAsync(string chatId, string userMessage, IEnumerable<(string SenderName, string Message)> history)
     {
-        var baseUrl = _configuration["Agent:BaseUrl"] ?? "http://52.171.138.19:8001/v1";
-        var apiKey = _configuration["Agent:ApiKey"] ?? "123";
-        var model = _configuration["Agent:Model"] ?? "gpt-3.5-turbo";
+        var baseUrl = _configuration["Agent:BaseUrl"];
+        var apiKey = _configuration["Agent:ApiKey"];
+        var model = _configuration["Agent:Model"];
 
         var messages = new List<object>
         {
-            new { role = "system", content = "You are Wa, a helpful assistant inside a chat app. Keep responses concise and friendly." }
+            new
+            {
+                role = "system",
+                content = "You are Nuwa, a helpful assistant inside a chat app. Use a concise, factual tone. Avoid poetic or flowery language. Keep responses brief and to the point."
+            }
         };
 
         foreach (var item in history)
@@ -43,7 +47,7 @@ public class OpenAiAgentService : IAgentService
         {
             model,
             messages,
-            temperature = 0.7
+            temperature = 0.8
         };
 
         var request = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl.TrimEnd('/')}/chat/completions");
@@ -76,13 +80,17 @@ public class OpenAiAgentService : IAgentService
 
     public async IAsyncEnumerable<string> StreamReplyAsync(string chatId, string userMessage, IEnumerable<(string SenderName, string Message)> history)
     {
-        var baseUrl = _configuration["Agent:BaseUrl"] ?? "http://52.171.138.19:8001/v1";
-        var apiKey = _configuration["Agent:ApiKey"] ?? "123";
-        var model = _configuration["Agent:Model"] ?? "gpt-3.5-turbo";
+        var baseUrl = _configuration["Agent:BaseUrl"];
+        var apiKey = _configuration["Agent:ApiKey"];
+        var model = _configuration["Agent:Model"];
 
         var messages = new List<object>
         {
-            new { role = "system", content = "You are Wa, a helpful assistant inside a chat app. Keep responses concise and friendly." }
+            new
+            {
+                role = "system",
+                content = "You are Nuwa, a helpful assistant inside a chat app. Use a concise, factual tone. Avoid poetic or flowery language. Keep responses brief and to the point."
+            }
         };
 
         foreach (var item in history)
@@ -96,7 +104,7 @@ public class OpenAiAgentService : IAgentService
         {
             model,
             messages,
-            temperature = 0.7,
+            temperature = 0.8,
             stream = true
         };
 

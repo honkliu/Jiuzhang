@@ -106,24 +106,85 @@ const findUserByToken = async (state, token) => {
   return null;
 };
 
+const wideCharRegex = /[\u1100-\u115F\u2329\u232A\u2E80-\uA4CF\uAC00-\uD7A3\uF900-\uFAFF\uFE10-\uFE19\uFE30-\uFE6F\uFF00-\uFF60\uFFE0-\uFFE6]/;
+let emojiRegex = null;
+try {
+  emojiRegex = /\p{Extended_Pictographic}/u;
+} catch {
+  emojiRegex = null;
+}
+
+const charDisplayWidth = (ch) => {
+  if (!ch) return 0;
+  if (ch === '\t') return 4;
+  if (ch < ' ') return 0;
+  if (emojiRegex && emojiRegex.test(ch)) return 2;
+  if (wideCharRegex.test(ch)) return 2;
+  return 1;
+};
+
+const stringDisplayWidth = (value) => {
+  let width = 0;
+  for (const ch of String(value || '')) {
+    width += charDisplayWidth(ch);
+  }
+  return width;
+};
+
+const splitByWidth = (text, maxWidth) => {
+  const lines = [];
+  let current = '';
+  let width = 0;
+
+  for (const ch of String(text || '')) {
+    const w = charDisplayWidth(ch);
+    if (width + w > maxWidth && current.length > 0) {
+      lines.push(current);
+      current = ch;
+      width = w;
+      continue;
+    }
+    current += ch;
+    width += w;
+  }
+
+  if (current.length > 0) {
+    lines.push(current);
+  }
+
+  return lines.length > 0 ? lines : [''];
+};
+
 const wrapText = (text, maxWidth) => {
   const lines = [];
-  const rawLines = text.split('\n');
+  const rawLines = String(text || '').split('\n');
 
-  for (const line of rawLines) {
-    if (line.length <= maxWidth) {
-      lines.push(line);
+  for (const raw of rawLines) {
+    if (stringDisplayWidth(raw) <= maxWidth) {
+      lines.push(raw);
       continue;
     }
 
-    let remaining = line;
-    while (remaining.length > maxWidth) {
+    let remaining = raw;
+    while (stringDisplayWidth(remaining) > maxWidth) {
       let breakPoint = remaining.lastIndexOf(' ', maxWidth);
-      if (breakPoint === -1) breakPoint = maxWidth;
-
-      lines.push(remaining.slice(0, breakPoint));
-      remaining = remaining.slice(breakPoint).trimStart();
+      if (breakPoint <= 0) {
+        const [first, ...rest] = splitByWidth(remaining, maxWidth);
+        lines.push(first);
+        remaining = rest.join('');
+      } else {
+        const candidate = remaining.slice(0, breakPoint);
+        if (stringDisplayWidth(candidate) > maxWidth) {
+          const [first, ...rest] = splitByWidth(remaining, maxWidth);
+          lines.push(first);
+          remaining = rest.join('');
+        } else {
+          lines.push(candidate);
+          remaining = remaining.slice(breakPoint).trimStart();
+        }
+      }
     }
+
     if (remaining) {
       lines.push(remaining);
     }
@@ -141,28 +202,34 @@ const printSeparator = () => {
   console.log(chalk.gray('─'.repeat(width)));
 };
 
-const getHelpLines = (state) => {
-  if (state.showingHelp) {
-    return state.helpContent.length || 1;
+const normalizeHelpContent = (lines) => {
+  if (lines.length === 0) return [''];
+  return lines[lines.length - 1] === '' ? lines : [...lines, ''];
+};
+
+const buildHelpRenderLines = (state) => {
+  const minLines = 2;
+  const content = state.helpContent || [];
+
+  // If no help content, show hint
+  if (content.length === 0) {
+    return ['  ? for shortcuts', ''];
   }
-  return 2; // Hint line + empty line for spacing
+
+  // Show help content, ensuring at least minLines
+  if (content.length < minLines) {
+    return content.concat(Array(minLines - content.length).fill(''));
+  }
+
+  return content;
+};
+
+const getHelpLines = (state) => {
+  return buildHelpRenderLines(state).length;
 };
 
 const getInputLineCount = (state, width) => {
-  const maxWidth = Math.max(1, width - 2);
-  const text = state.inputBuffer || '';
-  const rawLines = text.split('\n');
-  let count = 0;
-
-  rawLines.forEach((line) => {
-    if (!line) {
-      count += 1;
-      return;
-    }
-    count += Math.max(1, Math.ceil(line.length / maxWidth));
-  });
-
-  return Math.max(1, count);
+  return wrapInputText(state.inputBuffer || '', width).length;
 };
 
 const wrapInputText = (text, width) => {
@@ -175,15 +242,26 @@ const wrapInputText = (text, width) => {
       lines.push('');
       return;
     }
-    let remaining = line;
-    while (remaining.length > maxWidth) {
-      lines.push(remaining.slice(0, maxWidth));
-      remaining = remaining.slice(maxWidth);
-    }
-    lines.push(remaining);
+    const wrapped = splitByWidth(line, maxWidth);
+    wrapped.forEach((entry) => lines.push(entry));
   });
 
   return lines.length > 0 ? lines : [''];
+};
+
+// Simplified help area management - only two real states: showing or hidden
+const hideHelpArea = (state) => {
+  state.helpContent = [];
+  state.helpMinLines = 2;
+  state.lastLayoutKey = null;
+  redrawInputArea(state);
+};
+
+const showHelpArea = (state, lines) => {
+  state.helpContent = lines;
+  state.helpMinLines = Math.max(2, lines.length);
+  state.lastLayoutKey = null;
+  redrawInputArea(state);
 };
 
 const getInputAreaTotalLines = (state, width) => {
@@ -217,8 +295,9 @@ const redrawInputArea = (state) => {
   const helpLines = getHelpLines(state);
   const totalLines = 2 + inputLines + helpLines; // top separator + input lines + bottom separator + help
   const rows = process.stdout.rows || 24;
-  const helpKey = state.showingHelp ? state.helpContent.join('\n') : '';
-  const layoutKey = `${width}|${helpLines}|${inputLines}|${state.showingHelp ? 1 : 0}|${helpKey}`;
+  const helpRenderLines = buildHelpRenderLines(state);
+  const helpKey = helpRenderLines.join('\n');
+  const layoutKey = `${width}|${helpLines}|${inputLines}|${state.helpMode}|${helpKey}`;
   const layoutChanged =
     state.lastInputAreaLines !== totalLines ||
     state.lastRows !== rows ||
@@ -264,14 +343,9 @@ const redrawInputArea = (state) => {
     process.stdout.write(chalk.gray('─'.repeat(width)) + '\n');
 
     // Draw help area
-    if (state.showingHelp) {
-      state.helpContent.forEach((line) => {
-        process.stdout.write(chalk.gray(line) + '\n');
-      });
-    } else {
-      process.stdout.write(chalk.gray('  ? for shortcuts') + '\n');
-      process.stdout.write('\n');
-    }
+    helpRenderLines.forEach((line) => {
+      process.stdout.write(chalk.gray(line) + '\n');
+    });
   } else {
     // Only redraw input lines when layout is unchanged
     wrappedLines.forEach((line, index) => {
@@ -286,7 +360,7 @@ const redrawInputArea = (state) => {
   // Move cursor back to input position
   const lastLine = wrappedLines[wrappedLines.length - 1] || '';
   const cursorRow = inputStartRow + wrappedLines.length;
-  const cursorCol = Math.min(width, 3 + lastLine.length);
+  const cursorCol = Math.min(width, 3 + stringDisplayWidth(lastLine));
   process.stdout.write(`\x1b[${cursorRow};${cursorCol}H`);
 
   // Show cursor after redraw
@@ -353,7 +427,7 @@ const printSuccess = (state, text) => {
 };
 
 const showHelp = (state) => {
-  state.helpContent = [
+  const lines = [
     '  Chat Commands:',
     '    /cl              List all chats',
     '    /cj <n>          Join chat by number',
@@ -361,19 +435,112 @@ const showHelp = (state) => {
     '    /cd              Clear/delete current chat',
     '    /cn              Show current chat name',
     '',
+    '  User Commands:',
+    '    /ul              List users',
+    '    /ua <n>          Add user by number',
+    '    /c <n>           Start a chat with user',
+    '    /ur              List pending friend requests',
+    '    /urc [n]         Accept request (number or all)',
+    '    /urd [n]         Decline request (number or all)',
+    '',
     '  Other Commands:',
     '    /help            Show this help',
     '    /quit            Exit application',
-    '', // Empty last line
+    '',
   ];
-  state.showingHelp = true;
-  redrawInputArea(state);
+  showHelpArea(state, lines);
 };
 
-const hideHelp = (state) => {
-  state.showingHelp = false;
-  state.helpContent = [];
-  redrawInputArea(state);
+const showCommandSuggestions = (state, prefix) => {
+  const matches = getMatchingCommands(prefix);
+
+  if (matches.length === 0) {
+    hideHelpArea(state);
+    return;
+  }
+
+  const lines = [
+    '  Command suggestions:',
+    ...matches.map((m) => `    ${m.cmd.padEnd(15)} ${m.desc}`),
+    '',
+  ];
+
+  showHelpArea(state, lines);
+};
+
+const showCommandOutput = (state, lines) => {
+  showHelpArea(state, [...lines, '']);
+};
+
+const normalizeNameToken = (value) => String(value || '').trim();
+
+const resolveRequestTargets = (state, token) => {
+  const trimmed = String(token || '').trim().toLowerCase();
+  if (!trimmed || trimmed === 'all') {
+    return state.pendingRequests;
+  }
+  const index = Number.parseInt(trimmed, 10);
+  if (!Number.isNaN(index) && index >= 1 && index <= state.pendingRequests.length) {
+    return [state.pendingRequests[index - 1]];
+  }
+  return [];
+};
+
+const getMatchingCommands = (prefix) => {
+  const allCommands = [
+    { cmd: '/cl', desc: 'List all chats' },
+    { cmd: '/cj', desc: 'Join chat by number' },
+    { cmd: '/cq', desc: 'Quit current chat' },
+    { cmd: '/cd', desc: 'Clear/delete current chat' },
+    { cmd: '/cn', desc: 'Show current chat name' },
+    { cmd: '/c', desc: 'Start a chat with user' },
+    { cmd: '/ul', desc: 'List users' },
+    { cmd: '/ua', desc: 'Add user by number' },
+    { cmd: '/ur', desc: 'List pending friend requests' },
+    { cmd: '/urc', desc: 'Accept request' },
+    { cmd: '/urd', desc: 'Decline request' },
+    { cmd: '/help', desc: 'Show this help' },
+    { cmd: '/quit', desc: 'Exit application' },
+  ];
+
+  const trimmed = prefix.toLowerCase();
+  if (trimmed === '/') return [];
+
+  return allCommands.filter((c) => c.cmd.startsWith(trimmed));
+};
+
+const updateCommandMode = (state) => {
+  const isCommand = state.inputBuffer.startsWith('/');
+
+  // Show full help when typing just "/"
+  if (state.inputBuffer === '/') {
+    showHelp(state);
+    return true;
+  }
+
+  // Show command suggestions when typing a command
+  if (isCommand && state.inputBuffer.length > 1) {
+    showCommandSuggestions(state, state.inputBuffer);
+    return true;
+  }
+
+  // Hide help when user stops typing commands or starts typing regular text
+  if (!isCommand && state.helpContent.length > 0) {
+    hideHelpArea(state);
+    return true;
+  }
+
+  return false;
+};
+
+const formatIndexedList = (items, formatter) => {
+  return items.slice(0, 10).map((item, idx) => `  ${idx}. ${formatter(item)}`);
+};
+
+const getIndexedItem = (items, token) => {
+  const idx = Number.parseInt(String(token || '').trim(), 10);
+  if (Number.isNaN(idx) || idx < 0 || idx >= items.length) return null;
+  return items[idx];
 };
 
 const joinChatRealtime = async (state, chatId) => {
@@ -418,7 +585,11 @@ const attachRealtime = async (state) => {
     if (state.currentChat?.id === message.chatId) {
       const formatted = formatInboundMessage(message, state.meId);
       if (formatted) {
-        printMessage(state, 'assistant', `${formatted.name}: ${formatted.text}`);
+        // Check if text already includes the name prefix to avoid duplication
+        const text = formatted.text.startsWith(`${formatted.name}: `)
+          ? formatted.text
+          : `${formatted.name}: ${formatted.text}`;
+        printMessage(state, 'assistant', text);
       }
     }
   });
@@ -432,6 +603,8 @@ const attachRealtime = async (state) => {
       atLineStart: false,
       lineLen: 0,
     };
+    // Hide help area when streaming begins
+    hideHelpArea(state);
   });
 
   connection.on('AgentMessageChunk', (chatId, messageId, chunk) => {
@@ -452,6 +625,7 @@ const attachRealtime = async (state) => {
         process.stdout.write('\n');
         process.stdout.write(chalk.cyan('  ✦ '));
         state.streamingMessage.started = true;
+        state.streamingMessage.atLineStart = false;
         state.streamingMessage.lineLen = 0;
       }
       const maxLineWidth = Math.max(1, getTerminalWidth() - 4);
@@ -460,6 +634,12 @@ const attachRealtime = async (state) => {
       for (let i = 0; i < text.length; i += 1) {
         const ch = text[i];
 
+        // Handle Windows line endings: skip \r
+        if (ch === '\r') {
+          continue;
+        }
+
+        // Handle newlines - respect all newlines from OpenAI
         if (ch === '\n') {
           process.stdout.write('\n');
           state.streamingMessage.atLineStart = true;
@@ -472,14 +652,15 @@ const attachRealtime = async (state) => {
           state.streamingMessage.atLineStart = false;
         }
 
-        if (state.streamingMessage.lineLen >= maxLineWidth) {
+        const chWidth = charDisplayWidth(ch);
+        if (state.streamingMessage.lineLen + chWidth > maxLineWidth) {
           process.stdout.write('\n');
           process.stdout.write('    ');
           state.streamingMessage.lineLen = 0;
         }
 
         process.stdout.write(ch);
-        state.streamingMessage.lineLen += 1;
+        state.streamingMessage.lineLen += chWidth;
       }
     }
   });
@@ -518,6 +699,7 @@ const selectChatByIndex = async (state, idx) => {
   state.currentChat = chat;
 
   console.clear();
+  state.lastLayoutKey = null;
   printSuccess(state, `Joined: ${chat.name}`);
 
   await loadMessages(state, chat.id);
@@ -528,7 +710,11 @@ const selectChatByIndex = async (state, idx) => {
     } else {
       const formatted = formatInboundMessage(m, state.meId);
       if (formatted) {
-        printMessage(state, 'assistant', `${formatted.name}: ${formatted.text}`);
+        // Check if text already includes the name prefix to avoid duplication
+        const text = formatted.text.startsWith(`${formatted.name}: `)
+          ? formatted.text
+          : `${formatted.name}: ${formatted.text}`;
+        printMessage(state, 'assistant', text);
       }
     }
   });
@@ -546,46 +732,163 @@ const handleCommand = async (state, line) => {
     switch (cmd) {
       case '/cl':
         await loadChats(state);
-        console.log();
-        console.log(chalk.cyan.bold('Available Chats:'));
-        console.log();
-        state.chats.forEach((chat, idx) => {
-          const label = chat.chatType === 'group' ? chalk.magenta('[GROUP]') : chalk.blue('[DM]');
-          console.log(chalk.gray(`  ${idx + 1}. ${label} ${chat.name}`));
-        });
-        printSystem(state, 'Use /cj <number> to join a chat');
+        state.lastChatList = state.chats.slice(0, 10);
+        showCommandOutput(state, [
+          '  Available Chats:',
+          ...formatIndexedList(state.lastChatList, (chat) => {
+            const label = chat.chatType === 'group' ? '[GROUP]' : '[DM]';
+            return `${label} ${chat.name}`;
+          }),
+          '  Use /cj <n> to join a chat',
+        ]);
         break;
 
       case '/cj':
+        if (state.lastChatList.length === 0) {
+          showCommandOutput(state, ['  Run /cl first to list chats.']);
+          break;
+        }
+        const targetChat = getIndexedItem(state.lastChatList, arg);
+        if (!targetChat) {
+          showCommandOutput(state, ['  Invalid chat number.']);
+          break;
+        }
         await loadChats(state);
-        await selectChatByIndex(state, Number(arg));
+        const chatIndex = state.chats.findIndex((chat) => chat.id === targetChat.id);
+        if (chatIndex >= 0) {
+          await selectChatByIndex(state, chatIndex + 1);
+          return;
+        }
+        showCommandOutput(state, ['  Chat not found.']);
         return;
+
+      case '/ul':
+        await loadUsers(state);
+        state.lastUserList = state.users.slice(0, 10);
+        showCommandOutput(state, [
+          '  Users:',
+          ...formatIndexedList(state.lastUserList, (user) => {
+            const status = user.isOnline ? '●' : '○';
+            const name = user.displayName || user.handle || user.email || user.id;
+            const handle = user.handle ? `@${user.handle}` : '';
+            return `${status} ${name} ${handle}`.trimEnd();
+          }),
+          '  Use /ua <user> to send a friend request',
+        ]);
+        break;
+
+      case '/ua':
+        if (!arg) {
+          showCommandOutput(state, ['  Usage: /ua <n>']);
+          break;
+        }
+        if (state.lastUserList.length === 0) {
+          showCommandOutput(state, ['  Run /ul first to list users.']);
+          break;
+        }
+        const user = getIndexedItem(state.lastUserList, arg);
+        if (!user) {
+          showCommandOutput(state, ['  Invalid user number.']);
+          break;
+        }
+        await state.api.post('/contact/requests', { userId: user.id });
+        showCommandOutput(state, [`  Friend request sent to ${user.displayName || user.handle || user.id}`]);
+        break;
+
+      case '/c':
+        if (!arg) {
+          showCommandOutput(state, ['  Usage: /c <n>']);
+          break;
+        }
+        if (state.lastUserList.length === 0) {
+          showCommandOutput(state, ['  Run /ul first to list users.']);
+          break;
+        }
+        const chatUser = getIndexedItem(state.lastUserList, arg);
+        if (!chatUser) {
+          showCommandOutput(state, ['  Invalid user number.']);
+          break;
+        }
+        const chatRes = await state.api.post('/chat', {
+          chatType: 'direct',
+          participantIds: [chatUser.id],
+        });
+        await loadChats(state);
+        const createdIndex = state.chats.findIndex((chat) => chat.id === chatRes.data?.id);
+        if (createdIndex >= 0) {
+          await selectChatByIndex(state, createdIndex + 1);
+          return;
+        }
+        showCommandOutput(state, ['  Chat created. Run /cl to see it.']);
+        break;
+
+      case '/ur':
+        await loadRequests(state);
+        if (state.pendingRequests.length === 0) {
+          showCommandOutput(state, ['  Friend Requests:', '  (none)']);
+        } else {
+          showCommandOutput(state, [
+            '  Friend Requests:',
+            ...state.pendingRequests.map((req, idx) => {
+              const from = req.fromUser?.displayName || req.fromUser?.handle || req.fromUserId;
+              return `  ${idx + 1}. ${from}`;
+            }),
+            '  Use /urc [n] to accept or /urd [n] to decline',
+          ]);
+        }
+        break;
+
+      case '/urc':
+        await loadRequests(state);
+        const acceptTargets = resolveRequestTargets(state, arg);
+        if (acceptTargets.length === 0) {
+          showCommandOutput(state, ['  No matching requests.']);
+          break;
+        }
+        for (const req of acceptTargets) {
+          await state.api.post(`/contact/requests/${req.fromUserId}/accept`);
+        }
+        showCommandOutput(state, ['  Friend request(s) accepted']);
+        break;
+
+      case '/urd':
+        await loadRequests(state);
+        const rejectTargets = resolveRequestTargets(state, arg);
+        if (rejectTargets.length === 0) {
+          showCommandOutput(state, ['  No matching requests.']);
+          break;
+        }
+        for (const req of rejectTargets) {
+          await state.api.post(`/contact/requests/${req.fromUserId}/reject`);
+        }
+        showCommandOutput(state, ['  Friend request(s) declined']);
+        break;
 
       case '/cq':
         if (state.currentChat) {
           await leaveChatRealtime(state, state.currentChat.id);
-          printSuccess(state, `Left chat: ${state.currentChat.name}`);
+          showCommandOutput(state, [`  Left chat: ${state.currentChat.name}`]);
           state.currentChat = null;
         } else {
-          printError(state, 'No active chat.');
+          showCommandOutput(state, ['  No active chat.']);
         }
         break;
 
       case '/cd':
         if (!state.currentChat) {
-          printError(state, 'No active chat.');
+          showCommandOutput(state, ['  No active chat.']);
         } else {
           await state.api.post(`/chat/${state.currentChat.id}/clear`, {});
-          printSuccess(state, `Chat cleared: ${state.currentChat.name}`);
+          showCommandOutput(state, [`  Chat cleared: ${state.currentChat.name}`]);
           state.currentChat = null;
         }
         break;
 
       case '/cn':
         if (!state.currentChat) {
-          printError(state, 'No active chat.');
+          showCommandOutput(state, ['  No active chat.']);
         } else {
-          printSystem(state, `Current chat: ${state.currentChat.name}`);
+          showCommandOutput(state, [`  Current chat: ${state.currentChat.name}`]);
         }
         break;
 
@@ -605,14 +908,13 @@ const handleCommand = async (state, line) => {
         process.exit(0);
 
       default:
-        printError(state, `Unknown command: ${cmd}`);
-        printSystem(state, 'Type /help for available commands.');
+        showCommandOutput(state, [`  Unknown command: ${cmd}`, '  Type /help for available commands.']);
     }
 
     redrawInputArea(state);
   } catch (err) {
     const msg = err?.response?.data?.message || err.message;
-    printError(state, `Error: ${msg}`);
+    showCommandOutput(state, [`  Error: ${msg}`]);
     redrawInputArea(state);
   }
 };
@@ -642,8 +944,10 @@ const startInteractive = async () => {
     connection: null,
     streamingMessage: null,
     inputBuffer: '',
-    showingHelp: false,
-    helpContent: [],
+    helpContent: [],  // Simplified: just content lines or empty array
+    helpMinLines: 2,
+    lastChatList: [],
+    lastUserList: [],
     lastInputAreaLines: null,
     lastRows: null,
     lastLayoutKey: null,
@@ -705,6 +1009,7 @@ const startInteractive = async () => {
     if (key.name === 'return' || key.name === 'enter') {
       const text = state.inputBuffer.trim();
       state.inputBuffer = '';
+      state.commandMode = false;
 
       if (text === '/') {
         showHelp(state);
@@ -752,9 +1057,8 @@ const startInteractive = async () => {
     if (key.name === 'backspace') {
       if (state.inputBuffer.length > 0) {
         state.inputBuffer = state.inputBuffer.slice(0, -1);
-        if (state.showingHelp && state.inputBuffer !== '/') {
-          hideHelp(state);
-        } else {
+        const redrew = updateCommandMode(state);
+        if (!redrew) {
           redrawInputArea(state);
         }
       }
@@ -764,6 +1068,7 @@ const startInteractive = async () => {
     // Handle Escape
     if (key.name === 'escape') {
       state.inputBuffer = '';
+      state.commandMode = false;
       if (state.showingHelp) {
         hideHelp(state);
       } else {
@@ -775,12 +1080,8 @@ const startInteractive = async () => {
     // Handle regular character input
     if (str && !key.ctrl && !key.meta) {
       state.inputBuffer += str;
-
-      if (state.inputBuffer === '/') {
-        showHelp(state);
-      } else if (state.showingHelp && state.inputBuffer !== '/') {
-        hideHelp(state);
-      } else {
+      const redrew = updateCommandMode(state);
+      if (!redrew) {
         redrawInputArea(state);
       }
     }
