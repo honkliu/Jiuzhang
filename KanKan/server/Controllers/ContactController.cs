@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using System.Security.Claims;
+using KanKan.API.Domain;
+using KanKan.API.Domain.Chat;
 using KanKan.API.Models.DTOs.User;
 using KanKan.API.Models.Entities;
 using KanKan.API.Hubs;
@@ -39,10 +41,37 @@ public class ContactController : ControllerBase
 
     private string GetUserId() => User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
 
-    private static UserDto ToUserDto(User user) => new()
+    private async Task<User?> GetCurrentUserAsync()
+    {
+        var userId = GetUserId();
+        if (string.IsNullOrWhiteSpace(userId))
+            return null;
+        return await _userRepository.GetByIdAsync(userId);
+    }
+
+    private static string ResolveDomain(User user)
+    {
+        return string.IsNullOrWhiteSpace(user.Domain)
+            ? DomainRules.GetDomain(user.Email)
+            : user.Domain;
+    }
+
+    private static bool IsDomainAllowed(User viewer, User target)
+    {
+        if (ChatDomain.IsAgentUserId(target.Id))
+            return true;
+
+        return DomainRules.CanAccess(ResolveDomain(viewer), ResolveDomain(target));
+    }
+
+    private static UserDto ToUserDto(User user, bool includeDomain) => new()
     {
         Id = user.Id,
-        Email = user.Email,
+        Domain = includeDomain
+            ? (string.IsNullOrWhiteSpace(user.Domain) ? DomainRules.GetDomain(user.Email) : user.Domain)
+            : null,
+        IsAdmin = user.IsAdmin,
+        IsDisabled = user.IsDisabled,
         Handle = user.Handle,
         DisplayName = user.DisplayName,
         AvatarUrl = user.AvatarUrl,
@@ -53,7 +82,7 @@ public class ContactController : ControllerBase
     };
 
     /// <summary>
-    /// Search for users by email or display name
+    /// Search for users by display name or handle
     /// </summary>
     [HttpGet("search")]
     public async Task<ActionResult<IEnumerable<UserDto>>> SearchUsers([FromQuery] string q)
@@ -63,10 +92,16 @@ public class ContactController : ControllerBase
             if (string.IsNullOrWhiteSpace(q) || q.Length < 2)
                 return BadRequest(new { message = "Search query must be at least 2 characters" });
 
-            var userId = GetUserId();
-            var users = await _userRepository.SearchUsersAsync(q, userId);
+            var currentUser = await GetCurrentUserAsync();
+            if (currentUser == null)
+                return Unauthorized();
 
-            var userDtos = users.Select(ToUserDto).ToList();
+            var users = await _userRepository.SearchUsersAsync(q, currentUser.Id);
+            var includeDomain = DomainRules.IsSuperDomain(ResolveDomain(currentUser));
+            var userDtos = users
+                .Where(u => IsDomainAllowed(currentUser, u))
+                .Select(u => ToUserDto(u, includeDomain))
+                .ToList();
 
             return Ok(userDtos);
         }
@@ -85,12 +120,20 @@ public class ContactController : ControllerBase
     {
         try
         {
+            var currentUser = await GetCurrentUserAsync();
+            if (currentUser == null)
+                return Unauthorized();
+
             var user = await _userRepository.GetByIdAsync(userId);
 
             if (user == null)
                 return NotFound(new { message = "User not found" });
 
-            return Ok(ToUserDto(user));
+            if (!IsDomainAllowed(currentUser, user))
+                return Forbid();
+
+            var includeDomain = DomainRules.IsSuperDomain(ResolveDomain(currentUser));
+            return Ok(ToUserDto(user, includeDomain));
         }
         catch (Exception ex)
         {
@@ -107,10 +150,16 @@ public class ContactController : ControllerBase
     {
         try
         {
-            var userId = GetUserId();
-            var users = await _userRepository.GetAllUsersAsync(userId);
+            var currentUser = await GetCurrentUserAsync();
+            if (currentUser == null)
+                return Unauthorized();
 
-            var userDtos = users.Select(ToUserDto).ToList();
+            var users = await _userRepository.GetAllUsersAsync(currentUser.Id);
+            var includeDomain = DomainRules.IsSuperDomain(ResolveDomain(currentUser));
+            var userDtos = users
+                .Where(u => IsDomainAllowed(currentUser, u))
+                .Select(u => ToUserDto(u, includeDomain))
+                .ToList();
 
             return Ok(userDtos);
         }
@@ -129,16 +178,20 @@ public class ContactController : ControllerBase
     {
         try
         {
-            var userId = GetUserId();
-            var contacts = await _contactRepository.GetContactsByStatusAsync(userId, "accepted");
+            var currentUser = await GetCurrentUserAsync();
+            if (currentUser == null)
+                return Unauthorized();
+
+            var contacts = await _contactRepository.GetContactsByStatusAsync(currentUser.Id, "accepted");
+            var includeDomain = DomainRules.IsSuperDomain(ResolveDomain(currentUser));
 
             var users = new List<UserDto>();
             foreach (var contact in contacts)
             {
                 var user = await _userRepository.GetByIdAsync(contact.ContactId);
-                if (user != null)
+                if (user != null && IsDomainAllowed(currentUser, user))
                 {
-                    users.Add(ToUserDto(user));
+                    users.Add(ToUserDto(user, includeDomain));
                 }
             }
 
@@ -159,23 +212,27 @@ public class ContactController : ControllerBase
     {
         try
         {
-            var userId = GetUserId();
-            var pending = await _contactRepository.GetContactsByStatusAsync(userId, "pending");
+            var currentUser = await GetCurrentUserAsync();
+            if (currentUser == null)
+                return Unauthorized();
+
+            var pending = await _contactRepository.GetContactsByStatusAsync(currentUser.Id, "pending");
+            var includeDomain = DomainRules.IsSuperDomain(ResolveDomain(currentUser));
 
             var requests = new List<FriendRequestDto>();
             foreach (var contact in pending)
             {
                 var fromUser = await _userRepository.GetByIdAsync(contact.ContactId);
-                if (fromUser != null)
+                if (fromUser != null && IsDomainAllowed(currentUser, fromUser))
                 {
                     requests.Add(new FriendRequestDto
                     {
                         Id = contact.Id,
                         FromUserId = fromUser.Id,
-                        ToUserId = userId,
+                        ToUserId = currentUser.Id,
                         Status = contact.Status,
                         CreatedAt = contact.AddedAt,
-                        FromUser = ToUserDto(fromUser)
+                        FromUser = ToUserDto(fromUser, includeDomain)
                     });
                 }
             }
@@ -197,24 +254,31 @@ public class ContactController : ControllerBase
     {
         try
         {
-            var userId = GetUserId();
-            if (userId == request.UserId)
+            var currentUser = await GetCurrentUserAsync();
+            if (currentUser == null)
+                return Unauthorized();
+
+            if (currentUser.Id == request.UserId)
                 return BadRequest(new { message = "Cannot add yourself" });
 
             var target = await _userRepository.GetByIdAsync(request.UserId);
             if (target == null)
                 return NotFound(new { message = "User not found" });
 
-            var existing = await _contactRepository.GetByUserAndContactAsync(request.UserId, userId);
+            if (!IsDomainAllowed(currentUser, target))
+                return StatusCode(403, new { message = "Cross-domain contacts are not allowed" });
+
+            var existing = await _contactRepository.GetByUserAndContactAsync(request.UserId, currentUser.Id);
             if (existing != null && existing.Status == "accepted")
                 return Ok(new { message = "Already friends" });
 
             var pendingIncoming = existing ?? new Contact
             {
-                Id = $"contact_{request.UserId}_{userId}",
+                Id = $"contact_{request.UserId}_{currentUser.Id}",
                 UserId = request.UserId,
-                ContactId = userId,
+                ContactId = currentUser.Id,
                 DisplayName = target.DisplayName,
+                Domain = ResolveDomain(target),
                 Status = "pending",
                 AddedAt = DateTime.UtcNow,
                 LastInteraction = DateTime.UtcNow,
@@ -226,12 +290,13 @@ public class ContactController : ControllerBase
             await _contactRepository.UpsertAsync(pendingIncoming);
 
             // Optional outgoing record for sender
-            var outgoing = await _contactRepository.GetByUserAndContactAsync(userId, request.UserId) ?? new Contact
+            var outgoing = await _contactRepository.GetByUserAndContactAsync(currentUser.Id, request.UserId) ?? new Contact
             {
-                Id = $"contact_{userId}_{request.UserId}",
-                UserId = userId,
+                Id = $"contact_{currentUser.Id}_{request.UserId}",
+                UserId = currentUser.Id,
                 ContactId = request.UserId,
                 DisplayName = target.DisplayName,
+                Domain = ResolveDomain(currentUser),
                 Status = "pending_outgoing",
                 AddedAt = DateTime.UtcNow,
                 LastInteraction = DateTime.UtcNow,
@@ -258,8 +323,11 @@ public class ContactController : ControllerBase
     {
         try
         {
-            var userId = GetUserId();
-            var request = await _contactRepository.GetByUserAndContactAsync(userId, fromUserId);
+            var currentUser = await GetCurrentUserAsync();
+            if (currentUser == null)
+                return Unauthorized();
+
+            var request = await _contactRepository.GetByUserAndContactAsync(currentUser.Id, fromUserId);
 
             if (request == null || request.Status != "pending")
                 return NotFound(new { message = "Friend request not found" });
@@ -271,12 +339,16 @@ public class ContactController : ControllerBase
             var fromUser = await _userRepository.GetByIdAsync(fromUserId);
             if (fromUser != null)
             {
-                var reverse = await _contactRepository.GetByUserAndContactAsync(fromUserId, userId) ?? new Contact
+                if (!IsDomainAllowed(currentUser, fromUser))
+                    return StatusCode(403, new { message = "Cross-domain contacts are not allowed" });
+
+                var reverse = await _contactRepository.GetByUserAndContactAsync(fromUserId, currentUser.Id) ?? new Contact
                 {
-                    Id = $"contact_{fromUserId}_{userId}",
+                    Id = $"contact_{fromUserId}_{currentUser.Id}",
                     UserId = fromUserId,
-                    ContactId = userId,
+                    ContactId = currentUser.Id,
                     DisplayName = fromUser.DisplayName,
+                    Domain = ResolveDomain(fromUser),
                     Status = "accepted",
                     AddedAt = DateTime.UtcNow,
                     LastInteraction = DateTime.UtcNow,
@@ -368,7 +440,7 @@ public class ContactController : ControllerBase
             if (user == null)
                 return NotFound(new { message = "User not found" });
 
-            return Ok(ToUserDto(user));
+            return Ok(ToUserDto(user, includeDomain: false));
         }
         catch (Exception ex)
         {
@@ -454,7 +526,7 @@ public class ContactController : ControllerBase
                 gender = user.Gender
             });
 
-            return Ok(ToUserDto(user));
+            return Ok(ToUserDto(user, includeDomain: false));
         }
         catch (Exception ex)
         {

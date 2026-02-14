@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.IdentityModel.Tokens;
+using KanKan.API.Domain;
 using KanKan.API.Models.DTOs.Auth;
 using KanKan.API.Models.DTOs.User;
 using KanKan.API.Models.Entities;
@@ -53,9 +54,6 @@ public class InMemoryAuthService : IAuthService
 
     public Task<bool> VerifyCodeAsync(string email, string code)
     {
-        if (code == "123456")
-            return Task.FromResult(true);
-
         lock (_lock)
         {
             var key = email.ToLower();
@@ -73,12 +71,16 @@ public class InMemoryAuthService : IAuthService
 
     public async Task<UserEntity> CreateUserAsync(CreateUserDto dto)
     {
+        var isAdmin = IsConfiguredAdmin(dto.Email);
         var user = new UserEntity
         {
             Id = $"user_{Guid.NewGuid()}",
             Type = "user",
             Email = dto.Email.ToLower(),
+            Domain = DomainRules.GetDomain(dto.Email),
             EmailVerified = true,
+            IsAdmin = isAdmin,
+            IsDisabled = false,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
             Handle = GenerateUniqueHandle(dto.DisplayName),
             DisplayName = dto.DisplayName,
@@ -110,7 +112,17 @@ public class InMemoryAuthService : IAuthService
 
         var isValidPassword = BCrypt.Net.BCrypt.Verify(password, user.PasswordHash);
 
-        return isValidPassword ? user : null;
+        if (!isValidPassword)
+            return null;
+
+        var shouldBeAdmin = IsConfiguredAdmin(user.Email);
+        if (user.IsAdmin != shouldBeAdmin)
+        {
+            user.IsAdmin = shouldBeAdmin;
+            await _userRepository.UpdateAsync(user);
+        }
+
+        return user;
     }
 
     public string GenerateAccessToken(UserEntity user)
@@ -123,7 +135,6 @@ public class InMemoryAuthService : IAuthService
             Subject = new ClaimsIdentity(new[]
             {
                 new Claim(ClaimTypes.NameIdentifier, user.Id),
-                new Claim(ClaimTypes.Email, user.Email),
                 new Claim(ClaimTypes.Name, user.DisplayName)
             }),
             Expires = DateTime.UtcNow.AddMinutes(
@@ -179,6 +190,9 @@ public class InMemoryAuthService : IAuthService
         if (user == null)
             return null;
 
+        if (user.IsDisabled)
+            return null;
+
         var refreshToken = user.RefreshTokens.FirstOrDefault(rt => rt.Token == token);
 
         if (refreshToken == null || refreshToken.ExpiresAt < DateTime.UtcNow)
@@ -193,6 +207,15 @@ public class InMemoryAuthService : IAuthService
             AccessToken = newAccessToken,
             RefreshToken = newRefreshToken
         };
+    }
+
+    private bool IsConfiguredAdmin(string email)
+    {
+        var adminEmails = _configuration.GetSection("AdminEmails").Get<string[]>()
+            ?? Array.Empty<string>();
+        return Array.Exists(
+            adminEmails,
+            adminEmail => string.Equals(adminEmail, email, StringComparison.OrdinalIgnoreCase));
     }
 
     public async Task RevokeRefreshTokenAsync(string token)

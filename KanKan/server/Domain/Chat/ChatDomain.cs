@@ -121,6 +121,7 @@ public static class ChatDomain
         {
             Id = string.IsNullOrWhiteSpace(chatUser.ChatId) ? chatUser.Id : chatUser.ChatId,
             Type = "chat",
+            Domain = chatUser.Domain,
             ChatType = chatUser.ChatType,
             Participants = chatUser.Participants ?? new List<ChatParticipant>(),
             GroupName = chatUser.GroupName,

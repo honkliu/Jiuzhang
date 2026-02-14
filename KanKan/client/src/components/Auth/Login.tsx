@@ -19,7 +19,7 @@ import { useLanguage } from '@/i18n/LanguageContext';
 
 export const Login: React.FC = () => {
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('12345678');
+  const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -52,11 +52,17 @@ export const Login: React.FC = () => {
     }
   };
 
+  const quickLoginPassword = import.meta.env.VITE_QUICK_LOGIN_PASSWORD || '';
+
   const quickLogin = async (quickEmail: string) => {
     setError('');
     setLoading(true);
     try {
-      const response = await authService.login({ email: quickEmail, password: '12345678' });
+      if (!quickLoginPassword) {
+        setError('Quick login password is not configured.');
+        return;
+      }
+      const response = await authService.login({ email: quickEmail, password: quickLoginPassword });
       authService.saveAuth(response.accessToken, response.user);
       dispatch(setAuth(response));
       navigate('/chats');
@@ -104,7 +110,7 @@ export const Login: React.FC = () => {
               autoFocus
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              type="email"
+              type="text"
               disabled={loading}
             />
 

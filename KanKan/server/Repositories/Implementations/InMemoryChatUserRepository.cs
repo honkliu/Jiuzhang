@@ -138,4 +138,13 @@ public class InMemoryChatUserRepository : IChatUserRepository
             return Task.CompletedTask;
         }
     }
+
+    public Task DeleteAllForUserAsync(string userId)
+    {
+        lock (_lock)
+        {
+            _chatUsers.Remove(userId);
+            return Task.CompletedTask;
+        }
+    }
 }

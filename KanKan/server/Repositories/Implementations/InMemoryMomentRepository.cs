@@ -63,4 +63,22 @@ public class InMemoryMomentRepository : IMomentRepository
             return Task.CompletedTask;
         }
     }
+
+    public Task DeleteByUserAsync(string userId)
+    {
+        lock (_lock)
+        {
+            var keys = _moments
+                .Where(kvp => kvp.Value.UserId == userId)
+                .Select(kvp => kvp.Key)
+                .ToList();
+
+            foreach (var key in keys)
+            {
+                _moments.Remove(key);
+            }
+
+            return Task.CompletedTask;
+        }
+    }
 }

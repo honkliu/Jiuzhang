@@ -12,4 +12,5 @@ public interface IChatUserRepository
     Task ClearChatForUserAsync(string userId, string chatId, DateTime clearedAtUtc);
     Task PatchParticipantProfileAsync(string userId, string chatId, int participantIndex, string displayName, string avatarUrl, string gender);
     Task DeleteAsync(string userId, string chatId);
+    Task DeleteAllForUserAsync(string userId);
 }

@@ -1,7 +1,9 @@
 // User types
 export interface User {
   id: string;
-  email: string;
+  domain?: string;
+  isAdmin?: boolean;
+  isDisabled?: boolean;
   handle: string;
   displayName: string;
   avatarUrl: string;

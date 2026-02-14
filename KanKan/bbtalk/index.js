@@ -10,7 +10,6 @@ import * as signalR from '@microsoft/signalr';
 import WebSocket from 'ws';
 
 const WA_USER_ID = 'user_ai_wa';
-const DEFAULT_BASE_URL = 'http://localhost:5001/api';
 const CONFIG_PATH = path.join(os.homedir(), '.bbtalk.json');
 const HISTORY_LIMIT = 50;
 const HELP_MIN_LINES = 2;
@@ -35,7 +34,14 @@ const writeConfig = (next) => {
 };
 
 const getBaseUrl = (cfg, override) => {
-  return override || process.env.BBTALK_BASE_URL || cfg.baseUrl || DEFAULT_BASE_URL;
+  const baseUrl = override || process.env.BBTALK_BASE_URL || cfg.baseUrl;
+  if (!baseUrl) {
+    console.error(
+      chalk.red('Missing API base URL. Set BBTALK_BASE_URL, configure baseUrl, or pass --base-url.')
+    );
+    process.exit(1);
+  }
+  return baseUrl;
 };
 
 const getHubUrl = (cfg) => {
@@ -103,8 +109,7 @@ const findUserByToken = async (state, token) => {
     (u) =>
       u.id === query ||
       u.displayName?.toLowerCase() === query.toLowerCase() ||
-      u.handle?.toLowerCase() === query.toLowerCase() ||
-      u.email?.split('@')[0]?.toLowerCase() === query.toLowerCase()
+      u.handle?.toLowerCase() === query.toLowerCase()
   );
   if (direct) return direct;
 
@@ -579,6 +584,7 @@ const showHelp = (state) => {
     '    /ur              List pending friend requests',
     '    /urc [n]         Accept request (number or all)',
     '    /urd [n]         Decline request (number or all)',
+    '    /du <n>          Delete user (admin only)',
     '',
     '  Other Commands:',
     '    /help            Show this help',
@@ -600,6 +606,7 @@ const COMMAND_HINTS = [
   { cmd: '/ur', desc: 'List friend requests' },
   { cmd: '/urc [n]', desc: 'Accept request' },
   { cmd: '/urd [n]', desc: 'Decline request' },
+  { cmd: '/du <n>', desc: 'Delete user (admin)' },
   { cmd: '/help', desc: 'Show help' },
   { cmd: '/quit', desc: 'Exit application' },
 ];
@@ -612,7 +619,7 @@ const formatChatEntry = (chat, idx, currentChatId) => {
 
 const formatUserLine = (user) => {
   const status = user.isOnline ? '●' : '○';
-  const name = user.displayName || user.handle || user.email || user.id;
+  const name = user.displayName || user.handle || user.id;
   return `${status} ${name}`.trimEnd();
 };
 
@@ -849,6 +856,7 @@ const getMatchingCommands = (prefix) => {
     { cmd: '/ur', desc: 'List pending friend requests' },
     { cmd: '/urc', desc: 'Accept request' },
     { cmd: '/urd', desc: 'Decline request' },
+    { cmd: '/du', desc: 'Delete user (admin)' },
     { cmd: '/help', desc: 'Show this help' },
     { cmd: '/quit', desc: 'Exit application' },
   ];
@@ -1100,6 +1108,29 @@ const handleCommand = async (state, line) => {
         showCommandOutput(state, [`  Friend request sent to ${user.displayName || user.handle || user.id}`]);
         break;
 
+      case '/du':
+        if (!state.isAdmin) {
+          showCommandOutput(state, ['  Admin only.']);
+          break;
+        }
+        if (!arg) {
+          showCommandOutput(state, ['  Usage: /du <n>']);
+          break;
+        }
+        if (state.lastUserList.length === 0) {
+          showCommandOutput(state, ['  Run /ul first to list users.']);
+          break;
+        }
+        const deleteUser = getIndexedItem(state.lastUserList, arg);
+        if (!deleteUser) {
+          showCommandOutput(state, ['  Invalid user number.']);
+          break;
+        }
+        await state.api.delete(`/admin/users/${deleteUser.id}`);
+        showCommandOutput(state, [`  Deleted user ${deleteUser.displayName || deleteUser.handle || deleteUser.id}`]);
+        await loadUsers(state);
+        break;
+
       case '/c':
         if (!arg) {
           showCommandOutput(state, ['  Usage: /c <n>']);
@@ -1241,6 +1272,7 @@ const startInteractive = async () => {
     api,
     meId: cfg.userId,
     meName: cfg.userName || cfg.userId,
+    isAdmin: Boolean(cfg.isAdmin),
     chats: [],
     users: [],
     contacts: [],
@@ -1440,7 +1472,7 @@ program
   .description('Login and store token')
   .argument('<email>')
   .argument('<password>')
-  .option('--base-url <url>', 'API base URL (default http://localhost:5001/api)')
+  .option('--base-url <url>', 'API base URL (or set BBTALK_BASE_URL)')
   .action(async (email, password, options) => {
     const cfg = readConfig();
     const api = axios.create({ baseURL: getBaseUrl(cfg, options.baseUrl) });
@@ -1457,7 +1489,8 @@ program
         baseUrl: getBaseUrl(cfg, options.baseUrl),
         token: accessToken,
         userId: user.id,
-        userName: user.displayName || user.email || user.id,
+        userName: user.displayName || user.handle || user.id,
+        isAdmin: Boolean(user.isAdmin),
       };
       writeConfig(next);
       console.log(chalk.green('✓ Login successful!'));

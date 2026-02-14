@@ -124,7 +124,7 @@ export const ForgotPassword: React.FC = () => {
                 autoFocus
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                type="email"
+                type="text"
                 disabled={loading}
               />
 
@@ -151,7 +151,7 @@ export const ForgotPassword: React.FC = () => {
           ) : (
             <form onSubmit={handleResetPassword}>
               <Alert severity="info" sx={{ mb: 2 }}>
-                {t('auth.register.verifyInfo')} {email}
+                {t('auth.forgot.verifyInfo')} {email}
               </Alert>
 
               <TextField

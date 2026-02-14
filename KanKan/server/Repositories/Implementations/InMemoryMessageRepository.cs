@@ -75,4 +75,40 @@ public class InMemoryMessageRepository : IMessageRepository
             return Task.CompletedTask;
         }
     }
+
+    public Task DeleteBySenderAsync(string userId)
+    {
+        lock (_lock)
+        {
+            var keys = _messages
+                .Where(kvp => kvp.Value.SenderId == userId)
+                .Select(kvp => kvp.Key)
+                .ToList();
+
+            foreach (var key in keys)
+            {
+                _messages.Remove(key);
+            }
+
+            return Task.CompletedTask;
+        }
+    }
+
+    public Task DeleteByChatAsync(string chatId)
+    {
+        lock (_lock)
+        {
+            var keys = _messages
+                .Where(kvp => kvp.Value.ChatId == chatId)
+                .Select(kvp => kvp.Key)
+                .ToList();
+
+            foreach (var key in keys)
+            {
+                _messages.Remove(key);
+            }
+
+            return Task.CompletedTask;
+        }
+    }
 }

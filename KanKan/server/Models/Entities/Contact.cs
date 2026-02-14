@@ -4,6 +4,7 @@ public class Contact
 {
     public string Id { get; set; } = string.Empty;
     public string UserId { get; set; } = string.Empty;
+    public string Domain { get; set; } = string.Empty;
     public string Type { get; set; } = "contact";
     public string ContactId { get; set; } = string.Empty;
     public string DisplayName { get; set; } = string.Empty;

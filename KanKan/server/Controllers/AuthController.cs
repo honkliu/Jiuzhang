@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using KanKan.API.Domain;
 using KanKan.API.Models.DTOs.Auth;
 using KanKan.API.Models.DTOs.User;
 using KanKan.API.Services.Interfaces;
@@ -33,32 +34,17 @@ public class AuthController : ControllerBase
         {
             // Validate email format
             if (!IsValidEmail(request.Email))
-                return BadRequest(new { message = "Invalid email format" });
+                return BadRequest(new { message = "Invalid account format" });
 
             // Check if email already exists
             var existingUser = await _authService.GetUserByEmailAsync(request.Email);
             if (existingUser != null)
                 return BadRequest(new { message = "Email already registered" });
 
-            // Generate verification code
-            var verificationCode = GenerateVerificationCode();
-
-            // Store verification code in database
-            await _authService.CreateVerificationCodeAsync(
-                request.Email,
-                verificationCode,
-                "registration"
-            );
-
-            // Send verification email
-            await _emailService.SendVerificationEmailAsync(
-                request.Email,
-                verificationCode
-            );
-
+            // No email is sent. Verification code is derived from domain.
             return Ok(new
             {
-                message = "Verification code sent to your email",
+                message = "Verification step ready",
                 email = request.Email
             });
         }
@@ -74,11 +60,12 @@ public class AuthController : ControllerBase
     {
         try
         {
-            // Verify the code
-            var isValid = await _authService.VerifyCodeAsync(
-                request.Email,
-                request.Code
-            );
+            var domain = DomainRules.GetDomain(request.Email);
+            var expectedCode = DomainRules.BuildVerificationCode(domain);
+            var isValid = string.Equals(
+                expectedCode,
+                request.Code?.Trim(),
+                StringComparison.OrdinalIgnoreCase);
 
             if (!isValid)
                 return BadRequest(new { message = "Invalid or expired verification code" });
@@ -130,6 +117,9 @@ public class AuthController : ControllerBase
 
             if (user == null)
                 return Unauthorized(new { message = "Invalid email or password" });
+
+            if (user.IsDisabled)
+                return BadRequest(new { message = "Account disabled" });
 
             // Check if email is verified
             if (!user.EmailVerified)
@@ -290,15 +280,7 @@ public class AuthController : ControllerBase
 
     private bool IsValidEmail(string email)
     {
-        try
-        {
-            var addr = new System.Net.Mail.MailAddress(email);
-            return addr.Address == email;
-        }
-        catch
-        {
-            return false;
-        }
+        return DomainRules.IsValidAccount(email);
     }
 
     private string GetIpAddress()
@@ -325,8 +307,9 @@ public class AuthController : ControllerBase
         return new UserDto
         {
             Id = user.Id,
-            Email = user.Email,
             Handle = user.Handle,
+            IsAdmin = user.IsAdmin,
+            IsDisabled = user.IsDisabled,
             DisplayName = user.DisplayName,
             AvatarUrl = user.AvatarUrl,
             Gender = user.Gender,

@@ -91,8 +91,8 @@ KanKan/
 
 #### Client (.env)
 ```env
-VITE_API_URL=http://localhost:5000/api
-VITE_SIGNALR_URL=http://localhost:5000/hub/chat
+VITE_API_URL=<api-base-url>
+VITE_SIGNALR_URL=<signalr-url>
 ```
 
 #### Server (appsettings.json)
@@ -100,8 +100,8 @@ VITE_SIGNALR_URL=http://localhost:5000/hub/chat
 {
   "StorageMode": "MongoDB",
   "MongoDB": {
-    "ConnectionString": "mongodb://admin:password123@localhost:27017",
-    "DatabaseName": "KanKanDB"
+   "ConnectionString": "mongodb://<mongo-user>:<mongo-password>@<mongo-host>:<mongo-port>",
+   "DatabaseName": "KanKanDB"
   },
   "Jwt": {
     "Secret": "your-jwt-secret-key-at-least-32-characters",
@@ -112,10 +112,31 @@ VITE_SIGNALR_URL=http://localhost:5000/hub/chat
     "Provider": "SendGrid",
     "ApiKey": "your-sendgrid-api-key",
     "FromEmail": "noreply@example.com",
-   "FromName": "KanKan"
-  }
+      "FromName": "KanKan"
+   },
+   "AdminEmails": [
+      "alice@example.com"
+   ],
+   "DomainIsolation": {
+      "@yue.com": [
+         "@kankan",
+         "@admin.com"
+      ]
+   },
+   "DomainVisibility": {
+      "@ruoli.com": [
+         "@shaol.com",
+         "@four.com"
+      ]
+   }
 }
 ```
+
+`AdminEmails` grants admin privileges scoped to the admin's email domain. For example, `alice@example.com` can manage users in the `example.com` domain only. Admins in the `kankan` super domain can manage all domains.
+
+`DomainIsolation` blocks direct visibility (search/contacts/friend requests/moments/direct chats) from the listed viewer domain to the blocked domains. Group chat invites bypass isolation.
+
+`DomainVisibility` allows two domains to behave like the same domain for direct visibility. It is treated as bidirectional, so a single entry makes both domains visible to each other.
 
 ### Installation
 
@@ -145,7 +166,7 @@ dotnet restore
 ```bash
 cd server
 dotnet run
-# API will run on http://localhost:5000
+# API will run on the configured base URL
 ```
 
 **Terminal 2 - Start Frontend:**
@@ -154,7 +175,7 @@ cd client
 npm install 
 npm run dev
 npm start
-# UI will run on http://localhost:3000
+# UI will run on the configured frontend URL
 ```
 
 #### Docker (Linux, user-defined network)
@@ -238,15 +259,15 @@ See [Architecture.md](Architecture.md) for detailed data models.
    docker run -d \
      --name mongodb \
      -p 27017:27017 \
-     -e MONGO_INITDB_ROOT_USERNAME=admin \
-     -e MONGO_INITDB_ROOT_PASSWORD=password123 \
+   -e MONGO_INITDB_ROOT_USERNAME=<mongo-root-user> \
+   -e MONGO_INITDB_ROOT_PASSWORD=<mongo-root-password> \
      -v mongodb_data:/data/db \
      mongo:latest
    ```
 
 3. **Create database, user, and collections (optional manual bootstrap):**
    ```bash
-   docker exec -it mongodb mongosh -u admin -p password123 --authenticationDatabase admin
+   docker exec -it mongodb mongosh -u <mongo-root-user> -p <mongo-root-password> --authenticationDatabase admin
    ```
 
    ```javascript
@@ -254,7 +275,7 @@ See [Architecture.md](Architecture.md) for detailed data models.
 
    db.createUser({
      user: "kankan",
-     pwd: "kankan123",
+   pwd: "<db-user-password>",
      roles: [ { role: "readWrite", db: "KanKanDB" } ]
    })
 
@@ -278,7 +299,7 @@ See [Architecture.md](Architecture.md) for detailed data models.
    {
      "StorageMode": "MongoDB",
      "MongoDB": {
-       "ConnectionString": "mongodb://admin:password123@localhost:27017",
+       "ConnectionString": "mongodb://<mongo-user>:<mongo-password>@<mongo-host>:<mongo-port>",
           "DatabaseName": "KanKanDB",
           "Initialization": {
              "Enabled": true,

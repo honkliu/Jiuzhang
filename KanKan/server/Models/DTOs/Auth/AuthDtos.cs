@@ -6,18 +6,15 @@ namespace KanKan.API.Models.DTOs.Auth;
 public class RegisterRequest
 {
     [Required]
-    [EmailAddress]
     public string Email { get; set; } = string.Empty;
 }
 
 public class VerifyEmailRequest
 {
     [Required]
-    [EmailAddress]
     public string Email { get; set; } = string.Empty;
 
     [Required]
-    [StringLength(6, MinimumLength = 6)]
     public string Code { get; set; } = string.Empty;
 
     [Required]
@@ -32,7 +29,6 @@ public class VerifyEmailRequest
 public class LoginRequest
 {
     [Required]
-    [EmailAddress]
     public string Email { get; set; } = string.Empty;
 
     [Required]
@@ -42,14 +38,12 @@ public class LoginRequest
 public class ForgotPasswordRequest
 {
     [Required]
-    [EmailAddress]
     public string Email { get; set; } = string.Empty;
 }
 
 public class ResetPasswordRequest
 {
     [Required]
-    [EmailAddress]
     public string Email { get; set; } = string.Empty;
 
     [Required]

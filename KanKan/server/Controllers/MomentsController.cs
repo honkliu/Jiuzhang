@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using KanKan.API.Domain;
 using KanKan.API.Models.DTOs.Moment;
 using KanKan.API.Models.Entities;
 using KanKan.API.Repositories.Interfaces;
@@ -30,6 +31,21 @@ public class MomentsController : ControllerBase
     private string GetUserId() => User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
     private string GetUserName() => User.FindFirst(ClaimTypes.Name)?.Value ?? "";
 
+    private async Task<User?> GetCurrentUserAsync()
+    {
+        var userId = GetUserId();
+        if (string.IsNullOrWhiteSpace(userId))
+            return null;
+        return await _userRepository.GetByIdAsync(userId);
+    }
+
+    private static string ResolveDomain(User user)
+    {
+        return string.IsNullOrWhiteSpace(user.Domain)
+            ? DomainRules.GetDomain(user.Email)
+            : user.Domain;
+    }
+
     [HttpGet]
     public async Task<ActionResult<IEnumerable<MomentDto>>> GetMoments(
         [FromQuery] int limit = 50,
@@ -43,8 +59,41 @@ public class MomentsController : ControllerBase
                 beforeDate = parsedDate;
             }
 
+            var currentUser = await GetCurrentUserAsync();
+            if (currentUser == null)
+                return Unauthorized();
+
+            var currentDomain = ResolveDomain(currentUser);
+            var isSuperDomainUser = DomainRules.IsSuperDomain(currentDomain);
+
             var moments = await _momentRepository.GetFeedAsync(limit, beforeDate);
-            var dtos = moments.Select(MapToMomentDto).ToList();
+            var domainByUserId = new Dictionary<string, string>();
+
+            async Task<string> ResolveMomentDomainAsync(Moment moment)
+            {
+                if (!string.IsNullOrWhiteSpace(moment.Domain))
+                    return moment.Domain;
+
+                if (domainByUserId.TryGetValue(moment.UserId, out var cached))
+                    return cached;
+
+                var author = await _userRepository.GetByIdAsync(moment.UserId);
+                var domain = author != null ? ResolveDomain(author) : string.Empty;
+                domainByUserId[moment.UserId] = domain;
+                return domain;
+            }
+
+            var filtered = new List<Moment>();
+            foreach (var moment in moments)
+            {
+                var momentDomain = await ResolveMomentDomainAsync(moment);
+                if (isSuperDomainUser || DomainRules.CanAccess(currentDomain, momentDomain))
+                {
+                    filtered.Add(moment);
+                }
+            }
+
+            var dtos = filtered.Select(MapToMomentDto).ToList();
             return Ok(dtos);
         }
         catch (Exception ex)
@@ -66,10 +115,12 @@ public class MomentsController : ControllerBase
             if (user == null)
                 return BadRequest(new { message = "User not found" });
 
+            var domain = ResolveDomain(user);
             var moment = new Moment
             {
                 Id = $"moment_{Guid.NewGuid()}",
                 UserId = userId,
+                Domain = domain,
                 UserName = userName,
                 UserAvatar = user.AvatarUrl ?? string.Empty,
                 Content = new MomentContent
@@ -136,6 +187,17 @@ public class MomentsController : ControllerBase
             if (moment == null)
                 return NotFound(new { message = "Moment not found" });
 
+            var currentDomain = ResolveDomain(user);
+            var momentDomain = moment.Domain;
+            if (string.IsNullOrWhiteSpace(momentDomain))
+            {
+                var author = await _userRepository.GetByIdAsync(moment.UserId);
+                momentDomain = author != null ? ResolveDomain(author) : string.Empty;
+            }
+            if (!DomainRules.IsSuperDomain(currentDomain) &&
+                !DomainRules.CanAccess(currentDomain, momentDomain))
+                return Forbid();
+
             moment.Comments.Add(new MomentComment
             {
                 Id = $"comment_{Guid.NewGuid():N}",
@@ -166,6 +228,21 @@ public class MomentsController : ControllerBase
             var moment = await _momentRepository.GetByIdAsync(id);
             if (moment == null)
                 return NotFound(new { message = "Moment not found" });
+
+            var user = await _userRepository.GetByIdAsync(userId);
+            if (user == null)
+                return BadRequest(new { message = "User not found" });
+
+            var currentDomain = ResolveDomain(user);
+            var momentDomain = moment.Domain;
+            if (string.IsNullOrWhiteSpace(momentDomain))
+            {
+                var author = await _userRepository.GetByIdAsync(moment.UserId);
+                momentDomain = author != null ? ResolveDomain(author) : string.Empty;
+            }
+            if (!DomainRules.IsSuperDomain(currentDomain) &&
+                !DomainRules.CanAccess(currentDomain, momentDomain))
+                return Forbid();
 
             var existing = moment.Likes.FirstOrDefault(l => l.UserId == userId);
             if (existing != null)

@@ -5,6 +5,7 @@ public class Moment
     public string Id { get; set; } = string.Empty;
     public string Type { get; set; } = "moment";
     public string UserId { get; set; } = string.Empty;
+    public string Domain { get; set; } = string.Empty;
     public string UserName { get; set; } = string.Empty;
     public string UserAvatar { get; set; } = string.Empty;
     public MomentContent Content { get; set; } = new();

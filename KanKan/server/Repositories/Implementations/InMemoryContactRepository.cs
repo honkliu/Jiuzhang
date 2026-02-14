@@ -59,4 +59,22 @@ public class InMemoryContactRepository : IContactRepository
             return Task.CompletedTask;
         }
     }
+
+    public Task DeleteAllForUserAsync(string userId)
+    {
+        lock (_lock)
+        {
+            var keys = _contacts
+                .Where(kvp => kvp.Value.UserId == userId || kvp.Value.ContactId == userId)
+                .Select(kvp => kvp.Key)
+                .ToList();
+
+            foreach (var key in keys)
+            {
+                _contacts.Remove(key);
+            }
+
+            return Task.CompletedTask;
+        }
+    }
 }

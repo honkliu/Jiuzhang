@@ -1,3 +1,4 @@
+using KanKan.API.Domain;
 using KanKan.API.Repositories.Interfaces;
 using UserEntity = KanKan.API.Models.Entities.User;
 
@@ -91,7 +92,7 @@ public class InMemoryUserRepository : IUserRepository
             var lowerQuery = query.ToLower();
             var users = _users.Values
                 .Where(u => u.Id != excludeUserId &&
-                    (u.Email.ToLower().Contains(lowerQuery) ||
+                    (u.Handle.ToLower().Contains(lowerQuery) ||
                      u.DisplayName.ToLower().Contains(lowerQuery)))
                 .OrderBy(u => u.DisplayName)
                 .Take(limit)
@@ -111,5 +112,26 @@ public class InMemoryUserRepository : IUserRepository
                 .ToList();
             return Task.FromResult(users);
         }
+    }
+
+    public Task<List<UserEntity>> GetUsersByDomainAsync(string domain, string excludeUserId, int limit = 200)
+    {
+        lock (_lock)
+        {
+            var normalized = DomainRules.Normalize(domain);
+            var users = _users.Values
+                .Where(u => u.Id != excludeUserId && string.Equals(ResolveDomain(u), normalized, StringComparison.Ordinal))
+                .OrderBy(u => u.DisplayName)
+                .Take(limit)
+                .ToList();
+            return Task.FromResult(users);
+        }
+    }
+
+    private static string ResolveDomain(UserEntity user)
+    {
+        return string.IsNullOrWhiteSpace(user.Domain)
+            ? DomainRules.GetDomain(user.Email)
+            : user.Domain;
     }
 }

@@ -9,4 +9,6 @@ public interface IMessageRepository
     Task<Message> CreateAsync(Message message);
     Task<Message> UpdateAsync(Message message);
     Task DeleteAsync(string id, string chatId);
+    Task DeleteBySenderAsync(string userId);
+    Task DeleteByChatAsync(string chatId);
 }

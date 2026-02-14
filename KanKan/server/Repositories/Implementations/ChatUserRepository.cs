@@ -129,4 +129,10 @@ public class ChatUserRepository : IChatUserRepository
 
         await _collection.DeleteOneAsync(filter);
     }
+
+    public async Task DeleteAllForUserAsync(string userId)
+    {
+        var filter = Builders<ChatUser>.Filter.Eq(cu => cu.UserId, userId);
+        await _collection.DeleteManyAsync(filter);
+    }
 }

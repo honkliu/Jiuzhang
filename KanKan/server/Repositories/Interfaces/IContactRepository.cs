@@ -9,4 +9,5 @@ public interface IContactRepository
     Task<List<Contact>> GetContactsByStatusAsync(string userId, string status);
     Task<Contact> UpsertAsync(Contact contact);
     Task DeleteAsync(string id, string userId);
+    Task DeleteAllForUserAsync(string userId);
 }

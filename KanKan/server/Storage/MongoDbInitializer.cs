@@ -1,4 +1,5 @@
 using MongoDB.Driver;
+using KanKan.API.Domain;
 using KanKan.API.Models.Entities;
 
 namespace KanKan.API.Storage;
@@ -209,6 +210,15 @@ public class MongoDbInitializer : IHostedService
 
             if (existing != null)
             {
+                if (string.IsNullOrWhiteSpace(existing.Domain))
+                {
+                    existing.Domain = DomainRules.GetDomain(existing.Email);
+                    existing.UpdatedAt = DateTime.UtcNow;
+                    await usersCollection.ReplaceOneAsync(
+                        Builders<User>.Filter.Eq(u => u.Id, existing.Id),
+                        existing,
+                        cancellationToken: cancellationToken);
+                }
                 await EnsureEmailLookupAsync(emailLookupCollection, existing, cancellationToken);
                 return existing;
             }
@@ -240,6 +250,7 @@ public class MongoDbInitializer : IHostedService
                     Id = $"{chat.Id}:{participant.UserId}",
                     ChatId = chat.Id,
                     UserId = participant.UserId,
+                    Domain = chat.Domain,
                     ChatType = chat.ChatType,
                     Participants = chat.Participants,
                     GroupName = chat.GroupName,
@@ -311,12 +322,17 @@ public class MongoDbInitializer : IHostedService
             await UpsertChatUsersAsync(chat);
         }
 
+        var seedPassword = Environment.GetEnvironmentVariable("KANKAN_SEED_PASSWORD")
+            ?? Guid.NewGuid().ToString("N");
+
         var alice = await EnsureUserAsync(new User
         {
             Id = "user_alice",
             Email = "alice@example.com",
+            Domain = DomainRules.GetDomain("alice@example.com"),
             EmailVerified = true,
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword("12345678"),
+            IsAdmin = false,
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(seedPassword),
             Handle = "alice_1001",
             DisplayName = "Alice",
             AvatarUrl = "/zodiac/f2.png",
@@ -338,8 +354,10 @@ public class MongoDbInitializer : IHostedService
         {
             Id = "user_bob",
             Email = "bob@example.com",
+            Domain = DomainRules.GetDomain("bob@example.com"),
             EmailVerified = true,
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword("12345678"),
+            IsAdmin = false,
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(seedPassword),
             Handle = "bob_1002",
             DisplayName = "Bob",
             AvatarUrl = "/zodiac/m1.png",
@@ -361,8 +379,10 @@ public class MongoDbInitializer : IHostedService
         {
             Id = "user_carol",
             Email = "carol@example.com",
+            Domain = DomainRules.GetDomain("carol@example.com"),
             EmailVerified = true,
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword("12345678"),
+            IsAdmin = false,
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(seedPassword),
             Handle = "carol_1004",
             DisplayName = "Carol",
             AvatarUrl = "/zodiac/f3.png",
@@ -384,7 +404,9 @@ public class MongoDbInitializer : IHostedService
         {
             Id = "user_ai_wa",
             Email = "wa@assistant.local",
+            Domain = DomainRules.SuperDomain,
             EmailVerified = true,
+            IsAdmin = false,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(Guid.NewGuid().ToString()),
             Handle = "assistant_1003",
             DisplayName = "Assistant",
@@ -412,6 +434,7 @@ public class MongoDbInitializer : IHostedService
             directChat = new Chat
             {
                 Id = "chat_seed_alice_bob",
+                Domain = alice.Domain,
                 ChatType = "direct",
                 Participants = new List<ChatParticipant>
                 {
@@ -437,6 +460,7 @@ public class MongoDbInitializer : IHostedService
             groupChat = new Chat
             {
                 Id = "chat_seed_group_abc",
+                Domain = alice.Domain,
                 ChatType = "group",
                 GroupName = "Alice - Bob - Carol",
                 Participants = new List<ChatParticipant>
@@ -472,6 +496,15 @@ public class MongoDbInitializer : IHostedService
 
         if (existing != null)
         {
+            if (string.IsNullOrWhiteSpace(existing.Domain))
+            {
+                existing.Domain = DomainRules.SuperDomain;
+                existing.UpdatedAt = DateTime.UtcNow;
+                await usersCollection.ReplaceOneAsync(
+                    Builders<User>.Filter.Eq(u => u.Id, existing.Id),
+                    existing,
+                    cancellationToken: cancellationToken);
+            }
             await EnsureEmailLookupAsync(emailLookupCollection, existing, cancellationToken);
             return;
         }
@@ -480,7 +513,9 @@ public class MongoDbInitializer : IHostedService
         {
             Id = "user_ai_wa",
             Email = "wa@assistant.local",
+            Domain = DomainRules.SuperDomain,
             EmailVerified = true,
+            IsAdmin = false,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(Guid.NewGuid().ToString()),
             Handle = "assistant_1003",
             DisplayName = "Assistant",

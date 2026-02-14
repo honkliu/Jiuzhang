@@ -4,6 +4,7 @@ public class Chat
 {
     public string Id { get; set; } = string.Empty;
     public string Type { get; set; } = "chat";
+    public string Domain { get; set; } = string.Empty;
     public string ChatType { get; set; } = "direct"; // direct or group
     public List<ChatParticipant> Participants { get; set; } = new();
     public string? GroupName { get; set; }

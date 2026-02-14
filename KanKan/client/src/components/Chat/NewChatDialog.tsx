@@ -124,7 +124,7 @@ export const NewChatDialog: React.FC<NewChatDialogProps> = ({ open, onClose }) =
   const filteredUsers = users.filter(
     (user) =>
       user.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchQuery.toLowerCase())
+      user.handle.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const baseUsers = filteredUsers.filter((u) => u.id !== currentUserId);
@@ -134,7 +134,6 @@ export const NewChatDialog: React.FC<NewChatDialogProps> = ({ open, onClose }) =
 
   const waUser: User = {
     id: WA_USER_ID,
-    email: 'wa@assistant.local',
     handle: 'assistant_1003',
     displayName: t('Wa'),
     avatarUrl: '',
@@ -215,8 +214,8 @@ export const NewChatDialog: React.FC<NewChatDialogProps> = ({ open, onClose }) =
                     user.id === WA_USER_ID
                       ? t('chat.new.alwaysAvailable')
                       : isFriend(user.id)
-                        ? `${user.email} · ${t('contacts.friend')}`
-                        : `${user.email} · ${t('contacts.notFriend')}`
+                        ? (user.handle ? `@${user.handle} · ${t('contacts.friend')}` : t('contacts.friend'))
+                        : (user.handle ? `@${user.handle} · ${t('contacts.notFriend')}` : t('contacts.notFriend'))
                   }
                 />
               </ListItemButton>

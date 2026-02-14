@@ -10,7 +10,7 @@ In the host:
   docker run -d --name kanapi --network kankan-net \
     -v "$(pwd)/server:/server" -w /server \
     mcr.microsoft.com/dotnet/sdk:9.0 \
-    bash -lc "dotnet restore && dotnet run --urls http://0.0.0.0:5000"
+    bash -lc "dotnet restore && dotnet run --urls <api-url>"
 
   docker run -it --rm --name kanui --network kankan-net -p 80:3000 \
     -v "$(pwd)/client:/app" -w /app \
@@ -21,7 +21,7 @@ In the host:
 ```bash
 cd server
 dotnet restore        # Install dependencies
-dotnet run           # Start server (http://localhost:5000)
+dotnet run           # Start server (use configured URL)
 dotnet watch run     # Start with hot reload
 ```
 
@@ -29,23 +29,23 @@ dotnet watch run     # Start with hot reload
 ```bash
 cd client
 npm install          # Install dependencies
-npm run dev          # Start dev server (http://localhost:3000)
+npm run dev          # Start dev server (use configured URL)
 npm run build        # Production build
 npm run preview      # Preview production build
 ```
 
 ## 🔗 Important URLs
 
-- **Frontend:** http://localhost:3000
-- **Backend API:** http://localhost:5000
-- **Swagger Docs:** http://localhost:5000
-- **MongoDB Compass:** mongodb://localhost:27017
+- **Frontend:** <frontend-url>
+- **Backend API:** <api-base-url>
+- **Swagger Docs:** <swagger-url>
+- **MongoDB Compass:** mongodb://<host>:<port>
 
 ## 📋 Default Test Flow
 
 1. **Start Backend:** `cd server && dotnet run`
 2. **Start Frontend:** `cd client && npm run dev`
-3. **Open Browser:** http://localhost:3000
+3. **Open Browser:** <frontend-url>
 4. **Register:**
    - Click "Create account"
    - Enter email: test@example.com
@@ -62,7 +62,7 @@ npm run preview      # Preview production build
 {
   "StorageMode": "MongoDB",
   "MongoDB": {
-    "ConnectionString": "mongodb://admin:password123@localhost:27017",
+    "ConnectionString": "mongodb://<mongo-user>:<mongo-password>@<mongo-host>:<mongo-port>",
     "DatabaseName": "KanKanDB"
   },
   "Jwt": {
@@ -73,7 +73,7 @@ npm run preview      # Preview production build
 
 ### Frontend: `client/.env`
 ```env
-VITE_API_URL=http://localhost:5000/api
+VITE_API_URL=<api-base-url>
 ```
 
 ## 📊 Database Collections
@@ -120,8 +120,8 @@ kill -9 <PID>
 - Start MongoDB with Docker:
   ```bash
   docker run -d --name mongodb -p 27017:27017 \
-    -e MONGO_INITDB_ROOT_USERNAME=admin \
-    -e MONGO_INITDB_ROOT_PASSWORD=password123 \
+    -e MONGO_INITDB_ROOT_USERNAME=<mongo-root-user> \
+    -e MONGO_INITDB_ROOT_PASSWORD=<mongo-root-password> \
     mongo:latest
   ```
 - Verify MongoDB is running: `docker ps`
@@ -174,7 +174,7 @@ npm install
 - Refresh tokens expire in 7 days
 - Passwords hashed with BCrypt (work factor 10)
 - Refresh tokens stored in HTTP-only cookies
-- CORS configured for localhost:3000
+- CORS configured for your frontend origin
 
 ## 📝 File Locations
 
@@ -188,7 +188,7 @@ npm install
 ## 🧪 Testing
 
 ### Manual Testing
-1. Open Swagger UI: http://localhost:5000
+1. Open Swagger UI: <swagger-url>
 2. Test endpoints directly
 3. Use browser DevTools to inspect network requests
 

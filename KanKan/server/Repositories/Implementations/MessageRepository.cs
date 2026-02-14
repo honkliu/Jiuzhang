@@ -80,4 +80,16 @@ public class MessageRepository : IMessageRepository
             await UpdateAsync(message);
         }
     }
+
+    public async Task DeleteBySenderAsync(string userId)
+    {
+        var filter = Builders<Message>.Filter.Eq(m => m.SenderId, userId);
+        await _collection.DeleteManyAsync(filter);
+    }
+
+    public async Task DeleteByChatAsync(string chatId)
+    {
+        var filter = Builders<Message>.Filter.Eq(m => m.ChatId, chatId);
+        await _collection.DeleteManyAsync(filter);
+    }
 }

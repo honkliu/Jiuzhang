@@ -5,7 +5,10 @@ public class User
     public string Id { get; set; } = string.Empty;
     public string Type { get; set; } = "user";
     public string Email { get; set; } = string.Empty;
+    public string Domain { get; set; } = string.Empty;
     public bool EmailVerified { get; set; }
+    public bool IsAdmin { get; set; }
+    public bool IsDisabled { get; set; }
     public string PasswordHash { get; set; } = string.Empty;
     public string Handle { get; set; } = string.Empty;
     public string DisplayName { get; set; } = string.Empty;

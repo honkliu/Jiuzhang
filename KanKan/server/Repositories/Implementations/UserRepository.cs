@@ -1,4 +1,7 @@
+using System.Text.RegularExpressions;
+using MongoDB.Bson;
 using MongoDB.Driver;
+using KanKan.API.Domain;
 using KanKan.API.Models.Entities;
 using KanKan.API.Repositories.Interfaces;
 using UserEntity = KanKan.API.Models.Entities.User;
@@ -109,7 +112,7 @@ public class UserRepository : IUserRepository
             Builders<UserEntity>.Filter.Eq(u => u.Type, "user"),
             Builders<UserEntity>.Filter.Ne(u => u.Id, excludeUserId),
             Builders<UserEntity>.Filter.Or(
-                Builders<UserEntity>.Filter.Regex(u => u.Email, new MongoDB.Bson.BsonRegularExpression(lowerQuery, "i")),
+                Builders<UserEntity>.Filter.Regex(u => u.Handle, new MongoDB.Bson.BsonRegularExpression(lowerQuery, "i")),
                 Builders<UserEntity>.Filter.Regex(u => u.DisplayName, new MongoDB.Bson.BsonRegularExpression(lowerQuery, "i"))
             )
         );
@@ -127,6 +130,34 @@ public class UserRepository : IUserRepository
         var filter = Builders<UserEntity>.Filter.And(
             Builders<UserEntity>.Filter.Eq(u => u.Type, "user"),
             Builders<UserEntity>.Filter.Ne(u => u.Id, excludeUserId)
+        );
+
+        var sort = Builders<UserEntity>.Sort.Ascending(u => u.DisplayName);
+
+        return await _collection.Find(filter)
+            .Sort(sort)
+            .Limit(limit)
+            .ToListAsync();
+    }
+
+    public async Task<List<UserEntity>> GetUsersByDomainAsync(string domain, string excludeUserId, int limit = 200)
+    {
+        var normalized = DomainRules.Normalize(domain);
+        var domainFilter = Builders<UserEntity>.Filter.Eq(u => u.Domain, normalized);
+        var emptyDomainFilter = Builders<UserEntity>.Filter.Or(
+            Builders<UserEntity>.Filter.Eq(u => u.Domain, string.Empty),
+            Builders<UserEntity>.Filter.Eq(u => u.Domain, null)
+        );
+        var emailRegex = new BsonRegularExpression($"@{Regex.Escape(normalized)}$", "i");
+        var emailFilter = Builders<UserEntity>.Filter.Regex(u => u.Email, emailRegex);
+
+        var filter = Builders<UserEntity>.Filter.And(
+            Builders<UserEntity>.Filter.Eq(u => u.Type, "user"),
+            Builders<UserEntity>.Filter.Ne(u => u.Id, excludeUserId),
+            Builders<UserEntity>.Filter.Or(
+                domainFilter,
+                Builders<UserEntity>.Filter.And(emptyDomainFilter, emailFilter)
+            )
         );
 
         var sort = Builders<UserEntity>.Sort.Ascending(u => u.DisplayName);

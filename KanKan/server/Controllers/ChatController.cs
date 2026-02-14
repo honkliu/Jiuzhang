@@ -6,6 +6,7 @@ using System.Security.Claims;
 using System.Text;
 using System.Text.RegularExpressions;
 using KanKan.API.Hubs;
+using KanKan.API.Domain;
 using KanKan.API.Domain.Chat;
 using KanKan.API.Models.DTOs.Chat;
 using KanKan.API.Models.DTOs.Notification;
@@ -58,6 +59,34 @@ public class ChatController : ControllerBase
 
     private string GetUserId() => User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
     private string GetUserName() => User.FindFirst(ClaimTypes.Name)?.Value ?? "";
+
+    private async Task<User?> GetCurrentUserAsync()
+    {
+        var userId = GetUserId();
+        if (string.IsNullOrWhiteSpace(userId))
+            return null;
+        return await _userRepository.GetByIdAsync(userId);
+    }
+
+    private static string ResolveDomain(User user)
+    {
+        return string.IsNullOrWhiteSpace(user.Domain)
+            ? DomainRules.GetDomain(user.Email)
+            : user.Domain;
+    }
+
+    private static bool CanAccessDomain(User viewer, User target)
+    {
+        if (ChatDomain.IsAgentUserId(target.Id))
+            return true;
+
+        return DomainRules.CanAccess(ResolveDomain(viewer), ResolveDomain(target));
+    }
+
+    private static bool IsSuperDomainUser(User user)
+    {
+        return DomainRules.IsSuperDomain(ResolveDomain(user));
+    }
 
     private async Task<bool> IsFriendAsync(string userId, string otherUserId)
     {
@@ -123,6 +152,11 @@ public class ChatController : ControllerBase
         try
         {
             var userId = GetUserId();
+            var currentUser = await _userRepository.GetByIdAsync(userId);
+            if (currentUser == null)
+                return BadRequest(new { message = "User not found" });
+
+            var isSuperDomainUser = IsSuperDomainUser(currentUser);
             var chat = await _chatRepository.GetByIdAsync(chatId);
 
             if (chat == null)
@@ -164,12 +198,23 @@ public class ChatController : ControllerBase
             if (currentUser == null)
                 return BadRequest(new { message = "User not found" });
 
+            var isSuperDomainUser = IsSuperDomainUser(currentUser);
+
             var isDirectRequest = (request.ChatType == "direct" || string.IsNullOrWhiteSpace(request.ChatType))
                 && request.ParticipantIds.Count == 1;
 
             if (isDirectRequest)
             {
                 var otherUserId = request.ParticipantIds[0];
+                if (otherUserId != ChatDomain.AgentUserId)
+                {
+                    var otherUser = await _userRepository.GetByIdAsync(otherUserId);
+                    if (otherUser == null)
+                        return NotFound(new { message = "User not found" });
+
+                    if (!CanAccessDomain(currentUser, otherUser))
+                        return StatusCode(403, new { message = "Cross-domain chats are not allowed" });
+                }
                 if (!await IsFriendAsync(userId, otherUserId))
                     return StatusCode(403, new { message = "Direct chats require friendship" });
             }
@@ -181,7 +226,26 @@ public class ChatController : ControllerBase
                     .Distinct()
                     .ToList();
 
-                if (!await AreAllFriendsAsync(userId, otherUserIds))
+                var otherUsers = new List<User>();
+                foreach (var otherUserId in otherUserIds)
+                {
+                    if (otherUserId == ChatDomain.AgentUserId)
+                        continue;
+
+                    var otherUser = await _userRepository.GetByIdAsync(otherUserId);
+                    if (otherUser == null)
+                        return NotFound(new { message = "User not found" });
+
+                    otherUsers.Add(otherUser);
+                }
+
+                var currentDomain = ResolveDomain(currentUser);
+                var friendRequiredIds = otherUsers
+                    .Where(u => !DomainRules.IsIsolationBlocked(currentDomain, ResolveDomain(u)))
+                    .Select(u => u.Id)
+                    .ToList();
+
+                if (friendRequiredIds.Count > 0 && !await AreAllFriendsAsync(userId, friendRequiredIds))
                     return StatusCode(403, new { message = "Group chats require friends" });
             }
 
@@ -219,6 +283,7 @@ public class ChatController : ControllerBase
                         Id = ChatDomain.AgentUserId,
                         Type = "user",
                         Email = "wa@assistant.local",
+                        Domain = DomainRules.SuperDomain,
                         EmailVerified = true,
                         PasswordHash = BCrypt.Net.BCrypt.HashPassword(Guid.NewGuid().ToString()),
                         Handle = "assistant_1003",
@@ -258,6 +323,7 @@ public class ChatController : ControllerBase
             var chat = new Chat
             {
                 Id = $"chat_{Guid.NewGuid()}",
+                Domain = ResolveDomain(currentUser),
                 ChatType = request.ChatType ?? "direct",
                 Participants = participants,
                 GroupName = request.GroupName,
@@ -298,6 +364,10 @@ public class ChatController : ControllerBase
         try
         {
             var userId = GetUserId();
+            var currentUser = await _userRepository.GetByIdAsync(userId);
+            if (currentUser == null)
+                return BadRequest(new { message = "User not found" });
+
             var chat = await _chatRepository.GetByIdAsync(chatId);
 
             if (chat == null)
@@ -342,6 +412,11 @@ public class ChatController : ControllerBase
         try
         {
             var userId = GetUserId();
+            var currentUser = await _userRepository.GetByIdAsync(userId);
+            if (currentUser == null)
+                return BadRequest(new { message = "User not found" });
+
+            var isSuperDomainUser = IsSuperDomainUser(currentUser);
             var chat = await _chatRepository.GetByIdAsync(chatId);
 
             if (chat == null)
@@ -402,6 +477,11 @@ public class ChatController : ControllerBase
         try
         {
             var userId = GetUserId();
+            var currentUser = await _userRepository.GetByIdAsync(userId);
+            if (currentUser == null)
+                return BadRequest(new { message = "User not found" });
+
+            var isSuperDomainUser = IsSuperDomainUser(currentUser);
             var chat = await _chatRepository.GetByIdAsync(chatId);
 
             if (chat == null)
@@ -430,6 +510,11 @@ public class ChatController : ControllerBase
         try
         {
             var userId = GetUserId();
+            var currentUser = await _userRepository.GetByIdAsync(userId);
+            if (currentUser == null)
+                return BadRequest(new { message = "User not found" });
+
+            var isSuperDomainUser = IsSuperDomainUser(currentUser);
             var chat = await _chatRepository.GetByIdAsync(chatId);
 
             if (chat == null)
@@ -572,15 +657,28 @@ public class ChatController : ControllerBase
             if (!chat.Participants.Any(p => p.UserId == userId))
                 return Forbid();
 
+            var currentUser = await _userRepository.GetByIdAsync(userId);
+            if (currentUser == null)
+                return BadRequest(new { message = "User not found" });
+
             if (chat.ChatType == "direct")
             {
                 var other = chat.Participants.FirstOrDefault(p => p.UserId != userId);
+                if (other != null && other.UserId != ChatDomain.AgentUserId)
+                {
+                    var otherUser = await _userRepository.GetByIdAsync(other.UserId);
+                    if (otherUser == null)
+                        return BadRequest(new { message = "User not found" });
+
+                    if (!CanAccessDomain(currentUser, otherUser))
+                        return StatusCode(403, new { message = "Cross-domain chats are not allowed" });
+                }
                 if (other != null && !await IsFriendAsync(userId, other.UserId))
                     return StatusCode(403, new { message = "Direct chats require friendship" });
             }
 
             request.ChatId = string.IsNullOrWhiteSpace(request.ChatId) ? chatId : request.ChatId;
-            var user = await _userRepository.GetByIdAsync(userId);
+            var user = currentUser;
 
             var message = new Message
             {
@@ -670,7 +768,7 @@ public class ChatController : ControllerBase
             await _hubContext.Clients.Users(recipientIds).SendAsync("ReceiveMessage", messageDto);
 
             // Add participants based on @mentions (e.g., @carol)
-            await TryAddMentionedParticipantsAsync(chat, message, userId);
+            await TryAddMentionedParticipantsAsync(chat, message, currentUser);
 
             // AI agent response if mentioned (run in background so this request returns immediately)
             if (ShouldTriggerAgent(chat, message))
@@ -731,6 +829,11 @@ public class ChatController : ControllerBase
         try
         {
             var userId = GetUserId();
+            var currentUser = await _userRepository.GetByIdAsync(userId);
+            if (currentUser == null)
+                return BadRequest(new { message = "User not found" });
+
+            var isSuperDomainUser = IsSuperDomainUser(currentUser);
             var chat = await _chatRepository.GetByIdAsync(chatId);
 
             if (chat == null)
@@ -848,7 +951,7 @@ public class ChatController : ControllerBase
             chat.Participants.Any(p => p.UserId == ChatDomain.AgentUserId);
     }
 
-    private async Task TryAddMentionedParticipantsAsync(Chat chat, Message message, string currentUserId)
+    private async Task TryAddMentionedParticipantsAsync(Chat chat, Message message, User currentUser)
     {
         if (message.MessageType != "text" || string.IsNullOrWhiteSpace(message.Content?.Text))
             return;
@@ -858,17 +961,21 @@ public class ChatController : ControllerBase
             return;
 
         var addedUsers = new List<User>();
+        var isSuperDomainUser = IsSuperDomainUser(currentUser);
+        var allowIsolationBypass = string.Equals(chat.ChatType, "group", StringComparison.OrdinalIgnoreCase);
 
         foreach (var mention in mentionNames)
         {
-            var candidates = await _userRepository.SearchUsersAsync(mention, currentUserId, 10);
+            var candidates = await _userRepository.SearchUsersAsync(mention, currentUser.Id, 10);
             var match = candidates.FirstOrDefault(u =>
                 string.Equals(u.DisplayName, mention, StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(u.Handle, mention, StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(u.Email.Split('@')[0], mention, StringComparison.OrdinalIgnoreCase));
+                string.Equals(u.Handle, mention, StringComparison.OrdinalIgnoreCase));
 
             var userToAdd = match ?? candidates.FirstOrDefault();
             if (userToAdd == null)
+                continue;
+
+            if (!allowIsolationBypass && !isSuperDomainUser && !CanAccessDomain(currentUser, userToAdd))
                 continue;
 
             if (chat.Participants.Any(p => p.UserId == userToAdd.Id))
@@ -892,7 +999,7 @@ public class ChatController : ControllerBase
             // Wa can be present in a 1–1 chat, but is not counted as a participant.
             // Convert a direct chat into a group when any real participant besides the current user is added.
             var realOtherCount = chat.Participants.Count(p =>
-                p.UserId != currentUserId &&
+                p.UserId != currentUser.Id &&
                 p.UserId != ChatDomain.AgentUserId &&
                 !string.IsNullOrWhiteSpace(p.UserId));
 
@@ -901,7 +1008,7 @@ public class ChatController : ControllerBase
                 chat.ChatType = "group";
                 if (chat.AdminIds == null || chat.AdminIds.Count == 0)
                 {
-                    chat.AdminIds = new List<string> { currentUserId };
+                    chat.AdminIds = new List<string> { currentUser.Id };
                 }
                 if (string.IsNullOrWhiteSpace(chat.GroupName))
                 {
@@ -915,7 +1022,7 @@ public class ChatController : ControllerBase
         await UpsertChatUsersFromChatAsync(chat);
 
         await _hubContext.Clients.Group(chat.Id)
-            .SendAsync("ChatUpdated", ChatDomain.ToChatDto(chat, currentUserId, ChatHub.IsUserOnline));
+            .SendAsync("ChatUpdated", ChatDomain.ToChatDto(chat, currentUser.Id, ChatHub.IsUserOnline));
 
         await _hubContext.Clients.Group(chat.Id)
             .SendAsync("ParticipantsAdded", chat.Id, addedUsers.Select(u => u.Id).ToList());
@@ -977,6 +1084,7 @@ public class ChatController : ControllerBase
             Id = chat.Id,
             ChatId = chat.Id,
             UserId = participant.UserId,
+            Domain = chat.Domain,
             ChatType = chat.ChatType,
             Participants = CloneParticipants(chat.Participants),
             GroupName = chat.GroupName,

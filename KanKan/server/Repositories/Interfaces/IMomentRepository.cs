@@ -9,4 +9,5 @@ public interface IMomentRepository
     Task<Moment> CreateAsync(Moment moment);
     Task<Moment> UpdateAsync(Moment moment);
     Task DeleteAsync(string id);
+    Task DeleteByUserAsync(string userId);
 }

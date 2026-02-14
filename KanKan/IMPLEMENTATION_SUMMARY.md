@@ -173,7 +173,7 @@ KanKan/
 cd server
 dotnet restore
 dotnet run
-# API available at http://localhost:5000
+# API available at the configured base URL
 ```
 
 ### 2. Frontend
@@ -181,7 +181,7 @@ dotnet run
 cd client
 npm install
 npm run dev
-# App available at http://localhost:3000
+# App available at the configured frontend URL
 ```
 
 ### 3. Database
@@ -248,9 +248,9 @@ The foundation is ready. Next steps:
 
 3. **Security:** All passwords are hashed with BCrypt. JWT tokens are properly secured.
 
-4. **CORS:** Configured to allow localhost:3000 for development.
+4. **CORS:** Configured to allow the configured frontend origin.
 
-5. **API Documentation:** Swagger UI available at http://localhost:5000
+5. **API Documentation:** Swagger UI available at the configured docs URL
 
 ## ✨ Quality Features
 

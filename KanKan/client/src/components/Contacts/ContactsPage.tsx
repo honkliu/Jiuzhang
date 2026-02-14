@@ -17,6 +17,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { AppDispatch, RootState } from '@/store';
 import { contactService, User, FriendRequest } from '@/services/contact.service';
+import { adminService } from '@/services/admin.service';
 import { createChat } from '@/store/chatSlice';
 import { AppHeader } from '@/components/Shared/AppHeader';
 import { UserAvatar } from '@/components/Shared/UserAvatar';
@@ -29,7 +30,9 @@ export const ContactsPage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const { t } = useLanguage();
-  const currentUserId = useSelector((state: RootState) => state.auth.user?.id);
+  const currentUser = useSelector((state: RootState) => state.auth.user);
+  const currentUserId = currentUser?.id;
+  const isAdmin = Boolean(currentUser?.isAdmin);
   const [users, setUsers] = useState<User[]>([]);
   const [contacts, setContacts] = useState<User[]>([]);
   const [requests, setRequests] = useState<FriendRequest[]>([]);
@@ -41,7 +44,7 @@ export const ContactsPage: React.FC = () => {
     setLoading(true);
     try {
       const [allUsers, contactsData, requestsData] = await Promise.all([
-        contactService.getAllUsers(),
+        isAdmin ? adminService.getUsers() : contactService.getAllUsers(),
         contactService.getContacts(),
         contactService.getFriendRequests(),
       ]);
@@ -108,6 +111,39 @@ export const ContactsPage: React.FC = () => {
     setActionLoading(userId);
     try {
       await contactService.removeFriend(userId);
+      await loadUsers();
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleDeleteUser = async (userId: string, displayName?: string) => {
+    const label = displayName || userId;
+    const confirmed = window.confirm(`Delete user ${label}? This cannot be undone.`);
+    if (!confirmed) return;
+
+    setActionLoading(userId);
+    try {
+      await adminService.deleteUser(userId);
+      await loadUsers();
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleToggleDisabled = async (user: User) => {
+    const label = user.displayName || user.id;
+    const actionLabel = user.isDisabled ? 'Enable' : 'Disable';
+    const confirmed = window.confirm(`${actionLabel} user ${label}?`);
+    if (!confirmed) return;
+
+    setActionLoading(user.id);
+    try {
+      if (user.isDisabled) {
+        await adminService.enableUser(user.id);
+      } else {
+        await adminService.disableUser(user.id);
+      }
       await loadUsers();
     } finally {
       setActionLoading(null);
@@ -196,6 +232,26 @@ export const ContactsPage: React.FC = () => {
                         >
                           {t('contacts.reject')}
                         </Button>
+                        {isAdmin && req.fromUserId !== currentUserId && (
+                          <Button
+                            variant="outlined"
+                            color={req.fromUser.isDisabled ? 'success' : 'warning'}
+                            onClick={() => handleToggleDisabled(req.fromUser)}
+                            disabled={actionLoading === req.fromUserId}
+                          >
+                            {req.fromUser.isDisabled ? 'Enable' : 'Disable'}
+                          </Button>
+                        )}
+                        {isAdmin && req.fromUserId !== currentUserId && (
+                          <Button
+                            variant="outlined"
+                            color="error"
+                            onClick={() => handleDeleteUser(req.fromUserId, req.fromUser.displayName)}
+                            disabled={actionLoading === req.fromUserId}
+                          >
+                            Delete
+                          </Button>
+                        )}
                       </BoxAny>
                     }
                   >
@@ -208,7 +264,7 @@ export const ContactsPage: React.FC = () => {
                     </ListItemAvatar>
                     <ListItemText
                       primary={req.fromUser.displayName}
-                      secondary={req.fromUser.email}
+                      secondary={req.fromUser.domain || ''}
                     />
                   </ListItem>
                 ))}
@@ -240,6 +296,26 @@ export const ContactsPage: React.FC = () => {
                       >
                         {t('contacts.removeFriend')}
                       </Button>
+                      {isAdmin && user.id !== currentUserId && (
+                        <Button
+                          variant="outlined"
+                          color={user.isDisabled ? 'success' : 'warning'}
+                          onClick={() => handleToggleDisabled(user)}
+                          disabled={actionLoading === user.id}
+                        >
+                          {user.isDisabled ? 'Enable' : 'Disable'}
+                        </Button>
+                      )}
+                      {isAdmin && user.id !== currentUserId && (
+                        <Button
+                          variant="outlined"
+                          color="error"
+                          onClick={() => handleDeleteUser(user.id, user.displayName)}
+                          disabled={actionLoading === user.id}
+                        >
+                          Delete
+                        </Button>
+                      )}
                     </BoxAny>
                   }>
                     <ListItemAvatar>
@@ -254,9 +330,14 @@ export const ContactsPage: React.FC = () => {
                         <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <Typography fontWeight="bold">{user.displayName}</Typography>
                           {user.isOnline && <Chip size="small" color="success" label={t('contacts.online')} />}
+                          {user.isDisabled && <Chip size="small" color="warning" label="Disabled" />}
                         </BoxAny>
                       }
-                      secondary={`${user.email} · ${t('contacts.friend')}`}
+                      secondary={
+                        user.domain
+                          ? `${user.domain} · ${t('contacts.friend')}`
+                          : t('contacts.friend')
+                      }
                     />
                   </ListItem>
                 ))}
@@ -274,13 +355,35 @@ export const ContactsPage: React.FC = () => {
               <List>
                 {otherUsers.map((user) => (
                   <ListItem key={user.id} divider secondaryAction={
-                    <Button
-                      variant="outlined"
-                      onClick={() => handleAddFriend(user.id)}
-                      disabled={actionLoading === user.id}
-                    >
-                      {t('contacts.addFriend')}
-                    </Button>
+                    <BoxAny sx={{ display: 'flex', gap: 1 }}>
+                      <Button
+                        variant="outlined"
+                        onClick={() => handleAddFriend(user.id)}
+                        disabled={actionLoading === user.id}
+                      >
+                        {t('contacts.addFriend')}
+                      </Button>
+                      {isAdmin && user.id !== currentUserId && (
+                        <Button
+                          variant="outlined"
+                          color={user.isDisabled ? 'success' : 'warning'}
+                          onClick={() => handleToggleDisabled(user)}
+                          disabled={actionLoading === user.id}
+                        >
+                          {user.isDisabled ? 'Enable' : 'Disable'}
+                        </Button>
+                      )}
+                      {isAdmin && user.id !== currentUserId && (
+                        <Button
+                          variant="outlined"
+                          color="error"
+                          onClick={() => handleDeleteUser(user.id, user.displayName)}
+                          disabled={actionLoading === user.id}
+                        >
+                          Delete
+                        </Button>
+                      )}
+                    </BoxAny>
                   }>
                     <ListItemAvatar>
                       <UserAvatar
@@ -294,9 +397,14 @@ export const ContactsPage: React.FC = () => {
                         <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <Typography fontWeight="bold">{user.displayName}</Typography>
                           {user.isOnline && <Chip size="small" color="success" label={t('contacts.online')} />}
+                          {user.isDisabled && <Chip size="small" color="warning" label="Disabled" />}
                         </BoxAny>
                       }
-                      secondary={`${user.email} · ${t('contacts.notFriend')}`}
+                      secondary={
+                        user.domain
+                          ? `${user.domain} · ${t('contacts.notFriend')}`
+                          : t('contacts.notFriend')
+                      }
                     />
                   </ListItem>
                 ))}

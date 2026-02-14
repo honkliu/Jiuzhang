@@ -55,6 +55,39 @@ cd server
 }
 ```
 
+Optional: add an admin whitelist to `appsettings.json` so those accounts are created with admin privileges (scoped to their email domain):
+```json
+{
+  "AdminEmails": [
+    "admin@kankan.local"
+  ]
+}
+```
+
+Optional: add domain isolation rules to block direct visibility between domains (group chat invites bypass isolation):
+```json
+{
+  "DomainIsolation": {
+    "@yue.com": [
+      "@kankan",
+      "@admin.com"
+    ]
+  }
+}
+```
+
+Optional: add domain visibility rules to allow two domains to see each other (bidirectional):
+```json
+{
+  "DomainVisibility": {
+    "@ruoli.com": [
+      "@shaol.com",
+      "@four.com"
+    ]
+  }
+}
+```
+
 3. Run the backend:
 ```bash
 dotnet restore
@@ -79,8 +112,8 @@ docker pull mongo:latest
 docker run -d \
   --name mongodb \
   -p 27017:27017 \
-  -e MONGO_INITDB_ROOT_USERNAME=admin \
-  -e MONGO_INITDB_ROOT_PASSWORD=password123 \
+  -e MONGO_INITDB_ROOT_USERNAME=<mongo-root-user> \
+  -e MONGO_INITDB_ROOT_PASSWORD=<mongo-root-password> \
   -v mongodb_data:/data/db \
   mongo:latest
 ```
@@ -89,8 +122,8 @@ docker run -d \
 - `-d` - Runs the container in detached mode (background)
 - `--name mongodb` - Names the container "mongodb"
 - `-p 27017:27017` - Maps port 27017 (MongoDB default) from container to host
-- `-e MONGO_INITDB_ROOT_USERNAME=admin` - Sets root username
-- `-e MONGO_INITDB_ROOT_PASSWORD=password123` - Sets root password
+- `-e MONGO_INITDB_ROOT_USERNAME=<mongo-root-user>` - Sets root username
+- `-e MONGO_INITDB_ROOT_PASSWORD=<mongo-root-password>` - Sets root password
 - `-v mongodb_data:/data/db` - Creates a volume for data persistence
 - `mongo:latest` - Uses the latest MongoDB image
 
@@ -103,7 +136,7 @@ You should see the mongodb container running.
 
 4. Connect to MongoDB shell to create database and user (optional - the app will auto-create):
 ```bash
-docker exec -it mongodb mongosh -u admin -p password123 --authenticationDatabase admin
+docker exec -it mongodb mongosh -u <mongo-root-user> -p <mongo-root-password> --authenticationDatabase admin
 ```
 
 5. In the MongoDB shell, create database and user:
@@ -112,7 +145,7 @@ use KanKanDB
 
 db.createUser({
   user: "kankan",
-  pwd: "kankan123",
+  pwd: "<db-user-password>",
   roles: [
     { role: "readWrite", db: "KanKanDB" }
   ]
@@ -170,7 +203,7 @@ cd server
 {
   "StorageMode": "MongoDB",
   "MongoDB": {
-    "ConnectionString": "mongodb://admin:password123@localhost:27017",
+    "ConnectionString": "mongodb://<mongo-user>:<mongo-password>@<mongo-host>:<mongo-port>",
     "DatabaseName": "KanKanDB",
     "Initialization": {
       "Enabled": true,
@@ -186,7 +219,7 @@ dotnet restore
 dotnet run
 ```
 
-The API will be available at: `http://localhost:5000`
+The API will be available at: `<api-base-url>`
 
 ### 2. Frontend Setup
 
@@ -210,7 +243,7 @@ npm install
 npm run dev
 ```
 
-The app will be available at: `http://localhost:3000`
+The app will be available at: `<frontend-url>`
 
 ### 3. Initialize MongoDB
 
@@ -224,7 +257,7 @@ The application automatically initializes MongoDB when `MongoDB:Initialization:E
 You can verify the setup by connecting to MongoDB:
 
 ```bash
-docker exec -it mongodb mongosh -u admin -p password123 --authenticationDatabase admin
+docker exec -it mongodb mongosh -u <mongo-root-user> -p <mongo-root-password> --authenticationDatabase admin
 ```
 
 Then in the MongoDB shell:
@@ -257,12 +290,12 @@ exit
 
 1. **MongoDB Compass** (Recommended GUI):
    - Download from: https://www.mongodb.com/products/compass
-   - Connect using: `mongodb://admin:password123@localhost:27017`
+  - Connect using: `mongodb://<mongo-user>:<mongo-password>@<mongo-host>:<mongo-port>`
 
 2. **Command Line** (mongosh):
    ```bash
    # Connect
-   docker exec -it mongodb mongosh -u admin -p password123 --authenticationDatabase admin
+  docker exec -it mongodb mongosh -u <mongo-root-user> -p <mongo-root-password> --authenticationDatabase admin
 
    # List databases
    show dbs
@@ -282,7 +315,7 @@ exit
 
 3. **VS Code Extension**:
    - Install "MongoDB for VS Code" extension
-   - Connect to `mongodb://admin:password123@localhost:27017`
+  - Connect to `mongodb://<mongo-user>:<mongo-password>@<mongo-host>:<mongo-port>`
 
 ## 🔄 Storage Mode Configuration
 
@@ -315,7 +348,7 @@ The application supports flexible storage configuration via the `StorageMode` se
 {
   "StorageMode": "MongoDB",
   "MongoDB": {
-    "ConnectionString": "mongodb://admin:password123@localhost:27017",
+    "ConnectionString": "mongodb://<mongo-user>:<mongo-password>@<mongo-host>:<mongo-port>",
     "DatabaseName": "KanKanDB",
     "Initialization": {
       "Enabled": true
@@ -355,7 +388,7 @@ No code changes needed - just configuration!
 
 ### 1. Register a New User
 
-1. Open `http://localhost:3000` in your browser
+1. Open `<frontend-url>` in your browser
 2. Click "Create account"
 3. Enter your email address
 4. Check the console logs for the verification code (since SendGrid might not be configured)
@@ -366,13 +399,13 @@ No code changes needed - just configuration!
 
 ### 2. Login
 
-1. Go to `http://localhost:3000/login`
+1. Go to `<frontend-url>/login`
 2. Enter your email and password
 3. Click "Sign In"
 
 ### 3. Test API with Swagger
 
-1. Open `http://localhost:5000`
+1. Open `<api-base-url>`
 2. Explore available endpoints
 3. Test authentication flow:
    - POST `/api/auth/register` - Send email
@@ -400,7 +433,7 @@ No code changes needed - just configuration!
 
 **Issue: "MongoDB ConnectionString not configured"**
 - Make sure `appsettings.json` has the correct MongoDB configuration
-- For local development with Docker, use: `mongodb://admin:password123@localhost:27017`
+- For local development with Docker, use: `mongodb://<mongo-user>:<mongo-password>@<mongo-host>:<mongo-port>`
 - Verify MongoDB container is running: `docker ps`
 
 **Issue: "Cannot connect to MongoDB"**
@@ -410,7 +443,7 @@ No code changes needed - just configuration!
 
 **Issue: "Authentication failed"**
 - Ensure username/password in connection string matches Docker environment variables
-- Default credentials: username=`admin`, password=`password123`
+- Default credentials: username=`<mongo-root-user>`, password=`<mongo-root-password>`
 
 **Issue: Email not being sent**
 - This is expected if SendGrid is not configured
@@ -420,7 +453,7 @@ No code changes needed - just configuration!
 ### Frontend Issues
 
 **Issue: "Network Error" when calling API**
-- Ensure backend is running on `http://localhost:5000`
+- Ensure backend is running on `<api-base-url>`
 - Check CORS configuration in backend `Program.cs`
 - Verify `VITE_API_URL` in `.env` file
 
@@ -465,7 +498,7 @@ No code changes needed - just configuration!
 
 ## 💡 Development Tips
 
-1. **Use Swagger** for API testing: `http://localhost:5000`
+1. **Use Swagger** for API testing: `<swagger-url>`
 2. **Check Console Logs** for verification codes when email is not configured
 3. **Use Redux DevTools** to inspect application state
 4. **Enable Hot Reload** - Both frontend (Vite) and backend (dotnet watch) support hot reload

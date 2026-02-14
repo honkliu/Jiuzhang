@@ -2,6 +2,7 @@ using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using MongoDB.Driver;
 using Microsoft.IdentityModel.Tokens;
+using KanKan.API.Domain;
 using KanKan.API.Hubs;
 using KanKan.API.Models.Entities;
 using KanKan.API.Repositories.Implementations;
@@ -20,6 +21,14 @@ if (!string.IsNullOrWhiteSpace(configuredUrls))
 // Add services to the container
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
+
+var isolationRules = builder.Configuration.GetSection("DomainIsolation")
+    .Get<Dictionary<string, string[]>>();
+DomainRules.ConfigureIsolation(isolationRules);
+
+var visibilityRules = builder.Configuration.GetSection("DomainVisibility")
+    .Get<Dictionary<string, string[]>>();
+DomainRules.ConfigureVisibility(visibilityRules);
 
 // Configure Swagger
 builder.Services.AddSwaggerGen();
@@ -100,12 +109,15 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowClient", policy =>
     {
         var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
-            ?? new[] { "http://localhost:3000", "http://localhost:5173" };
+            ?? Array.Empty<string>();
 
-        policy.WithOrigins(allowedOrigins)
-              .AllowAnyHeader()
-              .AllowAnyMethod()
-              .AllowCredentials();
+        if (allowedOrigins.Length > 0)
+        {
+            policy.WithOrigins(allowedOrigins)
+                  .AllowAnyHeader()
+                  .AllowAnyMethod()
+                  .AllowCredentials();
+        }
     });
 });
 
@@ -154,6 +166,8 @@ if (useInMemory)
     var chats = scope.ServiceProvider.GetRequiredService<IChatRepository>();
     var chatUsers = scope.ServiceProvider.GetRequiredService<IChatUserRepository>();
     var messages = scope.ServiceProvider.GetRequiredService<IMessageRepository>();
+    var seedPassword = Environment.GetEnvironmentVariable("KANKAN_SEED_PASSWORD")
+        ?? Guid.NewGuid().ToString("N");
 
     var alice = await users.GetByEmailAsync("alice@example.com");
     if (alice == null)
@@ -163,8 +177,10 @@ if (useInMemory)
             Id = "user_alice",
             Type = "user",
             Email = "alice@example.com",
+            Domain = DomainRules.GetDomain("alice@example.com"),
             EmailVerified = true,
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword("12345678"),
+            IsAdmin = false,
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(seedPassword),
             Handle = "alice_1001",
             DisplayName = "Alice",
             AvatarUrl = "/zodiac/f2.png",
@@ -193,8 +209,10 @@ if (useInMemory)
             Id = "user_bob",
             Type = "user",
             Email = "bob@example.com",
+            Domain = DomainRules.GetDomain("bob@example.com"),
             EmailVerified = true,
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword("12345678"),
+            IsAdmin = false,
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(seedPassword),
             Handle = "bob_1002",
             DisplayName = "Bob",
             AvatarUrl = "/zodiac/m1.png",
@@ -223,8 +241,10 @@ if (useInMemory)
             Id = "user_carol",
             Type = "user",
             Email = "carol@example.com",
+            Domain = DomainRules.GetDomain("carol@example.com"),
             EmailVerified = true,
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword("12345678"),
+            IsAdmin = false,
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(seedPassword),
             Handle = "carol_1004",
             DisplayName = "Carol",
             AvatarUrl = "/zodiac/f3.png",
@@ -253,7 +273,9 @@ if (useInMemory)
             Id = "user_ai_wa",
             Type = "user",
             Email = "wa@assistant.local",
+            Domain = DomainRules.SuperDomain,
             EmailVerified = true,
+            IsAdmin = false,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(Guid.NewGuid().ToString()),
             Handle = "assistant_1003",
             DisplayName = "Assistant",

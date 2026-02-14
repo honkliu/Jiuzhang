@@ -58,4 +58,10 @@ public class MomentRepository : IMomentRepository
         var filter = Builders<Moment>.Filter.Eq(m => m.Id, id);
         await _collection.DeleteOneAsync(filter);
     }
+
+    public async Task DeleteByUserAsync(string userId)
+    {
+        var filter = Builders<Moment>.Filter.Eq(m => m.UserId, userId);
+        await _collection.DeleteManyAsync(filter);
+    }
 }

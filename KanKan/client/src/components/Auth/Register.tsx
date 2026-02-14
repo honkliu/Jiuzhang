@@ -21,8 +21,8 @@ export const Register: React.FC = () => {
   const [activeStep, setActiveStep] = useState(0);
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
-  const [password, setPassword] = useState('12345678');
-  const [confirmPassword, setConfirmPassword] = useState('12345678');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [error, setErrorState] = useState('');
   const [loading, setLoading] = useState(false);
@@ -125,7 +125,7 @@ export const Register: React.FC = () => {
                 autoFocus
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                type="email"
+                type="text"
                 disabled={loading}
               />
 
@@ -164,8 +164,8 @@ export const Register: React.FC = () => {
                 name="code"
                 autoFocus
                 value={code}
-                onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
-                inputProps={{ maxLength: 6, pattern: '[0-9]*' }}
+                onChange={(e) => setCode(e.target.value.replace(/\s+/g, ''))}
+                inputProps={{ maxLength: 64 }}
                 disabled={loading}
               />
 

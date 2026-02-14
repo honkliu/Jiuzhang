@@ -33,9 +33,7 @@ npm install
 ## Login
 
 ```bash
-node index.js login <email> <password> --base-url http://localhost:5001/api
-# Example:
-node index.js login alice@example.com 12345678 --base-url http://localhost:5001/api
+node index.js login <email> <password> --base-url <api-base-url>
 ```
 
 ## Start interactive mode
@@ -74,7 +72,7 @@ Configuration is stored at `~/.bbtalk.json`:
 
 ```json
 {
-  "baseUrl": "http://localhost:5001/api",
+  "baseUrl": "<api-base-url>",
   "token": "your-access-token",
   "userId": "your-user-id",
   "userName": "Your Display Name"
@@ -84,7 +82,7 @@ Configuration is stored at `~/.bbtalk.json`:
 You can override base URL with:
 
 ```bash
-BBTALK_BASE_URL=http://localhost:5001/api node index.js
+BBTALK_BASE_URL=<api-base-url> node index.js
 ```
 
 ## Technical Details
@@ -120,4 +118,4 @@ BBTALK_BASE_URL=http://localhost:5001/api node index.js
 ## Requirements
 
 - Node.js 14+ (for ES modules support)
-- KanKan server running on localhost:5001 or configured URL
+- KanKan server running at the configured API base URL

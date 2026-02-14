@@ -62,4 +62,14 @@ public class ContactRepository : IContactRepository
         );
         await _collection.DeleteOneAsync(filter);
     }
+
+    public async Task DeleteAllForUserAsync(string userId)
+    {
+        var filter = Builders<Contact>.Filter.Or(
+            Builders<Contact>.Filter.Eq(c => c.UserId, userId),
+            Builders<Contact>.Filter.Eq(c => c.ContactId, userId)
+        );
+
+        await _collection.DeleteManyAsync(filter);
+    }
 }

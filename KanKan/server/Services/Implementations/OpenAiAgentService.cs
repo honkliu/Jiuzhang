@@ -25,8 +25,14 @@ public class OpenAiAgentService : IAgentService
     public async Task<string> GenerateReplyAsync(string chatId, string userMessage, IEnumerable<(string SenderName, string Message)> history)
     {
         var baseUrl = _configuration["Agent:BaseUrl"];
-        var apiKey = _configuration["Agent:ApiKey"];
-        var model = _configuration["Agent:Model"];
+        if (string.IsNullOrWhiteSpace(baseUrl))
+        {
+            _logger.LogWarning("Agent base URL not configured. Skipping agent reply.");
+            return "Sorry, I'm having trouble responding right now.";
+        }
+
+        var apiKey = _configuration["Agent:ApiKey"] ?? string.Empty;
+        var model = _configuration["Agent:Model"] ?? string.Empty;
 
         var messages = new List<object>
         {
@@ -85,8 +91,14 @@ public class OpenAiAgentService : IAgentService
     public async IAsyncEnumerable<string> StreamReplyAsync(string chatId, string userMessage, IEnumerable<(string SenderName, string Message)> history)
     {
         var baseUrl = _configuration["Agent:BaseUrl"];
-        var apiKey = _configuration["Agent:ApiKey"];
-        var model = _configuration["Agent:Model"];
+        if (string.IsNullOrWhiteSpace(baseUrl))
+        {
+            _logger.LogWarning("Agent base URL not configured. Skipping agent stream.");
+            yield break;
+        }
+
+        var apiKey = _configuration["Agent:ApiKey"] ?? string.Empty;
+        var model = _configuration["Agent:Model"] ?? string.Empty;
 
         var messages = new List<object>
         {
