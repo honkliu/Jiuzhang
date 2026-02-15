@@ -1,81 +1,49 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Box, Typography, Paper } from '@mui/material';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { FiberManualRecord as FiberManualRecordIcon } from '@mui/icons-material';
 import { Message } from '@/services/chat.service';
 import { UserAvatar } from '@/components/Shared/UserAvatar';
 import { format } from 'date-fns';
 
-// Work around TS2590 (“union type too complex”) from MUI Box typings in some TS versions.
+// Work around TS2590 ("union type too complex") from MUI Box typings in some TS versions.
 const BoxAny = Box as any;
 
-const renderBoldItalic = (text: string, keyPrefix: string): React.ReactNode[] => {
-  const parts: React.ReactNode[] = [];
-  const pattern = /(\*\*[^*]+\*\*|\*[^*]+\*)/g;
-  let lastIndex = 0;
-  let match: RegExpExecArray | null;
-
-  while ((match = pattern.exec(text)) !== null) {
-    const start = match.index;
-    const end = start + match[0].length;
-
-    if (start > lastIndex) {
-      parts.push(text.slice(lastIndex, start));
-    }
-
-    const token = match[0];
-    if (token.startsWith('**') && token.endsWith('**')) {
-      parts.push(<strong key={`${keyPrefix}-b-${start}-${end}`}>{token.slice(2, -2)}</strong>);
-    } else if (token.startsWith('*') && token.endsWith('*')) {
-      parts.push(<em key={`${keyPrefix}-i-${start}-${end}`}>{token.slice(1, -1)}</em>);
-    } else {
-      parts.push(token);
-    }
-
-    lastIndex = end;
-  }
-
-  if (lastIndex < text.length) {
-    parts.push(text.slice(lastIndex));
-  }
-
-  return parts;
-};
-
-const renderInlineFormat = (text: string): React.ReactNode => {
-  // Very small, safe formatter:
-  // - [red]...[/red]
-  // - **bold**
-  // - *italic*
-  // Everything else is rendered as plain text.
-  const nodes: React.ReactNode[] = [];
-  const redPattern = /\[red\]([\s\S]*?)\[\/red\]/g;
-  let lastIndex = 0;
-  let match: RegExpExecArray | null;
-
-  while ((match = redPattern.exec(text)) !== null) {
-    const start = match.index;
-    const end = start + match[0].length;
-
-    if (start > lastIndex) {
-      nodes.push(...renderBoldItalic(text.slice(lastIndex, start), `t-${lastIndex}-${start}`));
-    }
-
-    const inner = match[1] ?? '';
-    nodes.push(
-      <span key={`red-${start}-${end}`} style={{ color: '#d32f2f', fontWeight: 600 }}>
-        {renderBoldItalic(inner, `red-${start}-${end}`)}
-      </span>
-    );
-
-    lastIndex = end;
-  }
-
-  if (lastIndex < text.length) {
-    nodes.push(...renderBoldItalic(text.slice(lastIndex), `tail-${lastIndex}`));
-  }
-
-  return nodes;
+const markdownComponents = {
+  p: ({ children }: { children: React.ReactNode }) => (
+    <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', my: 0.5 }}>
+      {children}
+    </Typography>
+  ),
+  code: ({ inline, children, ...props }: any) => (
+    inline ? (
+      <code style={{
+        backgroundColor: 'rgba(0, 0, 0, 0.05)',
+        padding: '2px 4px',
+        borderRadius: '3px',
+        fontFamily: 'monospace',
+        fontSize: '0.9em'
+      }}>
+        {children}
+      </code>
+    ) : (
+      <pre style={{
+        backgroundColor: 'rgba(0, 0, 0, 0.05)',
+        padding: '8px 12px',
+        borderRadius: '4px',
+        overflowX: 'auto',
+        margin: '8px 0'
+      }}>
+        <code style={{ fontFamily: 'monospace', fontSize: '0.9em' }}>
+          {children}
+        </code>
+      </pre>
+    )
+  ),
 };
 
 interface MessageBubbleProps {
@@ -202,9 +170,26 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
             {t('chat.message.deleted')}
           </Typography>
         ) : message.messageType === 'text' ? (
-          <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-            {renderInlineFormat(isOwn || isAgent || isDraft ? message.text || '' : displayText)}
-          </Typography>
+          <BoxAny
+            sx={{
+              '& .katex-display': {
+                margin: '0.5em 0',
+                overflowX: 'auto',
+                overflowY: 'hidden',
+              },
+              '& .katex': {
+                fontSize: '1.1em',
+              },
+            }}
+          >
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm, remarkMath]}
+              rehypePlugins={[rehypeKatex]}
+              components={markdownComponents}
+            >
+              {isOwn || isAgent || isDraft ? message.text || '' : displayText}
+            </ReactMarkdown>
+          </BoxAny>
         ) : message.messageType === 'image' ? (
           <BoxAny
             component="img"
