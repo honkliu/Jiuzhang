@@ -8,6 +8,7 @@ import axios from 'axios';
 import chalk from 'chalk';
 import * as signalR from '@microsoft/signalr';
 import WebSocket from 'ws';
+import { renderMessage } from './renderer.js';
 
 const WA_USER_ID = 'user_ai_wa';
 const CONFIG_PATH = path.join(os.homedir(), '.bbtalk.json');
@@ -31,6 +32,18 @@ const readConfig = () => {
 
 const writeConfig = (next) => {
   fs.writeFileSync(CONFIG_PATH, `${JSON.stringify(next, null, 2)}\n`, 'utf8');
+};
+
+const stripAnsi = (text) => String(text || '').replace(/\u001b\[[0-9;]*m/g, '');
+
+const safeRenderMessage = (text) => {
+  try {
+    const rendered = renderMessage(text);
+    if (typeof rendered !== 'string') return text;
+    return stripAnsi(rendered).trim().length === 0 ? text : rendered;
+  } catch {
+    return text;
+  }
 };
 
 const getBaseUrl = (cfg, override) => {
@@ -956,11 +969,13 @@ const attachRealtime = async (state) => {
       }
       const formatted = formatInboundMessage(message, state.meId);
       if (formatted) {
+        // Render markdown and LaTeX for Wa's messages
+        const renderedText = message.senderId === WA_USER_ID ? safeRenderMessage(formatted.text) : formatted.text;
         // Check if text already includes the name prefix to avoid duplication
-        const text = formatted.text.startsWith(`${formatted.name}: `)
-          ? formatted.text
-          : `${formatted.name}: ${formatted.text}`;
-        printMessage(state, 'assistant', text);
+        const text = renderedText.startsWith(`${formatted.name}: `)
+          ? renderedText
+          : `${formatted.name}: ${renderedText}`;
+        printMessage(state, 'assistant', text, { noWrap: message.senderId === WA_USER_ID });
       }
     }
   });
@@ -981,13 +996,14 @@ const attachRealtime = async (state) => {
     state.streamingMessage.text += chunk;
   });
 
-  connection.on('AgentMessageComplete', (chatId, messageId) => {
+  connection.on('AgentMessageComplete', (chatId, messageId, reply) => {
     if (!state.streamingMessage || state.streamingMessage.id !== messageId) return;
     const { text } = state.streamingMessage;
     state.streamingMessage = null;
     if (state.currentChat?.id === chatId) {
-      const rawText = String(text ?? '');
-      const displayText = rawText.startsWith('Wa: ') ? rawText : `Wa: ${rawText}`;
+      const rawText = String(reply ?? text ?? '');
+      const renderedText = safeRenderMessage(rawText);
+      const displayText = renderedText.startsWith('Wa: ') ? renderedText : `Wa: ${renderedText}`;
       printMessage(state, 'assistant', displayText, { noWrap: true });
     }
   });
@@ -1024,11 +1040,13 @@ const selectChatByIndex = async (state, idx) => {
     } else {
       const formatted = formatInboundMessage(m, state.meId);
       if (formatted) {
+        // Render markdown and LaTeX for Wa's messages
+        const renderedText = m.senderId === WA_USER_ID ? safeRenderMessage(formatted.text) : formatted.text;
         // Check if text already includes the name prefix to avoid duplication
-        const text = formatted.text.startsWith(`${formatted.name}: `)
-          ? formatted.text
-          : `${formatted.name}: ${formatted.text}`;
-        printMessage(state, 'assistant', text);
+        const text = renderedText.startsWith(`${formatted.name}: `)
+          ? renderedText
+          : `${formatted.name}: ${renderedText}`;
+        printMessage(state, 'assistant', text, { noWrap: m.senderId === WA_USER_ID });
       }
     }
   });
