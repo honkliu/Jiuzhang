@@ -13,8 +13,98 @@ import { format } from 'date-fns';
 // Work around TS2590 ("union type too complex") from MUI Box typings in some TS versions.
 const BoxAny = Box as any;
 
-const remarkPlugins = [remarkMath, remarkGfm];
+const restorePipesInMath = () => {
+  return (tree: any) => {
+    const walk = (node: any) => {
+      if (!node) return;
+      if (node.type === 'inlineMath' || node.type === 'math') {
+        if (typeof node.value === 'string') {
+          node.value = node.value.replace(/\\\|/g, '|');
+        }
+      }
+      if (Array.isArray(node.children)) {
+        node.children.forEach(walk);
+      }
+    };
+
+    walk(tree);
+  };
+};
+
+const remarkPlugins = [remarkMath, remarkGfm, restorePipesInMath];
 const rehypePlugins = [rehypeKatex];
+
+const escapePipesInMathForGfm = (input: string): string => {
+  let out = '';
+  let i = 0;
+  let inMath = false;
+  let mathDelim: '$' | '$$' = '$';
+
+  while (i < input.length) {
+    const ch = input[i];
+    const next = input[i + 1];
+
+    if (!inMath) {
+      if (ch === '\\' && next === '$') {
+        out += input.slice(i, i + 2);
+        i += 2;
+        continue;
+      }
+
+      if (ch === '$') {
+        if (next === '$') {
+          inMath = true;
+          mathDelim = '$$';
+          out += '$$';
+          i += 2;
+          continue;
+        }
+
+        inMath = true;
+        mathDelim = '$';
+        out += '$';
+        i += 1;
+        continue;
+      }
+
+      out += ch;
+      i += 1;
+      continue;
+    }
+
+    if (ch === '\\' && next === '$') {
+      out += input.slice(i, i + 2);
+      i += 2;
+      continue;
+    }
+
+    if (mathDelim === '$$' && ch === '$' && next === '$') {
+      inMath = false;
+      out += '$$';
+      i += 2;
+      continue;
+    }
+
+    if (mathDelim === '$' && ch === '$') {
+      inMath = false;
+      out += '$';
+      i += 1;
+      continue;
+    }
+
+    if (ch === '|') {
+      // Escape pipes inside math so GFM tables keep their column structure.
+      out += '\\|';
+      i += 1;
+      continue;
+    }
+
+    out += ch;
+    i += 1;
+  }
+
+  return out;
+};
 
 interface MessageBubbleProps {
   message: Message;
@@ -34,7 +124,8 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
   const animRef = useRef<number | null>(null);
   const lastTextRef = useRef(message.text || '');
 
-  const renderText = isOwn || isAgent || isDraft ? message.text || '' : displayText;
+  const rawText = isOwn || isAgent || isDraft ? message.text || '' : displayText;
+  const renderText = escapePipesInMathForGfm(rawText);
 
   useEffect(() => {
     const fullText = message.text || '';
