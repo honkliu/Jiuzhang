@@ -183,9 +183,10 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
         flexDirection: isOwn ? 'row-reverse' : 'row',
         justifyContent: isOwn ? 'flex-end' : 'flex-start',
         alignItems: 'flex-start', // Adjusted alignment to top-align the avatar
-        gap: 1,
+        gap: 0.5,
         mb: 0.5,
         width: '100%',
+        mx: -0.5,
       }}
     >
       {/* Avatar */}
@@ -210,7 +211,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
       <Paper
         elevation={0}
         sx={{
-          maxWidth: '70%',
+          maxWidth: '83%',
           px: 2,
           py: 1,
           bgcolor: isOwn ? 'rgba(7, 193, 96, 0.9)' : 'rgba(255, 255, 255, 0.6)',
