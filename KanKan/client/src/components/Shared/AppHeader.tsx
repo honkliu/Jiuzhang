@@ -27,6 +27,7 @@ import { RootState, AppDispatch } from '@/store';
 import { authService } from '@/services/auth.service';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { fetchNotifications, fetchUnreadNotificationCount } from '@/store/notificationsSlice';
+import { clearChat } from '@/store/chatSlice';
 import { UserAvatar } from '@/components/Shared/UserAvatar';
 import { formatDistanceToNow } from 'date-fns';
 import { enUS, zhCN } from 'date-fns/locale';
@@ -98,6 +99,8 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleSidebar, sidebarOp
     } catch {
       authService.clearAuth();
     }
+    // Clear Redux state
+    dispatch(clearChat());
     navigate('/login');
   };
 

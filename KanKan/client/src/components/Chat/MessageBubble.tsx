@@ -13,38 +13,8 @@ import { format } from 'date-fns';
 // Work around TS2590 ("union type too complex") from MUI Box typings in some TS versions.
 const BoxAny = Box as any;
 
-const markdownComponents = {
-  p: ({ children }: { children: React.ReactNode }) => (
-    <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', my: 0.5 }}>
-      {children}
-    </Typography>
-  ),
-  code: ({ inline, children, ...props }: any) => (
-    inline ? (
-      <code style={{
-        backgroundColor: 'rgba(0, 0, 0, 0.05)',
-        padding: '2px 4px',
-        borderRadius: '3px',
-        fontFamily: 'monospace',
-        fontSize: '0.9em'
-      }}>
-        {children}
-      </code>
-    ) : (
-      <pre style={{
-        backgroundColor: 'rgba(0, 0, 0, 0.05)',
-        padding: '8px 12px',
-        borderRadius: '4px',
-        overflowX: 'auto',
-        margin: '8px 0'
-      }}>
-        <code style={{ fontFamily: 'monospace', fontSize: '0.9em' }}>
-          {children}
-        </code>
-      </pre>
-    )
-  ),
-};
+const remarkPlugins = [remarkMath, remarkGfm];
+const rehypePlugins = [rehypeKatex];
 
 interface MessageBubbleProps {
   message: Message;
@@ -52,7 +22,7 @@ interface MessageBubbleProps {
   showAvatar: boolean;
 }
 
-export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({ 
+export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
   message,
   isOwn,
   showAvatar,
@@ -63,6 +33,8 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
   const [displayText, setDisplayText] = useState(message.text || '');
   const animRef = useRef<number | null>(null);
   const lastTextRef = useRef(message.text || '');
+
+  const renderText = isOwn || isAgent || isDraft ? message.text || '' : displayText;
 
   useEffect(() => {
     const fullText = message.text || '';
@@ -172,6 +144,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
         ) : message.messageType === 'text' ? (
           <BoxAny
             sx={{
+              whiteSpace: 'pre-wrap',
               '& .katex-display': {
                 margin: '0.5em 0',
                 overflowX: 'auto',
@@ -180,14 +153,45 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
               '& .katex': {
                 fontSize: '1.1em',
               },
+              '& table': {
+                width: '100%',
+                borderCollapse: 'collapse',
+                margin: '8px 0',
+              },
+              '& th, & td': {
+                border: '1px solid rgba(0,0,0,0.1)',
+                padding: '4px 8px',
+                textAlign: 'left',
+              },
+              '& th': {
+                backgroundColor: 'rgba(0,0,0,0.03)',
+                fontWeight: 600,
+              },
+              '& code': {
+                backgroundColor: 'rgba(0, 0, 0, 0.05)',
+                padding: '2px 4px',
+                borderRadius: '3px',
+                fontFamily: 'monospace',
+                fontSize: '0.9em',
+              },
+              '& pre': {
+                backgroundColor: 'rgba(0, 0, 0, 0.05)',
+                padding: '8px 12px',
+                borderRadius: '4px',
+                overflowX: 'auto',
+                margin: '8px 0',
+              },
+              '& pre code': {
+                padding: 0,
+                backgroundColor: 'transparent',
+              },
             }}
           >
             <ReactMarkdown
-              remarkPlugins={[remarkGfm, remarkMath]}
-              rehypePlugins={[rehypeKatex]}
-              components={markdownComponents}
+              remarkPlugins={remarkPlugins}
+              rehypePlugins={rehypePlugins}
             >
-              {isOwn || isAgent || isDraft ? message.text || '' : displayText}
+              {renderText}
             </ReactMarkdown>
           </BoxAny>
         ) : message.messageType === 'image' ? (

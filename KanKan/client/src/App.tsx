@@ -1,8 +1,8 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { Provider } from 'react-redux';
+import { Provider, useDispatch } from 'react-redux';
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
-import { store } from './store';
+import { store, AppDispatch } from './store';
 import { Login } from './components/Auth/Login';
 import { Register } from './components/Auth/Register';
 import { ForgotPassword } from './components/Auth/ForgotPassword';
@@ -12,7 +12,9 @@ import { MomentsPage } from './components/Moments/MomentsPage';
 import { ProfilePage } from './components/Profile/ProfilePage';
 import { ChatRoom3DTestPage } from './components/Chat/ChatRoom3DTestPage';
 import { authService } from './services/auth.service';
+import { contactService } from './services/contact.service';
 import { LanguageProvider } from './i18n/LanguageContext';
+import { setAuth } from './store/authSlice';
 
 // Create MUI theme
 const theme = createTheme({
@@ -179,6 +181,33 @@ const PublicRoute: React.FC<{ children: React.ReactElement }> = ({ children }) =
   return isAuthenticated ? <Navigate to="/chats" replace /> : children;
 };
 
+const AuthBootstrap: React.FC = () => {
+  const dispatch = useDispatch<AppDispatch>();
+
+  React.useEffect(() => {
+    const accessToken = authService.getAccessToken();
+    const storedUser = authService.getCurrentUser();
+
+    if (accessToken && storedUser) {
+      dispatch(setAuth({ accessToken, user: storedUser }));
+      return;
+    }
+
+    if (accessToken && !storedUser) {
+      contactService.getCurrentUser()
+        .then((user) => {
+          authService.saveAuth(accessToken, user);
+          dispatch(setAuth({ accessToken, user }));
+        })
+        .catch(() => {
+          // Keep auth state unchanged; protected routes will handle invalid sessions.
+        });
+    }
+  }, [dispatch]);
+
+  return null;
+};
+
 function App() {
   return (
     <Provider store={store}>
@@ -186,6 +215,7 @@ function App() {
         <ThemeProvider theme={theme}>
           <CssBaseline />
           <BrowserRouter>
+            <AuthBootstrap />
             <Routes>
               {/* Public routes */}
               <Route
