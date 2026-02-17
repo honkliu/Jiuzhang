@@ -23,6 +23,7 @@ import {
   AttachFile as AttachFileIcon,
   Edit as EditIcon,
   ViewInAr as ViewInArIcon,
+  Forum as ForumIcon,
 } from '@mui/icons-material';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState, AppDispatch } from '@/store';
@@ -41,6 +42,7 @@ import {
   WA_USER_ID,
 } from '@/utils/chatParticipants';
 import { ChatRoom3D } from './ChatRoom3D';
+import { ChatRoom2D } from './ChatRoom2D';
 import { useLanguage } from '@/i18n/LanguageContext';
 
 // Work around TS2590 (“union type too complex”) from MUI Box typings in some TS versions.
@@ -63,6 +65,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
   const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [isRoom3D, setIsRoom3D] = useState(false);
+  const [isRoom2D, setIsRoom2D] = useState(false);
   const [commandSelectedIndex, setCommandSelectedIndex] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -103,12 +106,19 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
   );
 
   const room3DStorageKey = activeChat ? `kankan.chat.3d:${activeChat.id}` : null;
+  const room2DStorageKey = activeChat ? `kankan.chat.2d:${activeChat.id}` : null;
 
   useEffect(() => {
     if (!room3DStorageKey) return;
     const saved = window.localStorage.getItem(room3DStorageKey);
     setIsRoom3D(saved === '1');
   }, [room3DStorageKey]);
+
+  useEffect(() => {
+    if (!room2DStorageKey) return;
+    const saved = window.localStorage.getItem(room2DStorageKey);
+    setIsRoom2D(saved === '1');
+  }, [room2DStorageKey]);
 
   const handleRenameGroup = async () => {
     if (!activeChat) return;
@@ -275,9 +285,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
 
   // Scroll to bottom when messages change
   useEffect(() => {
-    if (isRoom3D) return;
+    if (isRoom3D || isRoom2D) return;
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [mergedMessages, isRoom3D]);
+  }, [mergedMessages, isRoom3D, isRoom2D]);
 
   // Join chat room when active chat changes
   useEffect(() => {
@@ -438,6 +448,87 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
     ? getDirectDisplayParticipant(activeChat, user?.id)
     : undefined;
 
+  const otherParticipant = activeChat
+    ? getOtherRealParticipants(activeChat, user?.id)[0] || displayParticipant
+    : undefined;
+
+  const buildRollingTextFor = (senderId?: string, draftText?: string) => {
+    if (!senderId) return '';
+    const prefixLines = (value: string) =>
+      value
+        .split('\n')
+        .map((line) => `\\> ${line}`)
+        .join('\n');
+
+    const parts = chatMessages
+      .filter((msg) => msg.senderId === senderId && msg.messageType === 'text' && !msg.isDeleted)
+      .map((msg) => prefixLines(msg.text || ''))
+      .filter((text) => text.length > 0);
+
+    if (draftText && draftText.trim().length > 0) {
+      parts.push(prefixLines(draftText));
+    }
+
+    return parts.join('\n');
+  };
+
+  const getLatestRawTextFor = (senderId?: string) => {
+    if (!senderId) return '';
+    for (let i = chatMessages.length - 1; i >= 0; i -= 1) {
+      const msg = chatMessages[i];
+      if (msg.senderId !== senderId) continue;
+      if (msg.messageType !== 'text' || msg.isDeleted) continue;
+      return msg.text || '';
+    }
+    return '';
+  };
+
+  type MoodKey = 'neutral' | 'talk' | 'smile' | 'angry' | 'sad' | 'surprised' | 'thinking';
+
+  const getMoodFromText = (text: string, isDraft: boolean): MoodKey => {
+    if (isDraft && text.trim().length > 0) return 'talk';
+    const value = text.toLowerCase();
+
+    if (/生气|气死|恼火|怒|愤怒|抓狂/.test(value)) return 'angry';
+    if (/难过|伤心|哭|呜呜|sad/.test(value)) return 'sad';
+    if (/震惊|惊讶|哇|诶|wow/.test(value)) return 'surprised';
+    if (/想想|思考|等等|嗯|hmm|think/.test(value)) return 'thinking';
+    if (/笑|开心|高兴|哈哈|lol|haha|😂|😄/.test(value)) return 'smile';
+
+    return 'neutral';
+  };
+
+  const getAvatarForMood = (side: 'left' | 'right', mood: MoodKey, fallback?: string) => {
+    const base = `/avatars/2d/${side}`;
+    const byMood: Record<MoodKey, string> = {
+      neutral: `${base}_neutral.png`,
+      talk: `${base}_talk.png`,
+      smile: `${base}_smile.png`,
+      angry: `${base}_angry.png`,
+      sad: `${base}_sad.png`,
+      surprised: `${base}_surprised.png`,
+      thinking: `${base}_thinking.png`,
+    };
+
+    return byMood[mood] || fallback || '';
+  };
+
+  const otherDraft = draftMessages.find((d) => d.senderId === otherParticipant?.userId)?.text;
+  const leftText = buildRollingTextFor(otherParticipant?.userId, otherDraft);
+  const rightText = buildRollingTextFor(user?.id, messageText);
+  const leftMoodText = otherDraft || getLatestRawTextFor(otherParticipant?.userId);
+  const rightMoodText = messageText.trim().length > 0 ? messageText : getLatestRawTextFor(user?.id);
+  const leftAvatar = getAvatarForMood(
+    'left',
+    getMoodFromText(leftMoodText, Boolean(otherDraft)),
+    otherParticipant?.avatarUrl
+  );
+  const rightAvatar = getAvatarForMood(
+    'right',
+    getMoodFromText(rightMoodText, messageText.trim().length > 0),
+    user?.avatarUrl
+  );
+
   const groupMembersCount = activeChat
     ? getRealParticipants(activeChat.participants).length
     : 0;
@@ -530,6 +621,34 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
             </IconButton>
           )}
 
+          {!isGroup && (
+            <Tooltip title={isRoom2D ? 'Exit 2D view' : 'Enter 2D view'}>
+              <span>
+                <IconButton
+                  edge="end"
+                  onClick={() => {
+                    if (!room2DStorageKey) return;
+                    setIsRoom2D((prev) => {
+                      const next = !prev;
+                      window.localStorage.setItem(room2DStorageKey, next ? '1' : '0');
+                      if (next) {
+                        setIsRoom3D(false);
+                        if (room3DStorageKey) {
+                          window.localStorage.setItem(room3DStorageKey, '0');
+                        }
+                      }
+                      return next;
+                    });
+                  }}
+                  color={isRoom2D ? 'primary' : 'default'}
+                  aria-label="toggle-2d"
+                >
+                  <ForumIcon />
+                </IconButton>
+              </span>
+            </Tooltip>
+          )}
+
           <Tooltip title={isRoom3D ? t('chat.exit3d') : t('chat.enter3d')}>
             <span>
               <IconButton
@@ -539,6 +658,12 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
                   setIsRoom3D((prev) => {
                     const next = !prev;
                     window.localStorage.setItem(room3DStorageKey, next ? '1' : '0');
+                    if (next) {
+                      setIsRoom2D(false);
+                      if (room2DStorageKey) {
+                        window.localStorage.setItem(room2DStorageKey, '0');
+                      }
+                    }
                     return next;
                   });
                 }}
@@ -571,6 +696,21 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
             </BoxAny>
           ) : null}
         </BoxAny>
+      ) : isRoom2D ? (
+        <ChatRoom2D
+          leftParticipant={otherParticipant ? {
+            displayName: otherParticipant.displayName,
+            avatarUrl: leftAvatar,
+            gender: otherParticipant.gender,
+          } : null}
+          rightParticipant={user ? {
+            displayName: user.displayName,
+            avatarUrl: rightAvatar,
+            gender: user.gender,
+          } : null}
+          leftText={leftText}
+          rightText={rightText}
+        />
       ) : (
         <BoxAny
           sx={{
