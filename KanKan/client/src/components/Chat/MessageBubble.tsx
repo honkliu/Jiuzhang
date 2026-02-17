@@ -211,7 +211,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
       <Paper
         elevation={0}
         sx={{
-          maxWidth: '83%',
+          maxWidth: '76%',
           px: 2,
           py: 1,
           bgcolor: isOwn ? 'rgba(7, 193, 96, 0.9)' : 'rgba(255, 255, 255, 0.6)',
