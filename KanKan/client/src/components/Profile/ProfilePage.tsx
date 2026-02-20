@@ -83,6 +83,7 @@ export const ProfilePage: React.FC = () => {
     }
   };
 
+
   return (
     <BoxAny sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
       <AppHeader />

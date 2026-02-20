@@ -146,7 +146,10 @@ class UnifiedImageGenerationService {
   /**
    * Poll job until complete with progress callback
    */
-  async pollJobUntilComplete(jobId: string, onProgress?: (progress: number) => void): Promise<GenerationJob> {
+  async pollJobUntilComplete(
+    jobId: string,
+    onProgress?: (progress: number) => void | Promise<void>
+  ): Promise<GenerationJob> {
     const maxAttempts = 60; // 60 * 3 seconds = 3 minutes
     let attempt = 0;
 
@@ -154,7 +157,7 @@ class UnifiedImageGenerationService {
       const job = await this.getJobStatus(jobId);
 
       if (onProgress) {
-        onProgress(job.progress);
+        await onProgress(job.progress);
       }
 
       if (job.status === 'completed' || job.status === 'failed') {

@@ -9,7 +9,8 @@ import {
   CircularProgress,
 } from '@mui/material';
 import { AutoAwesome as MagicIcon } from '@mui/icons-material';
-import { imageGenerationService, type AvatarResult } from '@/services/imageGeneration.service';
+import { avatarService, type EmotionThumbnailResult } from '@/services/avatar.service';
+import { imageGenerationService } from '@/services/imageGeneration.service';
 
 interface EmotionAvatarGalleryProps {
   userId: string;
@@ -17,43 +18,64 @@ interface EmotionAvatarGalleryProps {
 }
 
 export const EmotionAvatarGallery: React.FC<EmotionAvatarGalleryProps> = ({ userId, avatarId }) => {
-  const containerStyle: React.CSSProperties = { padding: 16 };
+  const containerStyle: React.CSSProperties = { padding: 3 };
   const headerStyle: React.CSSProperties = {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 1,
   };
-  const errorStyle: React.CSSProperties = { marginBottom: 16 };
+  const errorStyle: React.CSSProperties = { marginBottom: 6 };
   const loadingStyle: React.CSSProperties = { display: 'flex', justifyContent: 'center', padding: 32 };
 
-  const emotionLabels = ['angry', 'smile', 'sad', 'happy', 'crying', 'thinking', 'surprised', 'neutral', 'excited'];
+  const buildThumbnailUrl = (imageUrl: string) => {
+    if (!imageUrl) return imageUrl;
+    return imageUrl.includes('?') ? `${imageUrl}&size=thumbnail` : `${imageUrl}?size=thumbnail`;
+  };
 
-  const [emotions, setEmotions] = useState<AvatarResult[]>([]);
+  const emotionLabels = ['angry', 'smile', 'sad', 'happy', 'crying', 'thinking', 'surprised', 'neutral', 'excited'];
+  const tileSize = 100;
+
+  const [emotions, setEmotions] = useState<EmotionThumbnailResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState<string | null>(null);
   const [generatingAll, setGeneratingAll] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const cacheRef = React.useRef<Map<string, EmotionThumbnailResult[]>>(new Map());
+  const avatarIdRef = React.useRef<string>(avatarId);
+  const refreshInFlightRef = React.useRef(false);
 
   useEffect(() => {
+    avatarIdRef.current = avatarId;
     loadEmotionAvatars();
   }, [userId, avatarId]);
 
-  const loadEmotionAvatars = async (silent: boolean = false) => {
+  const loadEmotionAvatars = async (silent: boolean = false, targetAvatarId: string = avatarId) => {
     try {
-      if (!silent) {
+      const cached = targetAvatarId ? cacheRef.current.get(targetAvatarId) : null;
+      if (cached) {
+        if (avatarIdRef.current === targetAvatarId) {
+          setEmotions(cached);
+        }
+      }
+
+      if (!silent && !cached) {
         setLoading(true);
       }
-      if (!avatarId) {
-        setEmotions([]);
+      if (!targetAvatarId) {
+        if (avatarIdRef.current === targetAvatarId) {
+          setEmotions([]);
+        }
         if (!silent) {
           setLoading(false);
         }
         return;
       }
-      const results = await imageGenerationService.getResults(avatarId, 'avatar');
-      const generated = Array.isArray(results.results) ? (results.results as AvatarResult[]) : [];
-      setEmotions(generated);
+      const generated = await avatarService.getEmotionThumbnails(targetAvatarId);
+      cacheRef.current.set(targetAvatarId, generated);
+      if (avatarIdRef.current === targetAvatarId) {
+        setEmotions(generated);
+      }
       if (!silent) {
         setLoading(false);
       }
@@ -67,17 +89,18 @@ export const EmotionAvatarGallery: React.FC<EmotionAvatarGalleryProps> = ({ user
 
   const handleGenerateEmotion = async (emotion: string) => {
     try {
+      const targetAvatarId = avatarId;
       setGenerating(emotion);
       setError(null);
 
-      const { jobId } = await imageGenerationService.generateAvatarEmotion(avatarId, emotion);
+      const { jobId } = await imageGenerationService.generateAvatarEmotion(targetAvatarId, emotion);
 
       // Poll for completion
       const result = await imageGenerationService.pollJobUntilComplete(jobId);
 
       if (result.status === 'completed') {
         // Reload emotion avatars
-        await loadEmotionAvatars();
+        await loadEmotionAvatars(false, targetAvatarId);
       } else {
         setError(result.errorMessage || 'Generation failed');
       }
@@ -91,27 +114,24 @@ export const EmotionAvatarGallery: React.FC<EmotionAvatarGalleryProps> = ({ user
 
   const handleGenerateAll = async () => {
     try {
+      const targetAvatarId = avatarId;
       setGeneratingAll(true);
       setError(null);
 
-      const tasks = emotionLabels.map(async (label) => {
-        const { jobId } = await imageGenerationService.generateAvatarEmotion(avatarId, label);
-        const result = await imageGenerationService.pollJobUntilComplete(jobId);
-        if (result.status === 'completed') {
-          await loadEmotionAvatars(true);
-        }
-        return result;
+      const { jobId } = await imageGenerationService.generateAvatarEmotions(targetAvatarId);
+      const result = await imageGenerationService.pollJobUntilComplete(jobId, () => {
+        if (refreshInFlightRef.current) return;
+        refreshInFlightRef.current = true;
+        return loadEmotionAvatars(true, targetAvatarId).finally(() => {
+          refreshInFlightRef.current = false;
+        });
       });
 
-      const results = await Promise.allSettled(tasks);
-      const failed = results.filter((result) =>
-        result.status === 'rejected' || (result.status === 'fulfilled' && result.value.status !== 'completed'));
-
-      if (failed.length > 0) {
-        setError(`${failed.length} of ${emotionLabels.length} generations failed.`);
+      if (result.status === 'completed') {
+        await loadEmotionAvatars(true, targetAvatarId);
+      } else {
+        setError(result.errorMessage || 'Generation failed');
       }
-
-      await loadEmotionAvatars(true);
     } catch (err: any) {
       setError(err.message || 'Failed to generate emotions');
     } finally {
@@ -145,24 +165,31 @@ export const EmotionAvatarGallery: React.FC<EmotionAvatarGalleryProps> = ({ user
           <CircularProgress />
         </div>
       ) : (
-        <Grid container spacing={2}>
+        <Grid container spacing={0.2}>
           {emotionLabels.map((label) => {
             const match = emotions.find((e) => (e.emotion || '').toLowerCase() === label);
             return (
               <Grid item xs={4} key={label}>
-                <Card>
+                <Card sx={{ p: 0.2, borderRadius: 1 }}>
                   {match ? (
                     <CardMedia
                       component="img"
-                      height="140"
-                      image={match.imageUrl}
+                      image={match.thumbnailDataUrl || buildThumbnailUrl(match.imageUrl)}
                       alt={match.emotion || label}
-                      sx={{ objectFit: 'cover' }}
+                      sx={{
+                        width: tileSize,
+                        height: tileSize,
+                        mx: 'auto',
+                        objectFit: 'cover',
+                        borderRadius: 1.5,
+                      }}
                     />
                   ) : (
                     <div
                       style={{
-                        height: 140,
+                        height: tileSize,
+                        width: tileSize,
+                        margin: '0 auto',
                         background: '#f0f0f0',
                         display: 'flex',
                         alignItems: 'center',
@@ -174,8 +201,13 @@ export const EmotionAvatarGallery: React.FC<EmotionAvatarGalleryProps> = ({ user
                       Not generated
                     </div>
                   )}
-                  <CardContent>
-                    <Typography variant="caption" textAlign="center" display="block">
+                  <CardContent sx={{ p: 0.2, pt: 0.2, '&:last-child': { pb: 0.2 } }}>
+                    <Typography
+                      variant="caption"
+                      textAlign="center"
+                      display="block"
+                      sx={{ fontSize: '0.55rem', lineHeight: 1 }}
+                    >
                       {label}
                     </Typography>
                     <Button
@@ -185,7 +217,18 @@ export const EmotionAvatarGallery: React.FC<EmotionAvatarGalleryProps> = ({ user
                       startIcon={<MagicIcon />}
                       onClick={() => handleGenerateEmotion(label)}
                       disabled={generating !== null || generatingAll || !avatarId}
-                      sx={{ mt: 1 }}
+                      sx={{
+                        mt: 0.2,
+                        minHeight: 20,
+                        px: 0.25,
+                        fontSize: '0.55rem',
+                        lineHeight: 1,
+                        '& .MuiButton-startIcon': {
+                          marginLeft: 2,
+                          marginRight: 2,
+                          '& > *:first-of-type': { fontSize: 14 },
+                        },
+                      }}
                     >
                       {generating === label ? 'Generating...' : match ? 'Update' : 'Generate'}
                     </Button>

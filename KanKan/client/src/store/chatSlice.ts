@@ -214,6 +214,16 @@ const chatSlice = createSlice({
 
       state.chats.forEach((chat) => applyToParticipants(chat.participants));
       if (state.activeChat) applyToParticipants(state.activeChat.participants);
+
+      if (typeof avatarUrl === 'string' || typeof gender === 'string') {
+        Object.values(state.messages).forEach((chatMessages) => {
+          chatMessages.forEach((message) => {
+            if (message.senderId !== userId) return;
+            if (typeof avatarUrl === 'string') message.senderAvatar = avatarUrl;
+            if (typeof gender === 'string') message.senderGender = gender;
+          });
+        });
+      }
     },
     startAgentMessage: (state, action: PayloadAction<Message>) => {
       const message = action.payload;

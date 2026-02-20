@@ -39,6 +39,13 @@ export interface SelectableAvatarResponse {
   pageSize: number;
 }
 
+export interface EmotionThumbnailResult {
+  avatarImageId: string;
+  emotion: string;
+  imageUrl: string;
+  thumbnailDataUrl?: string | null;
+}
+
 class AvatarService {
   async uploadAvatar(file: File): Promise<UploadAvatarResponse> {
     const formData = new FormData();
@@ -82,6 +89,13 @@ class AvatarService {
   async getUserEmotionAvatars(userId: string): Promise<AvatarImage[]> {
     const response = await apiClient.get<AvatarImage[]>(`/avatar/${userId}/emotions`);
     return response.data;
+  }
+
+  async getEmotionThumbnails(sourceAvatarId: string): Promise<EmotionThumbnailResult[]> {
+    const response = await apiClient.get<{ results: EmotionThumbnailResult[] }>(
+      `/avatar/emotion-thumbnails/${sourceAvatarId}`
+    );
+    return response.data.results || [];
   }
 
   async deleteAvatar(avatarImageId: string): Promise<void> {

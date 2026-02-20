@@ -14,6 +14,11 @@ public class AvatarController : ControllerBase
     private readonly IAvatarService _avatarService;
     private readonly ILogger<AvatarController> _logger;
 
+    private static readonly string[] EmotionTypes =
+    {
+        "angry", "smile", "sad", "happy", "crying", "thinking", "surprised", "neutral", "excited"
+    };
+
     public AvatarController(
         IAvatarService avatarService,
         ILogger<AvatarController> logger)
@@ -73,24 +78,45 @@ public class AvatarController : ControllerBase
     [AllowAnonymous] // Allow public access to view avatars
     public async Task<IActionResult> GetAvatarImage(string avatarImageId, [FromQuery] string? size = null)
     {
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        _logger.LogInformation("Avatar request start {AvatarImageId} size={Size}", avatarImageId, size ?? "full");
         try
         {
-            var avatarImage = await _avatarService.GetAvatarImageAsync(avatarImageId);
-            if (avatarImage == null)
-                return NotFound();
-
-            // Return thumbnail if requested and available
-            if (size == "thumbnail" && avatarImage.ThumbnailData != null && avatarImage.ThumbnailData.Length > 0)
+            if (size == "thumbnail")
             {
-                var contentType = avatarImage.ThumbnailContentType ?? "image/webp";
-                return File(avatarImage.ThumbnailData, contentType);
+                var thumbnail = await _avatarService.GetAvatarThumbnailAsync(avatarImageId);
+                if (thumbnail?.ThumbnailData != null && thumbnail.ThumbnailData.Length > 0)
+                {
+                    var contentType = thumbnail.ThumbnailContentType ?? "image/webp";
+                    sw.Stop();
+                    _logger.LogInformation(
+                        "Avatar request end {AvatarImageId} size=thumbnail bytes={Bytes} elapsedMs={ElapsedMs}",
+                        avatarImageId,
+                        thumbnail.ThumbnailData.Length,
+                        sw.ElapsedMilliseconds);
+                    return File(thumbnail.ThumbnailData, contentType);
+                }
+
+                _logger.LogInformation("Avatar thumbnail missing for {AvatarImageId}; falling back to full image", avatarImageId);
             }
 
-            // Return original image
+            var avatarImage = await _avatarService.GetAvatarImageAsync(avatarImageId);
+            if (avatarImage == null)
+            {
+                return NotFound();
+            }
+
+            sw.Stop();
+            _logger.LogInformation(
+                "Avatar request end {AvatarImageId} size=full bytes={Bytes} elapsedMs={ElapsedMs}",
+                avatarImageId,
+                avatarImage.ImageData.Length,
+                sw.ElapsedMilliseconds);
             return File(avatarImage.ImageData, avatarImage.ContentType);
         }
         catch (Exception ex)
         {
+            sw.Stop();
             _logger.LogError(ex, "Failed to retrieve avatar image {AvatarImageId}", avatarImageId);
             return StatusCode(500, new { message = "Failed to retrieve avatar image" });
         }
@@ -163,37 +189,52 @@ public class AvatarController : ControllerBase
         }
     }
 
-    // DEPRECATED: Use POST /api/imagegeneration/generate instead
-    // Kept for backward compatibility
-    [HttpPost("generate-emotions")]
-    [Obsolete("Use POST /api/imagegeneration/generate with sourceType=avatar and generationType=emotions instead")]
-    public async Task<IActionResult> GenerateEmotions([FromBody] GenerateEmotionsRequest request)
+    [HttpGet("emotion-thumbnails/{sourceAvatarId}")]
+    public async Task<IActionResult> GetEmotionThumbnails(string sourceAvatarId)
     {
         try
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (string.IsNullOrEmpty(userId))
-                return Unauthorized();
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            _logger.LogInformation("Emotion thumbnails request start {SourceAvatarId}", sourceAvatarId);
+            if (string.IsNullOrWhiteSpace(sourceAvatarId))
+            {
+                return BadRequest(new { message = "sourceAvatarId is required" });
+            }
 
-            if (string.IsNullOrEmpty(request.AvatarId))
-                return BadRequest(new { message = "Avatar ID is required" });
+            var avatars = await _avatarService.GetEmotionThumbnailsBySourceAvatarIdAsync(sourceAvatarId);
+            var results = avatars
+                .Where(a => !string.IsNullOrWhiteSpace(a.Emotion))
+                .Select(a => new
+                {
+                    avatarImageId = a.Id,
+                    emotion = a.Emotion,
+                    imageUrl = $"/api/avatar/image/{a.Id}",
+                    thumbnailDataUrl = a.ThumbnailData != null && a.ThumbnailData.Length > 0
+                        ? $"data:{a.ThumbnailContentType ?? "image/webp"};base64,{Convert.ToBase64String(a.ThumbnailData)}"
+                        : null,
+                })
+                .ToList();
 
-            // Redirect to unified endpoint
-            _logger.LogWarning("Using deprecated endpoint /api/avatar/generate-emotions. Please use /api/imagegeneration/generate instead.");
-
-            var jobId = await _avatarService.GenerateEmotionAvatarsAsync(userId, request.AvatarId);
+            sw.Stop();
+            _logger.LogInformation(
+                "Emotion thumbnails request end {SourceAvatarId} count={Count} elapsedMs={ElapsedMs}",
+                sourceAvatarId,
+                results.Count,
+                sw.ElapsedMilliseconds);
 
             return Ok(new
             {
-                jobId,
-                status = "processing",
-                message = "Emotion generation started (via deprecated endpoint, please migrate to /api/imagegeneration/generate)"
+                sourceAvatarId,
+                emotions = EmotionTypes,
+                count = results.Count,
+                results
             });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to start emotion generation");
-            return StatusCode(500, new { message = "Failed to start emotion generation" });
+            _logger.LogError(ex, "Emotion thumbnails request failed for {SourceAvatarId}", sourceAvatarId);
+            _logger.LogError(ex, "Failed to retrieve emotion thumbnails for {SourceAvatarId}", sourceAvatarId);
+            return StatusCode(500, new { message = "Failed to retrieve emotion thumbnails" });
         }
     }
 
@@ -241,9 +282,4 @@ public class AvatarController : ControllerBase
             return StatusCode(500, new { message = "Failed to delete avatar" });
         }
     }
-}
-
-public class GenerateEmotionsRequest
-{
-    public string AvatarId { get; set; } = string.Empty;
 }

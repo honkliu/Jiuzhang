@@ -212,6 +212,11 @@ public class ComfyUIService : IComfyUIService
             {
                 inputs["prompt"] = prompt;
             }
+
+            if (inputs.ContainsKey("seed"))
+            {
+                inputs["seed"] = Random.Shared.NextInt64(0, long.MaxValue);
+            }
         }
     }
 

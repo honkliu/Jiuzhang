@@ -25,10 +25,13 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState, AppDispatch } from '@/store';
 import { authService } from '@/services/auth.service';
+import { contactService } from '@/services/contact.service';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { fetchNotifications, fetchUnreadNotificationCount } from '@/store/notificationsSlice';
-import { clearChat } from '@/store/chatSlice';
+import { clearChat, upsertParticipantProfile } from '@/store/chatSlice';
+import { updateUser } from '@/store/authSlice';
 import { UserAvatar } from '@/components/Shared/UserAvatar';
+import { GeneratedAvatarPicker } from '@/components/Avatar/GeneratedAvatarPicker';
 import { formatDistanceToNow } from 'date-fns';
 import { enUS, zhCN } from 'date-fns/locale';
 
@@ -60,9 +63,11 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleSidebar, sidebarOp
   const { t, toggleLanguage, language } = useLanguage();
   const [notificationsAnchorEl, setNotificationsAnchorEl] = React.useState<null | HTMLElement>(null);
   const [navAnchorEl, setNavAnchorEl] = React.useState<null | HTMLElement>(null);
+  const [avatarAnchorEl, setAvatarAnchorEl] = React.useState<null | HTMLElement>(null);
 
   const notificationsOpen = Boolean(notificationsAnchorEl);
   const navOpen = Boolean(navAnchorEl);
+  const avatarPickerOpen = Boolean(avatarAnchorEl);
 
   const handleOpenNotifications = (e: React.MouseEvent<HTMLElement>) => {
     setNotificationsAnchorEl(e.currentTarget);
@@ -80,6 +85,41 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleSidebar, sidebarOp
 
   const handleCloseNav = () => {
     setNavAnchorEl(null);
+  };
+
+  const handleOpenAvatarPicker = (e: React.MouseEvent<HTMLElement>) => {
+    setAvatarAnchorEl(e.currentTarget);
+  };
+
+  const handleCloseAvatarPicker = () => {
+    setAvatarAnchorEl(null);
+  };
+
+  const handleSelectAvatar = async (avatarImageId: string, avatarUrl: string) => {
+    if (!user) return;
+
+    try {
+      const updated = await contactService.updateProfile({
+        avatarUrl,
+        avatarImageId,
+      });
+      dispatch(updateUser(updated));
+      dispatch(
+        upsertParticipantProfile({
+          userId: updated.id,
+          displayName: updated.displayName,
+          avatarUrl: updated.avatarUrl,
+          gender: updated.gender,
+        })
+      );
+
+      const accessToken = authService.getAccessToken();
+      if (accessToken) {
+        authService.saveAuth(accessToken, { ...user, ...updated });
+      }
+    } catch (error) {
+      console.error('Failed to update avatar selection', error);
+    }
   };
 
   const formatWhen = (iso: string) => {
@@ -142,7 +182,9 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleSidebar, sidebarOp
 
         <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 0.5 }}>
-            <UserAvatar src={user?.avatarUrl} gender={user?.gender} variant="rounded" sx={{ width: 32, height: 32 }} />
+            <IconButton onClick={handleOpenAvatarPicker} title="Choose avatar" size="small" sx={{ p: 0 }}>
+              <UserAvatar src={user?.avatarUrl} gender={user?.gender} variant="rounded" sx={{ width: 32, height: 32 }} />
+            </IconButton>
             <Typography
               variant="subtitle2"
               fontWeight="bold"
@@ -299,6 +341,15 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleSidebar, sidebarOp
           )}
         </Menu>
       </Toolbar>
+
+      <GeneratedAvatarPicker
+        anchorEl={avatarAnchorEl}
+        open={avatarPickerOpen}
+        onClose={handleCloseAvatarPicker}
+        avatarImageId={user?.avatarImageId}
+        currentAvatarUrl={user?.avatarUrl}
+        onSelect={handleSelectAvatar}
+      />
     </AppBar>
   );
 };

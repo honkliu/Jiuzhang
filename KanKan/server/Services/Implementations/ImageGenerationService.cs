@@ -1,5 +1,6 @@
 using KanKan.API.Models;
 using KanKan.API.Models.Entities;
+using KanKan.API.Utils;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
@@ -119,6 +120,34 @@ public class ImageGenerationService : IImageGenerationService
 
         var avatars = await _avatarImages.Find(filter).ToListAsync();
 
+        if (isObjectId)
+        {
+            var latestByEmotion = avatars
+                .Where(a => !string.IsNullOrWhiteSpace(a.Emotion))
+                .OrderByDescending(a => a.CreatedAt)
+                .GroupBy(a => a.Emotion!.Trim().ToLowerInvariant())
+                .ToDictionary(g => g.Key, g => g.First());
+
+            var ordered = new List<AvatarImage>();
+            foreach (var emotion in EmotionTypes)
+            {
+                if (latestByEmotion.TryGetValue(emotion, out var avatar))
+                {
+                    ordered.Add(avatar);
+                }
+            }
+
+            foreach (var extra in latestByEmotion)
+            {
+                if (!EmotionTypes.Contains(extra.Key))
+                {
+                    ordered.Add(extra.Value);
+                }
+            }
+
+            avatars = ordered;
+        }
+
         return avatars.Select(a => new GeneratedAvatarResult
         {
             AvatarImageId = a.Id,
@@ -197,7 +226,7 @@ public class ImageGenerationService : IImageGenerationService
                 {
                     _logger.LogInformation("Generating {Label} avatar for job {JobId}", label, jobId);
 
-                    var fullPrompt = $"portrait of a person {prompt}, high quality, detailed face";
+                    var fullPrompt = $"portrait of a person with a mild {prompt} expression, high quality, detailed face. Preserve the original gender and facial proportions. Do not change gender, if female, change the clothing to more variant seductive and sexy and variant colors, transparent.";
 
                     if (totalCount == 1 && !string.IsNullOrWhiteSpace(request.Emotion))
                     {
@@ -270,12 +299,28 @@ public class ImageGenerationService : IImageGenerationService
     private async Task<string> StoreGeneratedAvatarAsync(GenerationRequest request, AvatarImage originalAvatar, string label, string generatedBase64, string fullPrompt)
     {
         var bytes = Convert.FromBase64String(generatedBase64);
+        byte[] thumbnailData;
+        string thumbnailContentType;
+        try
+        {
+            thumbnailData = ImageResizer.GenerateThumbnail(bytes);
+            thumbnailContentType = "image/webp";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to generate thumbnail for {Label} avatar", label);
+            thumbnailData = bytes;
+            thumbnailContentType = originalAvatar.ContentType;
+        }
+
         var generatedAvatar = new AvatarImage
         {
             UserId = originalAvatar.UserId,
             ImageType = "emotion_generated",
             Emotion = label,
             ImageData = bytes,
+            ThumbnailData = thumbnailData,
+            ThumbnailContentType = thumbnailContentType,
             ContentType = originalAvatar.ContentType,
             FileName = $"{label}_{originalAvatar.FileName}",
             FileSize = bytes.Length,
@@ -438,14 +483,14 @@ public class ImageGenerationService : IImageGenerationService
             {
                 return new List<(string, string)>
                 {
-                    (selected, $"with {selected} expression")
+                    (selected, selected)
                 };
             }
         }
 
         return generationType switch
         {
-            "emotions" => EmotionTypes.Select(e => (e, $"Change the person's expression in image to {e}. Keep the original style, pose. Preserve the character's gender: if female, keep feminine facial features and proportions but change to more sexy clothing with different color; if male, keep masculine facial features and proportions."))
+            "emotions" => EmotionTypes.Select(e => (e, e))
                 .ToList(),
             "styles" => customPrompts?.Select(p => (p, $"in {p} style")).ToList() ?? new List<(string, string)>
             {
