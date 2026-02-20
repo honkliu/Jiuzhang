@@ -35,7 +35,6 @@ export const ProfilePage: React.FC = () => {
   const [gender, setGender] = useState<'male' | 'female'>((user?.gender as any) || 'male');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const { t } = useLanguage();
@@ -131,7 +130,7 @@ export const ProfilePage: React.FC = () => {
 
             <BoxAny sx={{ mb: 2 }}>
               <ZodiacAvatarPicker
-                disabled={uploading || saving}
+                disabled={saving}
                 value={avatarImageId ?? undefined}
                 onChange={async (selectedAvatarImageId, imageUrl) => {
                   setAvatarUrl(imageUrl);
