@@ -1,84 +1,41 @@
-import React from 'react';
-import { Box, Typography } from '@mui/material';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Box, Typography, Button, CircularProgress } from '@mui/material';
 import { useLanguage } from '@/i18n/LanguageContext';
+import { avatarService, type SelectableAvatar } from '@/services/avatar.service';
 
 // Work around TS2590 (“union type too complex”) from MUI Box typings in some TS versions.
 const BoxAny = Box as any;
 
-export type ZodiacAvatarId =
-  | 'm1'
-  | 'm2'
-  | 'm3'
-  | 'm4'
-  | 'm5'
-  | 'm6'
-  | 'f1'
-  | 'f2'
-  | 'f3'
-  | 'f4'
-  | 'f5'
-  | 'f6';
-
-const zodiacOptions: Array<{ id: ZodiacAvatarId; baseName: string }> = [
-  { id: 'm1', baseName: 'm1' },
-  { id: 'm2', baseName: 'm2' },
-  { id: 'm3', baseName: 'm3' },
-  { id: 'm4', baseName: 'm4' },
-  { id: 'm5', baseName: 'm5' },
-  { id: 'm6', baseName: 'm6' },
-  { id: 'f1', baseName: 'f1' },
-  { id: 'f2', baseName: 'f2' },
-  { id: 'f3', baseName: 'f3' },
-  { id: 'f4', baseName: 'f4' },
-  { id: 'f5', baseName: 'f5' },
-  { id: 'f6', baseName: 'f6' },
-];
-
-const buildCandidates = (baseName: string) => {
-  const png = `/zodiac/${baseName}.png`;
-  const jpg = `/zodiac/${baseName}.jpg`;
-  return { primary: png, fallback: jpg };
-};
-
 interface AvatarOptionTileProps {
-  id: ZodiacAvatarId;
-  primary: string;
-  fallback: string;
+  avatar: SelectableAvatar;
   value?: string;
   disabled?: boolean;
-  onSelect: (resolvedUrl: string, id: ZodiacAvatarId) => void;
+  onSelect: (avatarImageId: string, imageUrl: string) => void;
 }
 
 const AvatarOptionTile: React.FC<AvatarOptionTileProps> = ({
-  id,
-  primary,
-  fallback,
+  avatar,
   value,
   disabled,
   onSelect,
 }) => {
-  const selected = value === primary || value === fallback;
-
-  const [currentSrc, setCurrentSrc] = React.useState<string>(value === fallback ? fallback : primary);
-
-  React.useEffect(() => {
-    setCurrentSrc(value === fallback ? fallback : primary);
-  }, [value, primary, fallback]);
+  const selected = value === avatar.avatarImageId;
+  const [imgError, setImgError] = React.useState(false);
 
   return (
     <BoxAny
       role="button"
-      aria-label={id}
+      aria-label={avatar.fileName}
       tabIndex={disabled ? -1 : 0}
       onClick={() => {
         if (disabled) return;
-        onSelect(currentSrc, id);
+        onSelect(avatar.avatarImageId, avatar.imageUrl);
       }}
       onKeyDown={(e: any) => {
         if (disabled) return;
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
-          onSelect(currentSrc, id);
+          onSelect(avatar.avatarImageId, avatar.imageUrl);
         }
       }}
       sx={{
@@ -110,11 +67,11 @@ const AvatarOptionTile: React.FC<AvatarOptionTileProps> = ({
     >
       <BoxAny
         component="img"
-        src={currentSrc}
-        alt={id}
-        onError={() => {
-          if (currentSrc !== fallback) setCurrentSrc(fallback);
-        }}
+        src={imgError ? avatar.imageUrl : (avatar.thumbnailDataUrl || avatar.imageUrl)}
+        alt={avatar.fileName}
+        loading="eager"
+        decoding="sync"
+        onError={() => setImgError(true)}
         sx={{
           width: '100%',
           height: '100%',
@@ -132,7 +89,7 @@ const AvatarOptionTile: React.FC<AvatarOptionTileProps> = ({
 export interface ZodiacAvatarPickerProps {
   disabled?: boolean;
   value?: string;
-  onChange: (avatarUrl: string, id: ZodiacAvatarId) => void;
+  onChange: (avatarImageId: string, imageUrl: string) => void;
 }
 
 export const ZodiacAvatarPicker: React.FC<ZodiacAvatarPickerProps> = ({
@@ -141,13 +98,63 @@ export const ZodiacAvatarPicker: React.FC<ZodiacAvatarPickerProps> = ({
   onChange,
 }) => {
   const { t } = useLanguage();
-  // We serve zodiac images from the API's static files folder: /zodiac/*.png
-  // This keeps URLs stable (unlike Vite hashed asset paths).
+  const [avatars, setAvatars] = useState<SelectableAvatar[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [page, setPage] = useState(0);
+  const pageSize = 12;
+  const [totalCount, setTotalCount] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadAvatars = async () => {
+      try {
+        setLoading(true);
+        const response = await avatarService.getSelectableAvatars(page, pageSize);
+        if (!active) return;
+
+        // Debug: Check if thumbnailDataUrl exists
+        console.log('Avatar response:', {
+          count: response.items.length,
+          hasThumbnails: response.items.filter(a => a.thumbnailDataUrl).length,
+          firstAvatar: response.items[0] ? {
+            fileName: response.items[0].fileName,
+            hasThumbnail: !!response.items[0].thumbnailDataUrl,
+            thumbnailLength: response.items[0].thumbnailDataUrl?.length
+          } : null
+        });
+
+        setAvatars(response.items);
+        setTotalCount(response.totalCount);
+        setLoading(false);
+      } catch {
+        if (!active) return;
+        setAvatars([]);
+        setTotalCount(0);
+        setLoading(false);
+      }
+    };
+
+    loadAvatars();
+    return () => {
+      active = false;
+    };
+  }, [page]);
+
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const pagedAvatars = useMemo(() => avatars, [avatars]);
+
   return (
     <BoxAny>
       <Typography variant="subtitle2" sx={{ mb: 1 }}>
         {t('profile.zodiacTitle')}
       </Typography>
+
+      {loading ? (
+        <BoxAny sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+          <CircularProgress size={20} />
+        </BoxAny>
+      ) : null}
 
       <BoxAny
         sx={{
@@ -158,21 +165,37 @@ export const ZodiacAvatarPicker: React.FC<ZodiacAvatarPickerProps> = ({
           justifyContent: 'flex-start',
         }}
       >
-        {zodiacOptions.map((opt) => {
-          const { primary, fallback } = buildCandidates(opt.baseName);
-          return (
-            <AvatarOptionTile
-              key={opt.id}
-              id={opt.id}
-              primary={primary}
-              fallback={fallback}
-              value={value}
-              disabled={disabled}
-              onSelect={onChange}
-            />
-          );
-        })}
+        {pagedAvatars.map((avatar) => (
+          <AvatarOptionTile
+            key={avatar.avatarImageId}
+            avatar={avatar}
+            value={value}
+            disabled={disabled}
+            onSelect={onChange}
+          />
+        ))}
       </BoxAny>
+
+      {totalPages > 1 ? (
+        <BoxAny sx={{ display: 'flex', gap: 1, mt: 1 }}>
+          <Button
+            size="small"
+            variant="outlined"
+            disabled={disabled || page <= 0}
+            onClick={() => setPage((current) => Math.max(0, current - 1))}
+          >
+            Prev
+          </Button>
+          <Button
+            size="small"
+            variant="outlined"
+            disabled={disabled || page >= totalPages - 1}
+            onClick={() => setPage((current) => Math.min(totalPages - 1, current + 1))}
+          >
+            Next
+          </Button>
+        </BoxAny>
+      ) : null}
     </BoxAny>
   );
 };

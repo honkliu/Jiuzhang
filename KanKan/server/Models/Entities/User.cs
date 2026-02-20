@@ -13,6 +13,7 @@ public class User
     public string Handle { get; set; } = string.Empty;
     public string DisplayName { get; set; } = string.Empty;
     public string AvatarUrl { get; set; } = string.Empty;
+    public string? AvatarImageId { get; set; } // Reference to AvatarImages collection
     // "male" | "female" (defaults to "male" if not set)
     public string Gender { get; set; } = "male";
     public string Bio { get; set; } = "Hello, I'm using KanKan!";

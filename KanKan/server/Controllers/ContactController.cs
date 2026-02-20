@@ -75,6 +75,7 @@ public class ContactController : ControllerBase
         Handle = user.Handle,
         DisplayName = user.DisplayName,
         AvatarUrl = user.AvatarUrl,
+        AvatarImageId = user.AvatarImageId,
         Gender = user.Gender,
         Bio = user.Bio,
         IsOnline = user.IsOnline,
@@ -472,6 +473,9 @@ public class ContactController : ControllerBase
             if (request.AvatarUrl != null)
                 user.AvatarUrl = request.AvatarUrl.Trim();
 
+            if (request.AvatarImageId != null)
+                user.AvatarImageId = request.AvatarImageId.Trim();
+
             if (!string.IsNullOrWhiteSpace(request.Gender))
             {
                 var g = request.Gender.Trim().ToLowerInvariant();
@@ -523,7 +527,8 @@ public class ContactController : ControllerBase
                 userId = user.Id,
                 displayName = user.DisplayName,
                 avatarUrl = user.AvatarUrl,
-                gender = user.Gender
+                gender = user.Gender,
+                avatarImageId = user.AvatarImageId
             });
 
             return Ok(ToUserDto(user, includeDomain: false));
@@ -541,6 +546,7 @@ public class UpdateProfileRequest
     public string? DisplayName { get; set; }
     public string? Bio { get; set; }
     public string? AvatarUrl { get; set; }
+    public string? AvatarImageId { get; set; }
     public string? Gender { get; set; }
 }
 

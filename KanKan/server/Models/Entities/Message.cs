@@ -18,6 +18,14 @@ public class Message
     public bool IsDeleted { get; set; }
     public DateTime? DeletedAt { get; set; }
     public int? Ttl { get; set; }
+    public GeneratedVariationsRef? GeneratedVariationsRef { get; set; }
+}
+
+public class GeneratedVariationsRef
+{
+    public bool HasGenerations { get; set; }
+    public int GenerationCount { get; set; }
+    public List<string> GeneratedImageUrls { get; set; } = new();
 }
 
 public class MessageContent

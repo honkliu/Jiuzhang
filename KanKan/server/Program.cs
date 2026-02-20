@@ -152,6 +152,21 @@ builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<IAgentService, OpenAiAgentService>();
 
+// Register Image Generation services (MongoDB only)
+if (storageMode == "mongodb")
+{
+    builder.Services.AddSingleton(sp =>
+    {
+        var mongoClient = sp.GetRequiredService<IMongoClient>();
+        var databaseName = builder.Configuration["MongoDB:DatabaseName"] ?? "kankan";
+        return mongoClient.GetDatabase(databaseName);
+    });
+
+    builder.Services.AddHttpClient<KanKan.API.Services.IComfyUIService, KanKan.API.Services.Implementations.ComfyUIService>();
+    builder.Services.AddScoped<KanKan.API.Services.IAvatarService, KanKan.API.Services.Implementations.AvatarService>();
+    builder.Services.AddScoped<KanKan.API.Services.IImageGenerationService, KanKan.API.Services.Implementations.ImageGenerationService>();
+}
+
 // Add logging
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();

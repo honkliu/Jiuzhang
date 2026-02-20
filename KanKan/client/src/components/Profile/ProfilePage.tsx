@@ -16,10 +16,11 @@ import { AppHeader } from '@/components/Shared/AppHeader';
 import { contactService } from '@/services/contact.service';
 import { RootState, AppDispatch } from '@/store';
 import { updateUser } from '@/store/authSlice';
-import { mediaService } from '@/services/media.service';
 import { UserAvatar } from '@/components/Shared/UserAvatar';
 import { ZodiacAvatarPicker } from './ZodiacAvatarPicker';
 import { useLanguage } from '@/i18n/LanguageContext';
+import { AvatarUpload } from '@/components/Avatar/AvatarUpload';
+import { EmotionAvatarGallery } from '@/components/Avatar/EmotionAvatarGallery';
 
 // Work around TS2590 (“union type too complex”) from MUI Box typings in some TS versions.
 const BoxAny = Box as any;
@@ -30,6 +31,7 @@ export const ProfilePage: React.FC = () => {
   const [displayName, setDisplayName] = useState(user?.displayName || '');
   const [bio, setBio] = useState(user?.bio || '');
   const [avatarUrl, setAvatarUrl] = useState(user?.avatarUrl || '');
+  const [avatarImageId, setAvatarImageId] = useState<string | null>(user?.avatarImageId ?? null);
   const [gender, setGender] = useState<'male' | 'female'>((user?.gender as any) || 'male');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -46,6 +48,7 @@ export const ProfilePage: React.FC = () => {
         setDisplayName(currentUser.displayName || '');
         setBio(currentUser.bio || '');
         setAvatarUrl(currentUser.avatarUrl || '');
+        setAvatarImageId(currentUser.avatarImageId ?? null);
         setGender((currentUser.gender as any) || 'male');
         dispatch(updateUser(currentUser));
       } catch (err: any) {
@@ -64,29 +67,19 @@ export const ProfilePage: React.FC = () => {
     setMessage('');
 
     try {
-      const updated = await contactService.updateProfile({ displayName, bio, avatarUrl, gender });
+      const updated = await contactService.updateProfile({
+        displayName,
+        bio,
+        avatarUrl,
+        avatarImageId,
+        gender,
+      });
       dispatch(updateUser(updated));
       setMessage(t('profile.updateSuccess'));
     } catch (err: any) {
       setError(err.message || t('profile.updateFailed'));
     } finally {
       setSaving(false);
-    }
-  };
-
-  const handleAvatarSelected = async (file: File | null) => {
-    if (!file) return;
-    try {
-      setUploading(true);
-      setError('');
-      const upload = await mediaService.upload(file);
-      setAvatarUrl(upload.url);
-      // If user uploads a custom avatar, it supersedes zodiac selection
-      setMessage(t('profile.avatarUploaded'));
-    } catch (err: any) {
-      setError(err.message || t('profile.uploadFailed'));
-    } finally {
-      setUploading(false);
     }
   };
 
@@ -120,41 +113,45 @@ export const ProfilePage: React.FC = () => {
                 src={avatarUrl}
                 gender={gender}
                 variant="rounded"
-                sx={{ width: 72, height: 72 }}
+                sx={{ width: 128, height: 128 }}
               />
               <Stack spacing={1}>
-                <Button
-                  variant="outlined"
-                  component="label"
-                  disabled={uploading || saving}
-                >
-                  {uploading ? <CircularProgress size={18} /> : t('profile.uploadAvatar')}
-                  <input
-                    hidden
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => handleAvatarSelected(e.target.files?.[0] || null)}
-                  />
-                </Button>
-                <Button
-                  variant="text"
-                  disabled={uploading || saving || !avatarUrl}
-                  onClick={() => setAvatarUrl('')}
-                >
-                  {t('profile.removeAvatar')}
-                </Button>
+                <AvatarUpload
+                  currentAvatarUrl={avatarUrl}
+                  showPreview={false}
+                  onUploadSuccess={async (newAvatarImageId, imageUrl) => {
+                    setAvatarImageId(newAvatarImageId);
+                    setAvatarUrl(imageUrl);
+                    setMessage(t('profile.avatarUploaded'));
+                  }}
+                />
               </Stack>
             </Stack>
 
             <BoxAny sx={{ mb: 2 }}>
               <ZodiacAvatarPicker
                 disabled={uploading || saving}
-                value={avatarUrl}
-                onChange={(url) => {
-                  setAvatarUrl(url);
+                value={avatarImageId ?? undefined}
+                onChange={async (selectedAvatarImageId, imageUrl) => {
+                  setAvatarUrl(imageUrl);
+                  setAvatarImageId(selectedAvatarImageId);
                   setMessage(t('profile.zodiacSelected'));
                 }}
               />
+            </BoxAny>
+
+            <BoxAny sx={{ mt: 3, mb: 2 }}>
+              <Typography variant="subtitle1" fontWeight="bold" sx={{ mb: 1 }}>
+                AI Avatar Set
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Generate the fixed 3x3 emotion set (angry, smile, sad, etc.) for the selected avatar.
+                Regenerating will replace the existing set.
+              </Typography>
+
+              {user?.id && avatarImageId && (
+                <EmotionAvatarGallery userId={user.id} avatarId={avatarImageId} />
+              )}
             </BoxAny>
 
             <TextField

@@ -9,6 +9,7 @@ public class UserDto
     public string Handle { get; set; } = string.Empty;
     public string DisplayName { get; set; } = string.Empty;
     public string AvatarUrl { get; set; } = string.Empty;
+    public string? AvatarImageId { get; set; }
     public string Gender { get; set; } = "male";
     public string Bio { get; set; } = string.Empty;
     public bool IsOnline { get; set; }

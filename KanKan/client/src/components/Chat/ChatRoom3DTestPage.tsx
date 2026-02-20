@@ -1,13 +1,21 @@
-import React, { Suspense, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
+import { Suspense, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { Html, SoftShadows, Float, CameraControls, Sky, useGLTF } from '@react-three/drei';
+import type { GroupProps } from '@react-three/fiber';
+import { Html, SoftShadows, CameraControls, useGLTF } from '@react-three/drei';
+import type CameraControlsImpl from 'camera-controls';
 import * as THREE from 'three';
 import avatarUrl from '../../assets/zodiac/avatar.glb?url';
 import { useLanguage } from '@/i18n/LanguageContext';
 
 // Model source (CC-BY 4.0): https://sketchfab.com/3d-models/room-6417cbc1870a4a1691cca06912ae0369
-function RoomModel(props) {
-  const { nodes, materials } = useGLTF('/room-transformed.glb');
+type MeshNode = THREE.Mesh<THREE.BufferGeometry, THREE.Material | THREE.Material[]>;
+type RoomGLTFResult = {
+  nodes: Record<string, MeshNode>;
+  materials: Record<string, THREE.Material>;
+};
+
+function RoomModel(props: GroupProps) {
+  const { nodes, materials } = useGLTF('/room-transformed.glb') as unknown as RoomGLTFResult;
   return (
     <group {...props} dispose={null}>
       <group rotation={[-Math.PI / 2, 0, 0]}>
@@ -38,12 +46,17 @@ function RoomModel(props) {
 useGLTF.preload('/room-transformed.glb');
 
 // Avatar model source: local asset
-function AvatarModel({ scale = 0.12, rotation = [0, Math.PI, 0] }) {
-  const { scene } = useGLTF(avatarUrl);
+interface AvatarModelProps {
+  scale?: number;
+  rotation?: [number, number, number];
+}
+
+function AvatarModel({ scale = 0.12, rotation = [0, Math.PI, 0] }: AvatarModelProps) {
+  const { scene } = useGLTF(avatarUrl) as unknown as { scene: THREE.Group };
   const avatar = useMemo(() => {
     const clone = scene.clone(true);
-    clone.traverse((obj) => {
-      if (obj.isMesh) {
+    clone.traverse((obj: THREE.Object3D) => {
+      if (obj instanceof THREE.Mesh) {
         obj.castShadow = true;
         obj.receiveShadow = true;
       }
@@ -56,8 +69,13 @@ function AvatarModel({ scale = 0.12, rotation = [0, Math.PI, 0] }) {
 
 useGLTF.preload(avatarUrl);
 
-function ChairWithAvatar({ chair, material }) {
-  const avatarRef = useRef(null);
+interface ChairWithAvatarProps {
+  chair: MeshNode;
+  material: THREE.Material;
+}
+
+function ChairWithAvatar({ chair, material }: ChairWithAvatarProps) {
+  const avatarRef = useRef<THREE.Group | null>(null);
   const seatY = useMemo(() => {
     const geom = chair.geometry;
     if (!geom.boundingBox) {
@@ -70,8 +88,7 @@ function ChairWithAvatar({ chair, material }) {
   useLayoutEffect(() => {
     if (!avatarRef.current) return;
     const box = new THREE.Box3().setFromObject(avatarRef.current);
-    const min = new THREE.Vector3();
-    box.getMin(min);
+    const min = box.min.clone();
     const yOffset = -min.y;
     avatarRef.current.position.set(0, seatY + yOffset + 0.01, 0);
   }, [seatY]);
@@ -97,12 +114,12 @@ function Loading() {
   );
 }
 
-function damp(current, target, lambda, delta) {
+function damp(current: number, target: number, lambda: number, delta: number) {
   return current + (target - current) * (1 - Math.exp(-lambda * delta));
 }
 
 function LightRig() {
-  const ref = useRef();
+  const ref = useRef<THREE.Group | null>(null);
 
   useFrame((state, delta) => {
     if (!ref.current) return;
@@ -128,19 +145,8 @@ function LightRig() {
   );
 }
 
-function FloatingSphere({ color = 'hotpink', floatIntensity = 15, position = [0, 5, -8], scale = 1 }) {
-  return (
-    <Float floatIntensity={floatIntensity}>
-      <mesh castShadow position={position} scale={scale}>
-        <sphereGeometry />
-        <meshStandardMaterial color={color} roughness={0.9} />
-      </mesh>
-    </Float>
-  );
-}
-
 function CozyBar() {
-  const controlsRef = useRef(null);
+  const controlsRef = useRef<CameraControlsImpl | null>(null);
 
   useEffect(() => {
     if (!controlsRef.current) return;

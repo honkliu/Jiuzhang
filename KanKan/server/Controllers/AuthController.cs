@@ -312,6 +312,7 @@ public class AuthController : ControllerBase
             IsDisabled = user.IsDisabled,
             DisplayName = user.DisplayName,
             AvatarUrl = user.AvatarUrl,
+            AvatarImageId = user.AvatarImageId,
             Gender = user.Gender,
             Bio = user.Bio,
             IsOnline = user.IsOnline,

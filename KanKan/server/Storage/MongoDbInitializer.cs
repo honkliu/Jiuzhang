@@ -1,6 +1,9 @@
 using MongoDB.Driver;
 using KanKan.API.Domain;
+using KanKan.API.Models;
 using KanKan.API.Models.Entities;
+using KanKan.API.Utils;
+using Microsoft.AspNetCore.Hosting;
 
 namespace KanKan.API.Storage;
 
@@ -9,12 +12,18 @@ public class MongoDbInitializer : IHostedService
     private readonly IMongoClient _mongoClient;
     private readonly IConfiguration _configuration;
     private readonly ILogger<MongoDbInitializer> _logger;
+    private readonly IWebHostEnvironment _environment;
 
-    public MongoDbInitializer(IMongoClient mongoClient, IConfiguration configuration, ILogger<MongoDbInitializer> logger)
+    public MongoDbInitializer(
+        IMongoClient mongoClient,
+        IConfiguration configuration,
+        ILogger<MongoDbInitializer> logger,
+        IWebHostEnvironment environment)
     {
         _mongoClient = mongoClient;
         _configuration = configuration;
         _logger = logger;
+        _environment = environment;
     }
 
     public async Task StartAsync(CancellationToken cancellationToken)
@@ -42,7 +51,9 @@ public class MongoDbInitializer : IHostedService
             _configuration["MongoDB:Collections:Contacts"] ?? "Contacts",
             _configuration["MongoDB:Collections:Moments"] ?? "Moments",
             _configuration["MongoDB:Collections:EmailVerifications"] ?? "EmailVerifications",
-            _configuration["MongoDB:Collections:Notifications"] ?? "Notifications"
+            _configuration["MongoDB:Collections:Notifications"] ?? "Notifications",
+            "avatarImages",
+            "imageGenerationJobs"
         };
 
         var existingCollections = await (await database.ListCollectionNamesAsync(cancellationToken: cancellationToken))
@@ -62,6 +73,8 @@ public class MongoDbInitializer : IHostedService
 
         // Ensure the assistant user always exists for MongoDB mode.
         await EnsureAssistantUserAsync(database, cancellationToken);
+        await SeedPredefinedAvatarsAsync(database, cancellationToken);
+        await MigrateZodiacGeneratedAvatarsAsync(database, cancellationToken);
 
         var seedTestData = _configuration.GetValue<bool>("MongoDB:Initialization:SeedTestData", false);
         if (seedTestData)
@@ -182,10 +195,192 @@ public class MongoDbInitializer : IHostedService
                 new CreateIndexOptions { ExpireAfter = TimeSpan.Zero }),
             cancellationToken: cancellationToken);
 
+        // AvatarImages collection indexes
+        var avatarImagesCollection = database.GetCollection<AvatarImage>("avatarImages");
+
+        await avatarImagesCollection.Indexes.CreateOneAsync(
+            new CreateIndexModel<AvatarImage>(
+                Builders<AvatarImage>.IndexKeys
+                    .Ascending(a => a.UserId)
+                    .Ascending(a => a.ImageType)
+                    .Ascending(a => a.Emotion)),
+            cancellationToken: cancellationToken);
+
+        await avatarImagesCollection.Indexes.CreateOneAsync(
+            new CreateIndexModel<AvatarImage>(
+                Builders<AvatarImage>.IndexKeys
+                    .Ascending(a => a.SourceAvatarId)
+                    .Ascending(a => a.ImageType)
+                    .Ascending(a => a.Emotion)),
+            cancellationToken: cancellationToken);
+
+        await avatarImagesCollection.Indexes.CreateOneAsync(
+            new CreateIndexModel<AvatarImage>(
+                Builders<AvatarImage>.IndexKeys
+                    .Ascending(a => a.UserId)
+                    .Ascending(a => a.FileName)
+                    .Ascending(a => a.ImageType)),
+            cancellationToken: cancellationToken);
+
+        // Optimized index for GetSelectableAvatars query
+        await avatarImagesCollection.Indexes.CreateOneAsync(
+            new CreateIndexModel<AvatarImage>(
+                Builders<AvatarImage>.IndexKeys
+                    .Ascending(a => a.ImageType)
+                    .Ascending(a => a.Emotion)
+                    .Ascending(a => a.SourceAvatarId)
+                    .Ascending(a => a.UserId)
+                    .Ascending(a => a.FileName)
+                    .Descending(a => a.CreatedAt)),
+            cancellationToken: cancellationToken);
+
         _logger.LogInformation("Created indexes for all collections.");
     }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+    private async Task SeedPredefinedAvatarsAsync(IMongoDatabase database, CancellationToken cancellationToken)
+    {
+        var avatarImagesCollection = database.GetCollection<AvatarImage>("avatarImages");
+        var webRoot = _environment.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+        var zodiacDir = Path.Combine(webRoot, "zodiac");
+
+        if (!Directory.Exists(zodiacDir))
+        {
+            _logger.LogWarning("Predefined avatar directory not found: {Directory}", zodiacDir);
+            return;
+        }
+
+        const string predefinedUserId = "system_predefined";
+        var files = Directory.EnumerateFiles(zodiacDir, "*.*", SearchOption.TopDirectoryOnly)
+            .Where(path => path.EndsWith(".png", StringComparison.OrdinalIgnoreCase)
+                || path.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase)
+                || path.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase)
+                || path.EndsWith(".webp", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        var inserted = 0;
+        foreach (var filePath in files)
+        {
+            var fileName = Path.GetFileName(filePath);
+            var exists = await avatarImagesCollection
+                .Find(a => a.UserId == predefinedUserId && a.FileName == fileName && a.ImageType == "original")
+                .AnyAsync(cancellationToken);
+
+            if (exists)
+            {
+                continue;
+            }
+
+            var imageData = await File.ReadAllBytesAsync(filePath, cancellationToken);
+            var contentType = GetContentType(filePath);
+
+            // Generate thumbnail (128x128 WebP)
+            byte[] thumbnailData;
+            string thumbnailContentType;
+            try
+            {
+                thumbnailData = ImageResizer.GenerateThumbnail(imageData);
+                thumbnailContentType = "image/webp";
+                _logger.LogInformation("Generated thumbnail for {FileName}: {OriginalSize}KB -> {ThumbnailSize}KB",
+                    fileName, imageData.Length / 1024, thumbnailData.Length / 1024);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to generate thumbnail for {FileName}, using original", fileName);
+                thumbnailData = imageData;
+                thumbnailContentType = contentType;
+            }
+
+            var avatarImage = new AvatarImage
+            {
+                UserId = predefinedUserId,
+                ImageType = "original",
+                Emotion = null,
+                ImageData = imageData,
+                ThumbnailData = thumbnailData,
+                ThumbnailContentType = thumbnailContentType,
+                ContentType = contentType,
+                FileName = fileName,
+                FileSize = imageData.LongLength,
+                SourceAvatarId = null,
+                GenerationPrompt = null,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            await avatarImagesCollection.InsertOneAsync(avatarImage, cancellationToken: cancellationToken);
+            inserted++;
+        }
+
+        if (inserted > 0)
+        {
+            _logger.LogInformation("Seeded {Count} predefined avatars into MongoDB.", inserted);
+        }
+    }
+
+    private async Task MigrateZodiacGeneratedAvatarsAsync(IMongoDatabase database, CancellationToken cancellationToken)
+    {
+        var avatarImagesCollection = database.GetCollection<AvatarImage>("avatarImages");
+        const string predefinedUserId = "system_predefined";
+
+        var predefinedAvatars = await avatarImagesCollection
+            .Find(a => a.UserId == predefinedUserId && a.ImageType == "original")
+            .Project(a => new { a.Id, a.FileName })
+            .ToListAsync(cancellationToken);
+
+        if (predefinedAvatars.Count == 0)
+        {
+            return;
+        }
+
+        var migrated = 0L;
+        foreach (var predefined in predefinedAvatars)
+        {
+            if (string.IsNullOrWhiteSpace(predefined.FileName))
+            {
+                continue;
+            }
+
+            var legacyOriginalIds = await avatarImagesCollection
+                .Find(a => a.ImageType == "original"
+                    && a.UserId != predefinedUserId
+                    && a.FileName == predefined.FileName)
+                .Project(a => a.Id)
+                .ToListAsync(cancellationToken);
+
+            if (legacyOriginalIds.Count == 0)
+            {
+                continue;
+            }
+
+            var update = Builders<AvatarImage>.Update.Set(a => a.SourceAvatarId, predefined.Id);
+            var filter = Builders<AvatarImage>.Filter.And(
+                Builders<AvatarImage>.Filter.Eq(a => a.ImageType, "emotion_generated"),
+                Builders<AvatarImage>.Filter.In(a => a.SourceAvatarId, legacyOriginalIds));
+
+            var result = await avatarImagesCollection.UpdateManyAsync(filter, update, cancellationToken: cancellationToken);
+            migrated += result.ModifiedCount;
+        }
+
+        if (migrated > 0)
+        {
+            _logger.LogInformation("Migrated {Count} generated avatars to predefined source ids.", migrated);
+        }
+    }
+
+    private static string GetContentType(string filePath)
+    {
+        var extension = Path.GetExtension(filePath).ToLowerInvariant();
+        return extension switch
+        {
+            ".jpg" => "image/jpeg",
+            ".jpeg" => "image/jpeg",
+            ".png" => "image/png",
+            ".webp" => "image/webp",
+            _ => "application/octet-stream"
+        };
+    }
 
     private async Task SeedTestDataAsync(IMongoDatabase database, CancellationToken cancellationToken)
     {

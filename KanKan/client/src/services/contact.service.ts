@@ -1,27 +1,6 @@
 import apiClient from '@/utils/api';
-
-export interface User {
-  id: string;
-  domain?: string;
-  isAdmin?: boolean;
-  isDisabled?: boolean;
-  handle: string;
-  displayName: string;
-  avatarUrl: string;
-  gender?: 'male' | 'female';
-  bio: string;
-  isOnline: boolean;
-  lastSeen: string;
-}
-
-export interface FriendRequest {
-  id: string;
-  fromUserId: string;
-  toUserId: string;
-  status: 'pending' | 'accepted' | 'rejected';
-  createdAt: string;
-  fromUser: User;
-}
+import type { FriendRequest, User } from '@/types';
+export type { FriendRequest, User } from '@/types';
 
 class ContactService {
   async searchUsers(query: string): Promise<User[]> {
@@ -70,7 +49,7 @@ class ContactService {
     return response.data;
   }
 
-  async updateProfile(data: { displayName?: string; bio?: string; avatarUrl?: string; gender?: 'male' | 'female' }): Promise<User> {
+  async updateProfile(data: { displayName?: string; bio?: string; avatarUrl?: string; avatarImageId?: string | null; gender?: 'male' | 'female' }): Promise<User> {
     const response = await apiClient.put<User>('/contact/me', data);
     return response.data;
   }

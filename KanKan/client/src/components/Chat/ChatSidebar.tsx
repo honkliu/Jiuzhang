@@ -200,7 +200,6 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
             const isGroup = isRealGroupChat(chat, meId);
             const hasWa = (chat.participants || []).some((p) => p.userId === WA_USER_ID);
             const realParticipants = getRealParticipants(chat.participants);
-            const otherRealParticipants = getOtherRealParticipants(chat, meId);
             const isWaOnlyChat = !isGroup && hasWa && realParticipants.length <= 1;
             const showUnread = chat.unreadCount > 0 && !isWaOnlyChat;
 

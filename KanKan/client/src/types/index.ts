@@ -7,6 +7,7 @@ export interface User {
   handle: string;
   displayName: string;
   avatarUrl: string;
+  avatarImageId?: string | null;
   gender?: 'male' | 'female';
   bio: string;
   phoneNumber?: string;

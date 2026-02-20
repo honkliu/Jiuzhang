@@ -141,6 +141,8 @@ export const NewChatDialog: React.FC<NewChatDialogProps> = ({ open, onClose }) =
     bio: 'AI assistant',
     isOnline: true,
     lastSeen: new Date().toISOString(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   };
 
   const listWithWa = baseUsers.some((u) => u.id === WA_USER_ID)
