@@ -7,6 +7,7 @@ import {
   ButtonBase,
 } from '@mui/material';
 import { avatarService, type EmotionThumbnailResult } from '@/services/avatar.service';
+import { ImageHoverPreview } from '@/components/Shared/ImageHoverPreview';
 
 // Work around TS2590 ("union type too complex") from MUI Box typings in some TS versions.
 const BoxAny = Box as any;
@@ -75,6 +76,8 @@ export const GeneratedAvatarPicker: React.FC<GeneratedAvatarPickerProps> = ({
   const [loading, setLoading] = React.useState(false);
   const [items, setItems] = React.useState<EmotionThumbnailResult[]>([]);
   const cacheRef = React.useRef<Map<string, EmotionThumbnailResult[]>>(new Map());
+  const [activePreviewId, setActivePreviewId] = React.useState<string | null>(null);
+  const [isPreviewOpen, setIsPreviewOpen] = React.useState(false);
 
   React.useEffect(() => {
     let active = true;
@@ -148,6 +151,39 @@ export const GeneratedAvatarPicker: React.FC<GeneratedAvatarPickerProps> = ({
 
   const handleSelect = (item: GeneratedAvatarItem) => {
     onSelect(item.id, item.fullUrl);
+    setActivePreviewId(null);
+    setIsPreviewOpen(false);
+    onClose();
+  };
+
+  const handlePopoverClose = (
+    _event: unknown,
+    reason?: 'backdropClick' | 'escapeKeyDown'
+  ) => {
+    if (reason === 'backdropClick') {
+      if (isPreviewOpen || activePreviewId) {
+        setActivePreviewId(null);
+        setIsPreviewOpen(false);
+        return;
+      }
+
+      onClose();
+      return;
+    }
+
+    if (reason === 'escapeKeyDown') {
+      setActivePreviewId(null);
+      setIsPreviewOpen(false);
+      onClose();
+      return;
+    }
+
+    if (isPreviewOpen) {
+      setActivePreviewId(null);
+      setIsPreviewOpen(false);
+      return;
+    }
+
     onClose();
   };
 
@@ -155,7 +191,7 @@ export const GeneratedAvatarPicker: React.FC<GeneratedAvatarPickerProps> = ({
     <Popover
       open={open}
       anchorEl={anchorEl}
-      onClose={onClose}
+      onClose={handlePopoverClose}
       anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       transformOrigin={{ vertical: 'top', horizontal: 'right' }}
       PaperProps={{
@@ -163,6 +199,9 @@ export const GeneratedAvatarPicker: React.FC<GeneratedAvatarPickerProps> = ({
           p: 2,
           width: 216,
           maxWidth: '90vw',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
         },
       }}
     >
@@ -180,6 +219,8 @@ export const GeneratedAvatarPicker: React.FC<GeneratedAvatarPickerProps> = ({
             display: 'grid',
             gridTemplateColumns: 'repeat(3, 56px)',
             gap: 1,
+            width: 'fit-content',
+            mx: 'auto',
           }}
         >
           {tiles.map((item, idx) => {
@@ -201,43 +242,62 @@ export const GeneratedAvatarPicker: React.FC<GeneratedAvatarPickerProps> = ({
             const isSelected = selectedId === item.id;
 
             return (
-              <ButtonBase
+              <ImageHoverPreview
                 key={item.id}
-                onClick={() => handleSelect(item)}
-                sx={{
-                  width: 56,
-                  height: 56,
-                  borderRadius: '10px',
-                  overflow: 'hidden',
-                  border: isSelected
-                    ? '2px solid rgba(25, 118, 210, 0.95)'
-                    : '1px solid rgba(15, 23, 42, 0.12)',
-                  boxShadow: isSelected ? '0 10px 24px rgba(25, 118, 210, 0.20)' : 'none',
-                  transition: 'transform 120ms ease, box-shadow 120ms ease',
-                  '&:hover': {
-                    transform: 'translateY(-1px)',
-                    boxShadow: '0 10px 24px rgba(2, 6, 23, 0.10)',
-                  },
-                  '&:focus-visible': {
-                    boxShadow: '0 0 0 3px rgba(25, 118, 210, 0.25)',
-                    outline: 'none',
-                  },
+                src={item.fullUrl}
+                alt={item.isRaw ? 'Raw avatar preview' : 'Generated avatar preview'}
+                disabled={Boolean(activePreviewId && activePreviewId !== item.id)}
+                onPreviewClick={() => handleSelect(item)}
+                onOpenChange={(open) => {
+                  if (open) {
+                    setActivePreviewId(item.id);
+                    setIsPreviewOpen(true);
+                  } else {
+                    setActivePreviewId((prev) => (prev === item.id ? null : prev));
+                    setIsPreviewOpen(false);
+                  }
                 }}
               >
-                <BoxAny
-                  component="img"
-                  src={item.thumbnailUrl || item.fullUrl}
-                  alt={item.isRaw ? 'Raw avatar' : 'Generated avatar'}
-                  loading="eager"
-                  decoding="sync"
-                  sx={{
-                    width: '100%',
-                    height: '100%',
-                    display: 'block',
-                    objectFit: 'cover',
-                  }}
-                />
-              </ButtonBase>
+                {(previewProps) => (
+                  <ButtonBase
+                    {...previewProps}
+                    onClick={() => handleSelect(item)}
+                    sx={{
+                      width: 56,
+                      height: 56,
+                      borderRadius: '10px',
+                      overflow: 'hidden',
+                      border: isSelected
+                        ? '2px solid rgba(25, 118, 210, 0.95)'
+                        : '1px solid rgba(15, 23, 42, 0.12)',
+                      boxShadow: isSelected ? '0 10px 24px rgba(25, 118, 210, 0.20)' : 'none',
+                      transition: 'transform 120ms ease, box-shadow 120ms ease',
+                      '&:hover': {
+                        transform: 'translateY(-1px)',
+                        boxShadow: '0 10px 24px rgba(2, 6, 23, 0.10)',
+                      },
+                      '&:focus-visible': {
+                        boxShadow: '0 0 0 3px rgba(25, 118, 210, 0.25)',
+                        outline: 'none',
+                      },
+                    }}
+                  >
+                    <BoxAny
+                      component="img"
+                      src={item.thumbnailUrl || item.fullUrl}
+                      alt={item.isRaw ? 'Raw avatar' : 'Generated avatar'}
+                      loading="eager"
+                      decoding="sync"
+                      sx={{
+                        width: '100%',
+                        height: '100%',
+                        display: 'block',
+                        objectFit: 'cover',
+                      }}
+                    />
+                  </ButtonBase>
+                )}
+              </ImageHoverPreview>
             );
           })}
         </BoxAny>

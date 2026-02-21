@@ -99,9 +99,10 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleSidebar, sidebarOp
     if (!user) return;
 
     try {
+      const sourceAvatarImageId = user.avatarImageId ?? avatarImageId;
       const updated = await contactService.updateProfile({
         avatarUrl,
-        avatarImageId,
+        avatarImageId: sourceAvatarImageId,
       });
       dispatch(updateUser(updated));
       dispatch(
@@ -183,7 +184,13 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleSidebar, sidebarOp
         <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 0.5 }}>
             <IconButton onClick={handleOpenAvatarPicker} title="Choose avatar" size="small" sx={{ p: 0 }}>
-              <UserAvatar src={user?.avatarUrl} gender={user?.gender} variant="rounded" sx={{ width: 32, height: 32 }} />
+              <UserAvatar
+                src={user?.avatarUrl}
+                gender={user?.gender}
+                closePreviewOnClick
+                variant="rounded"
+                sx={{ width: 32, height: 32 }}
+              />
             </IconButton>
             <Typography
               variant="subtitle2"

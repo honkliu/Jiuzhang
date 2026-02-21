@@ -32,6 +32,7 @@ import { MessageBubble } from './MessageBubble';
 import { signalRService } from '@/services/signalr.service';
 import { chatService } from '@/services/chat.service';
 import { mediaService } from '@/services/media.service';
+import { avatarService, type EmotionThumbnailResult } from '@/services/avatar.service';
 import { UserAvatar } from '@/components/Shared/UserAvatar';
 import { GroupAvatar } from '@/components/Shared/GroupAvatar';
 import {
@@ -483,51 +484,179 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
     return '';
   };
 
-  type MoodKey = 'neutral' | 'talk' | 'smile' | 'angry' | 'sad' | 'surprised' | 'thinking';
-
-  const getMoodFromText = (text: string, isDraft: boolean): MoodKey => {
-    if (isDraft && text.trim().length > 0) return 'talk';
-    const value = text.toLowerCase();
-
-    if (/生气|气死|恼火|怒|愤怒|抓狂/.test(value)) return 'angry';
-    if (/难过|伤心|哭|呜呜|sad/.test(value)) return 'sad';
-    if (/震惊|惊讶|哇|诶|wow/.test(value)) return 'surprised';
-    if (/想想|思考|等等|嗯|hmm|think/.test(value)) return 'thinking';
-    if (/笑|开心|高兴|哈哈|lol|haha|😂|😄/.test(value)) return 'smile';
-
-    return 'neutral';
+  const getLatestMediaFor = (senderId?: string): string => {
+    if (!senderId) return '';
+    for (let i = mergedMessages.length - 1; i >= 0; i -= 1) {
+      const msg = mergedMessages[i];
+      if (msg.senderId !== senderId) continue;
+      if (msg.isDeleted) continue;
+      const content = (msg as any).content;
+      const url = msg.thumbnailUrl
+        || msg.mediaUrl
+        || content?.thumbnailUrl
+        || content?.mediaUrl
+        || '';
+      if (!url) continue;
+      return url;
+    }
+    return '';
   };
 
-  const getAvatarForMood = (side: 'left' | 'right', mood: MoodKey, fallback?: string) => {
-    const base = `/avatars/2d/${side}`;
-    const byMood: Record<MoodKey, string> = {
-      neutral: `${base}_neutral.png`,
-      talk: `${base}_talk.png`,
-      smile: `${base}_smile.png`,
-      angry: `${base}_angry.png`,
-      sad: `${base}_sad.png`,
-      surprised: `${base}_surprised.png`,
-      thinking: `${base}_thinking.png`,
-    };
+  type MoodKey = 'neutral' | 'smile' | 'angry' | 'sad' | 'surprised' | 'thinking' | 'happy' | 'crying' | 'excited';
 
-    return byMood[mood] || fallback || '';
-  };
+  const [leftMoodMap, setLeftMoodMap] = useState<Partial<Record<MoodKey, string>>>({});
+  const [rightMoodMap, setRightMoodMap] = useState<Partial<Record<MoodKey, string>>>({});
+  const [leftMood, setLeftMood] = useState<MoodKey | null>(null);
+  const [rightMood, setRightMood] = useState<MoodKey | null>(null);
+  const [leftMoodAt, setLeftMoodAt] = useState(0);
+  const [rightMoodAt, setRightMoodAt] = useState(0);
+  const moodCooldownMs = 5000;
 
   const otherDraft = draftMessages.find((d) => d.senderId === otherParticipant?.userId)?.text;
   const leftText = buildRollingTextFor(otherParticipant?.userId, otherDraft);
   const rightText = buildRollingTextFor(user?.id, messageText);
   const leftMoodText = otherDraft || getLatestRawTextFor(otherParticipant?.userId);
   const rightMoodText = messageText.trim().length > 0 ? messageText : getLatestRawTextFor(user?.id);
-  const leftAvatar = getAvatarForMood(
-    'left',
-    getMoodFromText(leftMoodText, Boolean(otherDraft)),
-    otherParticipant?.avatarUrl
-  );
-  const rightAvatar = getAvatarForMood(
-    'right',
-    getMoodFromText(rightMoodText, messageText.trim().length > 0),
-    user?.avatarUrl
-  );
+
+  const extractAvatarImageId = (url?: string | null): string | null => {
+    if (!url) return null;
+    try {
+      const parsed = new URL(url, window.location.origin);
+      const match = parsed.pathname.match(/\/api\/avatar\/image\/([^/]+)/i);
+      return match?.[1] ?? null;
+    } catch {
+      const match = url.match(/\/api\/avatar\/image\/([^/?#]+)/i);
+      return match?.[1] ?? null;
+    }
+  };
+
+  const toMoodKey = (emotion?: string | null): MoodKey | null => {
+    const normalized = (emotion || '').trim().toLowerCase();
+    if (!normalized) return null;
+    if (normalized === 'smile') return 'smile';
+    if (normalized === 'happy') return 'happy';
+    if (normalized === 'sad') return 'sad';
+    if (normalized === 'crying') return 'crying';
+    if (normalized === 'angry') return 'angry';
+    if (normalized === 'surprised') return 'surprised';
+    if (normalized === 'thinking') return 'thinking';
+    if (normalized === 'neutral') return 'neutral';
+    if (normalized === 'excited') return 'excited';
+    return null;
+  };
+
+  const buildMoodMap = (items: EmotionThumbnailResult[]): Partial<Record<MoodKey, string>> => {
+    const map: Partial<Record<MoodKey, string>> = {};
+    items.forEach((item) => {
+      const key = toMoodKey(item.emotion);
+      if (!key) return;
+      if (!map[key]) {
+        map[key] = item.imageUrl;
+      }
+    });
+    return map;
+  };
+
+  const getMoodFromText = (text: string): MoodKey | null => {
+    const value = text.toLowerCase();
+
+    if (/生气|气死|恼火|怒|愤怒|抓狂/.test(value)) return 'angry';
+    if (/难过|伤心|sad/.test(value)) return 'sad';
+    if (/哭|呜呜|泪|😭|😢/.test(value)) return 'crying';
+    if (/震惊|惊讶|哇|诶|wow/.test(value)) return 'surprised';
+    if (/想想|思考|等等|嗯|hmm|think/.test(value)) return 'thinking';
+    if (/笑|微笑|哈哈|lol|haha|😂|😄/.test(value)) return 'smile';
+    if (/开心|高兴|快乐|happy/.test(value)) return 'happy';
+    if (/兴奋|激动|excited|awesome/.test(value)) return 'excited';
+
+    return null;
+  };
+
+  const getAvatarForMood = (
+    mood: MoodKey | null,
+    moodMap: Partial<Record<MoodKey, string>>,
+    fallback?: string
+  ) => {
+    if (!mood) return fallback || '';
+    return moodMap[mood] || fallback || '';
+  };
+
+  useEffect(() => {
+    const next = getMoodFromText(leftMoodText);
+    if (!next) return;
+    const now = Date.now();
+    if (leftMood === null || now - leftMoodAt >= moodCooldownMs) {
+      setLeftMood(next);
+      setLeftMoodAt(now);
+    }
+  }, [leftMoodText, leftMood, leftMoodAt]);
+
+  useEffect(() => {
+    const next = getMoodFromText(rightMoodText);
+    if (!next) return;
+    const now = Date.now();
+    if (rightMood === null || now - rightMoodAt >= moodCooldownMs) {
+      setRightMood(next);
+      setRightMoodAt(now);
+    }
+  }, [rightMoodText, rightMood, rightMoodAt]);
+
+  useEffect(() => {
+    let active = true;
+    const avatarImageId = user?.avatarImageId || extractAvatarImageId(user?.avatarUrl);
+    if (!avatarImageId) {
+      setRightMoodMap({});
+      return () => {
+        active = false;
+      };
+    }
+
+    avatarService
+      .getEmotionThumbnails(avatarImageId)
+      .then((items) => {
+        if (!active) return;
+        setRightMoodMap(buildMoodMap(items));
+      })
+      .catch(() => {
+        if (!active) return;
+        setRightMoodMap({});
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [user?.avatarImageId, user?.avatarUrl]);
+
+  useEffect(() => {
+    let active = true;
+    const avatarImageId = extractAvatarImageId(otherParticipant?.avatarUrl);
+    if (!avatarImageId) {
+      setLeftMoodMap({});
+      return () => {
+        active = false;
+      };
+    }
+
+    avatarService
+      .getEmotionThumbnails(avatarImageId)
+      .then((items) => {
+        if (!active) return;
+        setLeftMoodMap(buildMoodMap(items));
+      })
+      .catch(() => {
+        if (!active) return;
+        setLeftMoodMap({});
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [otherParticipant?.avatarUrl]);
+
+  const leftAvatar = getAvatarForMood(leftMood, leftMoodMap, otherParticipant?.avatarUrl);
+  const rightAvatar = getAvatarForMood(rightMood, rightMoodMap, user?.avatarUrl);
+  const leftMediaUrl = getLatestMediaFor(otherParticipant?.userId);
+  const rightMediaUrl = getLatestMediaFor(user?.id);
 
   const groupMembersCount = activeChat
     ? getRealParticipants(activeChat.participants).length
@@ -710,6 +839,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
           } : null}
           leftText={leftText}
           rightText={rightText}
+          leftMediaUrl={leftMediaUrl}
+          rightMediaUrl={rightMediaUrl}
         />
       ) : (
         <BoxAny

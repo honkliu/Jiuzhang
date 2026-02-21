@@ -226,7 +226,12 @@ public class ImageGenerationService : IImageGenerationService
                 {
                     _logger.LogInformation("Generating {Label} avatar for job {JobId}", label, jobId);
 
-                    var fullPrompt = $"portrait of a person with a mild {prompt} expression, high quality, detailed face. Preserve the original gender and facial proportions. Do not change gender, if female, change the clothing to more variant seductive and sexy and variant colors, transparent.";
+                    var fullPrompt = $"portrait the input people or animal with a mild {prompt} expression, high quality. Preserve the original proportions.";
+                    var extraPrompt = request.ExtraPrompt?.Trim();
+                    if (!string.IsNullOrWhiteSpace(extraPrompt))
+                    {
+                        fullPrompt = $"{fullPrompt} {extraPrompt}";
+                    }
 
                     if (totalCount == 1 && !string.IsNullOrWhiteSpace(request.Emotion))
                     {

@@ -8,6 +8,7 @@ import { useLanguage } from '@/i18n/LanguageContext';
 import { FiberManualRecord as FiberManualRecordIcon } from '@mui/icons-material';
 import { Message } from '@/services/chat.service';
 import { UserAvatar } from '@/components/Shared/UserAvatar';
+import { ImageHoverPreview } from '@/components/Shared/ImageHoverPreview';
 import { format } from 'date-fns';
 
 // Work around TS2590 ("union type too complex") from MUI Box typings in some TS versions.
@@ -287,16 +288,22 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
             </ReactMarkdown>
           </BoxAny>
         ) : message.messageType === 'image' ? (
-          <BoxAny
-            component="img"
-            src={message.mediaUrl}
-            alt={t('chat.message.image')}
-            sx={{
-              maxWidth: '100%',
-              maxHeight: 300,
-              borderRadius: 1,
-            }}
-          />
+          <ImageHoverPreview src={message.mediaUrl} alt={t('chat.message.image')}>
+            {(previewProps) => (
+              <BoxAny
+                {...previewProps}
+                component="img"
+                src={message.mediaUrl}
+                alt={t('chat.message.image')}
+                tabIndex={0}
+                sx={{
+                  maxWidth: '100%',
+                  maxHeight: 300,
+                  borderRadius: 1,
+                }}
+              />
+            )}
+          </ImageHoverPreview>
         ) : message.messageType === 'video' ? (
           <BoxAny
             component="video"

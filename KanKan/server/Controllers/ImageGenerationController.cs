@@ -58,7 +58,8 @@ public class ImageGenerationController : ControllerBase
                 Emotion = request.Emotion,
                 Mode = request.Mode,
                 VariationCount = request.VariationCount,
-                CustomPrompts = request.CustomPrompts
+                CustomPrompts = request.CustomPrompts,
+                ExtraPrompt = request.ExtraPrompt
             });
 
             return Ok(new
@@ -157,5 +158,6 @@ public class UnifiedGenerationRequest
     public string? Mode { get; set; } // "create" | "replace"
     public int VariationCount { get; set; } = 9;
     public List<string>? CustomPrompts { get; set; } // For custom generation types
+    public string? ExtraPrompt { get; set; }
 }
 

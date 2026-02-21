@@ -6,11 +6,16 @@ import {
   CardContent,
   Typography,
   Button,
+  IconButton,
+  Popover,
   CircularProgress,
+  Box,
+  TextField,
 } from '@mui/material';
 import { AutoAwesome as MagicIcon } from '@mui/icons-material';
 import { avatarService, type EmotionThumbnailResult } from '@/services/avatar.service';
 import { imageGenerationService } from '@/services/imageGeneration.service';
+import { ImageHoverPreview } from '@/components/Shared/ImageHoverPreview';
 
 interface EmotionAvatarGalleryProps {
   userId: string;
@@ -44,6 +49,11 @@ export const EmotionAvatarGallery: React.FC<EmotionAvatarGalleryProps> = ({ user
   const cacheRef = React.useRef<Map<string, EmotionThumbnailResult[]>>(new Map());
   const avatarIdRef = React.useRef<string>(avatarId);
   const refreshInFlightRef = React.useRef(false);
+  const [promptValue, setPromptValue] = useState('');
+  const [helpAnchorEl, setHelpAnchorEl] = useState<HTMLElement | null>(null);
+
+  const helpOpen = Boolean(helpAnchorEl);
+  const helpId = helpOpen ? 'emotion-prompt-help' : undefined;
 
   useEffect(() => {
     avatarIdRef.current = avatarId;
@@ -87,13 +97,13 @@ export const EmotionAvatarGallery: React.FC<EmotionAvatarGalleryProps> = ({ user
     }
   };
 
-  const handleGenerateEmotion = async (emotion: string) => {
+  const handleGenerateEmotion = async (emotion: string, extraPrompt?: string) => {
     try {
       const targetAvatarId = avatarId;
       setGenerating(emotion);
       setError(null);
 
-      const { jobId } = await imageGenerationService.generateAvatarEmotion(targetAvatarId, emotion);
+      const { jobId } = await imageGenerationService.generateAvatarEmotion(targetAvatarId, emotion, extraPrompt);
 
       // Poll for completion
       const result = await imageGenerationService.pollJobUntilComplete(jobId);
@@ -112,13 +122,13 @@ export const EmotionAvatarGallery: React.FC<EmotionAvatarGalleryProps> = ({ user
     }
   };
 
-  const handleGenerateAll = async () => {
+  const handleGenerateAll = async (extraPrompt?: string) => {
     try {
       const targetAvatarId = avatarId;
       setGeneratingAll(true);
       setError(null);
 
-      const { jobId } = await imageGenerationService.generateAvatarEmotions(targetAvatarId);
+      const { jobId } = await imageGenerationService.generateAvatarEmotions(targetAvatarId, extraPrompt);
       const result = await imageGenerationService.pollJobUntilComplete(jobId, () => {
         if (refreshInFlightRef.current) return;
         refreshInFlightRef.current = true;
@@ -139,20 +149,80 @@ export const EmotionAvatarGallery: React.FC<EmotionAvatarGalleryProps> = ({ user
     }
   };
 
+  const handlePromptSubmit = async (emotion?: string) => {
+    const extraPrompt = promptValue.trim();
+    if (emotion) {
+      await handleGenerateEmotion(emotion, extraPrompt);
+      return;
+    }
+    await handleGenerateAll(extraPrompt);
+  };
+
   return (
     <div style={containerStyle}>
       <div style={headerStyle}>
         <Typography variant="h6">Emotion Avatars</Typography>
-        <Button
-          size="small"
-          variant="outlined"
-          startIcon={<MagicIcon />}
-          onClick={handleGenerateAll}
-          disabled={generating !== null || generatingAll || !avatarId}
-        >
-          {generatingAll ? 'Generating...' : 'Generate/Update All'}
-        </Button>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <IconButton
+            size="small"
+            aria-describedby={helpId}
+            title="Prompt help"
+            onClick={(event) => setHelpAnchorEl(event.currentTarget)}
+          >
+            <Typography component="span" sx={{ fontWeight: 700 }}>
+              ..
+            </Typography>
+          </IconButton>
+          <Button
+            size="small"
+            variant="outlined"
+            startIcon={<MagicIcon />}
+            onClick={() => {
+              void handlePromptSubmit();
+            }}
+            disabled={generating !== null || generatingAll || !avatarId}
+          >
+            {generatingAll ? 'Generating...' : 'Generate/Update All'}
+          </Button>
+        </Box>
       </div>
+
+      <Popover
+        id={helpId}
+        open={helpOpen}
+        anchorEl={helpAnchorEl}
+        onClose={() => setHelpAnchorEl(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <Box sx={{ p: 1.5, maxWidth: 320 }}>
+          <Typography variant="body2">
+            expression, high quality. Preserve the original proportions. Do not change gender, if
+            female, change the clothing to more variant seductive and sexy and variant colors,
+            transparent. If animal, keep the species and pose, but change the facial expression
+            according to the prompt. The output image should be in the same style as the input.
+          </Typography>
+        </Box>
+      </Popover>
+
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1,
+          mb: 1,
+        }}
+      >
+        <TextField
+          autoFocus
+          size="small"
+          label="Extra prompt (optional)"
+          placeholder="Applies to all emotions"
+          fullWidth
+          value={promptValue}
+          onChange={(e) => setPromptValue(e.target.value)}
+        />
+      </Box>
 
       {error && (
         <Typography color="error" style={errorStyle}>
@@ -165,25 +235,42 @@ export const EmotionAvatarGallery: React.FC<EmotionAvatarGalleryProps> = ({ user
           <CircularProgress />
         </div>
       ) : (
-        <Grid container spacing={0.2}>
+        <Grid container spacing={0.2} justifyContent="center">
           {emotionLabels.map((label) => {
             const match = emotions.find((e) => (e.emotion || '').toLowerCase() === label);
             return (
               <Grid item xs={4} key={label}>
                 <Card sx={{ p: 0.2, borderRadius: 1 }}>
                   {match ? (
-                    <CardMedia
-                      component="img"
-                      image={match.thumbnailDataUrl || buildThumbnailUrl(match.imageUrl)}
-                      alt={match.emotion || label}
-                      sx={{
-                        width: tileSize,
-                        height: tileSize,
-                        mx: 'auto',
-                        objectFit: 'cover',
-                        borderRadius: 1.5,
-                      }}
-                    />
+                    <ImageHoverPreview
+                      src={match.imageUrl}
+                      alt={`${match.emotion || label} preview`}
+                    >
+                      {(previewProps) => (
+                        <Box
+                          {...previewProps}
+                          sx={{
+                            display: 'flex',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            width: '100%',
+                          }}
+                        >
+                          <CardMedia
+                            component="img"
+                            image={match.thumbnailDataUrl || buildThumbnailUrl(match.imageUrl)}
+                            alt={match.emotion || label}
+                            sx={{
+                              width: tileSize,
+                              height: tileSize,
+                              objectFit: 'cover',
+                              borderRadius: 1.5,
+                              display: 'block',
+                            }}
+                          />
+                        </Box>
+                      )}
+                    </ImageHoverPreview>
                   ) : (
                     <div
                       style={{
@@ -215,7 +302,9 @@ export const EmotionAvatarGallery: React.FC<EmotionAvatarGalleryProps> = ({ user
                       fullWidth
                       variant={match ? 'outlined' : 'contained'}
                       startIcon={<MagicIcon />}
-                      onClick={() => handleGenerateEmotion(label)}
+                      onClick={() => {
+                        void handlePromptSubmit(label);
+                      }}
                       disabled={generating !== null || generatingAll || !avatarId}
                       sx={{
                         mt: 0.2,

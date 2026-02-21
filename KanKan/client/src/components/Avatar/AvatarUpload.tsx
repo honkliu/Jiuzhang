@@ -1,7 +1,8 @@
 import React, { useState, useRef } from 'react';
-import { Button, CircularProgress, Typography, Avatar } from '@mui/material';
+import { Button, CircularProgress, Typography, Avatar, Box } from '@mui/material';
 import { CloudUpload as UploadIcon } from '@mui/icons-material';
 import { avatarService } from '@/services/avatar.service';
+import { ImageHoverPreview } from '@/components/Shared/ImageHoverPreview';
 
 interface AvatarUploadProps {
   onUploadSuccess?: (avatarImageId: string, imageUrl: string) => void;
@@ -74,10 +75,16 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
   return (
     <div style={containerStyle}>
       {showPreview && (
-        <Avatar
-          src={previewUrl || undefined}
-          style={avatarStyle}
-        />
+        <ImageHoverPreview src={previewUrl} alt="Avatar preview">
+          {(previewProps) => (
+            <Box {...previewProps} sx={{ display: 'inline-flex' }}>
+              <Avatar
+                src={previewUrl || undefined}
+                style={avatarStyle}
+              />
+            </Box>
+          )}
+        </ImageHoverPreview>
       )}
 
       <input

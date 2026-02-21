@@ -37,6 +37,7 @@ public class GenerationRequest
     public string? Mode { get; set; } // "create" | "replace"
     public int VariationCount { get; set; } = 9;
     public List<string>? CustomPrompts { get; set; }
+    public string? ExtraPrompt { get; set; }
 }
 
 public class GeneratedAvatarResult

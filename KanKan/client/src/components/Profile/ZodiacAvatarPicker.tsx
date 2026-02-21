@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Box, Typography, Button, CircularProgress } from '@mui/material';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { avatarService, type SelectableAvatar } from '@/services/avatar.service';
+import { ImageHoverPreview } from '@/components/Shared/ImageHoverPreview';
 
 // Work around TS2590 (“union type too complex”) from MUI Box typings in some TS versions.
 const BoxAny = Box as any;
@@ -23,66 +24,71 @@ const AvatarOptionTile: React.FC<AvatarOptionTileProps> = ({
   const [imgError, setImgError] = React.useState(false);
 
   return (
-    <BoxAny
-      role="button"
-      aria-label={avatar.fileName}
-      tabIndex={disabled ? -1 : 0}
-      onClick={() => {
-        if (disabled) return;
-        onSelect(avatar.avatarImageId, avatar.imageUrl);
-      }}
-      onKeyDown={(e: any) => {
-        if (disabled) return;
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          onSelect(avatar.avatarImageId, avatar.imageUrl);
-        }
-      }}
-      sx={{
-        width: 56,
-        height: 56,
-        // IMPORTANT: use explicit px radius (not MUI numeric scaling)
-        // so the tile never becomes a circle under a custom theme.
-        borderRadius: '10px',
-        overflow: 'hidden',
-        cursor: disabled ? 'not-allowed' : 'pointer',
-        opacity: disabled ? 0.6 : 1,
-        border: selected
-          ? '2px solid rgba(25, 118, 210, 0.95)'
-          : '1px solid rgba(15, 23, 42, 0.12)',
-        backgroundColor: 'rgba(2, 6, 23, 0.02)',
-        boxShadow: selected ? '0 10px 24px rgba(25, 118, 210, 0.20)' : 'none',
-        transition: 'transform 120ms ease, box-shadow 120ms ease',
-        '&:hover': disabled
-          ? undefined
-          : {
-              transform: 'translateY(-1px)',
-              boxShadow: '0 10px 24px rgba(2, 6, 23, 0.10)',
+    <ImageHoverPreview src={avatar.fullImageUrl || avatar.imageUrl} alt={avatar.fileName}>
+      {(previewProps) => (
+        <BoxAny
+          {...previewProps}
+          role="button"
+          aria-label={avatar.fileName}
+          tabIndex={disabled ? -1 : 0}
+          onClick={() => {
+            if (disabled) return;
+            onSelect(avatar.avatarImageId, avatar.imageUrl);
+          }}
+          onKeyDown={(e: any) => {
+            if (disabled) return;
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              onSelect(avatar.avatarImageId, avatar.imageUrl);
+            }
+          }}
+          sx={{
+            width: 56,
+            height: 56,
+            // IMPORTANT: use explicit px radius (not MUI numeric scaling)
+            // so the tile never becomes a circle under a custom theme.
+            borderRadius: '10px',
+            overflow: 'hidden',
+            cursor: disabled ? 'not-allowed' : 'pointer',
+            opacity: disabled ? 0.6 : 1,
+            border: selected
+              ? '2px solid rgba(25, 118, 210, 0.95)'
+              : '1px solid rgba(15, 23, 42, 0.12)',
+            backgroundColor: 'rgba(2, 6, 23, 0.02)',
+            boxShadow: selected ? '0 10px 24px rgba(25, 118, 210, 0.20)' : 'none',
+            transition: 'transform 120ms ease, box-shadow 120ms ease',
+            '&:hover': disabled
+              ? undefined
+              : {
+                  transform: 'translateY(-1px)',
+                  boxShadow: '0 10px 24px rgba(2, 6, 23, 0.10)',
+                },
+            '&:focus-visible': {
+              boxShadow: '0 0 0 3px rgba(25, 118, 210, 0.25)',
+              outline: 'none',
             },
-        '&:focus-visible': {
-          boxShadow: '0 0 0 3px rgba(25, 118, 210, 0.25)',
-          outline: 'none',
-        },
-      }}
-    >
-      <BoxAny
-        component="img"
-        src={imgError ? avatar.imageUrl : (avatar.thumbnailDataUrl || avatar.imageUrl)}
-        alt={avatar.fileName}
-        loading="eager"
-        decoding="sync"
-        onError={() => setImgError(true)}
-        sx={{
-          width: '100%',
-          height: '100%',
-          display: 'block',
-          // Fill the square consistently so no option appears tall/narrow.
-          // Crops if the source image isn't square.
-          objectFit: 'cover',
-          borderRadius: 'inherit',
-        }}
-      />
-    </BoxAny>
+          }}
+        >
+          <BoxAny
+            component="img"
+            src={imgError ? avatar.imageUrl : (avatar.thumbnailDataUrl || avatar.imageUrl)}
+            alt={avatar.fileName}
+            loading="eager"
+            decoding="sync"
+            onError={() => setImgError(true)}
+            sx={{
+              width: '100%',
+              height: '100%',
+              display: 'block',
+              // Fill the square consistently so no option appears tall/narrow.
+              // Crops if the source image isn't square.
+              objectFit: 'cover',
+              borderRadius: 'inherit',
+            }}
+          />
+        </BoxAny>
+      )}
+    </ImageHoverPreview>
   );
 };
 

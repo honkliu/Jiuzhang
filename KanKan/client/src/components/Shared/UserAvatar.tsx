@@ -1,10 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Avatar, AvatarProps } from '@mui/material';
+import { Avatar, AvatarProps, Box } from '@mui/material';
+import { ImageHoverPreview } from './ImageHoverPreview';
 
 export interface UserAvatarProps extends Omit<AvatarProps, 'children'> {
   src?: string;
   gender?: string;
   fallbackText?: string;
+  closePreviewOnClick?: boolean;
 }
 
 const normalizeGender = (value?: string): 'male' | 'female' | 'unknown' => {
@@ -57,7 +59,14 @@ const getDefaultAvatarCandidates = (gender: 'male' | 'female' | 'unknown'): stri
   return [];
 };
 
-export const UserAvatar: React.FC<UserAvatarProps> = ({ src, gender, fallbackText, sx, ...props }) => {
+export const UserAvatar: React.FC<UserAvatarProps> = ({
+  src,
+  gender,
+  fallbackText,
+  closePreviewOnClick,
+  sx,
+  ...props
+}) => {
   const normalized = normalizeGender(gender);
 
   const candidates = useMemo(() => {
@@ -89,19 +98,32 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({ src, gender, fallbackTex
   };
 
   return (
-    <Avatar
-      src={effectiveSrc || undefined}
-      sx={derivedSx}
-      imgProps={{
-        onError: () => {
-          if (candidateIndex < candidates.length - 1) {
-            setCandidateIndex((i) => Math.min(i + 1, candidates.length - 1));
-          }
-        },
-      }}
-      {...props}
+    <ImageHoverPreview
+      src={effectiveSrc}
+      alt={fallbackText || 'Avatar'}
+      closeOnTriggerClickWhenOpen={Boolean(closePreviewOnClick)}
     >
-      {child}
-    </Avatar>
+      {(previewProps) => (
+        <Box
+          {...previewProps}
+          sx={{ display: 'inline-flex' }}
+        >
+          <Avatar
+            src={effectiveSrc || undefined}
+            sx={derivedSx}
+            imgProps={{
+              onError: () => {
+                if (candidateIndex < candidates.length - 1) {
+                  setCandidateIndex((i) => Math.min(i + 1, candidates.length - 1));
+                }
+              },
+            }}
+            {...props}
+          >
+            {child}
+          </Avatar>
+        </Box>
+      )}
+    </ImageHoverPreview>
   );
 };

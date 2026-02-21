@@ -50,6 +50,7 @@ class UnifiedImageGenerationService {
     mode?: 'create' | 'replace';
     variationCount?: number;
     customPrompts?: string[];
+    extraPrompt?: string;
   }): Promise<GenerateResponse> {
     const response = await apiClient.post<GenerateResponse>('/imagegeneration/generate', {
       sourceType: request.sourceType,
@@ -61,6 +62,7 @@ class UnifiedImageGenerationService {
       mode: request.mode,
       variationCount: request.variationCount || 9,
       customPrompts: request.customPrompts,
+      extraPrompt: request.extraPrompt,
     });
 
     return response.data;
@@ -69,21 +71,23 @@ class UnifiedImageGenerationService {
   /**
    * Generate avatar emotions
    */
-  async generateAvatarEmotions(avatarId: string): Promise<GenerateResponse> {
+  async generateAvatarEmotions(avatarId: string, extraPrompt?: string): Promise<GenerateResponse> {
     return this.generate({
       sourceType: 'avatar',
       generationType: 'emotions',
       avatarId,
+      extraPrompt,
     });
   }
 
-  async generateAvatarEmotion(avatarId: string, emotion: string): Promise<GenerateResponse> {
+  async generateAvatarEmotion(avatarId: string, emotion: string, extraPrompt?: string): Promise<GenerateResponse> {
     return this.generate({
       sourceType: 'avatar',
       generationType: 'emotions',
       avatarId,
       emotion,
       mode: 'replace',
+      extraPrompt,
     });
   }
 
@@ -150,7 +154,7 @@ class UnifiedImageGenerationService {
     jobId: string,
     onProgress?: (progress: number) => void | Promise<void>
   ): Promise<GenerationJob> {
-    const maxAttempts = 60; // 60 * 3 seconds = 3 minutes
+    const maxAttempts = 90; // 90 * 2 seconds = 3 minutes
     let attempt = 0;
 
     while (attempt < maxAttempts) {
@@ -164,7 +168,7 @@ class UnifiedImageGenerationService {
         return job;
       }
 
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      await new Promise(resolve => setTimeout(resolve, 2000));
       attempt++;
     }
 

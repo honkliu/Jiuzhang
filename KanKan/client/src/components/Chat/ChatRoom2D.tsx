@@ -113,6 +113,8 @@ interface ChatRoom2DProps {
   rightParticipant: ParticipantInfo | null;
   leftText?: string;
   rightText?: string;
+  leftMediaUrl?: string;
+  rightMediaUrl?: string;
 }
 
 export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
@@ -120,6 +122,8 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
   rightParticipant,
   leftText,
   rightText,
+  leftMediaUrl,
+  rightMediaUrl,
 }) => {
   const textStyle = {
     whiteSpace: 'pre-wrap',
@@ -128,8 +132,8 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
     fontFamily: "'STKaiti', 'KaiTi', 'STSong', 'SimSun', 'Noto Serif SC', serif",
   };
 
-  const renderBubble = (text?: string, align: 'left' | 'right' = 'left') => {
-    if (!text) return null;
+  const renderBubble = (text?: string, mediaUrl?: string, align: 'left' | 'right' = 'left') => {
+    if (!text && !mediaUrl) return null;
     return (
       <Paper
         elevation={0}
@@ -178,63 +182,79 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
           },
         }}
       >
-        <BoxAny
-          sx={{
-            position: 'relative',
-            zIndex: 1,
-            ...textStyle,
-            '& p': { margin: 0 },
-            '& blockquote': {
-              margin: 0,
-              paddingLeft: '0.75em',
-              borderLeft: '2px solid rgba(116, 84, 50, 0.45)',
-              color: 'inherit',
-            },
-            '& .katex-display': {
-              margin: '0.5em 0',
-              overflowX: 'auto',
-              overflowY: 'hidden',
-            },
-            '& .katex': {
-              fontSize: '1.05em',
-            },
-            '& table': {
-              width: '100%',
-              borderCollapse: 'collapse',
-              margin: '8px 0',
-            },
-            '& th, & td': {
-              border: '1px solid rgba(0,0,0,0.12)',
-              padding: '4px 8px',
-              textAlign: 'left',
-            },
-            '& th': {
-              backgroundColor: 'rgba(0,0,0,0.03)',
-              fontWeight: 600,
-            },
-            '& code': {
-              backgroundColor: 'rgba(0, 0, 0, 0.06)',
-              padding: '2px 4px',
-              borderRadius: '3px',
-              fontFamily: 'monospace',
-              fontSize: '0.9em',
-            },
-            '& pre': {
-              backgroundColor: 'rgba(0, 0, 0, 0.06)',
-              padding: '8px 12px',
-              borderRadius: '4px',
-              overflowX: 'auto',
-              margin: '8px 0',
-            },
-            '& pre code': {
-              padding: 0,
-              backgroundColor: 'transparent',
-            },
-          }}
-        >
-          <ReactMarkdown remarkPlugins={remarkPlugins} rehypePlugins={rehypePlugins}>
-            {escapePipesInMathForGfm(text)}
-          </ReactMarkdown>
+        <BoxAny sx={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
+          {mediaUrl && (
+            <BoxAny
+              component="img"
+              src={mediaUrl}
+              alt="Chat media"
+              sx={{
+                width: '100%',
+                maxHeight: 200,
+                objectFit: 'contain',
+                borderRadius: 1.5,
+                boxShadow: '0 10px 20px rgba(0,0,0,0.15)',
+              }}
+            />
+          )}
+          {text && (
+            <BoxAny
+              sx={{
+                ...textStyle,
+                '& p': { margin: 0 },
+                '& blockquote': {
+                  margin: 0,
+                  paddingLeft: '0.75em',
+                  borderLeft: '2px solid rgba(116, 84, 50, 0.45)',
+                  color: 'inherit',
+                },
+                '& .katex-display': {
+                  margin: '0.5em 0',
+                  overflowX: 'auto',
+                  overflowY: 'hidden',
+                },
+                '& .katex': {
+                  fontSize: '1.05em',
+                },
+                '& table': {
+                  width: '100%',
+                  borderCollapse: 'collapse',
+                  margin: '8px 0',
+                },
+                '& th, & td': {
+                  border: '1px solid rgba(0,0,0,0.12)',
+                  padding: '4px 8px',
+                  textAlign: 'left',
+                },
+                '& th': {
+                  backgroundColor: 'rgba(0,0,0,0.03)',
+                  fontWeight: 600,
+                },
+                '& code': {
+                  backgroundColor: 'rgba(0, 0, 0, 0.06)',
+                  padding: '2px 4px',
+                  borderRadius: '3px',
+                  fontFamily: 'monospace',
+                  fontSize: '0.9em',
+                },
+                '& pre': {
+                  backgroundColor: 'rgba(0, 0, 0, 0.06)',
+                  padding: '8px 12px',
+                  borderRadius: '4px',
+                  overflowX: 'auto',
+                  margin: '8px 0',
+                },
+                '& pre code': {
+                  padding: 0,
+                  backgroundColor: 'transparent',
+                },
+              }}
+            >
+              <ReactMarkdown remarkPlugins={remarkPlugins} rehypePlugins={rehypePlugins}>
+                {escapePipesInMathForGfm(text)}
+              </ReactMarkdown>
+            </BoxAny>
+          )}
         </BoxAny>
       </Paper>
     );
@@ -297,7 +317,7 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
             boxShadow: '0 18px 36px rgba(28, 18, 8, 0.35)',
           }}
         />
-        {renderBubble(leftText, 'left')}
+        {renderBubble(leftText, leftMediaUrl, 'left')}
       </BoxAny>
 
       <BoxAny
@@ -313,7 +333,7 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
           pb: 2.5,
         }}
       >
-        {renderBubble(rightText, 'right')}
+        {renderBubble(rightText, rightMediaUrl, 'right')}
         <UserAvatar
           src={rightParticipant?.avatarUrl || ''}
           gender={rightParticipant?.gender}
