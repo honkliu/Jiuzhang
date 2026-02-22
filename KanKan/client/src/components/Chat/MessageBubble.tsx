@@ -114,6 +114,8 @@ interface MessageBubbleProps {
   showAvatar: boolean;
   imageGallery?: string[];
   imageIndex?: number;
+  imageGroups?: Array<{ sourceUrl: string; messageId: string; canEdit: boolean }>;
+  imageGroupIndex?: number;
 }
 
 export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
@@ -122,6 +124,8 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
   showAvatar,
   imageGallery,
   imageIndex,
+  imageGroups,
+  imageGroupIndex,
 }) => {
   const { language, t } = useLanguage();
   const isAgent = message.senderId === 'user_ai_wa';
@@ -375,6 +379,8 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
                 ? Math.min(Math.max(imageIndex, 0), imageGallery.length - 1)
                 : 0
             }
+            groups={imageGroups}
+            initialGroupIndex={typeof imageGroupIndex === 'number' ? imageGroupIndex : undefined}
             open={isLightboxOpen}
             onClose={() => setIsLightboxOpen(false)}
           />

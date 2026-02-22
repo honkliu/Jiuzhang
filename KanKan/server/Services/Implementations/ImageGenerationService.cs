@@ -54,6 +54,12 @@ public class ImageGenerationService : IImageGenerationService
         }
 
         // Create generation job
+        string? originalMediaUrl = request.MediaUrl;
+        if (request.SourceType == "chat_image" && !string.IsNullOrWhiteSpace(request.MessageId))
+        {
+            originalMediaUrl = await ResolveOriginalMediaUrlAsync(request.MessageId, request.MediaUrl);
+        }
+
         var job = new ImageGenerationJob
         {
             JobId = Guid.NewGuid().ToString(),
@@ -63,7 +69,7 @@ public class ImageGenerationService : IImageGenerationService
             {
                 AvatarId = request.AvatarId,
                 MessageId = request.MessageId,
-                OriginalMediaUrl = request.MediaUrl
+                OriginalMediaUrl = originalMediaUrl
             },
             GenerationType = request.GenerationType,
             Emotion = request.Emotion,
@@ -162,7 +168,44 @@ public class ImageGenerationService : IImageGenerationService
     public async Task<List<string>> GetVariationUrlsAsync(string messageId)
     {
         var message = await _messages.Find(m => m.Id == messageId).FirstOrDefaultAsync();
-        return message?.GeneratedVariationsRef?.GeneratedImageUrls ?? new List<string>();
+        var sourceUrl = message?.Content?.MediaUrl ?? message?.Content?.ThumbnailUrl;
+        if (string.IsNullOrWhiteSpace(sourceUrl))
+        {
+            var job = await _generationJobs
+                .Find(j => j.SourceType == "chat_image" && j.SourceRef.MessageId == messageId && j.SourceRef.OriginalMediaUrl != null)
+                .SortBy(j => j.CreatedAt)
+                .FirstOrDefaultAsync();
+            sourceUrl = job?.SourceRef?.OriginalMediaUrl;
+        }
+
+        if (string.IsNullOrWhiteSpace(sourceUrl))
+        {
+            return new List<string>();
+        }
+
+        var uploadsPath = GetUploadsPath();
+        var sourceFileName = GetFileNameFromUrl(sourceUrl);
+        var baseName = Path.GetFileNameWithoutExtension(sourceFileName);
+        var extension = Path.GetExtension(sourceFileName);
+        if (string.IsNullOrWhiteSpace(baseName))
+        {
+            return new List<string>();
+        }
+
+        var searchPattern = string.IsNullOrWhiteSpace(extension)
+            ? $"{baseName}_*"
+            : $"{baseName}_*{extension}";
+
+        var results = new List<string>();
+        results.AddRange(FindGeneratedFiles(uploadsPath, searchPattern, baseName, "/uploads/"));
+
+        var legacyGeneratedPath = Path.Combine(uploadsPath, "generated");
+        results.AddRange(FindGeneratedFiles(legacyGeneratedPath, searchPattern, baseName, "/uploads/generated/"));
+
+        return results
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(name => ExtractSuffixIndex(Path.GetFileName(name), baseName))
+            .ToList();
     }
 
     private string GetPromptDescription(string generationType, List<string>? customPrompts)
@@ -175,6 +218,66 @@ public class ImageGenerationService : IImageGenerationService
             "custom" => customPrompts != null ? string.Join(", ", customPrompts) : "Custom generation",
             _ => "Image generation"
         };
+    }
+
+    private string GetUploadsPath()
+    {
+        return Path.Combine(_environment.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"), "uploads");
+    }
+
+    private static string GetFileNameFromUrl(string url)
+    {
+        return Path.GetFileName(url.TrimStart('/').Replace("uploads/", ""));
+    }
+
+    private static int ExtractSuffixIndex(string fileName, string baseName)
+    {
+        var withoutExt = Path.GetFileNameWithoutExtension(fileName);
+        if (!withoutExt.StartsWith(baseName + "_", StringComparison.OrdinalIgnoreCase))
+        {
+            return int.MaxValue;
+        }
+
+        var suffix = withoutExt.Substring(baseName.Length + 1);
+        return int.TryParse(suffix, out var value) ? value : int.MaxValue;
+    }
+
+    private static int GetNextGeneratedIndex(string uploadsPath, string baseName, string extension)
+    {
+        var searchPattern = string.IsNullOrWhiteSpace(extension)
+            ? $"{baseName}_*"
+            : $"{baseName}_*{extension}";
+
+        var files = Directory.Exists(uploadsPath)
+            ? Directory.GetFiles(uploadsPath, searchPattern)
+            : Array.Empty<string>();
+
+        var maxIndex = 0;
+        foreach (var file in files)
+        {
+            var fileName = Path.GetFileName(file);
+            var index = ExtractSuffixIndex(fileName, baseName);
+            if (index != int.MaxValue && index > maxIndex)
+            {
+                maxIndex = index;
+            }
+        }
+
+        return maxIndex + 1;
+    }
+
+    private static List<string> FindGeneratedFiles(string folderPath, string searchPattern, string baseName, string urlPrefix)
+    {
+        if (!Directory.Exists(folderPath))
+        {
+            return new List<string>();
+        }
+
+        return Directory.GetFiles(folderPath, searchPattern)
+            .Select(path => Path.GetFileName(path))
+            .OrderBy(name => ExtractSuffixIndex(name, baseName))
+            .Select(name => $"{urlPrefix}{name}")
+            .ToList();
     }
 
     private async Task ProcessAvatarGenerationAsync(string jobId, GenerationRequest request)
@@ -381,34 +484,54 @@ public class ImageGenerationService : IImageGenerationService
     {
         try
         {
+            var job = await _generationJobs.Find(j => j.JobId == jobId).FirstOrDefaultAsync();
+            if (job == null)
+            {
+                throw new InvalidOperationException($"Image generation job not found: {jobId}");
+            }
+
             // Update status to processing
             var updateStatus = Builders<ImageGenerationJob>.Update
                 .Set(j => j.Status, "processing")
                 .Set(j => j.Progress, 0);
             await _generationJobs.UpdateOneAsync(j => j.JobId == jobId, updateStatus);
 
-            // Read original image from file system
-            var uploadsPath = Path.Combine(_environment.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"), "uploads");
-            var fileName = Path.GetFileName(request.MediaUrl!.TrimStart('/').Replace("uploads/", ""));
-            var filePath = Path.Combine(uploadsPath, fileName);
+            // Resolve source (for naming) and input (for editing)
+            var message = await _messages.Find(m => m.Id == request.MessageId).FirstOrDefaultAsync();
+            var sourceUrl = job.SourceRef.OriginalMediaUrl
+                ?? message?.Content?.MediaUrl
+                ?? message?.Content?.ThumbnailUrl
+                ?? request.MediaUrl;
+            if (string.IsNullOrWhiteSpace(sourceUrl))
+            {
+                throw new InvalidOperationException("Missing source media URL for chat image generation.");
+            }
+
+            var inputUrl = request.MediaUrl ?? sourceUrl;
+            var uploadsPath = GetUploadsPath();
+            Directory.CreateDirectory(uploadsPath);
+
+            var sourceFileName = GetFileNameFromUrl(sourceUrl);
+            var inputFileName = GetFileNameFromUrl(inputUrl);
+            var filePath = Path.Combine(uploadsPath, inputFileName);
 
             if (!File.Exists(filePath))
             {
-                throw new FileNotFoundException($"Original image not found: {filePath}");
+                throw new FileNotFoundException($"Source image not found: {filePath}");
             }
 
             var imageBytes = await File.ReadAllBytesAsync(filePath);
             var imageBase64 = Convert.ToBase64String(imageBytes);
 
-            // Create generated directory
-            var generatedPath = Path.Combine(uploadsPath, "generated");
-            Directory.CreateDirectory(generatedPath);
-
             // Determine prompts
             var prompts = GetPrompts(request.GenerationType, request.CustomPrompts, null);
             var generatedUrls = new List<string>();
-            var filePrefix = Path.GetFileNameWithoutExtension(fileName);
-            var fileExtension = Path.GetExtension(fileName);
+            var filePrefix = Path.GetFileNameWithoutExtension(sourceFileName);
+            var fileExtension = Path.GetExtension(sourceFileName);
+            if (string.IsNullOrWhiteSpace(fileExtension))
+            {
+                fileExtension = Path.GetExtension(inputFileName);
+            }
             var totalCount = prompts.Count;
 
             for (int i = 0; i < totalCount; i++)
@@ -424,13 +547,14 @@ public class ImageGenerationService : IImageGenerationService
                     var generatedBase64 = await _comfyUIService.GenerateImageAsync(imageBase64, fullPrompt);
 
                     // Save to file system
-                    var generatedFileName = $"{filePrefix}_var{i + 1}{fileExtension}";
-                    var generatedFilePath = Path.Combine(generatedPath, generatedFileName);
+                    var nextIndex = GetNextGeneratedIndex(uploadsPath, filePrefix, fileExtension);
+                    var generatedFileName = $"{filePrefix}_{nextIndex}{fileExtension}";
+                    var generatedFilePath = Path.Combine(uploadsPath, generatedFileName);
 
                     var generatedBytes = Convert.FromBase64String(generatedBase64);
                     await File.WriteAllBytesAsync(generatedFilePath, generatedBytes);
 
-                    var generatedUrl = $"/uploads/generated/{generatedFileName}";
+                    var generatedUrl = $"/uploads/{generatedFileName}";
                     generatedUrls.Add(generatedUrl);
 
                     // Update progress
@@ -446,20 +570,10 @@ public class ImageGenerationService : IImageGenerationService
                 }
             }
 
-            // Update message with generated variations
-            var messageUpdate = Builders<Message>.Update.Set(m => m.GeneratedVariationsRef, new GeneratedVariationsRef
-            {
-                HasGenerations = true,
-                GenerationCount = generatedUrls.Count,
-                GeneratedImageUrls = generatedUrls
-            });
-            await _messages.UpdateOneAsync(m => m.Id == request.MessageId, messageUpdate);
-
             // Update job as completed
             var updateComplete = Builders<ImageGenerationJob>.Update
                 .Set(j => j.Status, "completed")
                 .Set(j => j.Progress, 100)
-                .Set(j => j.Results, new GenerationResults { GeneratedUrls = generatedUrls })
                 .Set(j => j.CompletedAt, DateTime.UtcNow);
 
             await _generationJobs.UpdateOneAsync(j => j.JobId == jobId, updateComplete);
@@ -515,5 +629,28 @@ public class ImageGenerationService : IImageGenerationService
             "custom" => customPrompts?.Select(p => (p, p)).ToList() ?? new List<(string, string)>(),
             _ => new List<(string, string)>()
         };
+    }
+
+    private async Task<string?> ResolveOriginalMediaUrlAsync(string messageId, string? fallbackUrl)
+    {
+        var message = await _messages.Find(m => m.Id == messageId).FirstOrDefaultAsync();
+        var mediaUrl = message?.Content?.MediaUrl;
+        if (!string.IsNullOrWhiteSpace(mediaUrl))
+        {
+            return mediaUrl;
+        }
+
+        var thumbnailUrl = message?.Content?.ThumbnailUrl;
+        if (!string.IsNullOrWhiteSpace(thumbnailUrl))
+        {
+            return thumbnailUrl;
+        }
+
+        var job = await _generationJobs
+            .Find(j => j.SourceType == "chat_image" && j.SourceRef.MessageId == messageId && j.SourceRef.OriginalMediaUrl != null)
+            .SortBy(j => j.CreatedAt)
+            .FirstOrDefaultAsync();
+
+        return job?.SourceRef?.OriginalMediaUrl ?? fallbackUrl;
     }
 }

@@ -116,6 +116,8 @@ interface ChatRoom2DProps {
   rightText?: string;
   leftMediaUrls?: string[];
   rightMediaUrls?: string[];
+  imageGroups?: Array<{ sourceUrl: string; messageId: string; canEdit: boolean }>;
+  imageGroupIndexByUrl?: Record<string, number>;
 }
 
 export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
@@ -125,8 +127,10 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
   rightText,
   leftMediaUrls,
   rightMediaUrls,
+  imageGroups,
+  imageGroupIndexByUrl,
 }) => {
-  const [lightbox, setLightbox] = useState<{ images: string[]; index: number } | null>(null);
+  const [lightbox, setLightbox] = useState<{ images: string[]; index: number; groupIndex?: number } | null>(null);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
@@ -258,7 +262,11 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
                 component="img"
                 src={url}
                 alt="Chat media"
-                onClick={() => setLightbox({ images: mediaUrls, index: i })}
+                onClick={() => setLightbox({
+                  images: mediaUrls,
+                  index: i,
+                  groupIndex: imageGroupIndexByUrl?.[url],
+                })}
                 sx={{
                   width: '100%',
                   flexShrink: 0,
@@ -280,104 +288,106 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
 
   return (
     <>
-    <BoxAny
-      sx={{
-        flexGrow: 1,
-        position: 'relative',
-        overflow: 'hidden',
-        display: 'flex',
-        flexDirection: isMobile ? 'column' : 'row',
-        alignItems: isMobile ? 'center' : 'stretch',
-        justifyContent: isMobile ? 'flex-end' : 'space-between',
-        px: isMobile ? 1.5 : 3,
-        py: isMobile ? 2 : 3,
-        background:
-          'linear-gradient(180deg, rgba(236, 219, 191, 0.98) 0%, rgba(205, 173, 133, 0.98) 60%, rgba(178, 142, 102, 0.98) 100%)',
-        '&::before': {
-          content: '""',
-          position: 'absolute',
-          inset: 0,
+      <BoxAny
+        sx={{
+          flexGrow: 1,
+          position: 'relative',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: isMobile ? 'column' : 'row',
+          alignItems: isMobile ? 'center' : 'stretch',
+          justifyContent: isMobile ? 'flex-end' : 'space-between',
+          px: isMobile ? 1.5 : 3,
+          py: isMobile ? 2 : 3,
           background:
-            'radial-gradient(circle at 20% 20%, rgba(255,255,255,0.22), transparent 52%), radial-gradient(circle at 80% 30%, rgba(255,255,255,0.16), transparent 55%), radial-gradient(circle at 50% 80%, rgba(0,0,0,0.25), transparent 45%), repeating-linear-gradient(45deg, rgba(120, 90, 55, 0.08) 0px, rgba(120, 90, 55, 0.08) 3px, rgba(255,255,255,0.04) 3px, rgba(255,255,255,0.04) 6px)',
-          pointerEvents: 'none',
-        },
-        '&::after': {
-          content: '""',
-          position: 'absolute',
-          inset: 14,
-          border: '1px solid rgba(105, 78, 46, 0.45)',
-          borderRadius: 3,
-          pointerEvents: 'none',
-        },
-      }}
-    >
-      <BoxAny
-        sx={{
-          width: isMobile ? '100%' : '46%',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: isMobile ? 'center' : 'flex-start',
-          justifyContent: 'flex-end',
-          gap: 1.5,
-          position: 'relative',
-          zIndex: 1,
-          pb: isMobile ? 1.5 : 2.5,
+            'linear-gradient(180deg, rgba(236, 219, 191, 0.98) 0%, rgba(205, 173, 133, 0.98) 60%, rgba(178, 142, 102, 0.98) 100%)',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            inset: 0,
+            background:
+              'radial-gradient(circle at 20% 20%, rgba(255,255,255,0.22), transparent 52%), radial-gradient(circle at 80% 30%, rgba(255,255,255,0.16), transparent 55%), radial-gradient(circle at 50% 80%, rgba(0,0,0,0.25), transparent 45%), repeating-linear-gradient(45deg, rgba(120, 90, 55, 0.08) 0px, rgba(120, 90, 55, 0.08) 3px, rgba(255,255,255,0.04) 3px, rgba(255,255,255,0.04) 6px)',
+            pointerEvents: 'none',
+          },
+          '&::after': {
+            content: '""',
+            position: 'absolute',
+            inset: 14,
+            border: '1px solid rgba(105, 78, 46, 0.45)',
+            borderRadius: 3,
+            pointerEvents: 'none',
+          },
         }}
       >
-        <UserAvatar
-          src={leftParticipant?.avatarUrl || ''}
-          gender={leftParticipant?.gender}
-          fallbackText={leftParticipant?.displayName}
-          variant="rounded"
+        <BoxAny
           sx={{
-            width: avatarSize,
-            height: avatarSize,
-            border: 'none',
-            bgcolor: 'transparent',
-            boxShadow: '0 18px 36px rgba(28, 18, 8, 0.35)',
+            width: isMobile ? '100%' : '46%',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: isMobile ? 'center' : 'flex-start',
+            justifyContent: 'flex-end',
+            gap: 1.5,
+            position: 'relative',
+            zIndex: 1,
+            pb: isMobile ? 1.5 : 2.5,
           }}
-        />
-        {renderBubble(leftText, leftMediaUrls, 'left')}
+        >
+          <UserAvatar
+            src={leftParticipant?.avatarUrl || ''}
+            gender={leftParticipant?.gender}
+            fallbackText={leftParticipant?.displayName}
+            variant="rounded"
+            sx={{
+              width: avatarSize,
+              height: avatarSize,
+              border: 'none',
+              bgcolor: 'transparent',
+              boxShadow: '0 18px 36px rgba(28, 18, 8, 0.35)',
+            }}
+          />
+          {renderBubble(leftText, leftMediaUrls, 'left')}
+        </BoxAny>
+
+        <BoxAny
+          sx={{
+            width: isMobile ? '100%' : '46%',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: isMobile ? 'center' : 'flex-end',
+            justifyContent: 'flex-end',
+            gap: 1.5,
+            position: 'relative',
+            zIndex: 1,
+            pb: isMobile ? 1.5 : 2.5,
+          }}
+        >
+          {renderBubble(rightText, rightMediaUrls, 'right')}
+          <UserAvatar
+            src={rightParticipant?.avatarUrl || ''}
+            gender={rightParticipant?.gender}
+            fallbackText={rightParticipant?.displayName}
+            variant="rounded"
+            sx={{
+              width: avatarSize,
+              height: avatarSize,
+              border: 'none',
+              bgcolor: 'transparent',
+              boxShadow: '0 18px 36px rgba(16, 45, 40, 0.35)',
+            }}
+          />
+        </BoxAny>
       </BoxAny>
 
-      <BoxAny
-        sx={{
-          width: isMobile ? '100%' : '46%',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: isMobile ? 'center' : 'flex-end',
-          justifyContent: 'flex-end',
-          gap: 1.5,
-          position: 'relative',
-          zIndex: 1,
-          pb: isMobile ? 1.5 : 2.5,
-        }}
-      >
-        {renderBubble(rightText, rightMediaUrls, 'right')}
-        <UserAvatar
-          src={rightParticipant?.avatarUrl || ''}
-          gender={rightParticipant?.gender}
-          fallbackText={rightParticipant?.displayName}
-          variant="rounded"
-          sx={{
-            width: avatarSize,
-            height: avatarSize,
-            border: 'none',
-            bgcolor: 'transparent',
-            boxShadow: '0 18px 36px rgba(16, 45, 40, 0.35)',
-          }}
+      {lightbox && (
+        <ImageLightbox
+          images={lightbox.images}
+          initialIndex={lightbox.index}
+          groups={imageGroups}
+          initialGroupIndex={lightbox.groupIndex}
+          open
+          onClose={() => setLightbox(null)}
         />
-      </BoxAny>
-    </BoxAny>
-
-    {lightbox && (
-      <ImageLightbox
-        images={lightbox.images}
-        initialIndex={lightbox.index}
-        open={true}
-        onClose={() => setLightbox(null)}
-      />
-    )}
-  </>
+      )}
+    </>
   );
 };

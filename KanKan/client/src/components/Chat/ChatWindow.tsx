@@ -55,6 +55,12 @@ interface ChatWindowProps {
   sx?: SxProps<Theme>;
 }
 
+interface LightboxGroup {
+  sourceUrl: string;
+  messageId: string;
+  canEdit: boolean;
+}
+
 export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar, sx }) => {
   const dispatch = useDispatch<AppDispatch>();
   const { activeChat, messages, typingUsers, loading, drafts } = useSelector(
@@ -125,6 +131,35 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
 
     return { urls, indexById };
   }, [mergedMessages]);
+
+  const imageGroups = useMemo<LightboxGroup[]>(() => {
+    if (!mergedMessages.length) return [];
+
+    return mergedMessages
+      .filter((msg) => msg.messageType === 'image' && !msg.id.startsWith('draft_'))
+      .map((msg) => ({
+        sourceUrl: getMessageImageUrl(msg),
+        messageId: msg.id,
+        canEdit: true,
+      }))
+      .filter((group) => Boolean(group.sourceUrl));
+  }, [mergedMessages, user?.id]);
+
+  const imageGroupIndexByMessageId = useMemo(() => {
+    const map: Record<string, number> = {};
+    imageGroups.forEach((group, index) => {
+      map[group.messageId] = index;
+    });
+    return map;
+  }, [imageGroups]);
+
+  const imageGroupIndexByUrl = useMemo(() => {
+    const map: Record<string, number> = {};
+    imageGroups.forEach((group, index) => {
+      map[group.sourceUrl] = index;
+    });
+    return map;
+  }, [imageGroups]);
 
   const room3DStorageKey = activeChat ? `kankan.chat.3d:${activeChat.id}` : null;
   const room2DStorageKey = activeChat ? `kankan.chat.2d:${activeChat.id}` : null;
@@ -895,6 +930,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
           rightText={right2D.text}
           leftMediaUrls={left2D.mediaUrls}
           rightMediaUrls={right2D.mediaUrls}
+          imageGroups={imageGroups}
+          imageGroupIndexByUrl={imageGroupIndexByUrl}
         />
       ) : (
         <BoxAny
@@ -929,6 +966,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
                   showAvatar={showAvatar}
                   imageGallery={imageGallery.urls}
                   imageIndex={imageGallery.indexById[message.id]}
+                  imageGroups={imageGroups}
+                  imageGroupIndex={imageGroupIndexByMessageId[message.id]}
                 />
               );
             })

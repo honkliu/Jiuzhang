@@ -1,16 +1,25 @@
-import React, { useEffect, useCallback, useRef } from 'react';
-import { Box, IconButton, Modal, Typography } from '@mui/material';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Box, Button, CircularProgress, IconButton, Modal, TextField, Typography } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
+import { imageGenerationService } from '@/services/imageGeneration.service';
 
 const BoxAny = Box as any;
+
+interface LightboxGroup {
+  sourceUrl: string;
+  messageId: string;
+  canEdit: boolean;
+}
 
 interface ImageLightboxProps {
   images: string[];
   initialIndex: number;
   open: boolean;
   onClose: () => void;
+  groups?: LightboxGroup[];
+  initialGroupIndex?: number;
 }
 
 export const ImageLightbox: React.FC<ImageLightboxProps> = ({
@@ -18,43 +27,150 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
   initialIndex,
   open,
   onClose,
+  groups,
+  initialGroupIndex,
 }) => {
-  const [currentIndex, setCurrentIndex] = React.useState(initialIndex);
+  const [currentIndex, setCurrentIndex] = useState(initialIndex);
+  const [activeGroupIndex, setActiveGroupIndex] = useState(initialGroupIndex ?? 0);
+  const [selectedImageUrl, setSelectedImageUrl] = useState<string>('');
+  const [prompt, setPrompt] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedByGroup, setGeneratedByGroup] = useState<Record<string, string[]>>({});
   const thumbnailRefs = useRef<(HTMLDivElement | null)[]>([]);
 
+  const hasGroups = Boolean(groups && groups.length > 0);
+  const activeGroup = hasGroups ? groups![Math.min(activeGroupIndex, groups!.length - 1)] : null;
+
+  const activeGeneratedUrls = useMemo(() => {
+    if (!activeGroup) return [];
+    return generatedByGroup[activeGroup.messageId] || [];
+  }, [activeGroup, generatedByGroup]);
+
+  const activeImages = useMemo(() => {
+    if (!activeGroup) return images;
+    return [activeGroup.sourceUrl, ...activeGeneratedUrls];
+  }, [activeGroup, activeGeneratedUrls, images]);
+
   useEffect(() => {
+    if (!open) return;
     setCurrentIndex(initialIndex);
-  }, [initialIndex, open]);
+    setActiveGroupIndex(initialGroupIndex ?? 0);
+    if (!hasGroups) {
+      setSelectedImageUrl(images[initialIndex] || '');
+      return;
+    }
+
+    const nextGroup = groups![Math.min(initialGroupIndex ?? 0, groups!.length - 1)];
+    setCurrentIndex(0);
+    setSelectedImageUrl(nextGroup?.sourceUrl || '');
+  }, [open, initialIndex, initialGroupIndex, images, groups, hasGroups]);
+
+  useEffect(() => {
+    if (!open || !hasGroups || !groups) return;
+    const pending = groups.filter((group) => generatedByGroup[group.messageId] === undefined);
+    if (pending.length === 0) return;
+
+    let cancelled = false;
+    const fetchAll = async () => {
+      await Promise.all(pending.map(async (group) => {
+        try {
+          const result = await imageGenerationService.getResults(group.messageId, 'chat_image');
+          const urls = Array.isArray(result.results) ? (result.results as string[]) : [];
+          if (!cancelled) {
+            setGeneratedByGroup((prev) => ({ ...prev, [group.messageId]: urls }));
+          }
+        } catch {
+          if (!cancelled) {
+            setGeneratedByGroup((prev) => ({ ...prev, [group.messageId]: prev[group.messageId] ?? [] }));
+          }
+        }
+      }));
+    };
+
+    fetchAll();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, hasGroups, groups, generatedByGroup]);
 
   // Scroll selected thumbnail into view
   useEffect(() => {
-    thumbnailRefs.current[currentIndex]?.scrollIntoView({
+    const index = hasGroups ? activeGroupIndex : currentIndex;
+    thumbnailRefs.current[index]?.scrollIntoView({
       behavior: 'smooth',
       inline: 'center',
       block: 'nearest',
     });
-  }, [currentIndex]);
+  }, [currentIndex, activeGroupIndex, hasGroups]);
+
+  useEffect(() => {
+    if (!hasGroups) return;
+    setSelectedImageUrl(activeImages[currentIndex] || '');
+  }, [activeImages, currentIndex, hasGroups]);
 
   const prev = useCallback(() => {
-    setCurrentIndex((i) => (i > 0 ? i - 1 : images.length - 1));
-  }, [images.length]);
+    setCurrentIndex((i) => (i > 0 ? i - 1 : activeImages.length - 1));
+  }, [activeImages.length]);
 
   const next = useCallback(() => {
-    setCurrentIndex((i) => (i < images.length - 1 ? i + 1 : 0));
-  }, [images.length]);
+    setCurrentIndex((i) => (i < activeImages.length - 1 ? i + 1 : 0));
+  }, [activeImages.length]);
 
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowLeft') prev();
-      else if (e.key === 'ArrowRight') next();
-      else if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') onClose();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [open, prev, next, onClose]);
 
-  if (!images.length) return null;
+  if (!activeImages.length) return null;
+
+  const displayedImage = hasGroups ? (selectedImageUrl || activeImages[currentIndex]) : activeImages[currentIndex];
+
+  const handleSelectGroup = (index: number) => {
+    if (!groups) return;
+    const nextGroup = groups[index];
+    setActiveGroupIndex(index);
+    setCurrentIndex(0);
+    setSelectedImageUrl(nextGroup.sourceUrl);
+  };
+
+  const handleSelectGenerated = (url: string, index: number) => {
+    setSelectedImageUrl(url);
+    setCurrentIndex(index);
+  };
+
+  const handlePicEdit = async () => {
+    if (!activeGroup || !activeGroup.canEdit || !displayedImage) return;
+    const trimmed = prompt.trim();
+    if (!trimmed) return;
+
+    try {
+      setIsGenerating(true);
+      const response = await imageGenerationService.generate({
+        sourceType: 'chat_image',
+        generationType: 'custom',
+        messageId: activeGroup.messageId,
+        // Always anchor edits to the raw source image.
+        mediaUrl: activeGroup.sourceUrl,
+        customPrompts: [trimmed],
+      });
+
+      await imageGenerationService.pollJobUntilComplete(response.jobId);
+      const result = await imageGenerationService.getResults(activeGroup.messageId, 'chat_image');
+      const urls = Array.isArray(result.results) ? (result.results as string[]) : [];
+      setGeneratedByGroup((prev) => ({ ...prev, [activeGroup.messageId]: urls }));
+      if (urls.length > 0) {
+        const latest = urls[urls.length - 1];
+        setSelectedImageUrl(latest);
+        setCurrentIndex(urls.length);
+      }
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   return (
     <Modal
@@ -90,7 +206,8 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
         >
           <BoxAny sx={{ width: 40 }} />
           <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem' }}>
-            {currentIndex + 1} / {images.length}
+            {currentIndex + 1} / {activeImages.length}
+            {hasGroups ? `  -  ${activeGroupIndex + 1} / ${groups!.length}` : ''}
           </Typography>
           <IconButton onClick={onClose} sx={{ color: 'rgba(255,255,255,0.8)' }}>
             <CloseIcon />
@@ -112,7 +229,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
         >
           <BoxAny
             component="img"
-            src={images[currentIndex]}
+            src={displayedImage}
             alt={`Image ${currentIndex + 1}`}
             onClick={(e: React.MouseEvent) => e.stopPropagation()}
             sx={{
@@ -126,7 +243,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
           />
 
           {/* Left arrow */}
-          {images.length > 1 && (
+          {activeImages.length > 1 && (
             <IconButton
               onClick={(e) => { e.stopPropagation(); prev(); }}
               sx={{
@@ -142,7 +259,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
           )}
 
           {/* Right arrow */}
-          {images.length > 1 && (
+          {activeImages.length > 1 && (
             <IconButton
               onClick={(e) => { e.stopPropagation(); next(); }}
               sx={{
@@ -158,51 +275,211 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
           )}
         </BoxAny>
 
-        {/* Thumbnail strip */}
-        {images.length > 1 && (
-          <BoxAny
-            sx={{
-              flexShrink: 0,
-              height: 80,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1,
-              px: 2,
-              overflowX: 'auto',
-              bgcolor: 'rgba(0,0,0,0.5)',
-              scrollbarWidth: 'thin',
-              scrollbarColor: 'rgba(255,255,255,0.2) transparent',
-            }}
-          >
-            {images.map((url, i) => (
+        {hasGroups ? (
+          <>
+            {activeGroup?.canEdit && (
               <BoxAny
-                key={i}
-                ref={(el: HTMLDivElement | null) => { thumbnailRefs.current[i] = el; }}
-                onClick={() => setCurrentIndex(i)}
                 sx={{
-                  flexShrink: 0,
-                  width: 60,
-                  height: 60,
-                  borderRadius: 1,
-                  overflow: 'hidden',
-                  cursor: 'pointer',
-                  border: i === currentIndex
-                    ? '2px solid rgba(255,255,255,0.9)'
-                    : '2px solid transparent',
-                  opacity: i === currentIndex ? 1 : 0.55,
-                  transition: 'opacity 0.15s, border-color 0.15s',
-                  '&:hover': { opacity: 1 },
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1,
+                  px: 2,
+                  py: 1,
+                  bgcolor: 'rgba(0,0,0,0.55)',
+                  borderTop: '1px solid rgba(255,255,255,0.08)',
                 }}
               >
-                <BoxAny
-                  component="img"
-                  src={url}
-                  alt={`Thumbnail ${i + 1}`}
-                  sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                <TextField
+                  value={prompt}
+                  onChange={(event) => setPrompt(event.target.value)}
+                  placeholder="Add a prompt for Pic Edit"
+                  size="small"
+                  fullWidth
+                  disabled={isGenerating}
+                  sx={{
+                    '& .MuiInputBase-input': { color: 'rgba(255,255,255,0.9)' },
+                    '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.25)' },
+                    '& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline': {
+                      borderColor: 'rgba(255,255,255,0.45)',
+                    },
+                  }}
                 />
+                <Button
+                  variant="contained"
+                  onClick={handlePicEdit}
+                  disabled={isGenerating || !prompt.trim()}
+                  sx={{ minWidth: 120 }}
+                >
+                  {isGenerating ? <CircularProgress size={18} sx={{ color: 'white' }} /> : 'Pic Edit'}
+                </Button>
               </BoxAny>
-            ))}
-          </BoxAny>
+            )}
+
+            {/* Source image list */}
+            <BoxAny
+              sx={{
+                flexShrink: 0,
+                height: 86,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1,
+                px: 2,
+                overflowX: 'auto',
+                bgcolor: 'rgba(0,0,0,0.5)',
+                scrollbarWidth: 'thin',
+                scrollbarColor: 'rgba(255,255,255,0.2) transparent',
+              }}
+            >
+              {groups!.map((group, i) => {
+                const count = generatedByGroup[group.messageId]?.length || 0;
+                const isActive = i === activeGroupIndex;
+                return (
+                  <BoxAny
+                    key={group.messageId}
+                    ref={(el: HTMLDivElement | null) => { thumbnailRefs.current[i] = el; }}
+                    onClick={() => handleSelectGroup(i)}
+                    sx={{
+                      position: 'relative',
+                      flexShrink: 0,
+                      width: 64,
+                      height: 64,
+                      borderRadius: 1,
+                      overflow: 'hidden',
+                      cursor: 'pointer',
+                      border: isActive
+                        ? '2px solid rgba(255,255,255,0.9)'
+                        : '2px solid transparent',
+                      opacity: isActive ? 1 : 0.6,
+                      transition: 'opacity 0.15s, border-color 0.15s',
+                      '&:hover': { opacity: 1 },
+                    }}
+                  >
+                    <BoxAny
+                      component="img"
+                      src={group.sourceUrl}
+                      alt="Source"
+                      sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                    {count > 0 && (
+                      <BoxAny
+                        sx={{
+                          position: 'absolute',
+                          right: 4,
+                          top: 4,
+                          bgcolor: 'rgba(0,0,0,0.7)',
+                          color: 'white',
+                          fontSize: '0.7rem',
+                          px: 0.5,
+                          borderRadius: 0.5,
+                        }}
+                      >
+                        {count}
+                      </BoxAny>
+                    )}
+                  </BoxAny>
+                );
+              })}
+            </BoxAny>
+
+            {/* Generated image list */}
+            <BoxAny
+              sx={{
+                flexShrink: 0,
+                height: 80,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1,
+                px: 2,
+                overflowX: 'auto',
+                bgcolor: 'rgba(0,0,0,0.35)',
+                scrollbarWidth: 'thin',
+                scrollbarColor: 'rgba(255,255,255,0.2) transparent',
+              }}
+            >
+              {activeGeneratedUrls.length === 0 ? (
+                <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem' }}>
+                  No edits yet
+                </Typography>
+              ) : (
+                activeGeneratedUrls.map((url, index) => {
+                  const isActive = selectedImageUrl === url;
+                  return (
+                    <BoxAny
+                      key={url}
+                      onClick={() => handleSelectGenerated(url, index + 1)}
+                      sx={{
+                        flexShrink: 0,
+                        width: 56,
+                        height: 56,
+                        borderRadius: 1,
+                        overflow: 'hidden',
+                        cursor: 'pointer',
+                        border: isActive
+                          ? '2px solid rgba(255,255,255,0.9)'
+                          : '2px solid transparent',
+                        opacity: isActive ? 1 : 0.6,
+                        transition: 'opacity 0.15s, border-color 0.15s',
+                        '&:hover': { opacity: 1 },
+                      }}
+                    >
+                      <BoxAny
+                        component="img"
+                        src={url}
+                        alt="Edit"
+                        sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                    </BoxAny>
+                  );
+                })
+              )}
+            </BoxAny>
+          </>
+        ) : (
+          images.length > 1 && (
+            <BoxAny
+              sx={{
+                flexShrink: 0,
+                height: 80,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1,
+                px: 2,
+                overflowX: 'auto',
+                bgcolor: 'rgba(0,0,0,0.5)',
+                scrollbarWidth: 'thin',
+                scrollbarColor: 'rgba(255,255,255,0.2) transparent',
+              }}
+            >
+              {images.map((url, i) => (
+                <BoxAny
+                  key={i}
+                  ref={(el: HTMLDivElement | null) => { thumbnailRefs.current[i] = el; }}
+                  onClick={() => setCurrentIndex(i)}
+                  sx={{
+                    flexShrink: 0,
+                    width: 60,
+                    height: 60,
+                    borderRadius: 1,
+                    overflow: 'hidden',
+                    cursor: 'pointer',
+                    border: i === currentIndex
+                      ? '2px solid rgba(255,255,255,0.9)'
+                      : '2px solid transparent',
+                    opacity: i === currentIndex ? 1 : 0.55,
+                    transition: 'opacity 0.15s, border-color 0.15s',
+                    '&:hover': { opacity: 1 },
+                  }}
+                >
+                  <BoxAny
+                    component="img"
+                    src={url}
+                    alt={`Thumbnail ${i + 1}`}
+                    sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                </BoxAny>
+              ))}
+            </BoxAny>
+          )
         )}
       </BoxAny>
     </Modal>
