@@ -1,10 +1,11 @@
-import React from 'react';
-import { Box, Paper } from '@mui/material';
+import React, { useState } from 'react';
+import { Box, Paper, useMediaQuery, useTheme } from '@mui/material';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import { UserAvatar } from '@/components/Shared/UserAvatar';
+import { ImageLightbox } from '@/components/Shared/ImageLightbox';
 
 // Work around TS2590 ("union type too complex") from MUI Box typings in some TS versions.
 const BoxAny = Box as any;
@@ -113,8 +114,8 @@ interface ChatRoom2DProps {
   rightParticipant: ParticipantInfo | null;
   leftText?: string;
   rightText?: string;
-  leftMediaUrl?: string;
-  rightMediaUrl?: string;
+  leftMediaUrls?: string[];
+  rightMediaUrls?: string[];
 }
 
 export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
@@ -122,26 +123,40 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
   rightParticipant,
   leftText,
   rightText,
-  leftMediaUrl,
-  rightMediaUrl,
+  leftMediaUrls,
+  rightMediaUrls,
 }) => {
+  const [lightbox, setLightbox] = useState<{ images: string[]; index: number } | null>(null);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
+  // Preserve current proportions across screen sizes
+  // Desktop: bubble 504×315, avatar 282×282, image strip 60px
+  // Mobile: scale down proportionally
+  const bubbleW = isMobile ? '90vw' : 504;
+  const bubbleH = isMobile ? '56vw' : 315;  // ratio ~1.6:1
+  const avatarSize = isMobile ? '49vw' : 212;
+  const imgStripW = isMobile ? 53 : 100;
+
   const textStyle = {
     whiteSpace: 'pre-wrap',
     lineHeight: 1.6,
-    fontSize: '0.95rem',
+    fontSize: isMobile ? '0.82rem' : '0.95rem',
     fontFamily: "'STKaiti', 'KaiTi', 'STSong', 'SimSun', 'Noto Serif SC', serif",
   };
 
-  const renderBubble = (text?: string, mediaUrl?: string, align: 'left' | 'right' = 'left') => {
-    if (!text && !mediaUrl) return null;
+  const renderBubble = (text?: string, mediaUrls?: string[], align: 'left' | 'right' = 'left') => {
+    const hasMedia = mediaUrls && mediaUrls.length > 0;
+    if (!text && !hasMedia) return null;
     return (
       <Paper
         elevation={0}
         sx={{
-          width: 504,
-          height: 315,
-          px: 2.5,
-          py: 1.5,
+          width: bubbleW,
+          height: bubbleH,
+          pl: isMobile ? 1.5 : 2.5,
+          pr: isMobile ? 2 : 3.5,
+          py: isMobile ? 1 : 1.5,
           bgcolor: align === 'right' ? 'rgba(23, 76, 70, 0.95)' : 'rgba(251, 243, 227, 0.96)',
           color: align === 'right' ? 'rgba(240, 250, 248, 0.95)' : 'rgba(50, 36, 24, 0.95)',
           border: '1px solid rgba(116, 84, 50, 0.6)',
@@ -151,8 +166,9 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
           position: 'relative',
           overflow: 'hidden',
           display: 'flex',
-          flexDirection: 'column',
+          flexDirection: 'row',
           justifyContent: 'flex-end',
+          alignItems: 'flex-end',
           backgroundImage:
             align === 'right'
               ? 'linear-gradient(180deg, rgba(15, 62, 57, 0.6), rgba(23, 76, 70, 0.95))'
@@ -182,95 +198,99 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
           },
         }}
       >
-        <BoxAny sx={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
-          {mediaUrl && (
-            <BoxAny
-              component="img"
-              src={mediaUrl}
-              alt="Chat media"
-              sx={{
-                width: '100%',
-                maxHeight: 200,
-                objectFit: 'contain',
-                borderRadius: 1.5,
-                boxShadow: '0 10px 20px rgba(0,0,0,0.15)',
-              }}
-            />
-          )}
-          {text && (
-            <BoxAny
-              sx={{
-                ...textStyle,
-                '& p': { margin: 0 },
-                '& blockquote': {
-                  margin: 0,
-                  paddingLeft: '0.75em',
-                  borderLeft: '2px solid rgba(116, 84, 50, 0.45)',
-                  color: 'inherit',
-                },
-                '& .katex-display': {
-                  margin: '0.5em 0',
-                  overflowX: 'auto',
-                  overflowY: 'hidden',
-                },
-                '& .katex': {
-                  fontSize: '1.05em',
-                },
-                '& table': {
+        {/* Text area — fills remaining width */}
+        {text && (
+          <BoxAny
+            sx={{
+              position: 'relative',
+              zIndex: 1,
+              flex: 1,
+              overflow: 'hidden',
+              ...textStyle,
+              '& p': { margin: 0 },
+              '& blockquote': {
+                margin: 0,
+                paddingLeft: '0.75em',
+                borderLeft: '2px solid rgba(116, 84, 50, 0.45)',
+                color: 'inherit',
+              },
+              '& .katex-display': {
+                margin: '0.5em 0',
+                overflowX: 'auto',
+                overflowY: 'hidden',
+              },
+              '& .katex': { fontSize: '1.05em' },
+              '& table': { width: '100%', borderCollapse: 'collapse', margin: '8px 0' },
+              '& th, & td': { border: '1px solid rgba(0,0,0,0.12)', padding: '4px 8px', textAlign: 'left' },
+              '& th': { backgroundColor: 'rgba(0,0,0,0.03)', fontWeight: 600 },
+              '& code': { backgroundColor: 'rgba(0,0,0,0.06)', padding: '2px 4px', borderRadius: '3px', fontFamily: 'monospace', fontSize: '0.9em' },
+              '& pre': { backgroundColor: 'rgba(0,0,0,0.06)', padding: '8px 12px', borderRadius: '4px', overflowX: 'auto', margin: '8px 0' },
+              '& pre code': { padding: 0, backgroundColor: 'transparent' },
+            }}
+          >
+            <ReactMarkdown remarkPlugins={remarkPlugins} rehypePlugins={rehypePlugins}>
+              {escapePipesInMathForGfm(text)}
+            </ReactMarkdown>
+          </BoxAny>
+        )}
+
+        {/* Image strip — 60px wide, newest at bottom, older images scroll off top */}
+        {hasMedia && (
+          <BoxAny
+            sx={{
+              position: 'relative',
+              zIndex: 1,
+              width: imgStripW,
+              flexShrink: 0,
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'flex-end',
+              overflow: 'hidden',
+              gap: 0.5,
+              pl: text ? 0.5 : 0,
+              pr: 0.5,
+            }}
+          >
+            {mediaUrls.map((url, i) => (
+              <BoxAny
+                key={i}
+                component="img"
+                src={url}
+                alt="Chat media"
+                onClick={() => setLightbox({ images: mediaUrls, index: i })}
+                sx={{
                   width: '100%',
-                  borderCollapse: 'collapse',
-                  margin: '8px 0',
-                },
-                '& th, & td': {
-                  border: '1px solid rgba(0,0,0,0.12)',
-                  padding: '4px 8px',
-                  textAlign: 'left',
-                },
-                '& th': {
-                  backgroundColor: 'rgba(0,0,0,0.03)',
-                  fontWeight: 600,
-                },
-                '& code': {
-                  backgroundColor: 'rgba(0, 0, 0, 0.06)',
-                  padding: '2px 4px',
-                  borderRadius: '3px',
-                  fontFamily: 'monospace',
-                  fontSize: '0.9em',
-                },
-                '& pre': {
-                  backgroundColor: 'rgba(0, 0, 0, 0.06)',
-                  padding: '8px 12px',
-                  borderRadius: '4px',
-                  overflowX: 'auto',
-                  margin: '8px 0',
-                },
-                '& pre code': {
-                  padding: 0,
-                  backgroundColor: 'transparent',
-                },
-              }}
-            >
-              <ReactMarkdown remarkPlugins={remarkPlugins} rehypePlugins={rehypePlugins}>
-                {escapePipesInMathForGfm(text)}
-              </ReactMarkdown>
-            </BoxAny>
-          )}
-        </BoxAny>
+                  flexShrink: 0,
+                  aspectRatio: 'auto',
+                  objectFit: 'cover',
+                  borderRadius: 1,
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+                  cursor: 'pointer',
+                  transition: 'opacity 0.15s',
+                  '&:hover': { opacity: 0.85 },
+                }}
+              />
+            ))}
+          </BoxAny>
+        )}
       </Paper>
     );
   };
 
   return (
+    <>
     <BoxAny
       sx={{
         flexGrow: 1,
         position: 'relative',
         overflow: 'hidden',
         display: 'flex',
-        alignItems: 'stretch',
-        justifyContent: 'space-between',
-        px: 3,
-        py: 3,
+        flexDirection: isMobile ? 'column' : 'row',
+        alignItems: isMobile ? 'center' : 'stretch',
+        justifyContent: isMobile ? 'flex-end' : 'space-between',
+        px: isMobile ? 1.5 : 3,
+        py: isMobile ? 2 : 3,
         background:
           'linear-gradient(180deg, rgba(236, 219, 191, 0.98) 0%, rgba(205, 173, 133, 0.98) 60%, rgba(178, 142, 102, 0.98) 100%)',
         '&::before': {
@@ -293,15 +313,15 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
     >
       <BoxAny
         sx={{
-          width: '46%',
+          width: isMobile ? '100%' : '46%',
           display: 'flex',
           flexDirection: 'column',
-          alignItems: 'flex-start',
+          alignItems: isMobile ? 'center' : 'flex-start',
           justifyContent: 'flex-end',
           gap: 1.5,
           position: 'relative',
           zIndex: 1,
-          pb: 2.5,
+          pb: isMobile ? 1.5 : 2.5,
         }}
       >
         <UserAvatar
@@ -310,38 +330,38 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
           fallbackText={leftParticipant?.displayName}
           variant="rounded"
           sx={{
-            width: 282,
-            height: 282,
+            width: avatarSize,
+            height: avatarSize,
             border: 'none',
             bgcolor: 'transparent',
             boxShadow: '0 18px 36px rgba(28, 18, 8, 0.35)',
           }}
         />
-        {renderBubble(leftText, leftMediaUrl, 'left')}
+        {renderBubble(leftText, leftMediaUrls, 'left')}
       </BoxAny>
 
       <BoxAny
         sx={{
-          width: '46%',
+          width: isMobile ? '100%' : '46%',
           display: 'flex',
           flexDirection: 'column',
-          alignItems: 'flex-end',
+          alignItems: isMobile ? 'center' : 'flex-end',
           justifyContent: 'flex-end',
           gap: 1.5,
           position: 'relative',
           zIndex: 1,
-          pb: 2.5,
+          pb: isMobile ? 1.5 : 2.5,
         }}
       >
-        {renderBubble(rightText, rightMediaUrl, 'right')}
+        {renderBubble(rightText, rightMediaUrls, 'right')}
         <UserAvatar
           src={rightParticipant?.avatarUrl || ''}
           gender={rightParticipant?.gender}
           fallbackText={rightParticipant?.displayName}
           variant="rounded"
           sx={{
-            width: 282,
-            height: 282,
+            width: avatarSize,
+            height: avatarSize,
             border: 'none',
             bgcolor: 'transparent',
             boxShadow: '0 18px 36px rgba(16, 45, 40, 0.35)',
@@ -349,5 +369,15 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
         />
       </BoxAny>
     </BoxAny>
+
+    {lightbox && (
+      <ImageLightbox
+        images={lightbox.images}
+        initialIndex={lightbox.index}
+        open={true}
+        onClose={() => setLightbox(null)}
+      />
+    )}
+  </>
   );
 };

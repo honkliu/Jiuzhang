@@ -290,12 +290,19 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [mergedMessages, isRoom3D, isRoom2D]);
 
+  // When our own mood changes, broadcast mood + the resolved avatar URL via draft
+  const lastBroadcastMoodRef = React.useRef<string | null>(null);
+
   // Join chat room when active chat changes
   useEffect(() => {
     if (activeChat) {
       signalRService.joinChat(activeChat.id);
       dispatch(fetchMessages({ chatId: activeChat.id }));
     }
+    setLeftMood(null);
+    setRightMood(null);
+    setLeftBroadcastAvatar('');
+    lastBroadcastMoodRef.current = null;
     return () => {
       if (activeChat) {
         signalRService.leaveChat(activeChat.id);
@@ -346,6 +353,18 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
     if (!raw.trim()) return;
 
     const text = raw.trim();
+
+    // Eagerly detect mood from the message text BEFORE clearing the input,
+    // so Alice sees her own avatar change without waiting for the HTTP round-trip.
+    const pendingMood = getMoodFromText(text);
+    if (pendingMood) {
+      const now = Date.now();
+      if (rightMood === null || now - rightMoodAt >= moodCooldownMs) {
+        setRightMood(pendingMood);
+        setRightMoodAt(now);
+      }
+    }
+
     setMessageText('');
     setSending(true);
 
@@ -484,22 +503,23 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
     return '';
   };
 
-  const getLatestMediaFor = (senderId?: string): string => {
-    if (!senderId) return '';
-    for (let i = mergedMessages.length - 1; i >= 0; i -= 1) {
+  const getLatest2DContentFor = (senderId?: string, draftText?: string): { text: string; mediaUrls: string[] } => {
+    if (!senderId) return { text: draftText || '', mediaUrls: [] };
+
+    const text = buildRollingTextFor(senderId, draftText);
+
+    // Collect all media URLs in chronological order (oldest first)
+    const mediaUrls: string[] = [];
+    for (let i = 0; i < mergedMessages.length; i += 1) {
       const msg = mergedMessages[i];
       if (msg.senderId !== senderId) continue;
       if (msg.isDeleted) continue;
       const content = (msg as any).content;
-      const url = msg.thumbnailUrl
-        || msg.mediaUrl
-        || content?.thumbnailUrl
-        || content?.mediaUrl
-        || '';
-      if (!url) continue;
-      return url;
+      const url = msg.thumbnailUrl || msg.mediaUrl || content?.thumbnailUrl || content?.mediaUrl || '';
+      if (url) mediaUrls.push(url);
     }
-    return '';
+
+    return { text, mediaUrls };
   };
 
   type MoodKey = 'neutral' | 'smile' | 'angry' | 'sad' | 'surprised' | 'thinking' | 'happy' | 'crying' | 'excited';
@@ -510,11 +530,13 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
   const [rightMood, setRightMood] = useState<MoodKey | null>(null);
   const [leftMoodAt, setLeftMoodAt] = useState(0);
   const [rightMoodAt, setRightMoodAt] = useState(0);
+  const [leftBroadcastAvatar, setLeftBroadcastAvatar] = useState<string>('');
   const moodCooldownMs = 5000;
 
   const otherDraft = draftMessages.find((d) => d.senderId === otherParticipant?.userId)?.text;
-  const leftText = buildRollingTextFor(otherParticipant?.userId, otherDraft);
-  const rightText = buildRollingTextFor(user?.id, messageText);
+  const otherDraftClean = otherDraft?.replace(/\[mood:[^\]]+\]/g, '').trim() || undefined;
+  const left2D = getLatest2DContentFor(otherParticipant?.userId, otherDraftClean);
+  const right2D = getLatest2DContentFor(user?.id);
   const leftMoodText = otherDraft || getLatestRawTextFor(otherParticipant?.userId);
   const rightMoodText = messageText.trim().length > 0 ? messageText : getLatestRawTextFor(user?.id);
 
@@ -560,14 +582,15 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
   const getMoodFromText = (text: string): MoodKey | null => {
     const value = text.toLowerCase();
 
-    if (/生气|气死|恼火|怒|愤怒|抓狂/.test(value)) return 'angry';
-    if (/难过|伤心|sad/.test(value)) return 'sad';
-    if (/哭|呜呜|泪|😭|😢/.test(value)) return 'crying';
-    if (/震惊|惊讶|哇|诶|wow/.test(value)) return 'surprised';
-    if (/想想|思考|等等|嗯|hmm|think/.test(value)) return 'thinking';
-    if (/笑|微笑|哈哈|lol|haha|😂|😄/.test(value)) return 'smile';
-    if (/开心|高兴|快乐|happy/.test(value)) return 'happy';
-    if (/兴奋|激动|excited|awesome/.test(value)) return 'excited';
+    if (/生气|气死|恼火|怒|愤怒|抓狂|angry|furious|mad|pissed|rage|🤬|😡|😤/.test(value)) return 'angry';
+    if (/难过|伤心|忧伤|惆怅|sad|sorrow|upset|unhappy|😞|😔/.test(value)) return 'sad';
+    if (/哭|呜呜|泪|大哭|哭泣|cry|crying|sob|😭|😢/.test(value)) return 'crying';
+    if (/震惊|惊讶|哇|诶|吃惊|不敢相信|surprised|shock|omg|wow|😱|😲|😮/.test(value)) return 'surprised';
+    if (/想想|思考|等等|嗯|让我想|琢磨|think|thinking|hmm|wonder|ponder|🤔/.test(value)) return 'thinking';
+    if (/笑|微笑|哈哈|嘻嘻|呵呵|smile|lol|haha|hehe|grin|😂|😄|😊|😁/.test(value)) return 'smile';
+    if (/开心|高兴|快乐|愉快|乐|太好了|happy|glad|joy|joyful|pleased|yay|😃|🥳/.test(value)) return 'happy';
+    if (/兴奋|激动|太棒|爽|excited|awesome|thrilled|pumped|stoked|🤩|🎉/.test(value)) return 'excited';
+    if (/平静|冷静|淡定|无聊|还好|一般|normal|neutral|calm|chill|meh|ok|okay|😐|😑/.test(value)) return 'neutral';
 
     return null;
   };
@@ -582,12 +605,15 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
   };
 
   useEffect(() => {
-    const next = getMoodFromText(leftMoodText);
+    // Tag format: [mood:smile:https://...avatarUrl...]
+    const moodTagMatch = leftMoodText?.match(/\[mood:([^:\]]+):([^\]]*)\]/);
+    const next = moodTagMatch ? toMoodKey(moodTagMatch[1]) : getMoodFromText(leftMoodText);
     if (!next) return;
     const now = Date.now();
     if (leftMood === null || now - leftMoodAt >= moodCooldownMs) {
       setLeftMood(next);
       setLeftMoodAt(now);
+      if (moodTagMatch?.[2]) setLeftBroadcastAvatar(moodTagMatch[2]);
     }
   }, [leftMoodText, leftMood, leftMoodAt]);
 
@@ -600,6 +626,16 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
       setRightMoodAt(now);
     }
   }, [rightMoodText, rightMood, rightMoodAt]);
+
+  // When our own mood changes, broadcast mood + the resolved avatar URL via draft
+  useEffect(() => {
+    if (!activeChat || !rightMood) return;
+    if (lastBroadcastMoodRef.current === rightMood) return;
+    lastBroadcastMoodRef.current = rightMood;
+    const avatarUrl = rightMoodMap[rightMood] || '';
+    const tag = `[mood:${rightMood}:${avatarUrl}]`;
+    signalRService.sendDraftChanged(activeChat.id, tag);
+  }, [rightMood, rightMoodMap, activeChat]);
 
   useEffect(() => {
     let active = true;
@@ -653,10 +689,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
     };
   }, [otherParticipant?.avatarUrl]);
 
-  const leftAvatar = getAvatarForMood(leftMood, leftMoodMap, otherParticipant?.avatarUrl);
+  const leftAvatar = leftBroadcastAvatar || getAvatarForMood(leftMood, leftMoodMap, otherParticipant?.avatarUrl);
   const rightAvatar = getAvatarForMood(rightMood, rightMoodMap, user?.avatarUrl);
-  const leftMediaUrl = getLatestMediaFor(otherParticipant?.userId);
-  const rightMediaUrl = getLatestMediaFor(user?.id);
 
   const groupMembersCount = activeChat
     ? getRealParticipants(activeChat.participants).length
@@ -837,10 +871,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
             avatarUrl: rightAvatar,
             gender: user.gender,
           } : null}
-          leftText={leftText}
-          rightText={rightText}
-          leftMediaUrl={leftMediaUrl}
-          rightMediaUrl={rightMediaUrl}
+          leftText={left2D.text}
+          rightText={right2D.text}
+          leftMediaUrls={left2D.mediaUrls}
+          rightMediaUrls={right2D.mediaUrls}
         />
       ) : (
         <BoxAny
