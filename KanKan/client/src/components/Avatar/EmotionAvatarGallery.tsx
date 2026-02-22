@@ -11,6 +11,8 @@ import {
   CircularProgress,
   Box,
   TextField,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import { AutoAwesome as MagicIcon } from '@mui/icons-material';
 import { avatarService, type EmotionThumbnailResult } from '@/services/avatar.service';
@@ -23,7 +25,10 @@ interface EmotionAvatarGalleryProps {
 }
 
 export const EmotionAvatarGallery: React.FC<EmotionAvatarGalleryProps> = ({ userId, avatarId }) => {
-  const containerStyle: React.CSSProperties = { padding: 3 };
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
+  const containerStyle: React.CSSProperties = { padding: isMobile ? 8 : 3 };
   const headerStyle: React.CSSProperties = {
     display: 'flex',
     justifyContent: 'space-between',
@@ -39,7 +44,7 @@ export const EmotionAvatarGallery: React.FC<EmotionAvatarGalleryProps> = ({ user
   };
 
   const emotionLabels = ['angry', 'smile', 'sad', 'happy', 'crying', 'thinking', 'surprised', 'neutral', 'excited'];
-  const tileSize = 100;
+  const tileSize = isMobile ? 'calc((100vw - 48px) / 3)' : 125;
 
   const [emotions, setEmotions] = useState<EmotionThumbnailResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -235,12 +240,12 @@ export const EmotionAvatarGallery: React.FC<EmotionAvatarGalleryProps> = ({ user
           <CircularProgress />
         </div>
       ) : (
-        <Grid container spacing={0.2} justifyContent="center">
+        <Grid container spacing={0.15} justifyContent="center">
           {emotionLabels.map((label) => {
             const match = emotions.find((e) => (e.emotion || '').toLowerCase() === label);
             return (
               <Grid item xs={4} key={label}>
-                <Card sx={{ p: 0.2, borderRadius: 1 }}>
+                <Card sx={{ p: 0.15, borderRadius: 1 }}>
                   {match ? (
                     <ImageHoverPreview
                       src={match.imageUrl}
@@ -272,8 +277,8 @@ export const EmotionAvatarGallery: React.FC<EmotionAvatarGalleryProps> = ({ user
                       )}
                     </ImageHoverPreview>
                   ) : (
-                    <div
-                      style={{
+                    <Box
+                      sx={{
                         height: tileSize,
                         width: tileSize,
                         margin: '0 auto',
@@ -286,41 +291,42 @@ export const EmotionAvatarGallery: React.FC<EmotionAvatarGalleryProps> = ({ user
                       }}
                     >
                       Not generated
-                    </div>
+                    </Box>
                   )}
-                  <CardContent sx={{ p: 0.2, pt: 0.2, '&:last-child': { pb: 0.2 } }}>
-                    <Typography
-                      variant="caption"
-                      textAlign="center"
-                      display="block"
-                      sx={{ fontSize: '0.55rem', lineHeight: 1 }}
-                    >
-                      {label}
-                    </Typography>
-                    <Button
-                      size="small"
-                      fullWidth
-                      variant={match ? 'outlined' : 'contained'}
-                      startIcon={<MagicIcon />}
-                      onClick={() => {
-                        void handlePromptSubmit(label);
-                      }}
-                      disabled={generating !== null || generatingAll || !avatarId}
-                      sx={{
-                        mt: 0.2,
-                        minHeight: 20,
-                        px: 0.25,
-                        fontSize: '0.55rem',
-                        lineHeight: 1,
-                        '& .MuiButton-startIcon': {
-                          marginLeft: 2,
-                          marginRight: 2,
-                          '& > *:first-of-type': { fontSize: 14 },
-                        },
-                      }}
-                    >
-                      {generating === label ? 'Generating...' : match ? 'Update' : 'Generate'}
-                    </Button>
+                  <CardContent sx={{ p: 0.15, pt: 0.15, '&:last-child': { pb: 0.15 } }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', position: 'relative', minHeight: 20 }}>
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          fontSize: '0.55rem',
+                          lineHeight: 1,
+                          position: 'absolute',
+                          left: '50%',
+                          transform: 'translateX(-50%)',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {label}
+                      </Typography>
+                      <Button
+                        size="small"
+                        variant={match ? 'outlined' : 'contained'}
+                        onClick={() => {
+                          void handlePromptSubmit(label);
+                        }}
+                        disabled={generating !== null || generatingAll || !avatarId}
+                        sx={{
+                          ml: 'auto',
+                          minWidth: 0,
+                          minHeight: 18,
+                          px: 0.5,
+                          fontSize: '0.55rem',
+                          lineHeight: 1,
+                        }}
+                      >
+                        {generating === label ? '...' : match ? '..' : '...'}
+                      </Button>
+                    </Box>
                   </CardContent>
                 </Card>
               </Grid>

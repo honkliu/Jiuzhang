@@ -34,6 +34,7 @@ const BoxAny = Box as any;
 export const ChatLayout: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isCompactHeader = useMediaQuery(theme.breakpoints.down('sm'));
   const dispatch = useDispatch<AppDispatch>();
   const { activeChat, chats } = useSelector((state: RootState) => state.chat);
   const myUserId = useSelector((state: RootState) => state.auth.user?.id);
@@ -219,7 +220,7 @@ export const ChatLayout: React.FC = () => {
     setShowSidebar(true);
   };
 
-  const appHeaderHeight = isMobile ? 56 : 64;
+  const appHeaderHeight = isCompactHeader ? 56 : 64;
 
   return (
     <BoxAny sx={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>

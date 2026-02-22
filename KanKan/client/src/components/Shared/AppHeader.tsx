@@ -183,28 +183,42 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleSidebar, sidebarOp
 
         <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 0.5 }}>
-            <IconButton onClick={handleOpenAvatarPicker} title="Choose avatar" size="small" sx={{ p: 0 }}>
+            {isMobile ? (
+              <IconButton onClick={handleOpenAvatarPicker} title="Choose mood" size="small" sx={{ p: 0 }}>
+                <UserAvatar
+                  src={user?.avatarUrl}
+                  gender={user?.gender}
+                  variant="rounded"
+                  sx={{ width: 32, height: 32 }}
+                />
+              </IconButton>
+            ) : (
               <UserAvatar
                 src={user?.avatarUrl}
                 gender={user?.gender}
-                closePreviewOnClick
                 variant="rounded"
                 sx={{ width: 32, height: 32 }}
               />
-            </IconButton>
-            <Typography
-              variant="subtitle2"
-              fontWeight="bold"
-              sx={{
-                maxWidth: 160,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-                display: { xs: 'none', sm: 'block' },
-              }}
-            >
-              {user?.displayName || ''}
-            </Typography>
+            )}
+            <BoxAny sx={{ display: { xs: 'none', sm: 'flex' }, flexDirection: 'column', alignItems: 'flex-start', minWidth: 0 }}>
+              <Typography
+                variant="subtitle2"
+                fontWeight="bold"
+                sx={{
+                  maxWidth: 160,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {user?.displayName || ''}
+              </Typography>
+              <IconButton onClick={handleOpenAvatarPicker} title="Choose mood" size="small" sx={{ p: 0, minWidth: 0, ml: '-2px' }}>
+                <Typography component="span" sx={{ fontSize: '0.7rem', fontWeight: 700, lineHeight: 1, color: 'text.secondary' }}>
+                  ...
+                </Typography>
+              </IconButton>
+            </BoxAny>
           </BoxAny>
 
           {isMobile && (

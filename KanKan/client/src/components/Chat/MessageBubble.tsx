@@ -9,6 +9,7 @@ import { FiberManualRecord as FiberManualRecordIcon } from '@mui/icons-material'
 import { Message } from '@/services/chat.service';
 import { UserAvatar } from '@/components/Shared/UserAvatar';
 import { ImageHoverPreview } from '@/components/Shared/ImageHoverPreview';
+import { ImageLightbox } from '@/components/Shared/ImageLightbox';
 import { format } from 'date-fns';
 
 // Work around TS2590 ("union type too complex") from MUI Box typings in some TS versions.
@@ -111,17 +112,22 @@ interface MessageBubbleProps {
   message: Message;
   isOwn: boolean;
   showAvatar: boolean;
+  imageGallery?: string[];
+  imageIndex?: number;
 }
 
 export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
   message,
   isOwn,
   showAvatar,
+  imageGallery,
+  imageIndex,
 }) => {
   const { language, t } = useLanguage();
   const isAgent = message.senderId === 'user_ai_wa';
   const isDraft = message.id.startsWith('draft_');
   const [displayText, setDisplayText] = useState(message.text || '');
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const animRef = useRef<number | null>(null);
   const lastTextRef = useRef(message.text || '');
 
@@ -177,19 +183,27 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
     }
   };
 
+  const imageUrl =
+    message.mediaUrl ||
+    message.thumbnailUrl ||
+    (message as any)?.content?.mediaUrl ||
+    (message as any)?.content?.thumbnailUrl ||
+    '';
+
   return (
-    <BoxAny
-      sx={{
-        display: 'flex',
-        flexDirection: isOwn ? 'row-reverse' : 'row',
-        justifyContent: isOwn ? 'flex-end' : 'flex-start',
-        alignItems: 'flex-start', // Adjusted alignment to top-align the avatar
-        gap: 0.5,
-        mb: 0.5,
-        width: '100%',
-        mx: -0.5,
-      }}
-    >
+    <>
+      <BoxAny
+        sx={{
+          display: 'flex',
+          flexDirection: isOwn ? 'row-reverse' : 'row',
+          justifyContent: isOwn ? 'flex-end' : 'flex-start',
+          alignItems: 'flex-start', // Adjusted alignment to top-align the avatar
+          gap: 0.5,
+          mb: 0.5,
+          width: '100%',
+          mx: -0.5,
+        }}
+      >
       {/* Avatar */}
       <BoxAny sx={{ width: 56, flexShrink: 0, textAlign: 'center' }}>
         {showAvatar && (
@@ -288,14 +302,22 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
             </ReactMarkdown>
           </BoxAny>
         ) : message.messageType === 'image' ? (
-          <ImageHoverPreview src={message.mediaUrl} alt={t('chat.message.image')}>
+          <ImageHoverPreview
+            src={imageUrl}
+            alt={t('chat.message.image')}
+            onPreviewClick={() => setIsLightboxOpen(true)}
+          >
             {(previewProps) => (
               <BoxAny
                 {...previewProps}
                 component="img"
-                src={message.mediaUrl}
+                src={imageUrl}
                 alt={t('chat.message.image')}
                 tabIndex={0}
+                onClick={(event: React.MouseEvent<HTMLElement>) => {
+                  previewProps.onClick?.(event);
+                  setIsLightboxOpen(true);
+                }}
                 sx={{
                   maxWidth: '100%',
                   maxHeight: 300,
@@ -345,5 +367,18 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
         </BoxAny>
       </Paper>
     </BoxAny>
+        {message.messageType === 'image' && imageUrl ? (
+          <ImageLightbox
+            images={imageGallery && imageGallery.length > 0 ? imageGallery : [imageUrl]}
+            initialIndex={
+              imageGallery && imageGallery.length > 0 && typeof imageIndex === 'number'
+                ? Math.min(Math.max(imageIndex, 0), imageGallery.length - 1)
+                : 0
+            }
+            open={isLightboxOpen}
+            onClose={() => setIsLightboxOpen(false)}
+          />
+        ) : null}
+    </>
   );
 });

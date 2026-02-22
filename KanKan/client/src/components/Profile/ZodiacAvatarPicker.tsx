@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Box, Typography, Button, CircularProgress } from '@mui/material';
+import { Box, Typography, Button, CircularProgress, useMediaQuery, useTheme } from '@mui/material';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { avatarService, type SelectableAvatar } from '@/services/avatar.service';
 import { ImageHoverPreview } from '@/components/Shared/ImageHoverPreview';
@@ -11,6 +11,7 @@ interface AvatarOptionTileProps {
   avatar: SelectableAvatar;
   value?: string;
   disabled?: boolean;
+  size?: number;
   onSelect: (avatarImageId: string, imageUrl: string) => void;
 }
 
@@ -18,6 +19,7 @@ const AvatarOptionTile: React.FC<AvatarOptionTileProps> = ({
   avatar,
   value,
   disabled,
+  size = 56,
   onSelect,
 }) => {
   const selected = value === avatar.avatarImageId;
@@ -43,8 +45,8 @@ const AvatarOptionTile: React.FC<AvatarOptionTileProps> = ({
             }
           }}
           sx={{
-            width: 56,
-            height: 56,
+            width: size,
+            height: size,
             // IMPORTANT: use explicit px radius (not MUI numeric scaling)
             // so the tile never becomes a circle under a custom theme.
             borderRadius: '10px',
@@ -104,6 +106,9 @@ export const ZodiacAvatarPicker: React.FC<ZodiacAvatarPickerProps> = ({
   onChange,
 }) => {
   const { t } = useLanguage();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const tileSize = isMobile ? 64 : 56;
   const [avatars, setAvatars] = useState<SelectableAvatar[]>([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(0);
@@ -165,7 +170,7 @@ export const ZodiacAvatarPicker: React.FC<ZodiacAvatarPickerProps> = ({
       <BoxAny
         sx={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(4, 56px)',
+          gridTemplateColumns: `repeat(4, ${tileSize}px)`,
           gap: 1,
           alignItems: 'center',
           justifyContent: 'flex-start',
@@ -177,6 +182,7 @@ export const ZodiacAvatarPicker: React.FC<ZodiacAvatarPickerProps> = ({
             avatar={avatar}
             value={value}
             disabled={disabled}
+            size={tileSize}
             onSelect={onChange}
           />
         ))}

@@ -30,7 +30,7 @@ import { RootState, AppDispatch } from '@/store';
 import { fetchMessages, addMessage, updateChat } from '@/store/chatSlice';
 import { MessageBubble } from './MessageBubble';
 import { signalRService } from '@/services/signalr.service';
-import { chatService } from '@/services/chat.service';
+import { chatService, type Message } from '@/services/chat.service';
 import { mediaService } from '@/services/media.service';
 import { avatarService, type EmotionThumbnailResult } from '@/services/avatar.service';
 import { UserAvatar } from '@/components/Shared/UserAvatar';
@@ -105,6 +105,26 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
     () => [...chatMessages, ...draftMessages],
     [chatMessages, draftMessages]
   );
+
+  const getMessageImageUrl = (msg: Message): string => {
+    const content = (msg as any)?.content;
+    return msg.mediaUrl || msg.thumbnailUrl || content?.mediaUrl || content?.thumbnailUrl || '';
+  };
+
+  const imageGallery = useMemo(() => {
+    const urls: string[] = [];
+    const indexById: Record<string, number> = {};
+
+    mergedMessages.forEach((msg) => {
+      if (msg.messageType !== 'image') return;
+      const url = getMessageImageUrl(msg);
+      if (!url) return;
+      indexById[msg.id] = urls.length;
+      urls.push(url);
+    });
+
+    return { urls, indexById };
+  }, [mergedMessages]);
 
   const room3DStorageKey = activeChat ? `kankan.chat.3d:${activeChat.id}` : null;
   const room2DStorageKey = activeChat ? `kankan.chat.2d:${activeChat.id}` : null;
@@ -907,6 +927,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
                   message={message}
                   isOwn={message.senderId === user?.id}
                   showAvatar={showAvatar}
+                  imageGallery={imageGallery.urls}
+                  imageIndex={imageGallery.indexById[message.id]}
                 />
               );
             })

@@ -5,6 +5,8 @@ import {
   Typography,
   CircularProgress,
   ButtonBase,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import { avatarService, type EmotionThumbnailResult } from '@/services/avatar.service';
 import { ImageHoverPreview } from '@/components/Shared/ImageHoverPreview';
@@ -78,6 +80,10 @@ export const GeneratedAvatarPicker: React.FC<GeneratedAvatarPickerProps> = ({
   const cacheRef = React.useRef<Map<string, EmotionThumbnailResult[]>>(new Map());
   const [activePreviewId, setActivePreviewId] = React.useState<string | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = React.useState(false);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const tileW = isMobile ? 64 : 56;
+  const popoverW = isMobile ? tileW * 3 + 32 + 16 : 216;  // 3 tiles + gap + padding
 
   React.useEffect(() => {
     let active = true;
@@ -197,7 +203,7 @@ export const GeneratedAvatarPicker: React.FC<GeneratedAvatarPickerProps> = ({
       PaperProps={{
         sx: {
           p: 2,
-          width: 216,
+          width: popoverW,
           maxWidth: '90vw',
           display: 'flex',
           flexDirection: 'column',
@@ -217,7 +223,7 @@ export const GeneratedAvatarPicker: React.FC<GeneratedAvatarPickerProps> = ({
         <BoxAny
           sx={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(3, 56px)',
+            gridTemplateColumns: `repeat(3, ${tileW}px)`,
             gap: 1,
             width: 'fit-content',
             mx: 'auto',
@@ -229,8 +235,8 @@ export const GeneratedAvatarPicker: React.FC<GeneratedAvatarPickerProps> = ({
                 <BoxAny
                   key={`blank_${idx}`}
                   sx={{
-                    width: 56,
-                    height: 56,
+                    width: tileW,
+                    height: tileW,
                     borderRadius: '10px',
                     bgcolor: '#fff',
                     border: '1px solid rgba(15, 23, 42, 0.12)',
@@ -263,8 +269,8 @@ export const GeneratedAvatarPicker: React.FC<GeneratedAvatarPickerProps> = ({
                     {...previewProps}
                     onClick={() => handleSelect(item)}
                     sx={{
-                      width: 56,
-                      height: 56,
+                      width: tileW,
+                      height: tileW,
                       borderRadius: '10px',
                       overflow: 'hidden',
                       border: isSelected
