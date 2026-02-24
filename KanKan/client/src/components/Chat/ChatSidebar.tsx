@@ -50,6 +50,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
   const { user } = useSelector((state: RootState) => state.auth);
   const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = React.useState('');
+  const lastTouchSelectRef = React.useRef(0);
 
   const filteredChats = chats.filter((chat) =>
     chat.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -59,6 +60,17 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
     dispatch(setActiveChat(chat));
     dispatch(clearUnread({ chatId: chat.id }));
     dispatch(fetchMessages({ chatId: chat.id }));
+  };
+
+  const handleChatClick = (chat: Chat) => () => {
+    if (Date.now() - lastTouchSelectRef.current < 500) return;
+    handleChatSelect(chat);
+  };
+
+  const handleChatPointerUp = (chat: Chat) => (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType !== 'touch') return;
+    lastTouchSelectRef.current = Date.now();
+    handleChatSelect(chat);
   };
 
   const handleClearChat = async (chat: Chat) => {
@@ -207,7 +219,8 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
             <ListItemButton
               key={chat.id}
               selected={activeChat?.id === chat.id}
-              onClick={() => handleChatSelect(chat)}
+              onClick={handleChatClick(chat)}
+              onPointerUp={handleChatPointerUp(chat)}
               sx={{
                 py: 1.5,
                 position: 'relative',

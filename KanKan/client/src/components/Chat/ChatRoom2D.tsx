@@ -138,16 +138,16 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
 
   // Preserve current proportions across screen sizes
   // Desktop: bubble 504×315, avatar 282×282, image strip 60px
-  // Mobile: scale down proportionally
-  const bubbleW = isMobile ? '90vw' : 504;
-  const bubbleH = isMobile ? '56vw' : 315;  // ratio ~1.6:1
-  const avatarSize = isMobile ? '49vw' : 212;
-  const imgStripW = isMobile ? 53 : 100;
+  // Mobile: stack vertically with more breathing room
+  const bubbleW = isMobile ? '92vw' : 520;
+  const bubbleH = isMobile ? '50vw' : 320;  // ratio ~1.8:1
+  const avatarSize = isMobile ? '44vw' : 220;
+  const imgStripW = isMobile ? 64 : 110;
 
   const textStyle = {
     whiteSpace: 'pre-wrap',
     lineHeight: 1.6,
-    fontSize: isMobile ? '0.82rem' : '0.95rem',
+    fontSize: isMobile ? '0.9rem' : '1rem',
     fontFamily: "'STKaiti', 'KaiTi', 'STSong', 'SimSun', 'Noto Serif SC', serif",
   };
 
@@ -327,9 +327,9 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
           display: 'flex',
           flexDirection: isMobile ? 'column' : 'row',
           alignItems: isMobile ? 'center' : 'stretch',
-          justifyContent: isMobile ? 'flex-end' : 'space-between',
-          px: isMobile ? 1.5 : 3,
-          py: isMobile ? 2 : 3,
+          justifyContent: isMobile ? 'space-between' : 'space-between',
+          px: isMobile ? 1.5 : 3.5,
+          py: isMobile ? 2.5 : 3.25,
           background:
             'linear-gradient(180deg, rgba(236, 219, 191, 0.98) 0%, rgba(205, 173, 133, 0.98) 60%, rgba(178, 142, 102, 0.98) 100%)',
           '&::before': {
@@ -352,15 +352,15 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
       >
         <BoxAny
           sx={{
-            width: isMobile ? '100%' : '46%',
+            width: isMobile ? '100%' : '48%',
             display: 'flex',
             flexDirection: 'column',
             alignItems: isMobile ? 'center' : 'flex-start',
             justifyContent: 'flex-end',
-            gap: 1.5,
+            gap: isMobile ? 1.25 : 1.5,
             position: 'relative',
             zIndex: 1,
-            pb: isMobile ? 1.5 : 2.5,
+            pb: isMobile ? 1 : 2.5,
           }}
         >
           <UserAvatar
@@ -383,15 +383,15 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
 
         <BoxAny
           sx={{
-            width: isMobile ? '100%' : '46%',
+            width: isMobile ? '100%' : '48%',
             display: 'flex',
             flexDirection: 'column',
             alignItems: isMobile ? 'center' : 'flex-end',
             justifyContent: 'flex-end',
-            gap: 1.5,
+            gap: isMobile ? 1.25 : 1.5,
             position: 'relative',
             zIndex: 1,
-            pb: isMobile ? 1.5 : 2.5,
+            pb: isMobile ? 1 : 2.5,
           }}
         >
           {renderBubble(rightText, rightMediaUrls, 'right')}

@@ -8,6 +8,7 @@ import { NewChatDialog } from './NewChatDialog';
 import { signalRService } from '@/services/signalr.service';
 import { RootState, AppDispatch } from '@/store';
 import { AppHeader } from '@/components/Shared/AppHeader';
+import { useLanguage } from '@/i18n/LanguageContext';
 import {
   fetchChats,
   addMessage,
@@ -38,6 +39,7 @@ export const ChatLayout: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { activeChat, chats } = useSelector((state: RootState) => state.chat);
   const myUserId = useSelector((state: RootState) => state.auth.user?.id);
+  const { t } = useLanguage();
   const [showSidebar, setShowSidebar] = useState(true);
   const [newChatOpen, setNewChatOpen] = useState(false);
 
