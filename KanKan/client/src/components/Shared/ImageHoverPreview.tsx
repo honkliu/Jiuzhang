@@ -125,6 +125,13 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
     closePreview(false);
   };
 
+  const handleCancelPendingOpen = () => {
+    if (openTimerRef.current) {
+      window.clearTimeout(openTimerRef.current);
+      openTimerRef.current = null;
+    }
+  };
+
   const handleDoubleClick = (event: React.MouseEvent<HTMLElement>) => {
     if (!src || disabled || isTouchDevice || !openOnDoubleClick) return;
     if (activePreviewOwnerId && activePreviewOwnerId !== popoverId) return;
@@ -231,9 +238,13 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
     <>
       {children({
         onMouseEnter: !isTouchDevice && openOnHover ? handleOpen : noopMouse,
-        onMouseLeave: !isTouchDevice && openOnHover && dismissOnHoverOut ? handleClose : noopMouse,
+        onMouseLeave: !isTouchDevice && openOnHover
+          ? (dismissOnHoverOut ? handleClose : handleCancelPendingOpen)
+          : noopMouse,
         onFocus: !isTouchDevice && openOnHover ? handleOpen : (noopMouse as any),
-        onBlur: !isTouchDevice && openOnHover && dismissOnHoverOut ? handleClose : (noopMouse as any),
+        onBlur: !isTouchDevice && openOnHover
+          ? (dismissOnHoverOut ? handleClose : handleCancelPendingOpen)
+          : (noopMouse as any),
         onClick: shouldCloseOnTriggerClick ? handleTriggerClick : undefined,
         onDoubleClick: !isTouchDevice && openOnDoubleClick ? handleDoubleClick : undefined,
         onTouchStart: isTouchDevice && openOnLongPress ? handleTouchStart : undefined,

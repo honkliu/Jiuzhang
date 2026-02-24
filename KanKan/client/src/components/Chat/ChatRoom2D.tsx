@@ -140,9 +140,9 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
   // Desktop: bubble 504×315, avatar 282×282, image strip 60px
   // Mobile: stack vertically with more breathing room
   const bubbleW = isMobile ? '92vw' : 520;
-  const bubbleH = isMobile ? '50vw' : 320;  // ratio ~1.8:1
-  const avatarSize = isMobile ? '44vw' : 220;
-  const imgStripW = isMobile ? 64 : 110;
+  const bubbleH = isMobile ? '44vw' : 320;  // ratio ~2.1:1
+  const avatarSize = isMobile ? '36vw' : 220;
+  const imgStripW = isMobile ? 56 : 110;
 
   const textStyle = {
     whiteSpace: 'pre-wrap',
@@ -328,8 +328,8 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
           flexDirection: isMobile ? 'column' : 'row',
           alignItems: isMobile ? 'center' : 'stretch',
           justifyContent: isMobile ? 'space-between' : 'space-between',
-          px: isMobile ? 1.5 : 3.5,
-          py: isMobile ? 2.5 : 3.25,
+          px: isMobile ? 1.25 : 3.5,
+          py: isMobile ? 1.75 : 3.25,
           background:
             'linear-gradient(180deg, rgba(236, 219, 191, 0.98) 0%, rgba(205, 173, 133, 0.98) 60%, rgba(178, 142, 102, 0.98) 100%)',
           '&::before': {
@@ -357,10 +357,10 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
             flexDirection: 'column',
             alignItems: isMobile ? 'center' : 'flex-start',
             justifyContent: 'flex-end',
-            gap: isMobile ? 1.25 : 1.5,
+            gap: isMobile ? 0.75 : 1.5,
             position: 'relative',
             zIndex: 1,
-            pb: isMobile ? 1 : 2.5,
+            pb: isMobile ? 0.5 : 2.5,
           }}
         >
           <UserAvatar
@@ -388,10 +388,10 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
             flexDirection: 'column',
             alignItems: isMobile ? 'center' : 'flex-end',
             justifyContent: 'flex-end',
-            gap: isMobile ? 1.25 : 1.5,
+            gap: isMobile ? 0.75 : 1.5,
             position: 'relative',
             zIndex: 1,
-            pb: isMobile ? 1 : 2.5,
+            pb: isMobile ? 0.5 : 2.5,
           }}
         >
           {renderBubble(rightText, rightMediaUrls, 'right')}
