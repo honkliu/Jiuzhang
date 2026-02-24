@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Box,
   Container,
@@ -18,6 +18,7 @@ import { Delete as DeleteIcon, ThumbUpAltOutlined as ThumbUpIcon, ChatBubbleOutl
 import { AppHeader } from '@/components/Shared/AppHeader';
 import { UserAvatar } from '@/components/Shared/UserAvatar';
 import { momentService, Moment } from '../../services/moment.service';
+import { contactService, User } from '@/services/contact.service';
 import { mediaService } from '@/services/media.service';
 import { ImageLightbox } from '@/components/Shared/ImageLightbox';
 import { ImageHoverPreview } from '@/components/Shared/ImageHoverPreview';
@@ -34,6 +35,7 @@ export const MomentsPage: React.FC = () => {
   const { formatDateTime } = useSettings();
   const { user } = useSelector((state: RootState) => state.auth);
   const [moments, setMoments] = useState<Moment[]>([]);
+  const [contacts, setContacts] = useState<User[]>([]);
   const [text, setText] = useState('');
   const [pendingImages, setPendingImages] = useState<Array<{ file: File; previewUrl: string }>>([]);
   const [loading, setLoading] = useState(false);
@@ -62,9 +64,21 @@ export const MomentsPage: React.FC = () => {
     }
   };
 
+  const loadContacts = async () => {
+    try {
+      const data = await contactService.getContacts();
+      setContacts(data);
+    } catch {
+      // Ignore contact errors to keep moments available.
+    }
+  };
+
   useEffect(() => {
     loadMoments();
+    loadContacts();
   }, []);
+
+  const friendIdSet = useMemo(() => new Set(contacts.map((contact) => contact.id)), [contacts]);
 
   const handlePost = async () => {
     if (!text.trim() && pendingImages.length === 0) return;
@@ -114,7 +128,9 @@ export const MomentsPage: React.FC = () => {
   };
 
   const buildMomentGroups = (moment: Moment, urls: string[]) => {
-    const canEdit = moment.userId === user?.id;
+    const isOwner = moment.userId === user?.id;
+    const isFriend = friendIdSet.has(moment.userId);
+    const canEdit = isOwner || isFriend;
     return urls.map((url, idx) => ({
       sourceUrl: url,
       messageId: `moment:${moment.id}:${idx}`,
@@ -298,6 +314,7 @@ export const MomentsPage: React.FC = () => {
                             component="img"
                             src={url}
                             alt={t('moments.image')}
+                            tabIndex={0}
                             onClick={(event: React.MouseEvent<HTMLElement>) => {
                               previewProps.onClick?.(event);
                               if (event.defaultPrevented) return;
@@ -329,6 +346,8 @@ export const MomentsPage: React.FC = () => {
                               borderRadius: 2,
                               border: '1px solid rgba(15, 23, 42, 0.12)',
                               cursor: 'pointer',
+                              transition: 'opacity 0.15s',
+                              '&:hover': { opacity: 0.85 },
                             }}
                           />
                         )}

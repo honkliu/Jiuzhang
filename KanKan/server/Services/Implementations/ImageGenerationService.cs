@@ -303,6 +303,7 @@ public class ImageGenerationService : IImageGenerationService
             }
 
             var imageBase64 = Convert.ToBase64String(originalAvatar.ImageData);
+            var (targetWidth, targetHeight) = ImageResizer.GetScaledDimensions(originalAvatar.ImageData, 1024);
 
             var shouldReplace = string.Equals(request.Mode, "replace", StringComparison.OrdinalIgnoreCase)
                 || (string.IsNullOrEmpty(request.Mode) && request.GenerationType == "emotions");
@@ -340,7 +341,8 @@ public class ImageGenerationService : IImageGenerationService
                         try
                         {
                             var generatedBase64 = await _comfyUIService.FetchResultAsync(promptId);
-                            var avatarId = await StoreGeneratedAvatarAsync(request, originalAvatar, label, generatedBase64, fullPrompt);
+                            var resizedBase64 = ResizeGeneratedBase64(generatedBase64, targetWidth, targetHeight, originalAvatar.ContentType);
+                            var avatarId = await StoreGeneratedAvatarAsync(request, originalAvatar, label, resizedBase64, fullPrompt);
                             generatedAvatarIds.Add(avatarId);
                             if (EmotionTypes.Contains(label))
                             {
@@ -361,7 +363,8 @@ public class ImageGenerationService : IImageGenerationService
                     else
                     {
                         var generatedBase64 = await _comfyUIService.GenerateImageAsync(imageBase64, fullPrompt);
-                        var avatarId = await StoreGeneratedAvatarAsync(request, originalAvatar, label, generatedBase64, fullPrompt);
+                        var resizedBase64 = ResizeGeneratedBase64(generatedBase64, targetWidth, targetHeight, originalAvatar.ContentType);
+                        var avatarId = await StoreGeneratedAvatarAsync(request, originalAvatar, label, resizedBase64, fullPrompt);
                         generatedAvatarIds.Add(avatarId);
                         if (EmotionTypes.Contains(label))
                         {
@@ -541,6 +544,7 @@ public class ImageGenerationService : IImageGenerationService
             }
 
             var imageBytes = await File.ReadAllBytesAsync(filePath);
+            var (targetWidth, targetHeight) = ImageResizer.GetScaledDimensions(imageBytes, 1024);
             var imageBase64 = Convert.ToBase64String(imageBytes);
 
             // Determine prompts
@@ -572,6 +576,7 @@ public class ImageGenerationService : IImageGenerationService
                     var generatedFilePath = Path.Combine(uploadsPath, generatedFileName);
 
                     var generatedBytes = Convert.FromBase64String(generatedBase64);
+                    generatedBytes = ImageResizer.ResizeToExact(generatedBytes, targetWidth, targetHeight, fileExtension);
                     await File.WriteAllBytesAsync(generatedFilePath, generatedBytes);
 
                     var generatedUrl = $"/uploads/{generatedFileName}";
@@ -649,6 +654,13 @@ public class ImageGenerationService : IImageGenerationService
             "custom" => customPrompts?.Select(p => (p, p)).ToList() ?? new List<(string, string)>(),
             _ => new List<(string, string)>()
         };
+    }
+
+    private static string ResizeGeneratedBase64(string generatedBase64, int targetWidth, int targetHeight, string? contentType)
+    {
+        var bytes = Convert.FromBase64String(generatedBase64);
+        var resized = ImageResizer.ResizeToExact(bytes, targetWidth, targetHeight, contentType);
+        return Convert.ToBase64String(resized);
     }
 
     private async Task<string?> ResolveOriginalMediaUrlAsync(string messageId, string? fallbackUrl)
