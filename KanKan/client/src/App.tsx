@@ -166,6 +166,11 @@ const theme = createTheme({
       },
     },
     MuiTextField: {
+      defaultProps: {
+        InputLabelProps: {
+          shrink: true,
+        },
+      },
       styleOverrides: {
         root: {
           '& .MuiOutlinedInput-root': {
