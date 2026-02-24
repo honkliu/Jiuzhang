@@ -172,6 +172,13 @@ const theme = createTheme({
             background: 'rgba(255, 255, 255, 0.6)',
             backdropFilter: 'blur(10px) saturate(160%)',
           },
+          '& .MuiInputLabel-root': {
+            zIndex: 1,
+          },
+          '& .MuiInputLabel-root.MuiInputLabel-shrink': {
+            backgroundColor: '#fff',
+            padding: '0 4px',
+          },
         },
       },
     },

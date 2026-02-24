@@ -90,15 +90,6 @@ export const Register: React.FC = () => {
     }
   };
 
-  const fieldSx = {
-    '& .MuiOutlinedInput-root': {
-      bgcolor: 'background.paper',
-    },
-    '& .MuiInputLabel-root.MuiInputLabel-shrink': {
-      bgcolor: 'background.paper',
-      px: 0.5,
-    },
-  };
 
   return (
     <Container component="main" maxWidth="sm">
@@ -137,7 +128,6 @@ export const Register: React.FC = () => {
                 onChange={(e) => setEmail(e.target.value)}
                 type="text"
                 disabled={loading}
-                sx={fieldSx}
               />
 
               <Button
@@ -178,7 +168,6 @@ export const Register: React.FC = () => {
                 onChange={(e) => setCode(e.target.value.replace(/\s+/g, ''))}
                 inputProps={{ maxLength: 64 }}
                 disabled={loading}
-                sx={fieldSx}
               />
 
               <TextField
@@ -191,7 +180,6 @@ export const Register: React.FC = () => {
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
                 disabled={loading}
-                sx={fieldSx}
               />
 
               <TextField
@@ -207,7 +195,6 @@ export const Register: React.FC = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={loading}
                 helperText={t('auth.register.passwordHint')}
-                sx={fieldSx}
               />
 
               <TextField
@@ -221,7 +208,6 @@ export const Register: React.FC = () => {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 disabled={loading}
-                sx={fieldSx}
               />
 
               <Button

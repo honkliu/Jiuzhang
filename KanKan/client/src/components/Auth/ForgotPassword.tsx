@@ -83,15 +83,6 @@ export const ForgotPassword: React.FC = () => {
     }
   };
 
-  const fieldSx = {
-    '& .MuiOutlinedInput-root': {
-      bgcolor: 'background.paper',
-    },
-    '& .MuiInputLabel-root.MuiInputLabel-shrink': {
-      bgcolor: 'background.paper',
-      px: 0.5,
-    },
-  };
 
   return (
     <Container component="main" maxWidth="sm">
@@ -136,7 +127,6 @@ export const ForgotPassword: React.FC = () => {
                 onChange={(e) => setEmail(e.target.value)}
                 type="text"
                 disabled={loading}
-                sx={fieldSx}
               />
 
               <Button
@@ -177,7 +167,6 @@ export const ForgotPassword: React.FC = () => {
                 onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
                 inputProps={{ maxLength: 6, pattern: '[0-9]*' }}
                 disabled={loading}
-                sx={fieldSx}
               />
 
               <TextField
@@ -193,7 +182,6 @@ export const ForgotPassword: React.FC = () => {
                 onChange={(e) => setNewPassword(e.target.value)}
                 disabled={loading}
                 helperText={t('auth.register.passwordHint')}
-                sx={fieldSx}
               />
 
               <TextField
@@ -207,7 +195,6 @@ export const ForgotPassword: React.FC = () => {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 disabled={loading}
-                sx={fieldSx}
               />
 
               <Button
