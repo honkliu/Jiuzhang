@@ -368,7 +368,7 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
             gender={leftParticipant?.gender}
             fallbackText={leftParticipant?.displayName}
             variant="rounded"
-            previewMode="doubleClick"
+            previewMode={isMobile ? 'tap' : 'hover'}
             closePreviewOnClick
             sx={{
               width: avatarSize,
@@ -400,7 +400,7 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
             gender={rightParticipant?.gender}
             fallbackText={rightParticipant?.displayName}
             variant="rounded"
-            previewMode="doubleClick"
+            previewMode={isMobile ? 'tap' : 'hover'}
             closePreviewOnClick
             sx={{
               width: avatarSize,

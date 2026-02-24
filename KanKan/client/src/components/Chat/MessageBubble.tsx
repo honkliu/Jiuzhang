@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Box, Typography, Paper } from '@mui/material';
+import { Box, Typography, Paper, useMediaQuery, useTheme } from '@mui/material';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
@@ -127,6 +127,8 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
   imageGroups,
   imageGroupIndex,
 }) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { language, t } = useLanguage();
   const { formatTime: formatTimeWithZone } = useSettings();
   const isAgent = message.senderId === 'user_ai_wa';
@@ -215,7 +217,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
             gender={message.senderGender}
             fallbackText={message.senderName}
             variant="rounded"
-            previewMode="doubleClick"
+            previewMode={isMobile ? 'tap' : 'hover'}
             closePreviewOnClick
             sx={{ width: 40, height: 40, mx: 'auto' }}
           />

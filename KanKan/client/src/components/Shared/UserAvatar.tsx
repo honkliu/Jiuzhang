@@ -7,7 +7,7 @@ export interface UserAvatarProps extends Omit<AvatarProps, 'children'> {
   gender?: string;
   fallbackText?: string;
   closePreviewOnClick?: boolean;
-  previewMode?: 'hover' | 'doubleClick';
+  previewMode?: 'hover' | 'doubleClick' | 'tap';
 }
 
 const normalizeGender = (value?: string): 'male' | 'female' | 'unknown' => {
@@ -109,6 +109,7 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
       openOnHover={previewMode === 'hover'}
       openOnLongPress={previewMode === 'hover'}
       openOnDoubleClick={previewMode === 'doubleClick'}
+      openOnTap={previewMode === 'tap'}
     >
       {(previewProps) => (
         <BoxAny

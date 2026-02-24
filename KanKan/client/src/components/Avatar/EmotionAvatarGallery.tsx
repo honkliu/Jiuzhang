@@ -293,8 +293,8 @@ export const EmotionAvatarGallery: React.FC<EmotionAvatarGalleryProps> = ({ user
                     <ImageHoverPreview
                       src={fullById.get(match.avatarImageId) || match.imageUrl}
                       alt={`${match.emotion || label} preview`}
-                      openOnDoubleClick
-                      openOnLongPress={false}
+                      openOnDoubleClick={false}
+                      openOnLongPress
                       dismissOnHoverOut={false}
                       closeOnClickWhenOpen
                       closeOnTriggerClickWhenOpen

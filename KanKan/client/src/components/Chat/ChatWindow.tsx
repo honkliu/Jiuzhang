@@ -14,6 +14,8 @@ import {
   Theme,
   CircularProgress,
   Tooltip,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
@@ -68,6 +70,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
   );
   const { user } = useSelector((state: RootState) => state.auth);
   const { t } = useLanguage();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [messageText, setMessageText] = useState('');
   const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -816,6 +820,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
               sx={{ width: 40, height: 40, mr: 2 }}
               fallbackText={displayParticipant?.displayName || activeChat.name}
               variant="rounded"
+              previewMode={isMobile ? 'tap' : 'hover'}
+              closePreviewOnClick
             />
           )}
           <BoxAny sx={{ flexGrow: 1, minWidth: 0, overflow: 'hidden' }}>

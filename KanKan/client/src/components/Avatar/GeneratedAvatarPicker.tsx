@@ -256,7 +256,8 @@ export const GeneratedAvatarPicker: React.FC<GeneratedAvatarPickerProps> = ({
                 src={item.fullUrl}
                 alt={item.isRaw ? 'Raw avatar preview' : 'Generated avatar preview'}
                 disabled={Boolean(activePreviewId && activePreviewId !== item.id)}
-                openOnDoubleClick
+                openOnDoubleClick={false}
+                openOnLongPress
                 closeOnClickWhenOpen
                 closeOnTriggerClickWhenOpen
                 onOpenChange={(open) => {
