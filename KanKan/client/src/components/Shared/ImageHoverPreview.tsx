@@ -164,11 +164,11 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
       suppressTapOpenRef.current = true;
     }
     if (!openOnLongPress) return;
-    if (activePreviewOwnerId && activePreviewOwnerId !== popoverId) return;
-    activePreviewOwnerId = popoverId;
     longPressOpenedRef.current = false;
     const currentTarget = event.currentTarget as HTMLElement;
     longPressTimerRef.current = window.setTimeout(() => {
+      if (activePreviewOwnerId && activePreviewOwnerId !== popoverId) return;
+      activePreviewOwnerId = popoverId;
       longPressOpenedRef.current = true;
       suppressNextClickRef.current = true;
       setAnchorEl(currentTarget);
