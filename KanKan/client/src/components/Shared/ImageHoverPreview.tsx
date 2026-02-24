@@ -157,6 +157,9 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
   // Touch: long press to preview
   const handleTouchStart = (event: React.TouchEvent<HTMLElement>) => {
     if (!src || disabled || !isTouchDevice) return;
+    if (openOnLongPress) {
+      event.preventDefault();
+    }
     if (openOnTap && anchorEl) {
       suppressTapOpenRef.current = true;
     }
