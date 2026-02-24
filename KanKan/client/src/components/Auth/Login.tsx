@@ -80,6 +80,16 @@ export const Login: React.FC = () => {
     alignItems: 'center',
   };
 
+  const fieldSx = {
+    '& .MuiOutlinedInput-root': {
+      bgcolor: 'background.paper',
+    },
+    '& .MuiInputLabel-root.MuiInputLabel-shrink': {
+      bgcolor: 'background.paper',
+      px: 0.5,
+    },
+  };
+
   return (
     <Container component="main" maxWidth="xs">
       <div style={containerStyle}>
@@ -112,6 +122,7 @@ export const Login: React.FC = () => {
               onChange={(e) => setEmail(e.target.value)}
               type="text"
               disabled={loading}
+              sx={fieldSx}
             />
 
             <TextField
@@ -126,6 +137,7 @@ export const Login: React.FC = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               disabled={loading}
+              sx={fieldSx}
             />
 
             <div
