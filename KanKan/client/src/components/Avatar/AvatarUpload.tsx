@@ -22,17 +22,6 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
   const [previewUrl, setPreviewUrl] = useState<string | null>(currentAvatarUrl || null);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const containerStyle: React.CSSProperties = {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: 16,
-  };
-  const avatarStyle: React.CSSProperties = {
-    width: 120,
-    height: 120,
-    border: '2px solid #e0e0e0',
-  };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -76,25 +65,28 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
   };
 
   return (
-    <div style={containerStyle}>
+    <BoxAny sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
       {showPreview && (
         <ImageHoverPreview src={previewUrl} alt="Avatar preview">
           {(previewProps) => (
             <BoxAny {...previewProps} sx={{ display: 'inline-flex' }}>
               <Avatar
                 src={previewUrl || undefined}
-                style={avatarStyle}
+                sx={{ width: 120, height: 120, border: '2px solid #e0e0e0' }}
               />
             </BoxAny>
           )}
         </ImageHoverPreview>
       )}
 
-      <input
+      <BoxAny
+        component="input"
         type="file"
         ref={fileInputRef}
         accept="image/*"
-        style={{ display: 'none' }}
+        title={t('profile.uploadAvatar')}
+        aria-label={t('profile.uploadAvatar')}
+        sx={{ display: 'none' }}
         onChange={handleFileSelect}
       />
 
@@ -112,6 +104,6 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
           {error}
         </Typography>
       )}
-    </div>
+    </BoxAny>
   );
 };

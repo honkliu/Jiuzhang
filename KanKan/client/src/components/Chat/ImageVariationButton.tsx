@@ -7,6 +7,8 @@ import {
   Grid,
   Typography,
   LinearProgress,
+  Box,
+  Button,
 } from '@mui/material';
 import { AutoAwesome as MagicIcon, Close as CloseIcon } from '@mui/icons-material';
 import { imageGenerationService } from '@/services/imageGeneration.service';
@@ -17,9 +19,7 @@ interface ImageVariationButtonProps {
 }
 
 export const ImageVariationButton: React.FC<ImageVariationButtonProps> = ({ messageId, mediaUrl }) => {
-    const centerStyle: React.CSSProperties = { textAlign: 'center', padding: 32 };
-    const progressStyle: React.CSSProperties = { padding: 32 };
-    const errorStyle: React.CSSProperties = { textAlign: 'center', padding: 16 };
+  const BoxAny = Box as any;
   const [open, setOpen] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -90,32 +90,25 @@ export const ImageVariationButton: React.FC<ImageVariationButtonProps> = ({ mess
 
         <DialogContent>
           {!variationUrls && !generating && (
-            <div style={centerStyle}>
+            <BoxAny sx={{ textAlign: 'center', p: 4 }}>
               <Typography sx={{ mb: 2 }}>Generate AI variations of this image</Typography>
-              <button
-                onClick={handleGenerate}
-                style={{
-                  padding: '10px 20px',
-                  fontSize: '16px',
-                  cursor: 'pointer',
-                }}
-              >
+              <Button variant="contained" onClick={handleGenerate} sx={{ fontSize: 16 }}>
                 Generate 9 Variations
-              </button>
-            </div>
+              </Button>
+            </BoxAny>
           )}
 
           {generating && (
-            <div style={progressStyle}>
+            <BoxAny sx={{ p: 4 }}>
               <LinearProgress variant="determinate" value={progress} />
               <Typography variant="caption" sx={{ mt: 1, display: 'block', textAlign: 'center' }}>
                 Generating variations... {progress}%
               </Typography>
-            </div>
+            </BoxAny>
           )}
 
           {error && (
-            <Typography color="error" style={errorStyle}>
+            <Typography color="error" sx={{ textAlign: 'center', p: 2 }}>
               {error}
             </Typography>
           )}
@@ -124,10 +117,11 @@ export const ImageVariationButton: React.FC<ImageVariationButtonProps> = ({ mess
             <Grid container spacing={2}>
               {variationUrls.map((url, index) => (
                 <Grid item xs={4} key={index}>
-                  <img
+                  <BoxAny
+                    component="img"
                     src={url}
                     alt={`Variation ${index + 1}`}
-                    style={{ width: '100%', height: 'auto', borderRadius: '4px' }}
+                    sx={{ width: '100%', height: 'auto', borderRadius: '4px', display: 'block' }}
                   />
                 </Grid>
               ))}

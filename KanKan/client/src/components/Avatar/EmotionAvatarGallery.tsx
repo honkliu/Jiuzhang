@@ -39,15 +39,6 @@ export const EmotionAvatarGallery: React.FC<EmotionAvatarGalleryProps> = ({ user
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
-  const containerStyle: React.CSSProperties = { padding: isMobile ? 8 : 3 };
-  const headerStyle: React.CSSProperties = {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 1,
-  };
-  const errorStyle: React.CSSProperties = { marginBottom: 6 };
-  const loadingStyle: React.CSSProperties = { display: 'flex', justifyContent: 'center', padding: 32 };
 
   const buildThumbnailUrl = (imageUrl: string) => {
     if (!imageUrl) return imageUrl;
@@ -210,8 +201,8 @@ export const EmotionAvatarGallery: React.FC<EmotionAvatarGalleryProps> = ({ user
   };
 
   return (
-    <div style={containerStyle}>
-      <div style={headerStyle}>
+    <BoxAny sx={{ p: isMobile ? 1 : 0.375 }}>
+      <BoxAny sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: '1px' }}>
         <Typography variant="h6">{t('avatar.emotionTitle')}</Typography>
         <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
           <IconButton
@@ -236,7 +227,7 @@ export const EmotionAvatarGallery: React.FC<EmotionAvatarGalleryProps> = ({ user
             {generatingAll ? t('avatar.generatingAll') : t('avatar.generateAll')}
           </Button>
         </BoxAny>
-      </div>
+      </BoxAny>
 
       <Popover
         id={helpId}
@@ -273,15 +264,15 @@ export const EmotionAvatarGallery: React.FC<EmotionAvatarGalleryProps> = ({ user
       </BoxAny>
 
       {error && (
-        <Typography color="error" style={errorStyle}>
+        <Typography color="error" sx={{ mb: '6px' }}>
           {error}
         </Typography>
       )}
 
       {loading ? (
-        <div style={loadingStyle}>
+        <BoxAny sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
           <CircularProgress />
-        </div>
+        </BoxAny>
       ) : (
         <Grid container spacing={0.15} justifyContent="center">
           {emotionLabels.map((label) => {
@@ -390,6 +381,6 @@ export const EmotionAvatarGallery: React.FC<EmotionAvatarGalleryProps> = ({ user
           })}
         </Grid>
       )}
-    </div>
+    </BoxAny>
   );
 };

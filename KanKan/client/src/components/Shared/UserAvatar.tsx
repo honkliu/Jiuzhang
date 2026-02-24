@@ -90,7 +90,7 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
     ? <CartoonMaleIcon />
     : normalized === 'female'
       ? <CartoonFemaleIcon />
-      : (fallbackText ? fallbackText[0]?.toUpperCase() : <span style={{ fontWeight: 700 }}>?</span>);
+      : (fallbackText ? fallbackText[0]?.toUpperCase() : <BoxAny component="span" sx={{ fontWeight: 700 }}>?</BoxAny>);
 
   const derivedSx = {
     bgcolor: !hasSrc && normalized === 'male' ? 'rgba(66, 165, 245, 0.20)'
@@ -118,7 +118,14 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
         >
           <Avatar
             src={effectiveSrc || undefined}
-            sx={derivedSx}
+            sx={{
+              ...derivedSx,
+              '& img': {
+                WebkitTouchCallout: 'none',
+                WebkitUserSelect: 'none',
+                userSelect: 'none',
+              },
+            }}
             imgProps={{
               onError: () => {
                 if (candidateIndex < candidates.length - 1) {
@@ -128,12 +135,6 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
               draggable: false,
               onDragStart: (event) => event.preventDefault(),
               onContextMenu: (event) => event.preventDefault(),
-              style: {
-                WebkitTouchCallout: 'none',
-                WebkitUserSelect: 'none',
-                userSelect: 'none',
-                WebkitUserDrag: 'none',
-              },
             }}
             {...props}
           >

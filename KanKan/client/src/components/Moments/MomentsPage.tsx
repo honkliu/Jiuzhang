@@ -183,12 +183,15 @@ export const MomentsPage: React.FC = () => {
 
         <Card sx={{ mb: 3 }}>
           <CardContent>
-            <input
+            <BoxAny
+              component="input"
               ref={fileInputRef}
               type="file"
               accept="image/*"
               multiple
-              style={{ display: 'none' }}
+              title={t('moments.addImages')}
+              aria-label={t('moments.addImages')}
+              sx={{ display: 'none' }}
               onChange={handleFilesSelected}
             />
             <TextField

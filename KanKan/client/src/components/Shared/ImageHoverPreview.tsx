@@ -29,8 +29,6 @@ export interface ImageHoverPreviewProps {
   }) => React.ReactNode;
 }
 
-let activeLockedPreviewId: string | null = null;
-
 let activePreviewOwnerId: string | null = null;
 
 export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
@@ -71,7 +69,6 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
   const handleOpen = (event: React.MouseEvent<HTMLElement> | React.FocusEvent<HTMLElement>) => {
     if (!src || disabled || isTouchDevice) return;
     if (activePreviewOwnerId && activePreviewOwnerId !== popoverId) return;
-    activePreviewOwnerId = popoverId;
     if (openTimerRef.current) {
       window.clearTimeout(openTimerRef.current);
       openTimerRef.current = null;
@@ -82,6 +79,11 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
     }
     const currentTarget = event.currentTarget as HTMLElement;
     openTimerRef.current = window.setTimeout(() => {
+      if (activePreviewOwnerId && activePreviewOwnerId !== popoverId) {
+        openTimerRef.current = null;
+        return;
+      }
+      activePreviewOwnerId = popoverId;
       setAnchorEl(currentTarget);
       onOpenChange?.(true);
       openTimerRef.current = null;

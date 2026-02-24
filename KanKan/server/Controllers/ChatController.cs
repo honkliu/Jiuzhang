@@ -88,6 +88,17 @@ public class ChatController : ControllerBase
         return DomainRules.IsSuperDomain(ResolveDomain(user));
     }
 
+    private async Task UnhideChatForUserAsync(Chat chat, string userId)
+    {
+        var me = chat.Participants.FirstOrDefault(p => p.UserId == userId);
+        if (me == null || !me.IsHidden)
+            return;
+
+        await _chatRepository.SetHiddenAsync(chat.Id, userId, isHidden: false);
+        await _chatUserRepository.SetHiddenAsync(userId, chat.Id, isHidden: false);
+        me.IsHidden = false;
+    }
+
     private async Task<bool> IsFriendAsync(string userId, string otherUserId)
     {
         if (string.IsNullOrWhiteSpace(userId) || string.IsNullOrWhiteSpace(otherUserId))
@@ -156,7 +167,6 @@ public class ChatController : ControllerBase
             if (currentUser == null)
                 return BadRequest(new { message = "User not found" });
 
-            var isSuperDomainUser = IsSuperDomainUser(currentUser);
             var chat = await _chatRepository.GetByIdAsync(chatId);
 
             if (chat == null)
@@ -166,13 +176,7 @@ public class ChatController : ControllerBase
                 return Forbid();
 
             // If the user explicitly opens a hidden chat, unhide it for them.
-            var me = chat.Participants.FirstOrDefault(p => p.UserId == userId);
-            if (me != null && me.IsHidden)
-            {
-                await _chatRepository.SetHiddenAsync(chatId, userId, isHidden: false);
-                await _chatUserRepository.SetHiddenAsync(userId, chatId, isHidden: false);
-                me.IsHidden = false;
-            }
+            await UnhideChatForUserAsync(chat, userId);
 
             return Ok(ChatDomain.ToChatDto(chat, userId, ChatHub.IsUserOnline));
         }
@@ -197,8 +201,6 @@ public class ChatController : ControllerBase
 
             if (currentUser == null)
                 return BadRequest(new { message = "User not found" });
-
-            var isSuperDomainUser = IsSuperDomainUser(currentUser);
 
             var isDirectRequest = (request.ChatType == "direct" || string.IsNullOrWhiteSpace(request.ChatType))
                 && request.ParticipantIds.Count == 1;
@@ -257,13 +259,7 @@ public class ChatController : ControllerBase
 
                 if (existingChat != null)
                 {
-                    var me = existingChat.Participants.FirstOrDefault(p => p.UserId == userId);
-                    if (me != null && me.IsHidden)
-                    {
-                        await _chatRepository.SetHiddenAsync(existingChat.Id, userId, isHidden: false);
-                        await _chatUserRepository.SetHiddenAsync(userId, existingChat.Id, isHidden: false);
-                        me.IsHidden = false;
-                    }
+                    await UnhideChatForUserAsync(existingChat, userId);
                     return Ok(ChatDomain.ToChatDto(existingChat, userId, ChatHub.IsUserOnline));
                 }
             }
@@ -389,7 +385,6 @@ public class ChatController : ControllerBase
             chat.UpdatedAt = DateTime.UtcNow;
             await _chatRepository.UpdateAsync(chat);
             await UpsertChatUsersFromChatAsync(chat);
-            await UpsertChatUsersFromChatAsync(chat);
 
             // Notify participants
             await _hubContext.Clients.Group(chatId).SendAsync("ChatUpdated", ChatDomain.ToChatDto(chat, userId, ChatHub.IsUserOnline));
@@ -416,7 +411,6 @@ public class ChatController : ControllerBase
             if (currentUser == null)
                 return BadRequest(new { message = "User not found" });
 
-            var isSuperDomainUser = IsSuperDomainUser(currentUser);
             var chat = await _chatRepository.GetByIdAsync(chatId);
 
             if (chat == null)
@@ -481,7 +475,6 @@ public class ChatController : ControllerBase
             if (currentUser == null)
                 return BadRequest(new { message = "User not found" });
 
-            var isSuperDomainUser = IsSuperDomainUser(currentUser);
             var chat = await _chatRepository.GetByIdAsync(chatId);
 
             if (chat == null)
@@ -514,7 +507,6 @@ public class ChatController : ControllerBase
             if (currentUser == null)
                 return BadRequest(new { message = "User not found" });
 
-            var isSuperDomainUser = IsSuperDomainUser(currentUser);
             var chat = await _chatRepository.GetByIdAsync(chatId);
 
             if (chat == null)
@@ -833,7 +825,6 @@ public class ChatController : ControllerBase
             if (currentUser == null)
                 return BadRequest(new { message = "User not found" });
 
-            var isSuperDomainUser = IsSuperDomainUser(currentUser);
             var chat = await _chatRepository.GetByIdAsync(chatId);
 
             if (chat == null)

@@ -1,4 +1,5 @@
 import React, { Suspense, useEffect, useMemo, useRef } from 'react';
+import { Box } from '@mui/material';
 import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls, useGLTF, Html } from '@react-three/drei';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
@@ -35,18 +36,18 @@ const placeOnFloor = (model: THREE.Object3D) => {
 
 const LoadingOverlay: React.FC = () => (
   <Html center>
-    <div
-      style={{
-        padding: '8px 10px',
-        background: 'rgba(0,0,0,0.55)',
+    <Box
+      sx={{
+        p: '8px 10px',
+        bgcolor: 'rgba(0,0,0,0.55)',
         color: '#fff',
         fontFamily: 'monospace',
         fontSize: 12,
-        borderRadius: 4,
+        borderRadius: 1,
       }}
     >
       Loading room and avatars...
-    </div>
+    </Box>
   </Html>
 );
 
@@ -105,7 +106,7 @@ const RoomCamera: React.FC = () => {
 
 export const ChatRoom3D: React.FC<ChatRoom3DProps> = () => {
   return (
-    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+    <Box sx={{ width: '100%', height: '100%', position: 'relative' }}>
       <Canvas
         camera={{ fov: 55, position: [0, 2.0, 4.5], near: 0.1, far: 1000 }}
         gl={{ antialias: true }}
@@ -124,7 +125,7 @@ export const ChatRoom3D: React.FC<ChatRoom3DProps> = () => {
           <RoomModels />
         </Suspense>
       </Canvas>
-    </div>
+    </Box>
   );
 };
 

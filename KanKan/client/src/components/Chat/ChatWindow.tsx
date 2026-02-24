@@ -83,6 +83,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
   const fileInputRef = useRef<HTMLInputElement>(null);
   const draftDebounceRef = useRef<number | null>(null);
   const lastDraftRef = useRef<string>('');
+  const lastDraftSentAtRef = useRef<number>(0);
 
   const chatMessages = activeChat ? messages[activeChat.id] || [] : [];
   const chatTypingUsers = activeChat ? typingUsers[activeChat.id] || [] : [];
@@ -458,15 +459,33 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
 
   const scheduleDraftSend = useCallback(
     (chatId: string, text: string) => {
+      const minIntervalMs = 80;
+      const sendDraft = () => {
+        if (lastDraftRef.current === text) return;
+        lastDraftRef.current = text;
+        lastDraftSentAtRef.current = Date.now();
+        signalRService.sendDraftChanged(chatId, text);
+      };
+
+      const now = Date.now();
+      const elapsed = now - lastDraftSentAtRef.current;
+
+      if (elapsed >= minIntervalMs) {
+        if (draftDebounceRef.current) {
+          window.clearTimeout(draftDebounceRef.current);
+          draftDebounceRef.current = null;
+        }
+        sendDraft();
+        return;
+      }
+
       if (draftDebounceRef.current) {
         window.clearTimeout(draftDebounceRef.current);
       }
 
       draftDebounceRef.current = window.setTimeout(() => {
-        if (lastDraftRef.current === text) return;
-        lastDraftRef.current = text;
-        signalRService.sendDraftChanged(chatId, text);
-      }, 200);
+        sendDraft();
+      }, minIntervalMs - elapsed);
     },
     []
   );
@@ -995,10 +1014,13 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
           borderColor: 'divider',
         }}
       >
-        <input
+        <BoxAny
+          component="input"
           ref={fileInputRef}
           type="file"
-          style={{ display: 'none' }}
+          title={t('chat.attach')}
+          aria-label={t('chat.attach')}
+          sx={{ display: 'none' }}
           onChange={handleFileSelected}
         />
         <BoxAny sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
