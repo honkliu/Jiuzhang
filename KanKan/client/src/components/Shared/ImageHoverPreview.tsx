@@ -237,7 +237,7 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
         onClick: shouldCloseOnTriggerClick ? handleTriggerClick : undefined,
         onDoubleClick: !isTouchDevice && openOnDoubleClick ? handleDoubleClick : undefined,
         onTouchStart: isTouchDevice && openOnLongPress ? handleTouchStart : undefined,
-        onTouchEnd: isTouchDevice && openOnLongPress ? handleTouchEnd : undefined,
+        onTouchEnd: isTouchDevice && (openOnLongPress || openOnDoubleClick) ? handleTouchEnd : undefined,
         'aria-describedby': id,
       })}
       <Popover
