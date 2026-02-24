@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Box, Paper, useMediaQuery, useTheme } from '@mui/material';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -6,6 +6,7 @@ import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import { UserAvatar } from '@/components/Shared/UserAvatar';
 import { ImageLightbox } from '@/components/Shared/ImageLightbox';
+import { ImageHoverPreview } from '@/components/Shared/ImageHoverPreview';
 
 // Work around TS2590 ("union type too complex") from MUI Box typings in some TS versions.
 const BoxAny = Box as any;
@@ -131,6 +132,7 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
   imageGroupIndexByUrl,
 }) => {
   const [lightbox, setLightbox] = useState<{ images: string[]; index: number; groupIndex?: number } | null>(null);
+  const imageClickTimerRef = useRef<number | null>(null);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
@@ -257,28 +259,57 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
             }}
           >
             {mediaUrls.map((url, i) => (
-              <BoxAny
+              <ImageHoverPreview
                 key={i}
-                component="img"
                 src={url}
                 alt="Chat media"
-                onClick={() => setLightbox({
-                  images: mediaUrls,
-                  index: i,
-                  groupIndex: imageGroupIndexByUrl?.[url],
-                })}
-                sx={{
-                  width: '100%',
-                  flexShrink: 0,
-                  aspectRatio: 'auto',
-                  objectFit: 'cover',
-                  borderRadius: 1,
-                  boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
-                  cursor: 'pointer',
-                  transition: 'opacity 0.15s',
-                  '&:hover': { opacity: 0.85 },
-                }}
-              />
+                openOnHover={false}
+                openOnLongPress={false}
+                openOnDoubleClick
+                closeOnTriggerClickWhenOpen
+              >
+                {(previewProps) => (
+                  <BoxAny
+                    {...previewProps}
+                    component="img"
+                    src={url}
+                    alt="Chat media"
+                    onClick={(event: React.MouseEvent<HTMLElement>) => {
+                      previewProps.onClick?.(event);
+                      if (event.defaultPrevented) return;
+                      if (imageClickTimerRef.current) {
+                        window.clearTimeout(imageClickTimerRef.current);
+                      }
+                      imageClickTimerRef.current = window.setTimeout(() => {
+                        setLightbox({
+                          images: mediaUrls,
+                          index: i,
+                          groupIndex: imageGroupIndexByUrl?.[url],
+                        });
+                        imageClickTimerRef.current = null;
+                      }, 220);
+                    }}
+                    onDoubleClick={(event: React.MouseEvent<HTMLElement>) => {
+                      if (imageClickTimerRef.current) {
+                        window.clearTimeout(imageClickTimerRef.current);
+                        imageClickTimerRef.current = null;
+                      }
+                      previewProps.onDoubleClick?.(event);
+                    }}
+                    sx={{
+                      width: '100%',
+                      flexShrink: 0,
+                      aspectRatio: 'auto',
+                      objectFit: 'cover',
+                      borderRadius: 1,
+                      boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+                      cursor: 'pointer',
+                      transition: 'opacity 0.15s',
+                      '&:hover': { opacity: 0.85 },
+                    }}
+                  />
+                )}
+              </ImageHoverPreview>
             ))}
           </BoxAny>
         )}
@@ -337,6 +368,8 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
             gender={leftParticipant?.gender}
             fallbackText={leftParticipant?.displayName}
             variant="rounded"
+            previewMode="doubleClick"
+            closePreviewOnClick
             sx={{
               width: avatarSize,
               height: avatarSize,
@@ -367,6 +400,8 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
             gender={rightParticipant?.gender}
             fallbackText={rightParticipant?.displayName}
             variant="rounded"
+            previewMode="doubleClick"
+            closePreviewOnClick
             sx={{
               width: avatarSize,
               height: avatarSize,

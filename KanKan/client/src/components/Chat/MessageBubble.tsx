@@ -10,7 +10,7 @@ import { Message } from '@/services/chat.service';
 import { UserAvatar } from '@/components/Shared/UserAvatar';
 import { ImageHoverPreview } from '@/components/Shared/ImageHoverPreview';
 import { ImageLightbox } from '@/components/Shared/ImageLightbox';
-import { format } from 'date-fns';
+import { useSettings } from '@/settings/SettingsContext';
 
 // Work around TS2590 ("union type too complex") from MUI Box typings in some TS versions.
 const BoxAny = Box as any;
@@ -128,10 +128,12 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
   imageGroupIndex,
 }) => {
   const { language, t } = useLanguage();
+  const { formatTime: formatTimeWithZone } = useSettings();
   const isAgent = message.senderId === 'user_ai_wa';
   const isDraft = message.id.startsWith('draft_');
   const [displayText, setDisplayText] = useState(message.text || '');
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  const imageClickTimerRef = useRef<number | null>(null);
   const animRef = useRef<number | null>(null);
   const lastTextRef = useRef(message.text || '');
 
@@ -179,13 +181,10 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
       }
     };
   }, [isOwn, isAgent, message.id, message.messageType, message.text]);
-  const formatTime = (timestamp: string) => {
-    try {
-      return format(new Date(timestamp), 'HH:mm');
-    } catch {
-      return '';
-    }
-  };
+  const formatTime = (timestamp: string) => formatTimeWithZone(timestamp, {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 
   const imageUrl =
     message.mediaUrl ||
@@ -216,6 +215,8 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
             gender={message.senderGender}
             fallbackText={message.senderName}
             variant="rounded"
+            previewMode="doubleClick"
+            closePreviewOnClick
             sx={{ width: 40, height: 40, mx: 'auto' }}
           />
         )}
@@ -309,7 +310,10 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
           <ImageHoverPreview
             src={imageUrl}
             alt={t('chat.message.image')}
-            onPreviewClick={() => setIsLightboxOpen(true)}
+            openOnHover={false}
+            openOnLongPress={false}
+            openOnDoubleClick
+            closeOnTriggerClickWhenOpen
           >
             {(previewProps) => (
               <BoxAny
@@ -320,7 +324,21 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
                 tabIndex={0}
                 onClick={(event: React.MouseEvent<HTMLElement>) => {
                   previewProps.onClick?.(event);
-                  setIsLightboxOpen(true);
+                  if (event.defaultPrevented) return;
+                  if (imageClickTimerRef.current) {
+                    window.clearTimeout(imageClickTimerRef.current);
+                  }
+                  imageClickTimerRef.current = window.setTimeout(() => {
+                    setIsLightboxOpen(true);
+                    imageClickTimerRef.current = null;
+                  }, 220);
+                }}
+                onDoubleClick={(event: React.MouseEvent<HTMLElement>) => {
+                  if (imageClickTimerRef.current) {
+                    window.clearTimeout(imageClickTimerRef.current);
+                    imageClickTimerRef.current = null;
+                  }
+                  previewProps.onDoubleClick?.(event);
                 }}
                 sx={{
                   maxWidth: '100%',

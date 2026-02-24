@@ -119,7 +119,10 @@ export const ContactsPage: React.FC = () => {
 
   const handleDeleteUser = async (userId: string, displayName?: string) => {
     const label = displayName || userId;
-    const confirmed = window.confirm(`Delete user ${label}? This cannot be undone.`);
+    const confirmed = window.confirm(
+      t('contacts.deleteUserConfirm')
+        .replace('{name}', label)
+    );
     if (!confirmed) return;
 
     setActionLoading(userId);
@@ -133,8 +136,12 @@ export const ContactsPage: React.FC = () => {
 
   const handleToggleDisabled = async (user: User) => {
     const label = user.displayName || user.id;
-    const actionLabel = user.isDisabled ? 'Enable' : 'Disable';
-    const confirmed = window.confirm(`${actionLabel} user ${label}?`);
+    const actionLabel = user.isDisabled ? t('contacts.enable') : t('contacts.disable');
+    const confirmed = window.confirm(
+      t('contacts.toggleDisableConfirm')
+        .replace('{action}', actionLabel)
+        .replace('{name}', label)
+    );
     if (!confirmed) return;
 
     setActionLoading(user.id);
@@ -239,7 +246,7 @@ export const ContactsPage: React.FC = () => {
                             onClick={() => handleToggleDisabled(req.fromUser)}
                             disabled={actionLoading === req.fromUserId}
                           >
-                            {req.fromUser.isDisabled ? 'Enable' : 'Disable'}
+                            {req.fromUser.isDisabled ? t('contacts.enable') : t('contacts.disable')}
                           </Button>
                         )}
                         {isAdmin && req.fromUserId !== currentUserId && (
@@ -249,7 +256,7 @@ export const ContactsPage: React.FC = () => {
                             onClick={() => handleDeleteUser(req.fromUserId, req.fromUser.displayName)}
                             disabled={actionLoading === req.fromUserId}
                           >
-                            Delete
+                            {t('contacts.deleteUser')}
                           </Button>
                         )}
                       </BoxAny>
@@ -303,7 +310,7 @@ export const ContactsPage: React.FC = () => {
                           onClick={() => handleToggleDisabled(user)}
                           disabled={actionLoading === user.id}
                         >
-                          {user.isDisabled ? 'Enable' : 'Disable'}
+                          {user.isDisabled ? t('contacts.enable') : t('contacts.disable')}
                         </Button>
                       )}
                       {isAdmin && user.id !== currentUserId && (
@@ -313,7 +320,7 @@ export const ContactsPage: React.FC = () => {
                           onClick={() => handleDeleteUser(user.id, user.displayName)}
                           disabled={actionLoading === user.id}
                         >
-                          Delete
+                          {t('contacts.deleteUser')}
                         </Button>
                       )}
                     </BoxAny>
@@ -330,7 +337,7 @@ export const ContactsPage: React.FC = () => {
                         <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <Typography fontWeight="bold">{user.displayName}</Typography>
                           {user.isOnline && <Chip size="small" color="success" label={t('contacts.online')} />}
-                          {user.isDisabled && <Chip size="small" color="warning" label="Disabled" />}
+                          {user.isDisabled && <Chip size="small" color="warning" label={t('contacts.disabled')} />}
                         </BoxAny>
                       }
                       secondary={
@@ -370,7 +377,7 @@ export const ContactsPage: React.FC = () => {
                           onClick={() => handleToggleDisabled(user)}
                           disabled={actionLoading === user.id}
                         >
-                          {user.isDisabled ? 'Enable' : 'Disable'}
+                          {user.isDisabled ? t('contacts.enable') : t('contacts.disable')}
                         </Button>
                       )}
                       {isAdmin && user.id !== currentUserId && (
@@ -380,7 +387,7 @@ export const ContactsPage: React.FC = () => {
                           onClick={() => handleDeleteUser(user.id, user.displayName)}
                           disabled={actionLoading === user.id}
                         >
-                          Delete
+                          {t('contacts.deleteUser')}
                         </Button>
                       )}
                     </BoxAny>
@@ -397,7 +404,7 @@ export const ContactsPage: React.FC = () => {
                         <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <Typography fontWeight="bold">{user.displayName}</Typography>
                           {user.isOnline && <Chip size="small" color="success" label={t('contacts.online')} />}
-                          {user.isDisabled && <Chip size="small" color="warning" label="Disabled" />}
+                          {user.isDisabled && <Chip size="small" color="warning" label={t('contacts.disabled')} />}
                         </BoxAny>
                       }
                       secondary={

@@ -4,6 +4,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import { imageGenerationService } from '@/services/imageGeneration.service';
+import { useLanguage } from '@/i18n/LanguageContext';
 
 const BoxAny = Box as any;
 
@@ -30,6 +31,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
   groups,
   initialGroupIndex,
 }) => {
+  const { t } = useLanguage();
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [activeGroupIndex, setActiveGroupIndex] = useState(initialGroupIndex ?? 0);
   const [selectedImageUrl, setSelectedImageUrl] = useState<string>('');
@@ -153,8 +155,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
         sourceType: 'chat_image',
         generationType: 'custom',
         messageId: activeGroup.messageId,
-        // Always anchor edits to the raw source image.
-        mediaUrl: activeGroup.sourceUrl,
+        mediaUrl: displayedImage,
         customPrompts: [trimmed],
       });
 
@@ -292,7 +293,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
                 <TextField
                   value={prompt}
                   onChange={(event) => setPrompt(event.target.value)}
-                  placeholder="Add a prompt for Pic Edit"
+                  placeholder={t('image.editPromptPlaceholder')}
                   size="small"
                   fullWidth
                   disabled={isGenerating}
@@ -310,7 +311,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
                   disabled={isGenerating || !prompt.trim()}
                   sx={{ minWidth: 120 }}
                 >
-                  {isGenerating ? <CircularProgress size={18} sx={{ color: 'white' }} /> : 'Pic Edit'}
+                  {isGenerating ? <CircularProgress size={18} sx={{ color: 'white' }} /> : t('image.editAction')}
                 </Button>
               </BoxAny>
             )}
@@ -398,7 +399,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
             >
               {activeGeneratedUrls.length === 0 ? (
                 <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem' }}>
-                  No edits yet
+                  {t('image.noEditsYet')}
                 </Typography>
               ) : (
                 activeGeneratedUrls.map((url, index) => {

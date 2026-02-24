@@ -3,6 +3,7 @@ import { Button, CircularProgress, Typography, Avatar, Box } from '@mui/material
 import { CloudUpload as UploadIcon } from '@mui/icons-material';
 import { avatarService } from '@/services/avatar.service';
 import { ImageHoverPreview } from '@/components/Shared/ImageHoverPreview';
+import { useLanguage } from '@/i18n/LanguageContext';
 
 interface AvatarUploadProps {
   onUploadSuccess?: (avatarImageId: string, imageUrl: string) => void;
@@ -15,6 +16,8 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
   currentAvatarUrl,
   showPreview = true,
 }) => {
+  const { t } = useLanguage();
+  const BoxAny = Box as any;
   const [uploading, setUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(currentAvatarUrl || null);
   const [error, setError] = useState<string | null>(null);
@@ -77,12 +80,12 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
       {showPreview && (
         <ImageHoverPreview src={previewUrl} alt="Avatar preview">
           {(previewProps) => (
-            <Box {...previewProps} sx={{ display: 'inline-flex' }}>
+            <BoxAny {...previewProps} sx={{ display: 'inline-flex' }}>
               <Avatar
                 src={previewUrl || undefined}
                 style={avatarStyle}
               />
-            </Box>
+            </BoxAny>
           )}
         </ImageHoverPreview>
       )}
@@ -101,7 +104,7 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
         onClick={() => fileInputRef.current?.click()}
         disabled={uploading}
       >
-        {uploading ? 'Uploading...' : 'Upload Avatar'}
+        {uploading ? t('profile.uploadingAvatar') : t('profile.uploadAvatar')}
       </Button>
 
       {error && (

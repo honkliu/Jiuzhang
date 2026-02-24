@@ -32,8 +32,7 @@ import { clearChat, upsertParticipantProfile } from '@/store/chatSlice';
 import { updateUser } from '@/store/authSlice';
 import { UserAvatar } from '@/components/Shared/UserAvatar';
 import { GeneratedAvatarPicker } from '@/components/Avatar/GeneratedAvatarPicker';
-import { formatDistanceToNow } from 'date-fns';
-import { enUS, zhCN } from 'date-fns/locale';
+import { useSettings } from '@/settings/SettingsContext';
 
 // Work around TS2590 (“union type too complex”) from MUI Box typings in some TS versions.
 const BoxAny = Box as any;
@@ -61,6 +60,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleSidebar, sidebarOp
     (state: RootState) => state.notifications
   );
   const { t, toggleLanguage, language } = useLanguage();
+  const { formatDateTime } = useSettings();
   const [notificationsAnchorEl, setNotificationsAnchorEl] = React.useState<null | HTMLElement>(null);
   const [navAnchorEl, setNavAnchorEl] = React.useState<null | HTMLElement>(null);
   const [avatarAnchorEl, setAvatarAnchorEl] = React.useState<null | HTMLElement>(null);
@@ -124,14 +124,13 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleSidebar, sidebarOp
   };
 
   const formatWhen = (iso: string) => {
-    try {
-      return formatDistanceToNow(new Date(iso), {
-        addSuffix: true,
-        locale: language === 'zh' ? zhCN : enUS,
-      });
-    } catch {
-      return '';
-    }
+    return formatDateTime(iso, {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
   };
 
   const handleLogout = async () => {
@@ -154,7 +153,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleSidebar, sidebarOp
           {showChatToggle && isMobile && (
             <IconButton
               onClick={onToggleSidebar}
-              title="Toggle chat list"
+              title={t('nav.toggleChatList')}
               size="small"
               edge="start"
             >
@@ -184,11 +183,13 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleSidebar, sidebarOp
         <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 0.5 }}>
             {isMobile ? (
-              <IconButton onClick={handleOpenAvatarPicker} title="Choose mood" size="small" sx={{ p: 0 }}>
+              <IconButton onClick={handleOpenAvatarPicker} title={t('nav.chooseMood')} size="small" sx={{ p: 0 }}>
                 <UserAvatar
                   src={user?.avatarUrl}
                   gender={user?.gender}
                   variant="rounded"
+                  previewMode="doubleClick"
+                  closePreviewOnClick
                   sx={{ width: 32, height: 32 }}
                 />
               </IconButton>
@@ -197,10 +198,29 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleSidebar, sidebarOp
                 src={user?.avatarUrl}
                 gender={user?.gender}
                 variant="rounded"
+                previewMode="doubleClick"
+                closePreviewOnClick
                 sx={{ width: 32, height: 32 }}
               />
             )}
-            <BoxAny sx={{ display: { xs: 'none', sm: 'flex' }, flexDirection: 'column', alignItems: 'flex-start', minWidth: 0 }}>
+            <BoxAny
+              sx={{
+                display: { xs: 'none', sm: 'flex' },
+                flexDirection: 'column',
+                alignItems: 'flex-start',
+                minWidth: 0,
+                cursor: 'pointer',
+              }}
+              role="button"
+              tabIndex={0}
+              onClick={handleOpenAvatarPicker}
+              onKeyDown={(event: React.KeyboardEvent<HTMLElement>) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  handleOpenAvatarPicker(event as any);
+                }
+              }}
+            >
               <Typography
                 variant="subtitle2"
                 fontWeight="bold"
@@ -213,8 +233,16 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleSidebar, sidebarOp
               >
                 {user?.displayName || ''}
               </Typography>
-              <IconButton onClick={handleOpenAvatarPicker} title="Choose mood" size="small" sx={{ p: 0, minWidth: 0, ml: '-2px' }}>
-                <Typography component="span" sx={{ fontSize: '0.7rem', fontWeight: 700, lineHeight: 1, color: 'text.secondary' }}>
+              <IconButton
+                onClick={handleOpenAvatarPicker}
+                title={t('nav.chooseMood')}
+                size="small"
+                sx={{ p: 0.5, minWidth: 0, ml: 0.25, bgcolor: 'rgba(7, 193, 96, 0.12)' }}
+              >
+                <Typography
+                  component="span"
+                  sx={{ fontSize: '0.95rem', fontWeight: 800, lineHeight: 1, color: 'primary.main' }}
+                >
                   ...
                 </Typography>
               </IconButton>

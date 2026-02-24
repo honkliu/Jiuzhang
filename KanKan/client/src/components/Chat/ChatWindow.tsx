@@ -570,7 +570,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
       if (msg.senderId !== senderId) continue;
       if (msg.isDeleted) continue;
       const content = (msg as any).content;
-      const url = msg.thumbnailUrl || msg.mediaUrl || content?.thumbnailUrl || content?.mediaUrl || '';
+      const url = (msg as any).thumbnailUrl || (msg as any).mediaUrl || content?.thumbnailUrl || content?.mediaUrl || '';
       if (url) mediaUrls.push(url);
     }
 
@@ -818,11 +818,11 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
               variant="rounded"
             />
           )}
-          <BoxAny sx={{ flexGrow: 1 }}>
-            <Typography variant="subtitle1" fontWeight="bold">
+          <BoxAny sx={{ flexGrow: 1, minWidth: 0, overflow: 'hidden' }}>
+            <Typography variant="subtitle1" fontWeight="bold" noWrap>
               {activeChat.name}
             </Typography>
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" color="text.secondary" noWrap>
               {chatTypingUsers.length > 0
                 ? `${chatTypingUsers.map((u) => u.userName).join(', ')} ${t('chat.typing')}`
                 : displayParticipant?.isOnline && displayParticipant.userId !== WA_USER_ID
@@ -840,10 +840,12 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
           )}
 
           {!isGroup && (
-            <Tooltip title={isRoom2D ? 'Exit 2D view' : 'Enter 2D view'}>
+            <Tooltip title={isRoom2D ? t('chat.exit2d') : t('chat.enter2d')}>
               <span>
                 <IconButton
                   edge="end"
+                  size="small"
+                  sx={{ p: 0.5 }}
                   onClick={() => {
                     if (!room2DStorageKey) return;
                     setIsRoom2D((prev) => {
@@ -871,6 +873,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
             <span>
               <IconButton
                 edge="end"
+                size="small"
+                sx={{ p: 0.5 }}
                 onClick={() => {
                   if (!room3DStorageKey) return;
                   setIsRoom3D((prev) => {

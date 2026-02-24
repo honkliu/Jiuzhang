@@ -14,6 +14,7 @@ import { ChatRoom3DTestPage } from './components/Chat/ChatRoom3DTestPage';
 import { authService } from './services/auth.service';
 import { contactService } from './services/contact.service';
 import { LanguageProvider } from './i18n/LanguageContext';
+import { SettingsProvider } from './settings/SettingsContext';
 import { setAuth } from './store/authSlice';
 
 // Create MUI theme
@@ -38,6 +39,14 @@ const theme = createTheme({
       '-apple-system',
       'BlinkMacSystemFont',
       '"Segoe UI"',
+      '"Microsoft YaHei"',
+      '"PingFang SC"',
+      '"Noto Sans CJK SC"',
+      '"Source Han Sans SC"',
+      '"Hiragino Sans GB"',
+      '"WenQuanYi Micro Hei"',
+      '"Heiti SC"',
+      '"SimHei"',
       'Roboto',
       '"Helvetica Neue"',
       'Arial',
@@ -211,12 +220,13 @@ const AuthBootstrap: React.FC = () => {
 function App() {
   return (
     <Provider store={store}>
-      <LanguageProvider>
-        <ThemeProvider theme={theme}>
-          <CssBaseline />
-          <BrowserRouter>
-            <AuthBootstrap />
-            <Routes>
+      <SettingsProvider>
+        <LanguageProvider>
+          <ThemeProvider theme={theme}>
+            <CssBaseline />
+            <BrowserRouter>
+              <AuthBootstrap />
+              <Routes>
               {/* Public routes */}
               <Route
                 path="/login"
@@ -282,10 +292,11 @@ function App() {
               {/* Default redirect */}
               <Route path="/" element={<Navigate to="/login" replace />} />
               <Route path="*" element={<Navigate to="/login" replace />} />
-            </Routes>
-          </BrowserRouter>
-        </ThemeProvider>
-      </LanguageProvider>
+              </Routes>
+            </BrowserRouter>
+          </ThemeProvider>
+        </LanguageProvider>
+      </SettingsProvider>
     </Provider>
   );
 }

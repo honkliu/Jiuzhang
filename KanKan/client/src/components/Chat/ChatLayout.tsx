@@ -270,7 +270,7 @@ export const ChatLayout: React.FC = () => {
               pt: 1,
             }}
           >
-            <IconButton onClick={() => setShowSidebar(true)} title="Expand" size="small">
+            <IconButton onClick={() => setShowSidebar(true)} title={t('chat.sidebarExpand')} size="small">
               <KeyboardDoubleArrowRightIcon />
             </IconButton>
           </BoxAny>

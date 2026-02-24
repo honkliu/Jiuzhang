@@ -18,24 +18,37 @@ import { Delete as DeleteIcon, ThumbUpAltOutlined as ThumbUpIcon, ChatBubbleOutl
 import { AppHeader } from '@/components/Shared/AppHeader';
 import { UserAvatar } from '@/components/Shared/UserAvatar';
 import { momentService, Moment } from '../../services/moment.service';
+import { mediaService } from '@/services/media.service';
+import { ImageLightbox } from '@/components/Shared/ImageLightbox';
+import { ImageHoverPreview } from '@/components/Shared/ImageHoverPreview';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/store';
 import { useLanguage } from '@/i18n/LanguageContext';
+import { useSettings } from '@/settings/SettingsContext';
 
 // Work around TS2590 (“union type too complex”) from MUI Box typings in some TS versions.
 const BoxAny = Box as any;
 
 export const MomentsPage: React.FC = () => {
   const { t } = useLanguage();
+  const { formatDateTime } = useSettings();
   const { user } = useSelector((state: RootState) => state.auth);
   const [moments, setMoments] = useState<Moment[]>([]);
   const [text, setText] = useState('');
-  const [mediaUrls, setMediaUrls] = useState('');
+  const [pendingImages, setPendingImages] = useState<Array<{ file: File; previewUrl: string }>>([]);
   const [loading, setLoading] = useState(false);
   const [posting, setPosting] = useState(false);
   const [error, setError] = useState('');
   const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [lightbox, setLightbox] = useState<{
+    images: string[];
+    index: number;
+    groups?: Array<{ sourceUrl: string; messageId: string; canEdit: boolean }>;
+    groupIndex?: number;
+  } | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const imageClickTimerRef = React.useRef<number | null>(null);
 
   const loadMoments = async () => {
     setLoading(true);
@@ -54,30 +67,59 @@ export const MomentsPage: React.FC = () => {
   }, []);
 
   const handlePost = async () => {
-    if (!text.trim() && !mediaUrls.trim()) return;
+    if (!text.trim() && pendingImages.length === 0) return;
 
     setPosting(true);
     setError('');
     try {
-      const urls = mediaUrls
-        .split(',')
-        .map((u) => u.trim())
-        .filter(Boolean);
+      let uploadedUrls: string[] = [];
+      if (pendingImages.length > 0) {
+        const uploads = await Promise.all(pendingImages.map((item) => mediaService.upload(item.file)));
+        uploadedUrls = uploads.map((item) => item.url).filter(Boolean);
+      }
 
       await momentService.createMoment({
         text: text.trim() || undefined,
-        mediaUrls: urls.length > 0 ? urls : undefined,
+        mediaUrls: uploadedUrls.length > 0 ? uploadedUrls : undefined,
         visibility: 'public',
       });
 
       setText('');
-      setMediaUrls('');
+      pendingImages.forEach((item) => URL.revokeObjectURL(item.previewUrl));
+      setPendingImages([]);
       await loadMoments();
     } catch (err: any) {
       setError(err.message || t('moments.postFailed'));
     } finally {
       setPosting(false);
     }
+  };
+
+  const handlePickImages = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFilesSelected = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    if (files.length === 0) return;
+
+    const images = files.filter((file) => file.type.startsWith('image/'));
+    const next = images.map((file) => ({
+      file,
+      previewUrl: URL.createObjectURL(file),
+    }));
+
+    setPendingImages((prev) => [...prev, ...next]);
+    event.target.value = '';
+  };
+
+  const buildMomentGroups = (moment: Moment, urls: string[]) => {
+    const canEdit = moment.userId === user?.id;
+    return urls.map((url, idx) => ({
+      sourceUrl: url,
+      messageId: `moment:${moment.id}:${idx}`,
+      canEdit,
+    }));
   };
 
   const updateMomentInState = (updated: Moment) => {
@@ -141,6 +183,14 @@ export const MomentsPage: React.FC = () => {
 
         <Card sx={{ mb: 3 }}>
           <CardContent>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              style={{ display: 'none' }}
+              onChange={handleFilesSelected}
+            />
             <TextField
               fullWidth
               label={t('moments.whatsOnMind')}
@@ -150,13 +200,42 @@ export const MomentsPage: React.FC = () => {
               minRows={3}
               sx={{ mb: 2 }}
             />
-            <TextField
-              fullWidth
-              label={t('moments.mediaUrls')}
-              value={mediaUrls}
-              onChange={(e) => setMediaUrls(e.target.value)}
-              sx={{ mb: 2 }}
-            />
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ mb: 2 }}>
+              <Button variant="outlined" onClick={handlePickImages} disabled={posting}>
+                {t('moments.addImages')}
+              </Button>
+              {pendingImages.length > 0 ? (
+                <Typography variant="body2" color="text.secondary" sx={{ alignSelf: 'center' }}>
+                  {t('moments.imagesSelected')} {pendingImages.length}
+                </Typography>
+              ) : null}
+            </Stack>
+            {pendingImages.length > 0 ? (
+              <BoxAny
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(72px, 1fr))',
+                  gap: 1,
+                  mb: 2,
+                }}
+              >
+                {pendingImages.map((item, idx) => (
+                  <BoxAny
+                    key={`${item.previewUrl}-${idx}`}
+                    component="img"
+                    src={item.previewUrl}
+                    alt={t('moments.imagePreview')}
+                    sx={{
+                      width: '100%',
+                      aspectRatio: '1 / 1',
+                      objectFit: 'cover',
+                      borderRadius: 2,
+                      border: '1px solid rgba(15, 23, 42, 0.12)',
+                    }}
+                  />
+                ))}
+              </BoxAny>
+            ) : null}
             <Button variant="contained" onClick={handlePost} disabled={posting}>
               {posting ? <CircularProgress size={24} /> : t('moments.post')}
             </Button>
@@ -175,7 +254,7 @@ export const MomentsPage: React.FC = () => {
               <CardHeader
                 avatar={<UserAvatar src={moment.userAvatar} fallbackText={moment.userName} />}
                 title={moment.userName}
-                subheader={new Date(moment.createdAt).toLocaleString()}
+                subheader={formatDateTime(moment.createdAt)}
                 action={
                   moment.userId === user?.id ? (
                     <IconButton
@@ -191,11 +270,69 @@ export const MomentsPage: React.FC = () => {
               />
               <CardContent>
                 <Typography sx={{ mb: 1 }}>{moment.content?.text}</Typography>
-                {moment.content?.mediaUrls?.map((url: string) => (
-                  <Typography key={url} variant="body2" color="text.secondary">
-                    {url}
-                  </Typography>
-                ))}
+                {moment.content?.mediaUrls?.length ? (
+                  <BoxAny
+                    sx={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
+                      gap: 1,
+                      mt: 1,
+                    }}
+                  >
+                    {moment.content.mediaUrls.map((url: string, idx: number) => (
+                      <ImageHoverPreview
+                        key={`${moment.id}-${url}-${idx}`}
+                        src={url}
+                        alt={t('moments.image')}
+                        openOnHover={false}
+                        openOnLongPress={false}
+                        openOnDoubleClick
+                        closeOnTriggerClickWhenOpen
+                      >
+                        {(previewProps) => (
+                          <BoxAny
+                            {...previewProps}
+                            component="img"
+                            src={url}
+                            alt={t('moments.image')}
+                            onClick={(event: React.MouseEvent<HTMLElement>) => {
+                              previewProps.onClick?.(event);
+                              if (event.defaultPrevented) return;
+                              if (imageClickTimerRef.current) {
+                                window.clearTimeout(imageClickTimerRef.current);
+                              }
+                              imageClickTimerRef.current = window.setTimeout(() => {
+                                const urls = moment.content?.mediaUrls || [];
+                                setLightbox({
+                                  images: urls,
+                                  index: idx,
+                                  groups: buildMomentGroups(moment, urls),
+                                  groupIndex: idx,
+                                });
+                                imageClickTimerRef.current = null;
+                              }, 220);
+                            }}
+                            onDoubleClick={(event: React.MouseEvent<HTMLElement>) => {
+                              if (imageClickTimerRef.current) {
+                                window.clearTimeout(imageClickTimerRef.current);
+                                imageClickTimerRef.current = null;
+                              }
+                              previewProps.onDoubleClick?.(event);
+                            }}
+                            sx={{
+                              width: '100%',
+                              aspectRatio: '1 / 1',
+                              objectFit: 'cover',
+                              borderRadius: 2,
+                              border: '1px solid rgba(15, 23, 42, 0.12)',
+                              cursor: 'pointer',
+                            }}
+                          />
+                        )}
+                      </ImageHoverPreview>
+                    ))}
+                  </BoxAny>
+                ) : null}
 
                 <Stack direction="row" spacing={2} alignItems="center" sx={{ mt: 2 }}>
                   <Button
@@ -258,6 +395,16 @@ export const MomentsPage: React.FC = () => {
           ))
         )}
       </Container>
+      {lightbox ? (
+        <ImageLightbox
+          images={lightbox.images}
+          initialIndex={lightbox.index}
+          groups={lightbox.groups}
+          initialGroupIndex={lightbox.groupIndex}
+          open
+          onClose={() => setLightbox(null)}
+        />
+      ) : null}
     </BoxAny>
   );
 };

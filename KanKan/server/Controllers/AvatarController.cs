@@ -79,7 +79,6 @@ public class AvatarController : ControllerBase
     public async Task<IActionResult> GetAvatarImage(string avatarImageId, [FromQuery] string? size = null)
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        _logger.LogInformation("Avatar request start {AvatarImageId} size={Size}", avatarImageId, size ?? "full");
         try
         {
             if (size == "thumbnail")
@@ -87,31 +86,20 @@ public class AvatarController : ControllerBase
                 var thumbnail = await _avatarService.GetAvatarThumbnailAsync(avatarImageId);
                 if (thumbnail?.ThumbnailData != null && thumbnail.ThumbnailData.Length > 0)
                 {
-                    var contentType = thumbnail.ThumbnailContentType ?? "image/webp";
                     sw.Stop();
-                    _logger.LogInformation(
-                        "Avatar request end {AvatarImageId} size=thumbnail bytes={Bytes} elapsedMs={ElapsedMs}",
-                        avatarImageId,
-                        thumbnail.ThumbnailData.Length,
-                        sw.ElapsedMilliseconds);
-                    return File(thumbnail.ThumbnailData, contentType);
+                    _logger.LogDebug("Avatar {AvatarImageId} thumbnail {Bytes}B in {ElapsedMs}ms", avatarImageId, thumbnail.ThumbnailData.Length, sw.ElapsedMilliseconds);
+                    return File(thumbnail.ThumbnailData, thumbnail.ThumbnailContentType ?? "image/webp");
                 }
 
-                _logger.LogInformation("Avatar thumbnail missing for {AvatarImageId}; falling back to full image", avatarImageId);
+                _logger.LogWarning("Avatar {AvatarImageId} thumbnail missing, falling back to full image", avatarImageId);
             }
 
             var avatarImage = await _avatarService.GetAvatarImageAsync(avatarImageId);
-            if (avatarImage == null)
-            {
+            if (avatarImage == null || avatarImage.ImageData == null || avatarImage.ImageData.Length == 0)
                 return NotFound();
-            }
 
             sw.Stop();
-            _logger.LogInformation(
-                "Avatar request end {AvatarImageId} size=full bytes={Bytes} elapsedMs={ElapsedMs}",
-                avatarImageId,
-                avatarImage.ImageData.Length,
-                sw.ElapsedMilliseconds);
+            _logger.LogDebug("Avatar {AvatarImageId} full {Bytes}B in {ElapsedMs}ms", avatarImageId, avatarImage.ImageData.Length, sw.ElapsedMilliseconds);
             return File(avatarImage.ImageData, avatarImage.ContentType);
         }
         catch (Exception ex)
@@ -150,7 +138,7 @@ public class AvatarController : ControllerBase
     }
 
     [HttpGet("originals")]
-    public async Task<IActionResult> GetSelectableAvatars([FromQuery] int page = 0, [FromQuery] int pageSize = 12)
+    public async Task<IActionResult> GetSelectableAvatars([FromQuery] int page = 0, [FromQuery] int pageSize = 12, [FromQuery] bool includeFull = false)
     {
         try
         {
@@ -158,7 +146,7 @@ public class AvatarController : ControllerBase
             if (string.IsNullOrEmpty(userId))
                 return Unauthorized();
 
-            var (items, totalCount) = await _avatarService.GetSelectableAvatarsAsync(userId, page, pageSize);
+            var (items, totalCount) = await _avatarService.GetSelectableAvatarsAsync(userId, page, pageSize, includeFull, includeCount: !includeFull);
 
             var result = items.Select(a => new
             {
@@ -167,6 +155,9 @@ public class AvatarController : ControllerBase
                 thumbnailDataUrl = a.ThumbnailData != null && a.ThumbnailData.Length > 0
                     ? $"data:{a.ThumbnailContentType ?? "image/webp"};base64,{Convert.ToBase64String(a.ThumbnailData)}"
                     : null, // Inline base64 thumbnail
+                fullImageDataUrl = includeFull && a.ImageData != null && a.ImageData.Length > 0
+                    ? $"data:{a.ContentType};base64,{Convert.ToBase64String(a.ImageData)}"
+                    : null, // Inline base64 full image (only when requested)
                 fullImageUrl = $"/api/avatar/image/{a.Id}", // Original image
                 fileName = a.FileName,
                 fileSize = a.FileSize,
@@ -190,37 +181,42 @@ public class AvatarController : ControllerBase
     }
 
     [HttpGet("emotion-thumbnails/{sourceAvatarId}")]
-    public async Task<IActionResult> GetEmotionThumbnails(string sourceAvatarId)
+    public async Task<IActionResult> GetEmotionThumbnails(string sourceAvatarId, [FromQuery] bool includeFull = false)
     {
         try
         {
             var sw = System.Diagnostics.Stopwatch.StartNew();
-            _logger.LogInformation("Emotion thumbnails request start {SourceAvatarId}", sourceAvatarId);
-            if (string.IsNullOrWhiteSpace(sourceAvatarId))
-            {
-                return BadRequest(new { message = "sourceAvatarId is required" });
-            }
 
-            var avatars = await _avatarService.GetEmotionThumbnailsBySourceAvatarIdAsync(sourceAvatarId);
-            var results = avatars
-                .Where(a => !string.IsNullOrWhiteSpace(a.Emotion))
-                .Select(a => new
+            if (string.IsNullOrWhiteSpace(sourceAvatarId))
+                return BadRequest(new { message = "sourceAvatarId is required" });
+
+            var avatars = await _avatarService.GetEmotionThumbnailsBySourceAvatarIdAsync(sourceAvatarId, includeFull);
+
+            var results = new List<object>();
+            foreach (var avatar in avatars.Where(a => !string.IsNullOrWhiteSpace(a.Emotion)))
+            {
+                string? thumbnailDataUrl = avatar.ThumbnailData?.Length > 0
+                    ? $"data:{avatar.ThumbnailContentType ?? "image/webp"};base64,{Convert.ToBase64String(avatar.ThumbnailData)}"
+                    : null;
+
+                string? fullImageDataUrl = includeFull && avatar.ImageData?.Length > 0
+                    ? $"data:{avatar.ContentType};base64,{Convert.ToBase64String(avatar.ImageData)}"
+                    : null;
+
+                results.Add(new
                 {
-                    avatarImageId = a.Id,
-                    emotion = a.Emotion,
-                    imageUrl = $"/api/avatar/image/{a.Id}",
-                    thumbnailDataUrl = a.ThumbnailData != null && a.ThumbnailData.Length > 0
-                        ? $"data:{a.ThumbnailContentType ?? "image/webp"};base64,{Convert.ToBase64String(a.ThumbnailData)}"
-                        : null,
-                })
-                .ToList();
+                    avatarImageId = avatar.Id,
+                    emotion = avatar.Emotion,
+                    imageUrl = $"/api/avatar/image/{avatar.Id}",
+                    thumbnailDataUrl,
+                    fullImageDataUrl,
+                });
+            }
 
             sw.Stop();
             _logger.LogInformation(
-                "Emotion thumbnails request end {SourceAvatarId} count={Count} elapsedMs={ElapsedMs}",
-                sourceAvatarId,
-                results.Count,
-                sw.ElapsedMilliseconds);
+                "EmotionThumbnails {SourceAvatarId} includeFull={IncludeFull} count={Count} elapsedMs={ElapsedMs}",
+                sourceAvatarId, includeFull, results.Count, sw.ElapsedMilliseconds);
 
             return Ok(new
             {
@@ -232,34 +228,8 @@ public class AvatarController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Emotion thumbnails request failed for {SourceAvatarId}", sourceAvatarId);
             _logger.LogError(ex, "Failed to retrieve emotion thumbnails for {SourceAvatarId}", sourceAvatarId);
             return StatusCode(500, new { message = "Failed to retrieve emotion thumbnails" });
-        }
-    }
-
-    [HttpGet("{userId}/emotions")]
-    public async Task<IActionResult> GetUserEmotionAvatars(string userId)
-    {
-        try
-        {
-            var emotions = await _avatarService.GetUserEmotionAvatarsAsync(userId);
-
-            var result = emotions.Select(e => new
-            {
-                avatarImageId = e.Id,
-                emotion = e.Emotion,
-                imageUrl = $"/api/avatar/image/{e.Id}",
-                sourceAvatarId = e.SourceAvatarId,
-                createdAt = e.CreatedAt
-            });
-
-            return Ok(result);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to retrieve emotion avatars for user {UserId}", userId);
-            return StatusCode(500, new { message = "Failed to retrieve emotion avatars" });
         }
     }
 

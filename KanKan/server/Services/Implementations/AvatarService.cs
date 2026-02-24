@@ -34,7 +34,7 @@ public class AvatarService : IAvatarService
         {
             thumbnailData = ImageResizer.GenerateThumbnail(imageData);
             thumbnailContentType = "image/webp";
-            _logger.LogInformation("Generated thumbnail for upload {FileName}: {OriginalSize}KB -> {ThumbnailSize}KB",
+            _logger.LogDebug("Thumbnail generated for {FileName}: {OriginalSize}KB -> {ThumbnailSize}KB",
                 fileName, imageData.Length / 1024, thumbnailData.Length / 1024);
         }
         catch (Exception ex)
@@ -78,6 +78,7 @@ public class AvatarService : IAvatarService
     public async Task<AvatarImage?> GetAvatarThumbnailAsync(string avatarImageId)
     {
         var projection = Builders<AvatarImage>.Projection
+            .Include(a => a.Id)
             .Include(a => a.ThumbnailData)
             .Include(a => a.ThumbnailContentType);
 
@@ -87,7 +88,7 @@ public class AvatarService : IAvatarService
             .FirstOrDefaultAsync();
     }
 
-    public async Task<List<AvatarImage>> GetEmotionThumbnailsBySourceAvatarIdAsync(string sourceAvatarId)
+    public async Task<List<AvatarImage>> GetEmotionThumbnailsBySourceAvatarIdAsync(string sourceAvatarId, bool includeFull = false)
     {
         var filter = Builders<AvatarImage>.Filter.And(
             Builders<AvatarImage>.Filter.Eq(a => a.SourceAvatarId, sourceAvatarId),
@@ -101,24 +102,35 @@ public class AvatarService : IAvatarService
             .Include(a => a.ThumbnailContentType)
             .Include(a => a.CreatedAt);
 
-        var avatars = await _avatarImages
-            .Find(filter)
-            .Project<AvatarImage>(projection)
-            .ToListAsync();
+        if (includeFull)
+        {
+            projection = projection
+                .Include(a => a.ImageData)
+                .Include(a => a.ContentType);
+        }
 
-        var latestByEmotion = avatars
-            .Where(a => !string.IsNullOrWhiteSpace(a.Emotion))
-            .OrderByDescending(a => a.CreatedAt)
-            .GroupBy(a => a.Emotion!.Trim().ToLowerInvariant())
-            .ToDictionary(g => g.Key, g => g.First());
+        var sort = Builders<AvatarImage>.Sort.Descending(a => a.CreatedAt);
+
+        var querySw = System.Diagnostics.Stopwatch.StartNew();
+        var findOptions = new FindOptions<AvatarImage, AvatarImage>
+        {
+            Sort = sort,
+            Projection = projection,
+            Limit = EmotionTypes.Length,
+        };
+        var items = await (await _avatarImages.FindAsync(filter, findOptions)).ToListAsync();
+        querySw.Stop();
+
+        _logger.LogDebug(
+            "EmotionThumbnails query src={SourceAvatarId} includeFull={IncludeFull} dbMs={QueryMs} count={Count}",
+            sourceAvatarId, includeFull, querySw.ElapsedMilliseconds, items.Count);
 
         var ordered = new List<AvatarImage>();
         foreach (var emotion in EmotionTypes)
         {
-            if (latestByEmotion.TryGetValue(emotion, out var avatar))
-            {
-                ordered.Add(avatar);
-            }
+            var match = items.FirstOrDefault(a => string.Equals(a.Emotion, emotion, StringComparison.OrdinalIgnoreCase));
+            if (match != null)
+                ordered.Add(match);
         }
 
         return ordered;
@@ -134,7 +146,7 @@ public class AvatarService : IAvatarService
             .FirstOrDefaultAsync();
     }
 
-    public async Task<(List<AvatarImage> Items, long TotalCount)> GetSelectableAvatarsAsync(string userId, int page, int pageSize)
+    public async Task<(List<AvatarImage> Items, long TotalCount)> GetSelectableAvatarsAsync(string userId, int page, int pageSize, bool includeFull = false, bool includeCount = true)
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
 
@@ -156,27 +168,35 @@ public class AvatarService : IAvatarService
         var safePageSize = Math.Min(Math.Max(1, pageSize), 60);
 
         var countSw = System.Diagnostics.Stopwatch.StartNew();
-        var totalCount = await _avatarImages.CountDocumentsAsync(filter);
+        var totalCount = includeCount
+            ? await _avatarImages.CountDocumentsAsync(filter)
+            : 0L;
         countSw.Stop();
 
-        // Use MongoDB native projection to exclude only original ImageData
-        var projection = Builders<AvatarImage>.Projection
-            .Exclude(a => a.ImageData);          // Exclude original, keep thumbnail
+        // Include ImageData only when full images are requested
+        ProjectionDefinition<AvatarImage> projection = includeFull
+            ? Builders<AvatarImage>.Projection.Include(a => a.Id)  // include everything (no exclusion)
+            : Builders<AvatarImage>.Projection.Exclude(a => a.ImageData);
+
+        var fetchCount = safePageSize;
+        var findOptions = new FindOptions<AvatarImage, AvatarImage>
+        {
+            Sort = sort,
+            Skip = safePage * safePageSize,
+            Limit = fetchCount,
+            BatchSize = fetchCount,
+            Projection = projection,
+        };
 
         var querySw = System.Diagnostics.Stopwatch.StartNew();
-        var items = await _avatarImages
-            .Find(filter)
-            .Sort(sort)
-            .Skip(safePage * safePageSize)
-            .Limit(safePageSize)
-            .Project<AvatarImage>(projection)
-            .ToListAsync();
+        var items = await (await _avatarImages.FindAsync(filter, findOptions)).ToListAsync();
         querySw.Stop();
 
         sw.Stop();
         _logger.LogInformation(
-            "GetSelectableAvatars completed: Total={TotalMs}ms (Count={CountMs}ms, Query={QueryMs}ms), Results={Count}",
-            sw.ElapsedMilliseconds, countSw.ElapsedMilliseconds, querySw.ElapsedMilliseconds, items.Count);
+            "Originals p{Page} includeFull={IncludeFull} count={Count} queryMs={QueryMs}ms{CountNote}",
+            safePage, includeFull, items.Count, querySw.ElapsedMilliseconds,
+            includeCount ? $" countMs={countSw.ElapsedMilliseconds}ms total={totalCount}" : "");
 
         return (items, totalCount);
     }

@@ -19,7 +19,7 @@ public class AvatarImage
     public string? Emotion { get; set; } // null | "angry" | "smile" | "sad" | "happy" | "crying" | "thinking"
 
     [BsonElement("imageData")]
-    public byte[] ImageData { get; set; } = Array.Empty<byte>();
+    public byte[]? ImageData { get; set; }
 
     [BsonElement("thumbnailData")]
     public byte[]? ThumbnailData { get; set; }

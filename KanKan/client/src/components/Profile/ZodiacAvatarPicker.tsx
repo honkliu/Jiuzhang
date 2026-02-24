@@ -124,17 +124,6 @@ export const ZodiacAvatarPicker: React.FC<ZodiacAvatarPickerProps> = ({
         const response = await avatarService.getSelectableAvatars(page, pageSize);
         if (!active) return;
 
-        // Debug: Check if thumbnailDataUrl exists
-        console.log('Avatar response:', {
-          count: response.items.length,
-          hasThumbnails: response.items.filter(a => a.thumbnailDataUrl).length,
-          firstAvatar: response.items[0] ? {
-            fileName: response.items[0].fileName,
-            hasThumbnail: !!response.items[0].thumbnailDataUrl,
-            thumbnailLength: response.items[0].thumbnailDataUrl?.length
-          } : null
-        });
-
         setAvatars(response.items);
         setTotalCount(response.totalCount);
         setLoading(false);
@@ -196,7 +185,7 @@ export const ZodiacAvatarPicker: React.FC<ZodiacAvatarPickerProps> = ({
             disabled={disabled || page <= 0}
             onClick={() => setPage((current) => Math.max(0, current - 1))}
           >
-            Prev
+            {t('common.prev')}
           </Button>
           <Button
             size="small"
@@ -204,7 +193,7 @@ export const ZodiacAvatarPicker: React.FC<ZodiacAvatarPickerProps> = ({
             disabled={disabled || page >= totalPages - 1}
             onClick={() => setPage((current) => Math.min(totalPages - 1, current + 1))}
           >
-            Next
+            {t('common.next')}
           </Button>
         </BoxAny>
       ) : null}

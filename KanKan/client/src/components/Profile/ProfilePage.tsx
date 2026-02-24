@@ -141,14 +141,6 @@ export const ProfilePage: React.FC = () => {
             </BoxAny>
 
             <BoxAny sx={{ mt: 3, mb: 2 }}>
-              <Typography variant="subtitle1" fontWeight="bold" sx={{ mb: 1 }}>
-                AI Avatar Set
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                Generate the fixed 3x3 emotion set (angry, smile, sad, etc.) for the selected avatar.
-                Regenerating will replace the existing set.
-              </Typography>
-
               {user?.id && avatarImageId && (
                 <EmotionAvatarGallery userId={user.id} avatarId={avatarImageId} />
               )}

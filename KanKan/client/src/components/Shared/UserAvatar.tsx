@@ -7,6 +7,7 @@ export interface UserAvatarProps extends Omit<AvatarProps, 'children'> {
   gender?: string;
   fallbackText?: string;
   closePreviewOnClick?: boolean;
+  previewMode?: 'hover' | 'doubleClick';
 }
 
 const normalizeGender = (value?: string): 'male' | 'female' | 'unknown' => {
@@ -15,6 +16,8 @@ const normalizeGender = (value?: string): 'male' | 'female' | 'unknown' => {
   if (normalized === 'female') return 'female';
   return 'unknown';
 };
+
+const BoxAny = Box as any;
 
 const CartoonMaleIcon: React.FC = () => (
   <svg viewBox="0 0 64 64" width="22" height="22" aria-hidden focusable="false">
@@ -64,6 +67,7 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
   gender,
   fallbackText,
   closePreviewOnClick,
+  previewMode = 'hover',
   sx,
   ...props
 }) => {
@@ -102,9 +106,12 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
       src={effectiveSrc}
       alt={fallbackText || 'Avatar'}
       closeOnTriggerClickWhenOpen={Boolean(closePreviewOnClick)}
+      openOnHover={previewMode === 'hover'}
+      openOnLongPress={previewMode === 'hover'}
+      openOnDoubleClick={previewMode === 'doubleClick'}
     >
       {(previewProps) => (
-        <Box
+        <BoxAny
           {...previewProps}
           sx={{ display: 'inline-flex' }}
         >
@@ -122,7 +129,7 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
           >
             {child}
           </Avatar>
-        </Box>
+        </BoxAny>
       )}
     </ImageHoverPreview>
   );

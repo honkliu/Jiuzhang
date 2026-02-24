@@ -297,24 +297,15 @@ public class ImageGenerationService : IImageGenerationService
                 throw new Exception($"Avatar {request.AvatarId} not found");
             }
 
+            if (originalAvatar.ImageData == null || originalAvatar.ImageData.Length == 0)
+            {
+                throw new Exception($"Avatar {request.AvatarId} has no image data");
+            }
+
             var imageBase64 = Convert.ToBase64String(originalAvatar.ImageData);
 
             var shouldReplace = string.Equals(request.Mode, "replace", StringComparison.OrdinalIgnoreCase)
                 || (string.IsNullOrEmpty(request.Mode) && request.GenerationType == "emotions");
-            if (shouldReplace && !string.IsNullOrEmpty(request.AvatarId))
-            {
-                var filter = Builders<AvatarImage>.Filter.And(
-                    Builders<AvatarImage>.Filter.Eq(a => a.SourceAvatarId, request.AvatarId),
-                    Builders<AvatarImage>.Filter.Eq(a => a.ImageType, "emotion_generated"));
-
-                if (!string.IsNullOrWhiteSpace(request.Emotion))
-                {
-                    filter = Builders<AvatarImage>.Filter.And(filter,
-                        Builders<AvatarImage>.Filter.Eq(a => a.Emotion, request.Emotion));
-                }
-
-                await _avatarImages.DeleteManyAsync(filter);
-            }
 
             // Determine prompts based on generation type
             var prompts = GetPrompts(request.GenerationType, request.CustomPrompts, request.Emotion);
@@ -351,6 +342,10 @@ public class ImageGenerationService : IImageGenerationService
                             var generatedBase64 = await _comfyUIService.FetchResultAsync(promptId);
                             var avatarId = await StoreGeneratedAvatarAsync(request, originalAvatar, label, generatedBase64, fullPrompt);
                             generatedAvatarIds.Add(avatarId);
+                            if (EmotionTypes.Contains(label))
+                            {
+                                await ReplaceEmotionAvatarAsync(request.AvatarId, label, avatarId);
+                            }
                         }
                         catch (TimeoutException)
                         {
@@ -368,6 +363,10 @@ public class ImageGenerationService : IImageGenerationService
                         var generatedBase64 = await _comfyUIService.GenerateImageAsync(imageBase64, fullPrompt);
                         var avatarId = await StoreGeneratedAvatarAsync(request, originalAvatar, label, generatedBase64, fullPrompt);
                         generatedAvatarIds.Add(avatarId);
+                        if (EmotionTypes.Contains(label))
+                        {
+                            await ReplaceEmotionAvatarAsync(request.AvatarId, label, avatarId);
+                        }
                     }
 
                     var progress = (int)((i + 1) / (double)totalCount * 100);
@@ -443,6 +442,22 @@ public class ImageGenerationService : IImageGenerationService
         return generatedAvatar.Id;
     }
 
+    private async Task ReplaceEmotionAvatarAsync(string? sourceAvatarId, string emotion, string newAvatarId)
+    {
+        if (string.IsNullOrWhiteSpace(sourceAvatarId))
+        {
+            return;
+        }
+
+        var filter = Builders<AvatarImage>.Filter.And(
+            Builders<AvatarImage>.Filter.Eq(a => a.SourceAvatarId, sourceAvatarId),
+            Builders<AvatarImage>.Filter.Eq(a => a.ImageType, "emotion_generated"),
+            Builders<AvatarImage>.Filter.Eq(a => a.Emotion, emotion),
+            Builders<AvatarImage>.Filter.Ne(a => a.Id, newAvatarId));
+
+        await _avatarImages.DeleteManyAsync(filter);
+    }
+
     private async Task<ImageGenerationJob?> TryRecoverAvatarJobAsync(ImageGenerationJob job)
     {
         if (string.IsNullOrWhiteSpace(job.SourceRef.AvatarId) || string.IsNullOrWhiteSpace(job.Emotion))
@@ -468,6 +483,11 @@ public class ImageGenerationService : IImageGenerationService
             AvatarId = job.SourceRef.AvatarId,
             Emotion = job.Emotion
         }, originalAvatar, job.Emotion, generatedBase64, job.Prompt);
+
+        if (EmotionTypes.Contains(job.Emotion))
+        {
+            await ReplaceEmotionAvatarAsync(job.SourceRef.AvatarId, job.Emotion, avatarId);
+        }
 
         var updateComplete = Builders<ImageGenerationJob>.Update
             .Set(j => j.Status, "completed")

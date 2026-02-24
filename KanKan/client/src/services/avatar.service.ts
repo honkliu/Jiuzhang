@@ -25,6 +25,7 @@ export interface SelectableAvatar {
   avatarImageId: string;
   imageUrl: string;
   thumbnailDataUrl?: string;  // Base64 data URL for instant display
+  fullImageDataUrl?: string | null;  // Base64 data URL for full image (only when includeFull=true)
   fullImageUrl: string;
   fileName: string;
   fileSize: number;
@@ -44,6 +45,13 @@ export interface EmotionThumbnailResult {
   emotion: string;
   imageUrl: string;
   thumbnailDataUrl?: string | null;
+}
+
+export interface EmotionFullResult {
+  avatarImageId: string;
+  emotion: string;
+  imageUrl: string;
+  fullImageDataUrl?: string | null;
 }
 
 class AvatarService {
@@ -86,6 +94,13 @@ class AvatarService {
     return response.data;
   }
 
+  async getSelectableAvatarsFull(page: number, pageSize: number): Promise<SelectableAvatarResponse> {
+    const response = await apiClient.get<SelectableAvatarResponse>('/avatar/originals', {
+      params: { page, pageSize, includeFull: true },
+    });
+    return response.data;
+  }
+
   async getUserEmotionAvatars(userId: string): Promise<AvatarImage[]> {
     const response = await apiClient.get<AvatarImage[]>(`/avatar/${userId}/emotions`);
     return response.data;
@@ -94,6 +109,14 @@ class AvatarService {
   async getEmotionThumbnails(sourceAvatarId: string): Promise<EmotionThumbnailResult[]> {
     const response = await apiClient.get<{ results: EmotionThumbnailResult[] }>(
       `/avatar/emotion-thumbnails/${sourceAvatarId}`
+    );
+    return response.data.results || [];
+  }
+
+  async getEmotionThumbnailsFull(sourceAvatarId: string): Promise<EmotionFullResult[]> {
+    const response = await apiClient.get<{ results: EmotionFullResult[] }>(
+      `/avatar/emotion-thumbnails/${sourceAvatarId}`,
+      { params: { includeFull: true } }
     );
     return response.data.results || [];
   }

@@ -1,6 +1,9 @@
+using System.Collections.Concurrent;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using MongoDB.Bson;
 using MongoDB.Driver;
+using MongoDB.Driver.Core.Events;
 using Microsoft.IdentityModel.Tokens;
 using KanKan.API.Domain;
 using KanKan.API.Hubs;
@@ -37,6 +40,7 @@ builder.Services.AddSwaggerGen();
 // Supported values: "InMemory", "MongoDB"
 var storageMode = builder.Configuration["StorageMode"]?.ToLower() ?? "inmemory";
 var useInMemory = storageMode == "inmemory";
+var mongoCommandCollections = new ConcurrentDictionary<long, string>();
 
 if (useInMemory)
 {
@@ -50,8 +54,67 @@ else if (storageMode == "mongodb")
     builder.Services.AddSingleton<IMongoClient>(sp =>
     {
         var configuration = sp.GetRequiredService<IConfiguration>();
-        var connectionString = configuration["MongoDB:ConnectionString"] ?? throw new InvalidOperationException("MongoDB ConnectionString not configured");
-        return new MongoClient(connectionString);
+        var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
+        var logger = loggerFactory.CreateLogger("MongoDB.Driver");
+        var connectionString = configuration["MongoDB:ConnectionString"]
+            ?? throw new InvalidOperationException("MongoDB ConnectionString not configured");
+
+        var mongoUrl = new MongoUrl(connectionString);
+        var settings = MongoClientSettings.FromUrl(mongoUrl);
+        // The C# driver defaults to a 64KB socket receive buffer. For queries that return
+        // large binary documents (e.g. full-size avatar images, ~1MB each), this causes
+        // hundreds of small socket reads over WAN, each requiring a round-trip ACK.
+        // 4MB matches OS-level defaults used by pymongo and reduces 14MB fetch from ~31s to ~2s.
+        settings.ClusterConfigurator = cb =>
+        {
+            cb.ConfigureTcp(tcp => tcp.With(receiveBufferSize: 4 * 1024 * 1024, sendBufferSize: 4 * 1024 * 1024));
+            cb.Subscribe<CommandStartedEvent>(e =>
+            {
+                // Track in-flight opIds so we can correlate success/failure logs
+                var collection = TryGetCollectionName(e.CommandName, e.Command);
+                if (collection != null && collection.Equals("avatarImages", StringComparison.OrdinalIgnoreCase))
+                {
+                    var opId = e.OperationId ?? -1;
+                    if (opId >= 0) mongoCommandCollections[opId] = collection;
+                }
+            });
+
+            cb.Subscribe<CommandSucceededEvent>(e =>
+            {
+                var opId = e.OperationId ?? -1;
+                if (opId >= 0 && mongoCommandCollections.TryRemove(opId, out var collection))
+                {
+                    // getMore means BatchSize hint was ignored — the result set didn't fit in one
+                    // response packet. This is worth surfacing because it adds a WAN round-trip.
+                    if (e.CommandName.Equals("getMore", StringComparison.OrdinalIgnoreCase))
+                    {
+                        logger.LogWarning(
+                            "Mongo getMore (BatchSize miss) opId={OperationId} durationMs={DurationMs} collection={Collection}",
+                            e.OperationId, e.Duration.TotalMilliseconds, collection);
+                    }
+                    else
+                    {
+                        logger.LogDebug(
+                            "Mongo {Command} opId={OperationId} durationMs={DurationMs} collection={Collection}",
+                            e.CommandName, e.OperationId, e.Duration.TotalMilliseconds, collection);
+                    }
+                }
+            });
+
+            cb.Subscribe<CommandFailedEvent>(e =>
+            {
+                var opId = e.OperationId ?? -1;
+                if (opId >= 0 && mongoCommandCollections.TryRemove(opId, out var collection))
+                {
+                    logger.LogWarning(
+                        e.Failure,
+                        "Mongo {Command} FAILED opId={OperationId} durationMs={DurationMs} collection={Collection}",
+                        e.CommandName, e.OperationId, e.Duration.TotalMilliseconds, collection);
+                }
+            });
+        };
+
+        return new MongoClient(settings);
     });
 
     builder.Services.AddHostedService<KanKan.API.Storage.MongoDbInitializer>();
@@ -59,6 +122,31 @@ else if (storageMode == "mongodb")
 else
 {
     throw new InvalidOperationException($"Unsupported StorageMode: {storageMode}. Valid options are: InMemory, MongoDB");
+}
+
+static string? TryGetCollectionName(string commandName, BsonDocument command)
+{
+    if (commandName.Equals("find", StringComparison.OrdinalIgnoreCase) && command.TryGetValue("find", out var findValue))
+    {
+        return findValue.AsString;
+    }
+
+    if (commandName.Equals("aggregate", StringComparison.OrdinalIgnoreCase) && command.TryGetValue("aggregate", out var aggregateValue))
+    {
+        return aggregateValue.AsString;
+    }
+
+    if (commandName.Equals("getMore", StringComparison.OrdinalIgnoreCase) && command.TryGetValue("collection", out var collectionValue))
+    {
+        return collectionValue.AsString;
+    }
+
+    if (command.TryGetValue("collection", out var fallbackCollection))
+    {
+        return fallbackCollection.AsString;
+    }
+
+    return null;
 }
 
 // Configure JWT Authentication
