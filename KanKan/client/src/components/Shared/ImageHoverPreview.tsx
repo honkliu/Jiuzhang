@@ -130,6 +130,9 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
       window.clearTimeout(openTimerRef.current);
       openTimerRef.current = null;
     }
+    if (!anchorEl && activePreviewOwnerId === popoverId) {
+      activePreviewOwnerId = null;
+    }
   };
 
   const handleDoubleClick = (event: React.MouseEvent<HTMLElement>) => {
