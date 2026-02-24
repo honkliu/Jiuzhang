@@ -33,15 +33,6 @@ const CartoonMaleIcon: React.FC = () => (
     <path d="M18 54c3-10 10-14 14-14s11 4 14 14" fill="#42A5F5" opacity="0.95" />
     <path d="M29 40l3 4 3-4" fill="#1976D2" />
   </svg>
-                draggable: false,
-                onDragStart: (event) => event.preventDefault(),
-                onContextMenu: (event) => event.preventDefault(),
-                style: {
-                  WebkitTouchCallout: 'none',
-                  WebkitUserSelect: 'none',
-                  userSelect: 'none',
-                  WebkitUserDrag: 'none',
-                },
 );
 
 const CartoonFemaleIcon: React.FC = () => (
@@ -133,6 +124,15 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
                 if (candidateIndex < candidates.length - 1) {
                   setCandidateIndex((i) => Math.min(i + 1, candidates.length - 1));
                 }
+              },
+              draggable: false,
+              onDragStart: (event) => event.preventDefault(),
+              onContextMenu: (event) => event.preventDefault(),
+              style: {
+                WebkitTouchCallout: 'none',
+                WebkitUserSelect: 'none',
+                userSelect: 'none',
+                WebkitUserDrag: 'none',
               },
             }}
             {...props}
