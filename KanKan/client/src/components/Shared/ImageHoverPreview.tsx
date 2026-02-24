@@ -330,6 +330,9 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
           component="img"
           src={src || undefined}
           alt={alt || 'Image preview'}
+          onContextMenu={(event: React.MouseEvent<HTMLImageElement>) => {
+            event.preventDefault();
+          }}
           sx={{
             display: 'block',
             maxWidth: effectiveMaxSize,
@@ -337,6 +340,10 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
             width: 'auto',
             height: 'auto',
             objectFit: 'contain',
+            WebkitTouchCallout: 'none',
+            WebkitUserSelect: 'none',
+            userSelect: 'none',
+            WebkitUserDrag: 'none',
           }}
         />
       </Popover>

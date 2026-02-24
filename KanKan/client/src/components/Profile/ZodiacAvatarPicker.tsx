@@ -86,6 +86,10 @@ const AvatarOptionTile: React.FC<AvatarOptionTileProps> = ({
               // Crops if the source image isn't square.
               objectFit: 'cover',
               borderRadius: 'inherit',
+              WebkitTouchCallout: 'none',
+              WebkitUserSelect: 'none',
+              userSelect: 'none',
+              WebkitUserDrag: 'none',
             }}
           />
         </BoxAny>

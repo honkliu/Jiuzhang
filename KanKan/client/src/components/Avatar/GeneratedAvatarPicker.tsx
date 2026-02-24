@@ -335,6 +335,10 @@ export const GeneratedAvatarPicker: React.FC<GeneratedAvatarPickerProps> = ({
                         height: '100%',
                         display: 'block',
                         objectFit: 'cover',
+                        WebkitTouchCallout: 'none',
+                        WebkitUserSelect: 'none',
+                        userSelect: 'none',
+                        WebkitUserDrag: 'none',
                       }}
                     />
                   </ButtonBase>

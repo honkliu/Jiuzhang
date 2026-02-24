@@ -320,6 +320,10 @@ export const EmotionAvatarGallery: React.FC<EmotionAvatarGalleryProps> = ({ user
                               objectFit: 'cover',
                               borderRadius: 1.5,
                               display: 'block',
+                              WebkitTouchCallout: 'none',
+                              WebkitUserSelect: 'none',
+                              userSelect: 'none',
+                              WebkitUserDrag: 'none',
                             }}
                           />
                         </BoxAny>
