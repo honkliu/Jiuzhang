@@ -20,6 +20,7 @@ import {
   Menu as MenuIcon,
   Close as CloseIcon,
   MoreVert as MoreVertIcon,
+  ExpandMore as ExpandMoreIcon,
 } from '@mui/icons-material';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
@@ -195,10 +196,15 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleSidebar, sidebarOp
           <Typography
             variant="subtitle1"
             fontWeight="bold"
-            sx={{ mr: 1, whiteSpace: 'nowrap', fontSize: { xs: '0.95rem', sm: '1rem' } }}
+            sx={{ mr: 0.5, whiteSpace: 'nowrap', fontSize: { xs: '0.95rem', sm: '1rem' } }}
           >
             {t('appName')}
           </Typography>
+          {isMobile && (
+            <IconButton onClick={handleOpenNav} title={t('nav.menu')} sx={{ p: 0.25 }}>
+              <ExpandMoreIcon sx={{ fontSize: '1.1rem' }} />
+            </IconButton>
+          )}
           <BoxAny sx={{ display: { xs: 'none', md: 'flex' }, gap: 1, overflow: 'hidden' }}>
             {navItems.map((item) => (
               <Button
@@ -271,21 +277,11 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleSidebar, sidebarOp
                 size="small"
                 sx={{ p: 0.5, minWidth: 0, ml: 0.25, bgcolor: 'rgba(7, 193, 96, 0.12)' }}
               >
-                <Typography
-                  component="span"
-                  sx={{ fontSize: '0.95rem', fontWeight: 800, lineHeight: 1, color: 'primary.main' }}
-                >
-                  ...
-                </Typography>
+                <ExpandMoreIcon sx={{ fontSize: '1.05rem', color: 'primary.main' }} />
               </IconButton>
             </BoxAny>
           </BoxAny>
 
-          {isMobile && (
-            <IconButton onClick={handleOpenNav} title={t('nav.menu')}>
-              <MoreVertIcon />
-            </IconButton>
-          )}
           <Button onClick={toggleLanguage} variant="outlined" size="small" sx={{ minWidth: 36, px: 0.75 }}>
             {language === 'en' ? '中文' : 'EN'}
           </Button>
