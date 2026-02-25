@@ -259,6 +259,19 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
 
   return (
     <>
+      {open && isTouchDevice && (
+        <Box
+          onClick={() => closePreview(true)}
+          onTouchStart={stopTouchPropagation}
+          sx={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: theme.zIndex.modal,
+            bgcolor: 'transparent',
+            touchAction: 'none',
+          }}
+        />
+      )}
       {children({
         onMouseEnter: !isTouchDevice && openOnHover ? handleOpen : noopMouse,
         onMouseLeave: !isTouchDevice && openOnHover
@@ -283,7 +296,7 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
         disableEnforceFocus
         disableRestoreFocus
         keepMounted
-        sx={{ pointerEvents: 'none' }}
+        sx={{ pointerEvents: isTouchDevice ? 'auto' : 'none', zIndex: theme.zIndex.modal + 1 }}
         anchorOrigin={isTouchDevice
           ? { vertical: 'top', horizontal: 'center' }
           : { vertical: 'center', horizontal: 'right' }
