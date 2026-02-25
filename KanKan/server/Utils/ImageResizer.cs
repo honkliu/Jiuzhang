@@ -62,25 +62,6 @@ public static class ImageResizer
     }
 
     /// <summary>
-    /// Resize so the longer side equals maxDimension while keeping aspect ratio.
-    /// </summary>
-    public static byte[] ResizeToMaxDimensionPng(byte[] imageData, int maxDimension)
-    {
-        using var image = Image.Load(imageData);
-
-        var maxSide = Math.Max(image.Width, image.Height);
-        var scale = maxSide == 0 ? 1.0 : (double)maxDimension / maxSide;
-        var newWidth = Math.Max(1, (int)Math.Round(image.Width * scale));
-        var newHeight = Math.Max(1, (int)Math.Round(image.Height * scale));
-
-        image.Mutate(x => x.Resize(newWidth, newHeight));
-
-        using var ms = new MemoryStream();
-        image.Save(ms, new PngEncoder());
-        return ms.ToArray();
-    }
-
-    /// <summary>
     /// Resize image to max width/height while keeping aspect ratio
     /// </summary>
     public static byte[] ResizeImage(byte[] imageData, int maxWidth, int maxHeight, int quality = 85)

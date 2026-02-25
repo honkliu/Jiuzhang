@@ -3,6 +3,8 @@ import { Box, Button, CircularProgress, IconButton, Modal, TextField, Typography
 import CloseIcon from '@mui/icons-material/Close';
 import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
+import FullscreenIcon from '@mui/icons-material/Fullscreen';
+import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
 import { imageGenerationService } from '@/services/imageGeneration.service';
 import { useLanguage } from '@/i18n/LanguageContext';
 
@@ -38,6 +40,8 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
   const [prompt, setPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedByGroup, setGeneratedByGroup] = useState<Record<string, string[]>>({});
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const thumbnailRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   const hasGroups = Boolean(groups && groups.length > 0);
@@ -127,6 +131,14 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
     return () => window.removeEventListener('keydown', onKey);
   }, [open, prev, next, onClose]);
 
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(Boolean(document.fullscreenElement));
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
   if (!activeImages.length) return null;
 
   const displayedImage = hasGroups ? (selectedImageUrl || activeImages[currentIndex]) : activeImages[currentIndex];
@@ -142,6 +154,22 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
   const handleSelectGenerated = (url: string, index: number) => {
     setSelectedImageUrl(url);
     setCurrentIndex(index);
+  };
+
+  const handleToggleFullscreen = async () => {
+    if (!containerRef.current) return;
+    if (!document.fullscreenElement) {
+      await containerRef.current.requestFullscreen();
+    } else {
+      await document.exitFullscreen();
+    }
+  };
+
+  const handleClose = () => {
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => undefined);
+    }
+    onClose();
   };
 
   const handlePicEdit = async () => {
@@ -176,10 +204,11 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
   return (
     <Modal
       open={open}
-      onClose={onClose}
+      onClose={handleClose}
       sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}
     >
       <BoxAny
+        ref={containerRef}
         sx={{
           display: 'flex',
           flexDirection: 'column',
@@ -205,12 +234,14 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
             flexShrink: 0,
           }}
         >
-          <BoxAny sx={{ width: 40 }} />
+          <IconButton onClick={handleToggleFullscreen} sx={{ color: 'rgba(255,255,255,0.8)' }}>
+            {isFullscreen ? <FullscreenExitIcon /> : <FullscreenIcon />}
+          </IconButton>
           <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem' }}>
             {currentIndex + 1} / {activeImages.length}
             {hasGroups ? `  -  ${activeGroupIndex + 1} / ${groups!.length}` : ''}
           </Typography>
-          <IconButton onClick={onClose} sx={{ color: 'rgba(255,255,255,0.8)' }}>
+          <IconButton onClick={handleClose} sx={{ color: 'rgba(255,255,255,0.8)' }}>
             <CloseIcon />
           </IconButton>
         </BoxAny>
