@@ -64,8 +64,6 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleSidebar, sidebarOp
   const [notificationsAnchorEl, setNotificationsAnchorEl] = React.useState<null | HTMLElement>(null);
   const [navAnchorEl, setNavAnchorEl] = React.useState<null | HTMLElement>(null);
   const [avatarAnchorEl, setAvatarAnchorEl] = React.useState<null | HTMLElement>(null);
-  const avatarLongPressTimerRef = React.useRef<number | null>(null);
-  const avatarLongPressTriggeredRef = React.useRef(false);
 
   const notificationsOpen = Boolean(notificationsAnchorEl);
   const navOpen = Boolean(navAnchorEl);
@@ -91,28 +89,6 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleSidebar, sidebarOp
 
   const handleOpenAvatarPicker = (e: React.MouseEvent<HTMLElement>) => {
     setAvatarAnchorEl(e.currentTarget);
-  };
-
-  const handleAvatarTouchStart = (event: React.TouchEvent<HTMLElement>) => {
-    if (!isMobile) return;
-    avatarLongPressTriggeredRef.current = false;
-    const currentTarget = event.currentTarget as HTMLElement;
-    avatarLongPressTimerRef.current = window.setTimeout(() => {
-      avatarLongPressTriggeredRef.current = true;
-      setAvatarAnchorEl(currentTarget);
-      avatarLongPressTimerRef.current = null;
-    }, 450);
-  };
-
-  const handleAvatarTouchEnd = (event: React.TouchEvent<HTMLElement>) => {
-    if (avatarLongPressTimerRef.current) {
-      window.clearTimeout(avatarLongPressTimerRef.current);
-      avatarLongPressTimerRef.current = null;
-    }
-    if (avatarLongPressTriggeredRef.current) {
-      event.preventDefault();
-      event.stopPropagation();
-    }
   };
 
   const handleCloseAvatarPicker = () => {
@@ -208,15 +184,14 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleSidebar, sidebarOp
           <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 0.5 }}>
             {isMobile ? (
               <BoxAny
-                onTouchStart={handleAvatarTouchStart}
-                onTouchEnd={handleAvatarTouchEnd}
+                onClick={handleOpenAvatarPicker}
                 sx={{ display: 'inline-flex' }}
               >
                 <UserAvatar
                   src={user?.avatarUrl}
                   gender={user?.gender}
                   variant="rounded"
-                  previewMode="tap"
+                  previewMode="hover"
                   closePreviewOnClick
                   sx={{ width: 32, height: 32 }}
                 />
