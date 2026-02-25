@@ -180,7 +180,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleSidebar, sidebarOp
 
   return (
     <AppBar position="fixed" color="default" elevation={0} sx={{ pt: 'env(safe-area-inset-top)' }}>
-      <Toolbar sx={{ gap: 1.5, minHeight: { xs: 56, sm: 64 } }}>
+      <Toolbar sx={{ gap: 1.25, minHeight: { xs: 53, sm: 61 }, py: 0.25 }}>
         <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1, flexGrow: 1, minWidth: 0 }}>
           {showChatToggle && isMobile && (
             <IconButton
@@ -212,8 +212,8 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleSidebar, sidebarOp
           </BoxAny>
         </BoxAny>
 
-        <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 0.5 }}>
+        <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mr: 0.25 }}>
             {isMobile ? (
               <BoxAny sx={{ display: 'inline-flex' }}>
                 <UserAvatar
@@ -222,7 +222,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleSidebar, sidebarOp
                   variant="rounded"
                   previewMode="tap"
                   closePreviewOnClick
-                  sx={{ width: 32, height: 32 }}
+                  sx={{ width: 48, height: 48 }}
                 />
               </BoxAny>
             ) : (
@@ -232,7 +232,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleSidebar, sidebarOp
                 variant="rounded"
                 previewMode="doubleClick"
                 closePreviewOnClick
-                sx={{ width: 32, height: 32 }}
+                sx={{ width: 48, height: 48 }}
               />
             )}
             <BoxAny
@@ -286,20 +286,24 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleSidebar, sidebarOp
               <MoreVertIcon />
             </IconButton>
           )}
-          <Button onClick={toggleLanguage} variant="outlined" size="small">
+          <Button onClick={toggleLanguage} variant="outlined" size="small" sx={{ minWidth: 36, px: 0.75 }}>
             {language === 'en' ? '中文' : 'EN'}
           </Button>
-          <IconButton title={t('nav.notifications')} onClick={handleOpenNotifications}>
+          <IconButton
+            title={t('nav.notifications')}
+            onClick={handleOpenNotifications}
+            sx={{ p: 0.6 }}
+          >
             <Badge
               color="error"
               badgeContent={unreadNotifications > 99 ? '99+' : unreadNotifications}
               invisible={unreadNotifications <= 0}
             >
-              <NotificationsIcon />
+              <NotificationsIcon sx={{ fontSize: '1.1rem' }} />
             </Badge>
           </IconButton>
-          <IconButton onClick={handleLogout} title={t('nav.logout')}>
-            <LogoutIcon />
+          <IconButton onClick={handleLogout} title={t('nav.logout')} sx={{ p: 0.6 }}>
+            <LogoutIcon sx={{ fontSize: '1.1rem' }} />
           </IconButton>
         </BoxAny>
 
