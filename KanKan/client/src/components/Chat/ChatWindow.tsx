@@ -13,11 +13,13 @@ import {
   SxProps,
   Theme,
   CircularProgress,
+  ThemeProvider,
   Tooltip,
   useMediaQuery,
   useTheme,
 } from '@mui/material';
 import { Virtuoso } from 'react-virtuoso';
+import { createRoot, type Root } from 'react-dom/client';
 import {
   ArrowBack as ArrowBackIcon,
   Send as SendIcon,
@@ -80,6 +82,8 @@ interface LightboxGroup {
   messageId: string;
   canEdit: boolean;
 }
+
+type ChatCommandId = '/w' | '/wa' | '/h' | '/b' | '/i' | '/r';
 
 interface ChatMessagesProps {
   activeChat: Chat | null;
@@ -211,6 +215,232 @@ const ChatMessages: React.FC<ChatMessagesProps> = React.memo(({
   );
 });
 
+interface ChatInputPanelProps {
+  activeChatId: string | null;
+  sending: boolean;
+  uploading: boolean;
+  chatCommands: Array<{ id: ChatCommandId; description: string; example: string }>;
+  onSendMessage: (raw: string) => Promise<boolean>;
+  onFileSelected: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onMoodTextChange: (text: string) => void;
+  t: (key: string) => string;
+}
+
+const ChatInputPanel: React.FC<ChatInputPanelProps> = React.memo(({
+  activeChatId,
+  sending,
+  uploading,
+  chatCommands,
+  onSendMessage,
+  onFileSelected,
+  onMoodTextChange,
+  t,
+}) => {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const draftDebounceRef = useRef<number | null>(null);
+  const lastDraftRef = useRef<string>('');
+  const lastDraftSentAtRef = useRef<number>(0);
+  const [messageText, setMessageText] = useState('');
+  const [commandSelectedIndex, setCommandSelectedIndex] = useState(0);
+
+  const isCommandMode = messageText.startsWith('/');
+  const commandToken = (() => {
+    if (!isCommandMode) return null;
+    const firstSpace = messageText.indexOf(' ');
+    return (firstSpace === -1 ? messageText : messageText.slice(0, firstSpace)).trim();
+  })();
+
+  const commandSuggestions = (() => {
+    if (!isCommandMode) return [];
+    const prefix = commandToken ?? '/';
+    return chatCommands.filter((c) => c.id.startsWith(prefix as string));
+  })();
+
+  useEffect(() => {
+    setCommandSelectedIndex(0);
+  }, [commandToken]);
+
+  useEffect(() => {
+    setMessageText('');
+  }, [activeChatId]);
+
+  useEffect(() => {
+    return () => {
+      if (draftDebounceRef.current) {
+        window.clearTimeout(draftDebounceRef.current);
+        draftDebounceRef.current = null;
+      }
+    };
+  }, []);
+
+  const scheduleDraftSend = useCallback((text: string) => {
+    if (!activeChatId) return;
+    const minIntervalMs = 150;
+    const sendDraft = () => {
+      if (lastDraftRef.current === text) return;
+      lastDraftRef.current = text;
+      lastDraftSentAtRef.current = Date.now();
+      signalRService.sendDraftChanged(activeChatId, text);
+    };
+
+    const now = Date.now();
+    const elapsed = now - lastDraftSentAtRef.current;
+
+    if (elapsed >= minIntervalMs) {
+      if (draftDebounceRef.current) {
+        window.clearTimeout(draftDebounceRef.current);
+        draftDebounceRef.current = null;
+      }
+      sendDraft();
+      return;
+    }
+
+    if (draftDebounceRef.current) {
+      window.clearTimeout(draftDebounceRef.current);
+    }
+
+    draftDebounceRef.current = window.setTimeout(() => {
+      sendDraft();
+    }, minIntervalMs - elapsed);
+  }, [activeChatId]);
+
+  const handlePickFile = useCallback(() => {
+    if (uploading || sending) return;
+    fileInputRef.current?.click();
+  }, [uploading, sending]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const nextValue = e.target.value;
+    setMessageText(nextValue);
+    onMoodTextChange(nextValue);
+    if (activeChatId) {
+      scheduleDraftSend(nextValue);
+    }
+  };
+
+  const handleKeyPress = async (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      const raw = messageText;
+      if (!raw.trim()) return;
+      setMessageText('');
+      const ok = await onSendMessage(raw);
+      if (!ok) setMessageText(raw);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!isCommandMode || commandSuggestions.length === 0) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setCommandSelectedIndex((i) => Math.min(i + 1, commandSuggestions.length - 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setCommandSelectedIndex((i) => Math.max(i - 1, 0));
+    } else if (e.key === 'Tab') {
+      e.preventDefault();
+      const next = commandSuggestions[commandSelectedIndex] ?? commandSuggestions[0];
+      setMessageText(`${next.id} `);
+    }
+  };
+
+  return (
+    <>
+      <BoxAny
+        component="input"
+        ref={fileInputRef}
+        type="file"
+        title={t('chat.attach')}
+        aria-label={t('chat.attach')}
+        sx={{ display: 'none' }}
+        onChange={(event) => {
+          onFileSelected(event);
+          if (fileInputRef.current) fileInputRef.current.value = '';
+        }}
+      />
+      <BoxAny sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
+        <IconButton size="small" disabled>
+          <EmojiIcon />
+        </IconButton>
+        <IconButton
+          size="small"
+          onClick={handlePickFile}
+          disabled={uploading || sending}
+          title={t('chat.attach')}
+          aria-label={t('chat.attach')}
+        >
+          {uploading ? <CircularProgress size={18} /> : <AttachFileIcon />}
+        </IconButton>
+        <TextField
+          inputRef={inputRef}
+          fullWidth
+          multiline
+          maxRows={4}
+          placeholder={t('chat.typeMessage')}
+          value={messageText}
+          onChange={handleChange}
+          onKeyPress={handleKeyPress}
+          onKeyDown={handleKeyDown}
+          size="small"
+          sx={{
+            '& .MuiOutlinedInput-root': {
+              borderRadius: 3,
+              bgcolor: 'grey.100',
+            },
+          }}
+        />
+        <Popper
+          open={isCommandMode && commandSuggestions.length > 0}
+          anchorEl={inputRef.current}
+          placement="top-start"
+          sx={{ zIndex: 1300 }}
+        >
+          <Paper
+            elevation={6}
+            sx={{
+              width: 'fit-content',
+              maxWidth: 'calc(100vw - 32px)',
+              mb: 1,
+              px: 1,
+              py: 0.75,
+            }}
+          >
+            <Stack direction="row" spacing={0.75} useFlexGap flexWrap="wrap">
+              {commandSuggestions.map((c, idx) => (
+                <Chip
+                  key={c.id}
+                  size="small"
+                  label={c.id}
+                  color={idx === commandSelectedIndex ? 'primary' : 'default'}
+                  variant={idx === commandSelectedIndex ? 'filled' : 'outlined'}
+                  onMouseEnter={() => setCommandSelectedIndex(idx)}
+                  onClick={() => setMessageText(`${c.id} `)}
+                  sx={{ fontFamily: 'monospace' }}
+                />
+              ))}
+            </Stack>
+          </Paper>
+        </Popper>
+        <IconButton
+          color="primary"
+          onClick={async () => {
+            const raw = messageText;
+            if (!raw.trim()) return;
+            setMessageText('');
+            const ok = await onSendMessage(raw);
+            if (!ok) setMessageText(raw);
+          }}
+          disabled={!messageText.trim() || sending || uploading}
+        >
+          <SendIcon />
+        </IconButton>
+      </BoxAny>
+    </>
+  );
+});
+
 export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar, sx }) => {
   const dispatch = useDispatch<AppDispatch>();
   const { activeChat, messages, typingUsers, loading, drafts } = useSelector(
@@ -220,18 +450,25 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
   const { t } = useLanguage();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const [messageText, setMessageText] = useState('');
   const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [isRoom3D, setIsRoom3D] = useState(false);
   const [isRoom2D, setIsRoom2D] = useState(false);
-  const [commandSelectedIndex, setCommandSelectedIndex] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const draftDebounceRef = useRef<number | null>(null);
-  const lastDraftRef = useRef<string>('');
-  const lastDraftSentAtRef = useRef<number>(0);
+  const inputRootHostRef = useRef<HTMLDivElement | null>(null);
+  const inputRootRef = useRef<Root | null>(null);
+
+  const setInputHost = useCallback((node: HTMLDivElement | null) => {
+    if (node === inputRootHostRef.current) return;
+    if (inputRootRef.current) {
+      inputRootRef.current.unmount();
+      inputRootRef.current = null;
+    }
+    inputRootHostRef.current = node;
+    if (node) {
+      inputRootRef.current = createRoot(node);
+    }
+  }, []);
 
   const chatMessages = activeChat ? messages[activeChat.id] || [] : [];
   const chatTypingUsers = activeChat ? typingUsers[activeChat.id] || [] : [];
@@ -346,42 +583,18 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
     }
   };
 
-  type ChatCommandId = '/w' | '/wa' | '/h' | '/b' | '/i' | '/r';
-  const exampleText = t('chat.command.exampleText');
-  const CHAT_COMMANDS: Array<{ id: ChatCommandId; description: string; example: string }> = [
-    { id: '/w', description: t('chat.command.desc.w'), example: '/w' },
-    { id: '/wa', description: t('chat.command.desc.wa'), example: '/wa' },
-    { id: '/h', description: t('chat.command.desc.h'), example: '/h' },
-    { id: '/b', description: t('chat.command.desc.b'), example: `/b ${exampleText}` },
-    { id: '/i', description: t('chat.command.desc.i'), example: `/i ${exampleText}` },
-    { id: '/r', description: t('chat.command.desc.r'), example: `/r ${exampleText}` },
-  ];
+  const chatCommands = useMemo(() => {
+    const exampleText = t('chat.command.exampleText');
+    return [
+      { id: '/w' as const, description: t('chat.command.desc.w'), example: '/w' },
+      { id: '/wa' as const, description: t('chat.command.desc.wa'), example: '/wa' },
+      { id: '/h' as const, description: t('chat.command.desc.h'), example: '/h' },
+      { id: '/b' as const, description: t('chat.command.desc.b'), example: `/b ${exampleText}` },
+      { id: '/i' as const, description: t('chat.command.desc.i'), example: `/i ${exampleText}` },
+      { id: '/r' as const, description: t('chat.command.desc.r'), example: `/r ${exampleText}` },
+    ];
+  }, [t]);
 
-  const isCommandMode = messageText.startsWith('/');
-  const commandToken = (() => {
-    if (!isCommandMode) return null;
-    const firstSpace = messageText.indexOf(' ');
-    return (firstSpace === -1 ? messageText : messageText.slice(0, firstSpace)).trim();
-  })();
-
-  const commandSuggestions = (() => {
-    if (!isCommandMode) return [];
-    const prefix = commandToken ?? '/';
-    return CHAT_COMMANDS.filter((c) => c.id.startsWith(prefix as string));
-  })();
-
-  useEffect(() => {
-    setCommandSelectedIndex(0);
-  }, [commandToken]);
-
-  useEffect(() => {
-    return () => {
-      if (draftDebounceRef.current) {
-        window.clearTimeout(draftDebounceRef.current);
-        draftDebounceRef.current = null;
-      }
-    };
-  }, []);
 
   const addLocalInfoMessage = (text: string) => {
     if (!activeChat) return;
@@ -411,12 +624,12 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
     const cmd = (firstSpace === -1 ? rawInput : rawInput.slice(0, firstSpace)).trim() as string;
     const rest = (firstSpace === -1 ? '' : rawInput.slice(firstSpace + 1)).trim();
 
-    const known = CHAT_COMMANDS.some((c) => c.id === cmd);
+    const known = chatCommands.some((c) => c.id === cmd);
     if (!known || cmd === '/' || cmd.length === 0) {
       addLocalInfoMessage(
         [
           t('chat.command.available'),
-          ...CHAT_COMMANDS.map((c) => `  ${c.example}  — ${c.description}`),
+          ...chatCommands.map((c) => `  ${c.example}  — ${c.description}`),
           '',
           t('chat.command.tip'),
         ].join('\n')
@@ -427,7 +640,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
     switch (cmd as ChatCommandId) {
       case '/h':
         addLocalInfoMessage(
-          [t('chat.command.available'), ...CHAT_COMMANDS.map((c) => `  ${c.example}  — ${c.description}`)].join('\n')
+          [t('chat.command.available'), ...chatCommands.map((c) => `  ${c.example}  — ${c.description}`)].join('\n')
         );
         return;
 
@@ -534,35 +747,31 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
     });
   }, [activeChat?.id, chatMessages, user?.id]);
 
-  const handleSendMessage = async () => {
-    if (!activeChat || sending) return;
+  const sendMessage = async (raw: string): Promise<boolean> => {
+    if (!activeChat || sending) return false;
 
     // Commands only trigger when '/' is the first character.
     // Leading whitespace like "  /w" is NOT a command.
-    const raw = messageText;
     if (raw.startsWith('/')) {
-      setMessageText('');
       setSending(true);
 
       try {
         await runChatCommand(raw);
+        return true;
       } catch (error) {
         console.error('Failed to run command:', error);
-        setMessageText(raw);
         signalRService.sendDraftChanged(activeChat.id, raw);
+        return false;
       } finally {
         setSending(false);
-        inputRef.current?.focus();
       }
-
-      return;
     }
 
-    if (!raw.trim()) return;
+    if (!raw.trim()) return false;
 
     const text = raw.trim();
 
-    // Eagerly detect mood from the message text BEFORE clearing the input,
+    // Eagerly detect mood from the message text BEFORE sending,
     // so Alice sees her own avatar change without waiting for the HTTP round-trip.
     const pendingMood = getMoodFromText(text);
     if (pendingMood) {
@@ -573,7 +782,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
       }
     }
 
-    setMessageText('');
     setSending(true);
 
     try {
@@ -582,13 +790,13 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
         text,
       });
       dispatch(addMessage(message));
+      return true;
     } catch (error) {
       console.error('Failed to send message:', error);
-      setMessageText(text); // Restore message on error
       signalRService.sendDraftChanged(activeChat.id, text);
+      return false;
     } finally {
       setSending(false);
-      inputRef.current?.focus();
     }
   };
 
@@ -600,43 +808,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
     return 'file';
   };
 
-  const handlePickFile = useCallback(() => {
-    if (uploading || sending) return;
-    fileInputRef.current?.click();
-  }, [uploading, sending]);
-
-  const scheduleDraftSend = useCallback(
-    (chatId: string, text: string) => {
-      const minIntervalMs = 150;
-      const sendDraft = () => {
-        if (lastDraftRef.current === text) return;
-        lastDraftRef.current = text;
-        lastDraftSentAtRef.current = Date.now();
-        signalRService.sendDraftChanged(chatId, text);
-      };
-
-      const now = Date.now();
-      const elapsed = now - lastDraftSentAtRef.current;
-
-      if (elapsed >= minIntervalMs) {
-        if (draftDebounceRef.current) {
-          window.clearTimeout(draftDebounceRef.current);
-          draftDebounceRef.current = null;
-        }
-        sendDraft();
-        return;
-      }
-
-      if (draftDebounceRef.current) {
-        window.clearTimeout(draftDebounceRef.current);
-      }
-
-      draftDebounceRef.current = window.setTimeout(() => {
-        sendDraft();
-      }, minIntervalMs - elapsed);
-    },
-    []
-  );
 
   const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -660,31 +831,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
       alert(t('chat.sendFileFailed'));
     } finally {
       setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-      inputRef.current?.focus();
-    }
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (!isCommandMode || commandSuggestions.length === 0) return;
-
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      setCommandSelectedIndex((i) => Math.min(i + 1, commandSuggestions.length - 1));
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      setCommandSelectedIndex((i) => Math.max(i - 1, 0));
-    } else if (e.key === 'Tab') {
-      e.preventDefault();
-      const next = commandSuggestions[commandSelectedIndex] ?? commandSuggestions[0];
-      setMessageText(`${next.id} `);
     }
   };
 
@@ -774,7 +920,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
     return getLatest2DContentFor(user?.id);
   }, [isRoom2D, user?.id, mergedMessages, chatMessages]);
   const leftMoodText = otherDraft || getLatestRawTextFor(otherParticipant?.userId);
-  const rightMoodText = messageText.trim().length > 0 ? messageText : getLatestRawTextFor(user?.id);
 
   const extractAvatarImageId = (url?: string | null): string | null => {
     if (!url) return null;
@@ -853,15 +998,16 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
     }
   }, [leftMoodText, leftMood, leftMoodAt]);
 
-  useEffect(() => {
-    const next = getMoodFromText(rightMoodText);
+  const handleMoodTextChange = useCallback((text: string) => {
+    if (!text || text.trim().length === 0) return;
+    const next = getMoodFromText(text);
     if (!next) return;
     const now = Date.now();
     if (rightMood === null || now - rightMoodAt >= moodCooldownMs) {
       setRightMood(next);
       setRightMoodAt(now);
     }
-  }, [rightMoodText, rightMood, rightMoodAt]);
+  }, [rightMood, rightMoodAt]);
 
   // When our own mood changes, broadcast mood + the resolved avatar URL via draft
   useEffect(() => {
@@ -932,17 +1078,41 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
     ? getRealParticipants(activeChat.participants).length
     : 0;
 
-  const leftParticipant = otherParticipant ? {
-    displayName: otherParticipant.displayName,
-    avatarUrl: leftAvatar,
-    gender: otherParticipant.gender,
-  } : null;
+  const leftParticipant = useMemo(() => {
+    if (!otherParticipant) return null;
+    return {
+      displayName: otherParticipant.displayName,
+      avatarUrl: leftAvatar,
+      gender: otherParticipant.gender,
+    };
+  }, [otherParticipant, leftAvatar]);
 
-  const rightParticipant = user ? {
-    displayName: user.displayName,
-    avatarUrl: rightAvatar,
-    gender: user.gender,
-  } : null;
+  const rightParticipant = useMemo(() => {
+    if (!user) return null;
+    return {
+      displayName: user.displayName,
+      avatarUrl: rightAvatar,
+      gender: user.gender,
+    };
+  }, [user, rightAvatar]);
+
+  useEffect(() => {
+    if (!inputRootRef.current || !activeChat?.id) return;
+    inputRootRef.current.render(
+      <ThemeProvider theme={theme}>
+        <ChatInputPanel
+          activeChatId={activeChat.id}
+          sending={sending}
+          uploading={uploading}
+          chatCommands={chatCommands}
+          onSendMessage={sendMessage}
+          onFileSelected={handleFileSelected}
+          onMoodTextChange={handleMoodTextChange}
+          t={t}
+        />
+      </ThemeProvider>
+    );
+  }, [theme, activeChat?.id, sending, uploading, chatCommands, sendMessage, handleFileSelected, handleMoodTextChange, t]);
 
   if (!activeChat) {
     return (
@@ -1126,92 +1296,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
           borderColor: 'divider',
         }}
       >
-        <BoxAny
-          component="input"
-          ref={fileInputRef}
-          type="file"
-          title={t('chat.attach')}
-          aria-label={t('chat.attach')}
-          sx={{ display: 'none' }}
-          onChange={handleFileSelected}
-        />
-        <BoxAny sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
-          <IconButton size="small" disabled>
-            <EmojiIcon />
-          </IconButton>
-          <IconButton
-            size="small"
-            onClick={handlePickFile}
-            disabled={uploading || sending}
-            title={t('chat.attach')}
-            aria-label={t('chat.attach')}
-          >
-            {uploading ? <CircularProgress size={18} /> : <AttachFileIcon />}
-          </IconButton>
-          <TextField
-            inputRef={inputRef}
-            fullWidth
-            multiline
-            maxRows={4}
-            placeholder={t('chat.typeMessage')}
-            value={messageText}
-            onChange={(e) => {
-              const nextValue = e.target.value;
-              setMessageText(nextValue);
-              if (activeChat) {
-                scheduleDraftSend(activeChat.id, nextValue);
-              }
-            }}
-            onKeyPress={handleKeyPress}
-            onKeyDown={handleKeyDown}
-            size="small"
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                borderRadius: 3,
-                bgcolor: 'grey.100',
-              },
-            }}
-          />
-          <Popper
-            open={isCommandMode && commandSuggestions.length > 0}
-            anchorEl={inputRef.current}
-            placement="top-start"
-            sx={{ zIndex: 1300 }}
-          >
-            <Paper
-              elevation={6}
-              sx={{
-                width: 'fit-content',
-                maxWidth: 'calc(100vw - 32px)',
-                mb: 1,
-                px: 1,
-                py: 0.75,
-              }}
-            >
-              <Stack direction="row" spacing={0.75} useFlexGap flexWrap="wrap">
-                {commandSuggestions.map((c, idx) => (
-                  <Chip
-                    key={c.id}
-                    size="small"
-                    label={c.id}
-                    color={idx === commandSelectedIndex ? 'primary' : 'default'}
-                    variant={idx === commandSelectedIndex ? 'filled' : 'outlined'}
-                    onMouseEnter={() => setCommandSelectedIndex(idx)}
-                    onClick={() => setMessageText(`${c.id} `)}
-                    sx={{ fontFamily: 'monospace' }}
-                  />
-                ))}
-              </Stack>
-            </Paper>
-          </Popper>
-          <IconButton
-            color="primary"
-            onClick={handleSendMessage}
-            disabled={!messageText.trim() || sending || uploading}
-          >
-            <SendIcon />
-          </IconButton>
-        </BoxAny>
+        <div ref={setInputHost} />
       </BoxAny>
     </BoxAny>
   );
