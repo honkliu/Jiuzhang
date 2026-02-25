@@ -222,7 +222,6 @@ interface ChatInputPanelProps {
   chatCommands: Array<{ id: ChatCommandId; description: string; example: string }>;
   onSendMessage: (raw: string) => Promise<boolean>;
   onFileSelected: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  onMoodTextChange: (text: string) => void;
   t: (key: string) => string;
 }
 
@@ -233,7 +232,6 @@ const ChatInputPanel: React.FC<ChatInputPanelProps> = React.memo(({
   chatCommands,
   onSendMessage,
   onFileSelected,
-  onMoodTextChange,
   t,
 }) => {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -276,7 +274,6 @@ const ChatInputPanel: React.FC<ChatInputPanelProps> = React.memo(({
 
   const scheduleDraftSend = useCallback((text: string) => {
     if (!activeChatId) return;
-    const minIntervalMs = 150;
     const sendDraft = () => {
       if (lastDraftRef.current === text) return;
       lastDraftRef.current = text;
@@ -284,25 +281,14 @@ const ChatInputPanel: React.FC<ChatInputPanelProps> = React.memo(({
       signalRService.sendDraftChanged(activeChatId, text);
     };
 
-    const now = Date.now();
-    const elapsed = now - lastDraftSentAtRef.current;
-
-    if (elapsed >= minIntervalMs) {
-      if (draftDebounceRef.current) {
-        window.clearTimeout(draftDebounceRef.current);
-        draftDebounceRef.current = null;
-      }
-      sendDraft();
-      return;
-    }
-
     if (draftDebounceRef.current) {
       window.clearTimeout(draftDebounceRef.current);
     }
 
     draftDebounceRef.current = window.setTimeout(() => {
       sendDraft();
-    }, minIntervalMs - elapsed);
+      draftDebounceRef.current = null;
+    }, 200);
   }, [activeChatId]);
 
   const handlePickFile = useCallback(() => {
@@ -313,7 +299,6 @@ const ChatInputPanel: React.FC<ChatInputPanelProps> = React.memo(({
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const nextValue = e.target.value;
     setMessageText(nextValue);
-    onMoodTextChange(nextValue);
     if (activeChatId) {
       scheduleDraftSend(nextValue);
     }
@@ -391,38 +376,40 @@ const ChatInputPanel: React.FC<ChatInputPanelProps> = React.memo(({
             },
           }}
         />
-        <Popper
-          open={isCommandMode && commandSuggestions.length > 0}
-          anchorEl={inputRef.current}
-          placement="top-start"
-          sx={{ zIndex: 1300 }}
-        >
-          <Paper
-            elevation={6}
-            sx={{
-              width: 'fit-content',
-              maxWidth: 'calc(100vw - 32px)',
-              mb: 1,
-              px: 1,
-              py: 0.75,
-            }}
+        {isCommandMode && commandSuggestions.length > 0 ? (
+          <Popper
+            open
+            anchorEl={inputRef.current}
+            placement="top-start"
+            sx={{ zIndex: 1300 }}
           >
-            <Stack direction="row" spacing={0.75} useFlexGap flexWrap="wrap">
-              {commandSuggestions.map((c, idx) => (
-                <Chip
-                  key={c.id}
-                  size="small"
-                  label={c.id}
-                  color={idx === commandSelectedIndex ? 'primary' : 'default'}
-                  variant={idx === commandSelectedIndex ? 'filled' : 'outlined'}
-                  onMouseEnter={() => setCommandSelectedIndex(idx)}
-                  onClick={() => setMessageText(`${c.id} `)}
-                  sx={{ fontFamily: 'monospace' }}
-                />
-              ))}
-            </Stack>
-          </Paper>
-        </Popper>
+            <Paper
+              elevation={6}
+              sx={{
+                width: 'fit-content',
+                maxWidth: 'calc(100vw - 32px)',
+                mb: 1,
+                px: 1,
+                py: 0.75,
+              }}
+            >
+              <Stack direction="row" spacing={0.75} useFlexGap flexWrap="wrap">
+                {commandSuggestions.map((c, idx) => (
+                  <Chip
+                    key={c.id}
+                    size="small"
+                    label={c.id}
+                    color={idx === commandSelectedIndex ? 'primary' : 'default'}
+                    variant={idx === commandSelectedIndex ? 'filled' : 'outlined'}
+                    onMouseEnter={() => setCommandSelectedIndex(idx)}
+                    onClick={() => setMessageText(`${c.id} `)}
+                    sx={{ fontFamily: 'monospace' }}
+                  />
+                ))}
+              </Stack>
+            </Paper>
+          </Popper>
+        ) : null}
         <IconButton
           color="primary"
           onClick={async () => {
@@ -998,16 +985,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
     }
   }, [leftMoodText, leftMood, leftMoodAt]);
 
-  const handleMoodTextChange = useCallback((text: string) => {
-    if (!text || text.trim().length === 0) return;
-    const next = getMoodFromText(text);
-    if (!next) return;
-    const now = Date.now();
-    if (rightMood === null || now - rightMoodAt >= moodCooldownMs) {
-      setRightMood(next);
-      setRightMoodAt(now);
-    }
-  }, [rightMood, rightMoodAt]);
 
   // When our own mood changes, broadcast mood + the resolved avatar URL via draft
   useEffect(() => {
@@ -1107,12 +1084,11 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
           chatCommands={chatCommands}
           onSendMessage={sendMessage}
           onFileSelected={handleFileSelected}
-          onMoodTextChange={handleMoodTextChange}
           t={t}
         />
       </ThemeProvider>
     );
-  }, [theme, activeChat?.id, sending, uploading, chatCommands, sendMessage, handleFileSelected, handleMoodTextChange, t]);
+  }, [theme, activeChat?.id, sending, uploading, chatCommands, sendMessage, handleFileSelected, t]);
 
   if (!activeChat) {
     return (
