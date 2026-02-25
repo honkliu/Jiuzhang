@@ -215,17 +215,12 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleSidebar, sidebarOp
         <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 0.5 }}>
             {isMobile ? (
-              <BoxAny
-                onClick={handleAvatarClick}
-                onTouchStart={handleAvatarTouchStart}
-                onTouchEnd={handleAvatarTouchEnd}
-                sx={{ display: 'inline-flex' }}
-              >
+              <BoxAny sx={{ display: 'inline-flex' }}>
                 <UserAvatar
                   src={user?.avatarUrl}
                   gender={user?.gender}
                   variant="rounded"
-                  previewMode="hover"
+                  previewMode="tap"
                   closePreviewOnClick
                   sx={{ width: 32, height: 32 }}
                 />
@@ -242,7 +237,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleSidebar, sidebarOp
             )}
             <BoxAny
               sx={{
-                display: { xs: 'none', sm: 'flex' },
+                display: { xs: 'flex', sm: 'flex' },
                 flexDirection: 'column',
                 alignItems: 'flex-start',
                 minWidth: 0,
