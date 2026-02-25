@@ -41,8 +41,10 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedByGroup, setGeneratedByGroup] = useState<Record<string, string[]>>({});
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isPseudoFullscreen, setIsPseudoFullscreen] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const thumbnailRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const isIos = /iP(ad|hone|od)/i.test(navigator.userAgent);
 
   const hasGroups = Boolean(groups && groups.length > 0);
   const activeGroup = hasGroups ? groups![Math.min(activeGroupIndex, groups!.length - 1)] : null;
@@ -139,6 +141,26 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
 
+  useEffect(() => {
+    if (!open) {
+      setIsPseudoFullscreen(false);
+      return;
+    }
+
+    if (!isPseudoFullscreen) {
+      return;
+    }
+
+    const originalOverflow = document.body.style.overflow;
+    const originalTouchAction = document.body.style.touchAction;
+    document.body.style.overflow = 'hidden';
+    document.body.style.touchAction = 'none';
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      document.body.style.touchAction = originalTouchAction;
+    };
+  }, [open, isPseudoFullscreen]);
+
   if (!activeImages.length) return null;
 
   const displayedImage = hasGroups ? (selectedImageUrl || activeImages[currentIndex]) : activeImages[currentIndex];
@@ -157,7 +179,11 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
   };
 
   const handleToggleFullscreen = async () => {
-    if (!containerRef.current) return;
+    if (isIos || !containerRef.current || !containerRef.current.requestFullscreen) {
+      setIsPseudoFullscreen((prev) => !prev);
+      return;
+    }
+
     if (!document.fullscreenElement) {
       await containerRef.current.requestFullscreen();
     } else {
@@ -169,6 +195,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
     if (document.fullscreenElement) {
       document.exitFullscreen().catch(() => undefined);
     }
+    setIsPseudoFullscreen(false);
     onClose();
   };
 
@@ -212,11 +239,11 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
         sx={{
           display: 'flex',
           flexDirection: 'column',
-          width: '90vw',
-          maxWidth: 1100,
-          height: '90vh',
+          width: isPseudoFullscreen ? '100vw' : '90vw',
+          maxWidth: isPseudoFullscreen ? 'none' : 1100,
+          height: isPseudoFullscreen ? '100vh' : '90vh',
           bgcolor: 'rgba(10, 10, 10, 0.97)',
-          borderRadius: 2,
+          borderRadius: isPseudoFullscreen ? 0 : 2,
           overflow: 'hidden',
           outline: 'none',
           position: 'relative',
@@ -235,7 +262,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
           }}
         >
           <IconButton onClick={handleToggleFullscreen} sx={{ color: 'rgba(255,255,255,0.8)' }}>
-            {isFullscreen ? <FullscreenExitIcon /> : <FullscreenIcon />}
+            {(isFullscreen || isPseudoFullscreen) ? <FullscreenExitIcon /> : <FullscreenIcon />}
           </IconButton>
           <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem' }}>
             {currentIndex + 1} / {activeImages.length}
