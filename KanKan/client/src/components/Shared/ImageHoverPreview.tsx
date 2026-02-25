@@ -211,6 +211,8 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
   const handleTriggerClick = (event: React.MouseEvent<HTMLElement>) => {
     if (suppressNextClickRef.current) {
       suppressNextClickRef.current = false;
+      event.preventDefault();
+      event.stopPropagation();
       return;
     }
     if (!shouldCloseOnTriggerClick || !open) return;
