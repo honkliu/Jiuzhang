@@ -64,6 +64,8 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleSidebar, sidebarOp
   const [notificationsAnchorEl, setNotificationsAnchorEl] = React.useState<null | HTMLElement>(null);
   const [navAnchorEl, setNavAnchorEl] = React.useState<null | HTMLElement>(null);
   const [avatarAnchorEl, setAvatarAnchorEl] = React.useState<null | HTMLElement>(null);
+  const avatarLongPressTimerRef = React.useRef<number | null>(null);
+  const avatarLongPressTriggeredRef = React.useRef(false);
 
   const notificationsOpen = Boolean(notificationsAnchorEl);
   const navOpen = Boolean(navAnchorEl);
@@ -89,6 +91,36 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleSidebar, sidebarOp
 
   const handleOpenAvatarPicker = (e: React.MouseEvent<HTMLElement>) => {
     setAvatarAnchorEl(e.currentTarget);
+  };
+
+  const handleAvatarTouchStart = (event: React.TouchEvent<HTMLElement>) => {
+    if (!isMobile) return;
+    avatarLongPressTriggeredRef.current = false;
+    avatarLongPressTimerRef.current = window.setTimeout(() => {
+      avatarLongPressTriggeredRef.current = true;
+      avatarLongPressTimerRef.current = null;
+    }, 450);
+  };
+
+  const handleAvatarTouchEnd = (event: React.TouchEvent<HTMLElement>) => {
+    if (avatarLongPressTimerRef.current) {
+      window.clearTimeout(avatarLongPressTimerRef.current);
+      avatarLongPressTimerRef.current = null;
+    }
+    if (avatarLongPressTriggeredRef.current) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  };
+
+  const handleAvatarClick = (event: React.MouseEvent<HTMLElement>) => {
+    if (avatarLongPressTriggeredRef.current) {
+      avatarLongPressTriggeredRef.current = false;
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+    handleOpenAvatarPicker(event);
   };
 
   const handleCloseAvatarPicker = () => {
@@ -184,7 +216,9 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleSidebar, sidebarOp
           <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 0.5 }}>
             {isMobile ? (
               <BoxAny
-                onClick={handleOpenAvatarPicker}
+                onClick={handleAvatarClick}
+                onTouchStart={handleAvatarTouchStart}
+                onTouchEnd={handleAvatarTouchEnd}
                 sx={{ display: 'inline-flex' }}
               >
                 <UserAvatar
