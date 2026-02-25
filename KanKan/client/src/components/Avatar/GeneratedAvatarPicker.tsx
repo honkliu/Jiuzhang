@@ -81,6 +81,7 @@ export const GeneratedAvatarPicker: React.FC<GeneratedAvatarPickerProps> = ({
   const [activePreviewId, setActivePreviewId] = React.useState<string | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = React.useState(false);
   const previewCloseTimerRef = React.useRef<number | null>(null);
+  const lastPreviewCloseAtRef = React.useRef<number | null>(null);
   const clickTimerRef = React.useRef<number | null>(null);
   const suppressClickRef = React.useRef(false);
   const theme = useTheme();
@@ -169,8 +170,13 @@ export const GeneratedAvatarPicker: React.FC<GeneratedAvatarPickerProps> = ({
     _event: unknown,
     reason?: 'backdropClick' | 'escapeKeyDown'
   ) => {
+    const now = Date.now();
+    const justClosedPreview = lastPreviewCloseAtRef.current
+      ? now - lastPreviewCloseAtRef.current < 400
+      : false;
+
     if (reason === 'backdropClick') {
-      if (isPreviewOpen || activePreviewId) {
+      if (isPreviewOpen || activePreviewId || justClosedPreview) {
         setActivePreviewId(null);
         setIsPreviewOpen(false);
         return;
@@ -266,6 +272,7 @@ export const GeneratedAvatarPicker: React.FC<GeneratedAvatarPickerProps> = ({
                     setIsPreviewOpen(true);
                   } else {
                     setIsPreviewOpen(false);
+                    lastPreviewCloseAtRef.current = Date.now();
                     if (previewCloseTimerRef.current) {
                       window.clearTimeout(previewCloseTimerRef.current);
                     }
