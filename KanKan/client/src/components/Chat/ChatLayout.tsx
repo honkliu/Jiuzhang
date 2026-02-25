@@ -47,6 +47,8 @@ export const ChatLayout: React.FC = () => {
   const myUserIdRef = useRef<string | null>(null);
   const chatIdsRef = useRef<Set<string>>(new Set());
   const inFlightChatFetchRef = useRef<Set<string>>(new Set());
+  const agentChunkBufferRef = useRef<Map<string, string>>(new Map());
+  const agentChunkFlushTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     activeChatIdRef.current = activeChat?.id ?? null;
@@ -179,15 +181,47 @@ export const ChatLayout: React.FC = () => {
       }
     });
 
+    const flushAgentChunks = () => {
+      if (agentChunkFlushTimerRef.current) {
+        window.clearTimeout(agentChunkFlushTimerRef.current);
+        agentChunkFlushTimerRef.current = null;
+      }
+
+      if (agentChunkBufferRef.current.size === 0) return;
+
+      agentChunkBufferRef.current.forEach((bufferedChunk, key) => {
+        const [bufferChatId, bufferMessageId] = key.split(':');
+        if (!bufferChatId || !bufferMessageId) return;
+        dispatch(appendAgentMessageChunk({
+          chatId: bufferChatId,
+          messageId: bufferMessageId,
+          chunk: bufferedChunk,
+        }));
+      });
+
+      agentChunkBufferRef.current.clear();
+    };
+
     const unsubAgentChunk = signalRService.onAgentMessageChunk((chatId, messageId, chunk) => {
-      dispatch(appendAgentMessageChunk({ chatId, messageId, chunk }));
+      const key = `${chatId}:${messageId}`;
+      const existing = agentChunkBufferRef.current.get(key) || '';
+      agentChunkBufferRef.current.set(key, `${existing}${chunk}`);
+
+      if (!agentChunkFlushTimerRef.current) {
+        agentChunkFlushTimerRef.current = window.setTimeout(flushAgentChunks, 120);
+      }
     });
 
     const unsubAgentComplete = signalRService.onAgentMessageComplete((chatId, messageId, fullText) => {
+      const key = `${chatId}:${messageId}`;
+      if (agentChunkBufferRef.current.has(key)) {
+        flushAgentChunks();
+      }
       dispatch(finalizeAgentMessage({ chatId, messageId, fullText }));
     });
 
     const unsubDraft = signalRService.onDraftChanged((chatId, userId, userName, text) => {
+      if (userId === myUserIdRef.current) return;
       dispatch(setDraft({ chatId, userId, userName, text }));
     });
 
@@ -207,6 +241,11 @@ export const ChatLayout: React.FC = () => {
       unsubAgentComplete();
       unsubDraft();
       unsubUserUpdated();
+      if (agentChunkFlushTimerRef.current) {
+        window.clearTimeout(agentChunkFlushTimerRef.current);
+        agentChunkFlushTimerRef.current = null;
+      }
+      agentChunkBufferRef.current.clear();
       signalRService.disconnect();
     };
   }, [dispatch]);

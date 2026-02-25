@@ -17,6 +17,7 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material';
+import { Virtuoso } from 'react-virtuoso';
 import {
   ArrowBack as ArrowBackIcon,
   Send as SendIcon,
@@ -32,7 +33,7 @@ import { RootState, AppDispatch } from '@/store';
 import { fetchMessages, addMessage, updateChat } from '@/store/chatSlice';
 import { MessageBubble } from './MessageBubble';
 import { signalRService } from '@/services/signalr.service';
-import { chatService, type Message } from '@/services/chat.service';
+import { chatService, type Chat, type Message } from '@/services/chat.service';
 import { mediaService } from '@/services/media.service';
 import { avatarService, type EmotionThumbnailResult } from '@/services/avatar.service';
 import { UserAvatar } from '@/components/Shared/UserAvatar';
@@ -51,6 +52,23 @@ import { useLanguage } from '@/i18n/LanguageContext';
 // Work around TS2590 (“union type too complex”) from MUI Box typings in some TS versions.
 const BoxAny = Box as any;
 
+const VirtualizedMessageList = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+  (props, ref) => (
+    <div
+      {...props}
+      ref={ref}
+      style={{
+        ...props.style,
+        padding: '12px 1px',
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: '100%',
+      }}
+    />
+  )
+);
+VirtualizedMessageList.displayName = 'VirtualizedMessageList';
+
 interface ChatWindowProps {
   onBack?: () => void;
   onToggleSidebar?: () => void;
@@ -62,6 +80,136 @@ interface LightboxGroup {
   messageId: string;
   canEdit: boolean;
 }
+
+interface ChatMessagesProps {
+  activeChat: Chat | null;
+  user: any;
+  loading: boolean;
+  isRoom3D: boolean;
+  isRoom2D: boolean;
+  mergedMessages: Message[];
+  chatTypingUsers: Array<{ userId: string; userName: string }>;
+  leftParticipant: { displayName: string; avatarUrl: string; gender?: string } | null;
+  rightParticipant: { displayName: string; avatarUrl: string; gender?: string } | null;
+  left2D: { text: string; mediaUrls: string[] };
+  right2D: { text: string; mediaUrls: string[] };
+  leftAvatar: string;
+  rightAvatar: string;
+  imageGroups: LightboxGroup[];
+  imageGroupIndexByUrl: Record<string, number>;
+  imageGallery: { urls: string[]; indexById: Record<string, number> };
+  imageGroupIndexByMessageId: Record<string, number>;
+  messagesEndRef: React.RefObject<HTMLDivElement>;
+  noMessagesText: string;
+}
+
+const ChatMessages: React.FC<ChatMessagesProps> = React.memo(({
+  activeChat,
+  user,
+  loading,
+  isRoom3D,
+  isRoom2D,
+  mergedMessages,
+  chatTypingUsers,
+  leftParticipant,
+  rightParticipant,
+  left2D,
+  right2D,
+  leftAvatar,
+  rightAvatar,
+  imageGroups,
+  imageGroupIndexByUrl,
+  imageGallery,
+  imageGroupIndexByMessageId,
+  messagesEndRef,
+  noMessagesText,
+}) => {
+  if (!activeChat) return null;
+
+  if (isRoom3D) {
+    return (
+      <BoxAny sx={{ flexGrow: 1, overflow: 'hidden', position: 'relative' }}>
+        <ChatRoom3D chat={activeChat} me={user} messages={mergedMessages as any} typingUsers={chatTypingUsers} />
+        {loading && mergedMessages.length === 0 ? (
+          <BoxAny
+            sx={{
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              pointerEvents: 'none',
+            }}
+          >
+            <CircularProgress />
+          </BoxAny>
+        ) : null}
+      </BoxAny>
+    );
+  }
+
+  if (isRoom2D) {
+    return (
+      <ChatRoom2D
+        leftParticipant={leftParticipant}
+        rightParticipant={rightParticipant}
+        leftText={left2D.text}
+        rightText={right2D.text}
+        leftMediaUrls={left2D.mediaUrls}
+        rightMediaUrls={right2D.mediaUrls}
+        imageGroups={imageGroups}
+        imageGroupIndexByUrl={imageGroupIndexByUrl}
+      />
+    );
+  }
+
+  if (loading && mergedMessages.length === 0) {
+    return (
+      <BoxAny sx={{ flexGrow: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+        <CircularProgress />
+      </BoxAny>
+    );
+  }
+
+  if (mergedMessages.length === 0) {
+    return (
+      <BoxAny sx={{ flexGrow: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+        <Typography color="text.secondary">{noMessagesText}</Typography>
+      </BoxAny>
+    );
+  }
+
+  return (
+    <BoxAny sx={{ flexGrow: 1, minHeight: 0 }}>
+      <Virtuoso
+        data={mergedMessages}
+        followOutput="auto"
+        computeItemKey={(_, message) => message.id}
+        style={{ height: '100%', width: '100%' }}
+        components={{
+          List: VirtualizedMessageList,
+          Footer: () => <div ref={messagesEndRef} />,
+        }}
+        itemContent={(index, message) => {
+          const prevMessage = index > 0 ? mergedMessages[index - 1] : null;
+          const showAvatar = !prevMessage || prevMessage.senderId !== message.senderId;
+
+          return (
+            <MessageBubble
+              message={message}
+              isOwn={message.senderId === user?.id}
+              showAvatar={showAvatar}
+              imageGallery={imageGallery.urls}
+              imageIndex={imageGallery.indexById[message.id]}
+              imageGroups={imageGroups}
+              imageGroupIndex={imageGroupIndexByMessageId[message.id]}
+            />
+          );
+        }}
+      />
+    </BoxAny>
+  );
+});
 
 export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar, sx }) => {
   const dispatch = useDispatch<AppDispatch>();
@@ -459,7 +607,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
 
   const scheduleDraftSend = useCallback(
     (chatId: string, text: string) => {
-      const minIntervalMs = 80;
+      const minIntervalMs = 150;
       const sendDraft = () => {
         if (lastDraftRef.current === text) return;
         lastDraftRef.current = text;
@@ -550,6 +698,15 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
     ? getOtherRealParticipants(activeChat, user?.id)[0] || displayParticipant
     : undefined;
 
+  const latestRawTextBySenderId = useMemo(() => {
+    const map: Record<string, string> = {};
+    chatMessages.forEach((msg) => {
+      if (msg.messageType !== 'text' || msg.isDeleted) return;
+      map[msg.senderId] = msg.text || '';
+    });
+    return map;
+  }, [chatMessages]);
+
   const buildRollingTextFor = (senderId?: string, draftText?: string) => {
     if (!senderId) return '';
     const prefixLines = (value: string) =>
@@ -572,13 +729,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
 
   const getLatestRawTextFor = (senderId?: string) => {
     if (!senderId) return '';
-    for (let i = chatMessages.length - 1; i >= 0; i -= 1) {
-      const msg = chatMessages[i];
-      if (msg.senderId !== senderId) continue;
-      if (msg.messageType !== 'text' || msg.isDeleted) continue;
-      return msg.text || '';
-    }
-    return '';
+    return latestRawTextBySenderId[senderId] || '';
   };
 
   const getLatest2DContentFor = (senderId?: string, draftText?: string): { text: string; mediaUrls: string[] } => {
@@ -613,8 +764,15 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
 
   const otherDraft = draftMessages.find((d) => d.senderId === otherParticipant?.userId)?.text;
   const otherDraftClean = otherDraft?.replace(/\[mood:[^\]]+\]/g, '').trim() || undefined;
-  const left2D = getLatest2DContentFor(otherParticipant?.userId, otherDraftClean);
-  const right2D = getLatest2DContentFor(user?.id);
+  const left2D = useMemo(() => {
+    if (!isRoom2D) return { text: '', mediaUrls: [] };
+    return getLatest2DContentFor(otherParticipant?.userId, otherDraftClean);
+  }, [isRoom2D, otherParticipant?.userId, otherDraftClean, mergedMessages, chatMessages]);
+
+  const right2D = useMemo(() => {
+    if (!isRoom2D) return { text: '', mediaUrls: [] };
+    return getLatest2DContentFor(user?.id);
+  }, [isRoom2D, user?.id, mergedMessages, chatMessages]);
   const leftMoodText = otherDraft || getLatestRawTextFor(otherParticipant?.userId);
   const rightMoodText = messageText.trim().length > 0 ? messageText : getLatestRawTextFor(user?.id);
 
@@ -774,6 +932,18 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
     ? getRealParticipants(activeChat.participants).length
     : 0;
 
+  const leftParticipant = otherParticipant ? {
+    displayName: otherParticipant.displayName,
+    avatarUrl: leftAvatar,
+    gender: otherParticipant.gender,
+  } : null;
+
+  const rightParticipant = user ? {
+    displayName: user.displayName,
+    avatarUrl: rightAvatar,
+    gender: user.gender,
+  } : null;
+
   if (!activeChat) {
     return (
       <BoxAny
@@ -925,85 +1095,27 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
       </AppBar>
 
       {/* Messages */}
-      {isRoom3D ? (
-        <BoxAny sx={{ flexGrow: 1, overflow: 'hidden', position: 'relative' }}>
-          <ChatRoom3D chat={activeChat} me={user} messages={mergedMessages as any} typingUsers={chatTypingUsers} />
-          {loading && mergedMessages.length === 0 ? (
-            <BoxAny
-              sx={{
-                position: 'absolute',
-                inset: 0,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                pointerEvents: 'none',
-              }}
-            >
-              <CircularProgress />
-            </BoxAny>
-          ) : null}
-        </BoxAny>
-      ) : isRoom2D ? (
-        <ChatRoom2D
-          leftParticipant={otherParticipant ? {
-            displayName: otherParticipant.displayName,
-            avatarUrl: leftAvatar,
-            gender: otherParticipant.gender,
-          } : null}
-          rightParticipant={user ? {
-            displayName: user.displayName,
-            avatarUrl: rightAvatar,
-            gender: user.gender,
-          } : null}
-          leftText={left2D.text}
-          rightText={right2D.text}
-          leftMediaUrls={left2D.mediaUrls}
-          rightMediaUrls={right2D.mediaUrls}
-          imageGroups={imageGroups}
-          imageGroupIndexByUrl={imageGroupIndexByUrl}
-        />
-      ) : (
-        <BoxAny
-          sx={{
-            flexGrow: 1,
-            overflow: 'auto',
-            px: '1px',
-            py: 1.5,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 1,
-          }}
-        >
-          {loading && mergedMessages.length === 0 ? (
-            <BoxAny sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-              <CircularProgress />
-            </BoxAny>
-          ) : mergedMessages.length === 0 ? (
-            <BoxAny sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-              <Typography color="text.secondary">{t('chat.noMessages')}</Typography>
-            </BoxAny>
-          ) : (
-            mergedMessages.map((message, index) => {
-              const prevMessage = index > 0 ? mergedMessages[index - 1] : null;
-              const showAvatar = !prevMessage || prevMessage.senderId !== message.senderId;
-
-              return (
-                <MessageBubble
-                  key={message.id}
-                  message={message}
-                  isOwn={message.senderId === user?.id}
-                  showAvatar={showAvatar}
-                  imageGallery={imageGallery.urls}
-                  imageIndex={imageGallery.indexById[message.id]}
-                  imageGroups={imageGroups}
-                  imageGroupIndex={imageGroupIndexByMessageId[message.id]}
-                />
-              );
-            })
-          )}
-          <div ref={messagesEndRef} />
-        </BoxAny>
-      )}
+      <ChatMessages
+        activeChat={activeChat}
+        user={user}
+        loading={loading}
+        isRoom3D={isRoom3D}
+        isRoom2D={isRoom2D}
+        mergedMessages={mergedMessages}
+        chatTypingUsers={chatTypingUsers}
+        leftParticipant={leftParticipant}
+        rightParticipant={rightParticipant}
+        left2D={left2D}
+        right2D={right2D}
+        leftAvatar={leftAvatar}
+        rightAvatar={rightAvatar}
+        imageGroups={imageGroups}
+        imageGroupIndexByUrl={imageGroupIndexByUrl}
+        imageGallery={imageGallery}
+        imageGroupIndexByMessageId={imageGroupIndexByMessageId}
+        messagesEndRef={messagesEndRef}
+        noMessagesText={t('chat.noMessages')}
+      />
 
       {/* Input */}
       <BoxAny
