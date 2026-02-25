@@ -219,6 +219,11 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
     closePreview(true);
   };
 
+  const stopTouchPropagation = (event: React.TouchEvent<HTMLElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
   const noopMouse = (_event?: React.SyntheticEvent<HTMLElement>) => {};
 
   React.useEffect(() => {
@@ -326,12 +331,16 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
                 handleClose();
               }
             : undefined,
+          onTouchStart: isTouchDevice ? stopTouchPropagation : undefined,
+          onTouchEnd: isTouchDevice ? stopTouchPropagation : undefined,
         }}
       >
         <Box
           component="img"
           src={src || undefined}
           alt={alt || 'Image preview'}
+          onTouchStart={isTouchDevice ? stopTouchPropagation : undefined}
+          onTouchEnd={isTouchDevice ? stopTouchPropagation : undefined}
           onContextMenu={(event: React.MouseEvent<HTMLImageElement>) => {
             event.preventDefault();
           }}
