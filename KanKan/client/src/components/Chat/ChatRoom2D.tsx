@@ -157,7 +157,12 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
   // Keep bubble sizes consistent until narrow; cap at <= 2/3 view width.
   const bubbleTargetPx = Math.min(baseWidth * 0.66, 520);
   const bubbleW = `${bubbleTargetPx}px`;
-  const bubbleH = isMobile ? 'min(40vh, 300px)' : 'clamp(240px, 30vh, 320px)';
+  const fontSizePx = isMobile ? 14.4 : 16;
+  const rowHeightPx = fontSizePx * 1.6;
+  const bubbleRowTrimPx = Math.round(rowHeightPx * 2);
+  const bubbleH = isMobile
+    ? `calc(min(40vh, 300px) - ${bubbleRowTrimPx}px)`
+    : `calc(clamp(240px, 30vh, 320px) - ${bubbleRowTrimPx}px)`;
   const avatarSizePx = isMobile
     ? clamp(baseWidth * 0.2, 96, 150)
     : clamp(baseWidth * 0.14, 110, 220);
@@ -203,8 +208,8 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
           overflowY: 'hidden',
           display: 'flex',
           flexDirection: 'row',
-          justifyContent: 'flex-end',
-          alignItems: 'flex-end',
+          justifyContent: 'flex-start',
+          alignItems: 'stretch',
           backgroundImage:
             align === 'right'
               ? 'linear-gradient(180deg, rgba(15, 62, 57, 0.6), rgba(23, 76, 70, 0.95))'
@@ -372,7 +377,8 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
           rowGap: isMobile ? 0.75 : 2.5,
           px: isMobile ? 1.25 : 3.5,
           pr: overlapOffsetPx > 0 ? 6 : undefined,
-          py: isMobile ? 1.75 : 3.25,
+          pt: isMobile ? 0.75 : 2,
+          pb: isMobile ? 2.25 : 3.5,
           background:
             'linear-gradient(180deg, rgba(236, 219, 191, 0.98) 0%, rgba(205, 173, 133, 0.98) 60%, rgba(178, 142, 102, 0.98) 100%)',
           '&::before': {
