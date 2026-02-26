@@ -34,7 +34,7 @@ const BoxAny = Box as any;
 
 export const ChatLayout: React.FC = () => {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isCompactHeader = useMediaQuery(theme.breakpoints.down('sm'));
   const dispatch = useDispatch<AppDispatch>();
   const { activeChat, chats } = useSelector((state: RootState) => state.chat);

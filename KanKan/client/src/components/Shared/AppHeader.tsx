@@ -53,6 +53,7 @@ interface AppHeaderProps {
 export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleSidebar, sidebarOpen }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isCompactNav = useMediaQuery(theme.breakpoints.down('md'));
   const isHoverCapable = useMediaQuery('(hover: hover) and (pointer: fine)');
   const navigate = useNavigate();
   const location = useLocation();
@@ -184,7 +185,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleSidebar, sidebarOp
     <AppBar position="fixed" color="default" elevation={0} sx={{ pt: 'env(safe-area-inset-top)' }}>
       <Toolbar sx={{ gap: 1.25, minHeight: { xs: 53, sm: 61 }, py: 0.25 }}>
         <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1, flexGrow: 1, minWidth: 0 }}>
-          {showChatToggle && isMobile && (
+          {showChatToggle && isCompactNav && (
             <IconButton
               onClick={onToggleSidebar}
               title={t('nav.toggleChatList')}
@@ -201,7 +202,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleSidebar, sidebarOp
           >
             {t('appName')}
           </Typography>
-          {isMobile && (
+          {isCompactNav && (
             <IconButton onClick={handleOpenNav} title={t('nav.menu')} sx={{ p: 0.25 }}>
               <ExpandMoreIcon sx={{ fontSize: '1.1rem' }} />
             </IconButton>
@@ -299,6 +300,12 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleSidebar, sidebarOp
           onClose={handleCloseNav}
           transformOrigin={{ vertical: 'top', horizontal: 'right' }}
           anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+          PaperProps={{
+            sx: {
+              background: '#f5f7fb',
+              border: '1px solid rgba(15, 23, 42, 0.08)',
+            },
+          }}
         >
           {navItems.map((item) => (
             <MenuItem
@@ -322,6 +329,8 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleSidebar, sidebarOp
           anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
           PaperProps={{
             sx: {
+              background: '#f5f7fb',
+              border: '1px solid rgba(15, 23, 42, 0.08)',
               width: 420,
               maxWidth: '92vw',
               maxHeight: '70vh',
