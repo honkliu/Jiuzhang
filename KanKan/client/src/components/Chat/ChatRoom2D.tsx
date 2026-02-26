@@ -136,7 +136,6 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
   const layoutRef = useRef<HTMLDivElement | null>(null);
   const [layoutWidth, setLayoutWidth] = useState<number>(0);
   const [layoutHeight, setLayoutHeight] = useState<number>(0);
-  const [viewportHeight, setViewportHeight] = useState<number>(0);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isHoverCapable = useMediaQuery('(hover: hover) and (pointer: fine)');
@@ -153,27 +152,9 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
     return () => observer.disconnect();
   }, []);
 
-  useEffect(() => {
-    const vv = window.visualViewport;
-    if (!vv) return;
-    const handleViewportChange = () => {
-      const rect = layoutRef.current?.getBoundingClientRect();
-      const topOffset = rect ? rect.top : 0;
-      const available = Math.max(0, vv.height - topOffset);
-      setViewportHeight(available);
-    };
-    handleViewportChange();
-    vv.addEventListener('resize', handleViewportChange);
-    vv.addEventListener('scroll', handleViewportChange);
-    return () => {
-      vv.removeEventListener('resize', handleViewportChange);
-      vv.removeEventListener('scroll', handleViewportChange);
-    };
-  }, []);
-
   const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
   const baseWidth = layoutWidth || window.innerWidth;
-  const baseHeight = viewportHeight || layoutHeight || window.innerHeight;
+  const baseHeight = layoutHeight || window.innerHeight;
   const columnWidth = baseWidth / 2;
 
   // Keep bubble sizes consistent until narrow; cap at <= 2/3 view width.
@@ -399,8 +380,6 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
           flexGrow: 1,
           position: 'relative',
           overflow: 'hidden',
-          height: viewportHeight ? `${viewportHeight}px` : '100%',
-          maxHeight: viewportHeight ? `${viewportHeight}px` : undefined,
           display: 'grid',
           gridTemplateColumns: '1fr 1fr',
           gridTemplateRows: '1fr 1fr',

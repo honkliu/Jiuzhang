@@ -1073,22 +1073,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
     };
   }, [user, rightAvatar]);
 
-  const [viewportHeight, setViewportHeight] = useState<number>(0);
-
-  useEffect(() => {
-    const vv = window.visualViewport;
-    if (!vv) return;
-    const handleViewportChange = () => {
-      setViewportHeight(vv.height);
-    };
-    handleViewportChange();
-    vv.addEventListener('resize', handleViewportChange);
-    vv.addEventListener('scroll', handleViewportChange);
-    return () => {
-      vv.removeEventListener('resize', handleViewportChange);
-      vv.removeEventListener('scroll', handleViewportChange);
-    };
-  }, []);
 
   useEffect(() => {
     if (!inputRootRef.current || !activeChat?.id) return;
@@ -1135,8 +1119,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
         display: 'flex',
         flexDirection: 'column',
         bgcolor: 'grey.100',
-        height: viewportHeight ? `${viewportHeight}px` : '100%',
-        maxHeight: viewportHeight ? `${viewportHeight}px` : undefined,
         minHeight: 0,
         ...sx,
       }}
