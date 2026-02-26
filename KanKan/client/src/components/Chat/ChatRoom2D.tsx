@@ -157,7 +157,10 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
     const vv = window.visualViewport;
     if (!vv) return;
     const handleViewportChange = () => {
-      setViewportHeight(vv.height);
+      const rect = layoutRef.current?.getBoundingClientRect();
+      const topOffset = rect ? rect.top : 0;
+      const available = Math.max(0, vv.height - topOffset);
+      setViewportHeight(available);
     };
     handleViewportChange();
     vv.addEventListener('resize', handleViewportChange);
@@ -396,6 +399,8 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
           flexGrow: 1,
           position: 'relative',
           overflow: 'hidden',
+          height: viewportHeight ? `${viewportHeight}px` : '100%',
+          maxHeight: viewportHeight ? `${viewportHeight}px` : undefined,
           display: 'grid',
           gridTemplateColumns: '1fr 1fr',
           gridTemplateRows: '1fr 1fr',
