@@ -13,6 +13,8 @@ import {
   IconButton,
   Divider,
   Stack,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import { Delete as DeleteIcon, ThumbUpAltOutlined as ThumbUpIcon, ChatBubbleOutline as CommentIcon } from '@mui/icons-material';
 import { AppHeader } from '@/components/Shared/AppHeader';
@@ -33,6 +35,8 @@ const BoxAny = Box as any;
 export const MomentsPage: React.FC = () => {
   const { t } = useLanguage();
   const { formatDateTime } = useSettings();
+  const theme = useTheme();
+  const isHoverCapable = useMediaQuery('(hover: hover) and (pointer: fine)');
   const { user } = useSelector((state: RootState) => state.auth);
   const [moments, setMoments] = useState<Moment[]>([]);
   const [contacts, setContacts] = useState<User[]>([]);
@@ -303,8 +307,9 @@ export const MomentsPage: React.FC = () => {
                         key={`${moment.id}-${url}-${idx}`}
                         src={url}
                         alt={t('moments.image')}
-                        openOnHover={false}
-                        openOnLongPress={false}
+                        openOnHover={isHoverCapable}
+                        openOnLongPress={!isHoverCapable}
+                        openOnTap={false}
                         openOnDoubleClick
                         closeOnTriggerClickWhenOpen
                       >

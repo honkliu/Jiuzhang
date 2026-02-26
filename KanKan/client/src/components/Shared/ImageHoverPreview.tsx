@@ -64,10 +64,14 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
   const popoverPaperRef = React.useRef<HTMLDivElement | null>(null);
   const popoverId = React.useId();
 
-  const viewportLimit = Math.min(window.innerWidth, window.innerHeight) * 0.9;
-  const effectiveMaxSize = typeof maxSize === 'number'
-    ? Math.min(maxSize, viewportLimit)
-    : viewportLimit;
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+  const maxWidth = typeof maxSize === 'number'
+    ? Math.min(maxSize, viewportWidth)
+    : viewportWidth;
+  const maxHeight = typeof maxSize === 'number'
+    ? Math.min(maxSize, viewportHeight)
+    : viewportHeight;
 
   const handleOpen = (event: React.MouseEvent<HTMLElement> | React.FocusEvent<HTMLElement>) => {
     if (!src || disabled || isTouchDevice) return;
@@ -314,8 +318,8 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
           ref: popoverPaperRef,
           sx: {
             p: 0.5,
-            maxWidth: effectiveMaxSize,
-            maxHeight: effectiveMaxSize,
+            maxWidth,
+            maxHeight,
             borderRadius: 1,
             pointerEvents: interactive && !isTouchDevice ? 'auto' : 'none',
             overflow: 'hidden',
@@ -364,8 +368,8 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
           }}
           sx={{
             display: 'block',
-            maxWidth: effectiveMaxSize,
-            maxHeight: effectiveMaxSize,
+            maxWidth,
+            maxHeight,
             width: 'auto',
             height: 'auto',
             objectFit: 'contain',
