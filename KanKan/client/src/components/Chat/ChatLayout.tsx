@@ -262,7 +262,8 @@ export const ChatLayout: React.FC = () => {
     const vv = window.visualViewport;
     if (!vv) return;
     const handleViewportChange = () => {
-      setViewportHeight(vv.height);
+      const nextHeight = Math.max(0, vv.height + vv.offsetTop);
+      setViewportHeight(nextHeight);
     };
     handleViewportChange();
     vv.addEventListener('resize', handleViewportChange);
