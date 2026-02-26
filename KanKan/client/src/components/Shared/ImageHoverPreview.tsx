@@ -66,12 +66,14 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
 
   const viewportWidth = window.innerWidth;
   const viewportHeight = window.innerHeight;
+  const viewportCap = 0.8;
+  const absoluteCap = 800;
   const maxWidth = typeof maxSize === 'number'
-    ? Math.min(maxSize, viewportWidth)
-    : viewportWidth;
+    ? Math.min(maxSize, viewportWidth * viewportCap, absoluteCap)
+    : Math.min(viewportWidth * viewportCap, absoluteCap);
   const maxHeight = typeof maxSize === 'number'
-    ? Math.min(maxSize, viewportHeight)
-    : viewportHeight;
+    ? Math.min(maxSize, viewportHeight * viewportCap, absoluteCap)
+    : Math.min(viewportHeight * viewportCap, absoluteCap);
 
   const handleOpen = (event: React.MouseEvent<HTMLElement> | React.FocusEvent<HTMLElement>) => {
     if (!src || disabled || isTouchDevice) return;
