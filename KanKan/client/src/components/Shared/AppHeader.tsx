@@ -53,6 +53,7 @@ interface AppHeaderProps {
 export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleSidebar, sidebarOpen }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isHoverCapable = useMediaQuery('(hover: hover) and (pointer: fine)');
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useDispatch<AppDispatch>();
@@ -220,27 +221,16 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleSidebar, sidebarOp
 
         <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
           <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mr: 0.25 }}>
-            {isMobile ? (
-              <BoxAny sx={{ display: 'inline-flex' }}>
-                <UserAvatar
-                  src={user?.avatarUrl}
-                  gender={user?.gender}
-                  variant="rounded"
-                  previewMode="tap"
-                  closePreviewOnClick
-                  sx={{ width: 48, height: 48 }}
-                />
-              </BoxAny>
-            ) : (
+            <BoxAny sx={{ display: 'inline-flex' }}>
               <UserAvatar
                 src={user?.avatarUrl}
                 gender={user?.gender}
                 variant="rounded"
-                previewMode="doubleClick"
+                previewMode={isHoverCapable ? 'hover' : 'tap'}
                 closePreviewOnClick
                 sx={{ width: 48, height: 48 }}
               />
-            )}
+            </BoxAny>
             <BoxAny
               sx={{
                 display: { xs: 'flex', sm: 'flex' },

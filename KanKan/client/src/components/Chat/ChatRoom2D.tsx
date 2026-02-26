@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Box, Paper, useMediaQuery, useTheme } from '@mui/material';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -133,16 +133,39 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
 }) => {
   const [lightbox, setLightbox] = useState<{ images: string[]; index: number; groupIndex?: number } | null>(null);
   const imageClickTimerRef = useRef<number | null>(null);
+  const layoutRef = useRef<HTMLDivElement | null>(null);
+  const [layoutWidth, setLayoutWidth] = useState<number>(0);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isHoverCapable = useMediaQuery('(hover: hover) and (pointer: fine)');
 
-  // Preserve current proportions across screen sizes
-  // Desktop: bubble 504×315, avatar 282×282, image strip 60px
-  // Mobile: stack vertically with more breathing room
-  const bubbleW = isMobile ? '92vw' : 520;
-  const bubbleH = isMobile ? '44vw' : 320;  // ratio ~2.1:1
-  const avatarSize = isMobile ? '36vw' : 220;
+  useEffect(() => {
+    if (!layoutRef.current) return;
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+      setLayoutWidth(entry.contentRect.width);
+    });
+    observer.observe(layoutRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+  const baseWidth = layoutWidth || window.innerWidth;
+  const columnWidth = baseWidth / 2;
+
+  // Keep bubble sizes consistent until narrow; cap at <= 2/3 view width.
+  const bubbleTargetPx = Math.min(baseWidth * 0.66, 520);
+  const bubbleW = `${bubbleTargetPx}px`;
+  const bubbleH = isMobile ? 'min(40vh, 300px)' : 'clamp(240px, 30vh, 320px)';
+  const avatarSizePx = isMobile
+    ? clamp(baseWidth * 0.2, 96, 150)
+    : clamp(baseWidth * 0.14, 110, 220);
+  const avatarSize = `${avatarSizePx}px`;
   const imgStripW = isMobile ? 56 : 110;
+  const maxSafeOverlapPx = Math.max(0, columnWidth - avatarSizePx - 16);
+  const overlapOffsetPx = Math.min(Math.max(0, bubbleTargetPx - columnWidth), maxSafeOverlapPx, 120);
+  const overlapOffset = `${overlapOffsetPx}px`;
 
   const textStyle = {
     whiteSpace: 'pre-wrap',
@@ -151,7 +174,12 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
     fontFamily: "'STKaiti', 'KaiTi', 'STSong', 'SimSun', 'Noto Serif SC', serif",
   };
 
-  const renderBubble = (text?: string, mediaUrls?: string[], align: 'left' | 'right' = 'left') => {
+  const renderBubble = (
+    text?: string,
+    mediaUrls?: string[],
+    align: 'left' | 'right' = 'left',
+    extraSx?: Record<string, any>
+  ) => {
     const hasMedia = mediaUrls && mediaUrls.length > 0;
     if (!text && !hasMedia) return null;
     return (
@@ -159,6 +187,7 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
         elevation={0}
         sx={{
           width: bubbleW,
+          maxWidth: overlapOffsetPx > 0 ? `calc(100% + ${overlapOffset})` : '100%',
           height: bubbleH,
           pl: isMobile ? 1.5 : 2.5,
           pr: isMobile ? 2 : 3.5,
@@ -170,7 +199,8 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
           borderRadius: 2,
           alignSelf: align === 'right' ? 'flex-end' : 'flex-start',
           position: 'relative',
-          overflow: 'hidden',
+          overflowX: 'visible',
+          overflowY: 'hidden',
           display: 'flex',
           flexDirection: 'row',
           justifyContent: 'flex-end',
@@ -202,6 +232,7 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
             right: align === 'right' ? 18 : 'auto',
             left: align === 'left' ? 18 : 'auto',
           },
+          ...extraSx,
         }}
       >
         {/* Text area — fills remaining width */}
@@ -263,8 +294,8 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
                 key={i}
                 src={url}
                 alt="Chat media"
-                openOnHover={false}
-                openOnLongPress={false}
+                openOnHover={isHoverCapable}
+                openOnLongPress={!isHoverCapable}
                 openOnDoubleClick
                 closeOnTriggerClickWhenOpen
               >
@@ -320,15 +351,20 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
   return (
     <>
       <BoxAny
+        ref={layoutRef}
         sx={{
           flexGrow: 1,
           position: 'relative',
           overflow: 'hidden',
-          display: 'flex',
-          flexDirection: isMobile ? 'column' : 'row',
-          alignItems: isMobile ? 'center' : 'stretch',
-          justifyContent: isMobile ? 'space-between' : 'space-between',
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          gridTemplateRows: '1fr 1fr',
+          alignItems: 'stretch',
+          justifyContent: 'space-between',
+          columnGap: isMobile ? 0 : 3.5,
+          rowGap: isMobile ? 0.75 : 2.5,
           px: isMobile ? 1.25 : 3.5,
+          pr: overlapOffsetPx > 0 ? 6 : undefined,
           py: isMobile ? 1.75 : 3.25,
           background:
             'linear-gradient(180deg, rgba(236, 219, 191, 0.98) 0%, rgba(205, 173, 133, 0.98) 60%, rgba(178, 142, 102, 0.98) 100%)',
@@ -350,17 +386,16 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
           },
         }}
       >
+        {/* A (top-left avatar) */}
         <BoxAny
           sx={{
-            width: isMobile ? '100%' : '48%',
+            gridColumn: 1,
+            gridRow: 1,
             display: 'flex',
-            flexDirection: 'column',
-            alignItems: isMobile ? 'center' : 'flex-start',
-            justifyContent: 'flex-end',
-            gap: isMobile ? 0.75 : 1.5,
+            alignItems: 'flex-start',
+            justifyContent: 'flex-start',
             position: 'relative',
             zIndex: 1,
-            pb: isMobile ? 0.5 : 2.5,
           }}
         >
           <UserAvatar
@@ -368,7 +403,7 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
             gender={leftParticipant?.gender}
             fallbackText={leftParticipant?.displayName}
             variant="rounded"
-            previewMode={isMobile ? 'tap' : 'hover'}
+            previewMode={isHoverCapable ? 'hover' : 'tap'}
             closePreviewOnClick
             sx={{
               width: avatarSize,
@@ -378,29 +413,60 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
               boxShadow: '0 18px 36px rgba(28, 18, 8, 0.35)',
             }}
           />
-          {renderBubble(leftText, leftMediaUrls, 'left')}
         </BoxAny>
 
+        {/* BM (top-right bubble) */}
         <BoxAny
           sx={{
-            width: isMobile ? '100%' : '48%',
+            gridColumn: 2,
+            gridRow: 1,
             display: 'flex',
-            flexDirection: 'column',
-            alignItems: isMobile ? 'center' : 'flex-end',
+            alignItems: 'flex-start',
             justifyContent: 'flex-end',
-            gap: isMobile ? 0.75 : 1.5,
             position: 'relative',
-            zIndex: 1,
-            pb: isMobile ? 0.5 : 2.5,
+            zIndex: 2,
           }}
         >
-          {renderBubble(rightText, rightMediaUrls, 'right')}
+          {renderBubble(rightText, rightMediaUrls, 'right', {
+            ml: overlapOffsetPx > 0 ? `calc(-1 * ${overlapOffset})` : 0,
+          })}
+        </BoxAny>
+
+        {/* AM (bottom-left bubble) */}
+        <BoxAny
+          sx={{
+            gridColumn: 1,
+            gridRow: 2,
+            display: 'flex',
+            alignItems: 'flex-end',
+            justifyContent: 'flex-start',
+            position: 'relative',
+            zIndex: 2,
+          }}
+        >
+          {renderBubble(leftText, leftMediaUrls, 'left', {
+            mr: overlapOffsetPx > 0 ? `calc(-1 * ${overlapOffset})` : 0,
+          })}
+        </BoxAny>
+
+        {/* B (bottom-right avatar) */}
+        <BoxAny
+          sx={{
+            gridColumn: 2,
+            gridRow: 2,
+            display: 'flex',
+            alignItems: 'flex-end',
+            justifyContent: 'flex-end',
+            position: 'relative',
+            zIndex: 1,
+          }}
+        >
           <UserAvatar
             src={rightParticipant?.avatarUrl || ''}
             gender={rightParticipant?.gender}
             fallbackText={rightParticipant?.displayName}
             variant="rounded"
-            previewMode={isMobile ? 'tap' : 'hover'}
+            previewMode={isHoverCapable ? 'hover' : 'tap'}
             closePreviewOnClick
             sx={{
               width: avatarSize,

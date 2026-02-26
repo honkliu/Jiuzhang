@@ -128,7 +128,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
   imageGroupIndex,
 }) => {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isHoverCapable = useMediaQuery('(hover: hover) and (pointer: fine)');
   const { language, t } = useLanguage();
   const { formatTime: formatTimeWithZone } = useSettings();
   const isAgent = message.senderId === 'user_ai_wa';
@@ -217,7 +217,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
             gender={message.senderGender}
             fallbackText={message.senderName}
             variant="rounded"
-            previewMode={isMobile ? 'tap' : 'hover'}
+            previewMode={isHoverCapable ? 'hover' : 'tap'}
             closePreviewOnClick
             sx={{ width: 40, height: 40, mx: 'auto' }}
           />
@@ -312,8 +312,8 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
           <ImageHoverPreview
             src={imageUrl}
             alt={t('chat.message.image')}
-            openOnHover={false}
-            openOnLongPress={false}
+            openOnHover={isHoverCapable}
+            openOnLongPress={!isHoverCapable}
             openOnDoubleClick
             closeOnTriggerClickWhenOpen
           >
