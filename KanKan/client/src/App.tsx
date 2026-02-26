@@ -77,8 +77,6 @@ const theme = createTheme({
               textTransform: 'none',
               borderRadius: 12,
               boxShadow: '0 8px 20px rgba(15, 23, 42, 0.12), inset 0 1px 0 rgba(255,255,255,0.8), inset 0 -1px 0 rgba(255,255,255,0.35)',
-              backdropFilter: 'blur(12px) saturate(160%)',
-              WebkitBackdropFilter: 'blur(12px) saturate(160%)',
             },
             contained: {
               background: 'linear-gradient(135deg, rgba(7,193,96,0.9), rgba(35,208,124,0.85))',
@@ -97,8 +95,6 @@ const theme = createTheme({
               background: 'rgba(255,255,255,0.45)',
               border: '1px solid rgba(255,255,255,0.5)',
               boxShadow: '0 8px 20px rgba(15, 23, 42, 0.12), inset 0 1px 0 rgba(255,255,255,0.8), inset 0 -1px 0 rgba(255,255,255,0.35)',
-              backdropFilter: 'blur(10px) saturate(160%)',
-              WebkitBackdropFilter: 'blur(10px) saturate(160%)',
             },
           },
         },
@@ -110,8 +106,6 @@ const theme = createTheme({
               background: 'rgba(255,255,255,0.55)',
               border: '1px solid rgba(255,255,255,0.5)',
               boxShadow: '0 8px 20px rgba(15, 23, 42, 0.12), inset 0 1px 0 rgba(255,255,255,0.75), inset 0 -1px 0 rgba(255,255,255,0.3)',
-              backdropFilter: 'blur(12px) saturate(160%)',
-              WebkitBackdropFilter: 'blur(12px) saturate(160%)',
             },
           },
         },
@@ -126,8 +120,6 @@ const theme = createTheme({
       styleOverrides: {
         root: {
           background: 'rgba(255, 255, 255, 0.65)',
-          backdropFilter: 'blur(16px) saturate(160%)',
-          WebkitBackdropFilter: 'blur(16px) saturate(160%)',
           borderBottom: '1px solid rgba(255, 255, 255, 0.5)',
         },
       },
@@ -138,8 +130,6 @@ const theme = createTheme({
           background: 'rgba(255, 255, 255, 0.6)',
           border: '1px solid rgba(255, 255, 255, 0.5)',
           boxShadow: '0 10px 30px rgba(15, 23, 42, 0.08)',
-          backdropFilter: 'blur(14px) saturate(160%)',
-          WebkitBackdropFilter: 'blur(14px) saturate(160%)',
         },
       },
     },
@@ -149,8 +139,6 @@ const theme = createTheme({
           background: 'rgba(255, 255, 255, 0.6)',
           border: '1px solid rgba(255, 255, 255, 0.5)',
           boxShadow: '0 10px 30px rgba(15, 23, 42, 0.08)',
-          backdropFilter: 'blur(14px) saturate(160%)',
-          WebkitBackdropFilter: 'blur(14px) saturate(160%)',
         },
       },
     },
@@ -160,8 +148,6 @@ const theme = createTheme({
           background: 'rgba(255, 255, 255, 0.7)',
           border: '1px solid rgba(255, 255, 255, 0.5)',
           boxShadow: '0 12px 40px rgba(15, 23, 42, 0.12)',
-          backdropFilter: 'blur(18px) saturate(170%)',
-          WebkitBackdropFilter: 'blur(18px) saturate(170%)',
         },
       },
     },
@@ -175,7 +161,6 @@ const theme = createTheme({
         root: {
           '& .MuiOutlinedInput-root': {
             background: 'rgba(255, 255, 255, 0.6)',
-            backdropFilter: 'blur(10px) saturate(160%)',
           },
           '& .MuiInputLabel-root': {
             zIndex: 1,
