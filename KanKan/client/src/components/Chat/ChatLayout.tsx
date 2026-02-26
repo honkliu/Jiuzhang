@@ -38,7 +38,6 @@ export const ChatLayout: React.FC = () => {
   const isCompactHeader = useMediaQuery(theme.breakpoints.down('sm'));
   const dispatch = useDispatch<AppDispatch>();
   const { activeChat, chats } = useSelector((state: RootState) => state.chat);
-  const [viewportHeight, setViewportHeight] = useState<number>(0);
   const myUserId = useSelector((state: RootState) => state.auth.user?.id);
   const { t } = useLanguage();
   const [showSidebar, setShowSidebar] = useState(true);
@@ -258,22 +257,6 @@ export const ChatLayout: React.FC = () => {
     }
   }, [isMobile, activeChat]);
 
-  useEffect(() => {
-    const vv = window.visualViewport;
-    if (!vv) return;
-    const handleViewportChange = () => {
-      const rawHeight = vv.height + vv.offsetTop;
-      const nextHeight = Math.max(0, Math.min(window.innerHeight, rawHeight));
-      setViewportHeight(nextHeight);
-    };
-    handleViewportChange();
-    vv.addEventListener('resize', handleViewportChange);
-    vv.addEventListener('scroll', handleViewportChange);
-    return () => {
-      vv.removeEventListener('resize', handleViewportChange);
-      vv.removeEventListener('scroll', handleViewportChange);
-    };
-  }, []);
 
   const handleBackToList = () => {
     setShowSidebar(true);
@@ -286,7 +269,7 @@ export const ChatLayout: React.FC = () => {
       sx={{
         display: 'flex',
         flexDirection: 'column',
-        height: viewportHeight ? `${viewportHeight}px` : '100vh',
+        height: '100dvh',
         overflow: 'hidden',
       }}
     >
@@ -295,12 +278,8 @@ export const ChatLayout: React.FC = () => {
         sx={{
           display: 'flex',
           height: {
-            xs: viewportHeight
-              ? `calc(${viewportHeight}px - ${appHeaderHeight}px - env(safe-area-inset-top))`
-              : `calc(100vh - ${appHeaderHeight}px - env(safe-area-inset-top))`,
-            sm: viewportHeight
-              ? `calc(${viewportHeight}px - 64px - env(safe-area-inset-top))`
-              : `calc(100vh - 64px - env(safe-area-inset-top))`,
+            xs: `calc(100dvh - ${appHeaderHeight}px - env(safe-area-inset-top))`,
+            sm: `calc(100dvh - 64px - env(safe-area-inset-top))`,
           },
           mt: {
             xs: `calc(${appHeaderHeight}px + env(safe-area-inset-top))`,
