@@ -314,6 +314,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
             alt={t('chat.message.image')}
             openOnHover={isHoverCapable}
             openOnLongPress={!isHoverCapable}
+            openOnTap={!isHoverCapable}
             openOnDoubleClick
             closeOnTriggerClickWhenOpen
           >

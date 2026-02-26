@@ -296,6 +296,7 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
                 alt="Chat media"
                 openOnHover={isHoverCapable}
                 openOnLongPress={!isHoverCapable}
+                openOnTap={!isHoverCapable}
                 openOnDoubleClick
                 closeOnTriggerClickWhenOpen
               >
