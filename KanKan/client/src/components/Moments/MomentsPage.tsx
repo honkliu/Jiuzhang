@@ -315,6 +315,9 @@ export const MomentsPage: React.FC = () => {
                             src={url}
                             alt={t('moments.image')}
                             tabIndex={0}
+                            onContextMenu={(event: React.MouseEvent<HTMLElement>) => {
+                              event.preventDefault();
+                            }}
                             onClick={(event: React.MouseEvent<HTMLElement>) => {
                               previewProps.onClick?.(event);
                               if (event.defaultPrevented) return;
@@ -348,6 +351,9 @@ export const MomentsPage: React.FC = () => {
                               cursor: 'pointer',
                               transition: 'opacity 0.15s',
                               '&:hover': { opacity: 0.85 },
+                              WebkitTouchCallout: 'none',
+                              WebkitUserSelect: 'none',
+                              userSelect: 'none',
                             }}
                           />
                         )}
