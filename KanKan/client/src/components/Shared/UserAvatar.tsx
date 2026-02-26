@@ -105,6 +105,7 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
     <ImageHoverPreview
       src={effectiveSrc}
       alt={fallbackText || 'Avatar'}
+      maxSize={400}
       closeOnTriggerClickWhenOpen={Boolean(closePreviewOnClick)}
       openOnHover={previewMode === 'hover'}
       openOnLongPress={previewMode === 'hover'}

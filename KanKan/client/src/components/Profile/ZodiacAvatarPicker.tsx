@@ -26,7 +26,7 @@ const AvatarOptionTile: React.FC<AvatarOptionTileProps> = ({
   const [imgError, setImgError] = React.useState(false);
 
   return (
-    <ImageHoverPreview src={avatar.fullImageUrl || avatar.imageUrl} alt={avatar.fileName}>
+    <ImageHoverPreview src={avatar.fullImageUrl || avatar.imageUrl} alt={avatar.fileName} maxSize={400}>
       {(previewProps) => (
         <BoxAny
           {...previewProps}

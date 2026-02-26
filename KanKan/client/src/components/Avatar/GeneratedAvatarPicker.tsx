@@ -261,6 +261,7 @@ export const GeneratedAvatarPicker: React.FC<GeneratedAvatarPickerProps> = ({
                 key={item.id}
                 src={item.fullUrl}
                 alt={item.isRaw ? 'Raw avatar preview' : 'Generated avatar preview'}
+                maxSize={400}
                 disabled={Boolean(activePreviewId && activePreviewId !== item.id)}
                 openOnDoubleClick={false}
                 openOnLongPress={isMobile}
@@ -286,6 +287,31 @@ export const GeneratedAvatarPicker: React.FC<GeneratedAvatarPickerProps> = ({
                 {(previewProps) => (
                   <ButtonBase
                     {...previewProps}
+                    onClick={(event) => {
+                      previewProps.onClick?.(event);
+                      if (event.defaultPrevented) return;
+                      if (suppressClickRef.current) {
+                        suppressClickRef.current = false;
+                        return;
+                      }
+                      if (clickTimerRef.current) {
+                        window.clearTimeout(clickTimerRef.current);
+                      }
+                      clickTimerRef.current = window.setTimeout(() => {
+                        handleSelect(item);
+                        clickTimerRef.current = null;
+                      }, 300);
+                    }}
+                    onDoubleClick={(event) => {
+                      if (clickTimerRef.current) {
+                        window.clearTimeout(clickTimerRef.current);
+                        clickTimerRef.current = null;
+                      }
+                      suppressClickRef.current = true;
+                      event.preventDefault();
+                      event.stopPropagation();
+                      previewProps.onDoubleClick?.(event);
+                    }}
                     onClick={(event) => {
                       previewProps.onClick?.(event);
                       if (event.defaultPrevented) return;

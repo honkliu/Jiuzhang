@@ -135,6 +135,7 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
   const imageClickTimerRef = useRef<number | null>(null);
   const layoutRef = useRef<HTMLDivElement | null>(null);
   const [layoutWidth, setLayoutWidth] = useState<number>(0);
+  const [layoutHeight, setLayoutHeight] = useState<number>(0);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isHoverCapable = useMediaQuery('(hover: hover) and (pointer: fine)');
@@ -145,6 +146,7 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
       const entry = entries[0];
       if (!entry) return;
       setLayoutWidth(entry.contentRect.width);
+      setLayoutHeight(entry.contentRect.height);
     });
     observer.observe(layoutRef.current);
     return () => observer.disconnect();
@@ -152,6 +154,7 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
 
   const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
   const baseWidth = layoutWidth || window.innerWidth;
+  const baseHeight = layoutHeight || window.innerHeight;
   const columnWidth = baseWidth / 2;
 
   // Keep bubble sizes consistent until narrow; cap at <= 2/3 view width.
@@ -160,16 +163,14 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
   const fontSizePx = isMobile ? 14.4 : 16;
   const rowHeightPx = fontSizePx * 1.6;
   const bubbleRowTrimPx = Math.round(rowHeightPx * 2);
-  const bubbleH = isMobile
-    ? `calc(min(40vh, 300px) - ${bubbleRowTrimPx}px)`
-    : `calc(clamp(240px, 30vh, 320px) - ${bubbleRowTrimPx}px)`;
-  const avatarSizePx = isMobile
+  const bubbleH = 'calc(100% - 10px)';
+  const avatarSizePx = (isMobile
     ? clamp(baseWidth * 0.2, 96, 150)
-    : clamp(baseWidth * 0.14, 110, 220);
+    : clamp(baseWidth * 0.14, 110, 220)) * 1.3;
   const avatarSize = `${avatarSizePx}px`;
   const imgStripW = isMobile ? 56 : 110;
   const maxSafeOverlapPx = Math.max(0, columnWidth - avatarSizePx - 16);
-  const overlapOffsetPx = Math.min(Math.max(0, bubbleTargetPx - columnWidth), maxSafeOverlapPx, 120);
+  const overlapOffsetPx = Math.min(Math.max(0, bubbleTargetPx - columnWidth), maxSafeOverlapPx, 140);
   const overlapOffset = `${overlapOffsetPx}px`;
 
   const textStyle = {
@@ -201,7 +202,7 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
           color: align === 'right' ? 'rgba(240, 250, 248, 0.95)' : 'rgba(50, 36, 24, 0.95)',
           border: '1px solid rgba(116, 84, 50, 0.6)',
           boxShadow: '0 18px 40px rgba(46, 30, 16, 0.3)',
-          borderRadius: 2,
+          borderRadius: 1,
           alignSelf: 'auto',
           position: 'relative',
           overflowX: 'visible',
@@ -247,6 +248,8 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
               position: 'relative',
               zIndex: 1,
               flex: 1,
+              height: `calc(100% - ${bubbleRowTrimPx}px)`,
+              alignSelf: 'flex-end',
               overflow: 'hidden',
               ...textStyle,
               '& p': { margin: 0 },
@@ -270,9 +273,18 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
               '& pre code': { padding: 0, backgroundColor: 'transparent' },
             }}
           >
-            <ReactMarkdown remarkPlugins={remarkPlugins} rehypePlugins={rehypePlugins}>
-              {escapePipesInMathForGfm(text)}
-            </ReactMarkdown>
+            <BoxAny
+              sx={{
+                position: 'absolute',
+                left: 0,
+                right: 0,
+                bottom: 0,
+              }}
+            >
+              <ReactMarkdown remarkPlugins={remarkPlugins} rehypePlugins={rehypePlugins}>
+                {escapePipesInMathForGfm(text)}
+              </ReactMarkdown>
+            </BoxAny>
           </BoxAny>
         )}
 
@@ -374,11 +386,11 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
           alignItems: 'stretch',
           justifyContent: 'space-between',
           columnGap: isMobile ? 0 : 3.5,
-          rowGap: isMobile ? 0.75 : 2.5,
+          rowGap: 0,
           px: isMobile ? 1.25 : 3.5,
           pr: overlapOffsetPx > 0 ? 6 : undefined,
-          pt: isMobile ? 0.75 : 2,
-          pb: isMobile ? 2.25 : 3.5,
+          pt: 0,
+          pb: 0,
           background:
             'linear-gradient(180deg, rgba(236, 219, 191, 0.98) 0%, rgba(205, 173, 133, 0.98) 60%, rgba(178, 142, 102, 0.98) 100%)',
           '&::before': {
@@ -394,7 +406,7 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
             position: 'absolute',
             inset: 14,
             border: '1px solid rgba(105, 78, 46, 0.45)',
-            borderRadius: 3,
+            borderRadius: 0,
             pointerEvents: 'none',
           },
         }}

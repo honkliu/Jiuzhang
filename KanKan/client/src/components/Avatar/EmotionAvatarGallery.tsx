@@ -284,6 +284,7 @@ export const EmotionAvatarGallery: React.FC<EmotionAvatarGalleryProps> = ({ user
                     <ImageHoverPreview
                       src={fullById.get(match.avatarImageId) || match.imageUrl}
                       alt={`${match.emotion || label} preview`}
+                      maxSize={400}
                       openOnDoubleClick={false}
                       openOnLongPress
                       dismissOnHoverOut={false}
