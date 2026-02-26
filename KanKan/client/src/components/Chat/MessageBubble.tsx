@@ -325,6 +325,9 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
                 src={imageUrl}
                 alt={t('chat.message.image')}
                 tabIndex={0}
+                onContextMenu={(event: React.MouseEvent<HTMLElement>) => {
+                  event.preventDefault();
+                }}
                 onClick={(event: React.MouseEvent<HTMLElement>) => {
                   previewProps.onClick?.(event);
                   if (event.defaultPrevented) return;
@@ -347,6 +350,9 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
                   maxWidth: '100%',
                   maxHeight: 300,
                   borderRadius: 1,
+                  WebkitTouchCallout: 'none',
+                  WebkitUserSelect: 'none',
+                  userSelect: 'none',
                 }}
               />
             )}

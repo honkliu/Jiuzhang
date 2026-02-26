@@ -306,6 +306,9 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
                     component="img"
                     src={url}
                     alt="Chat media"
+                    onContextMenu={(event: React.MouseEvent<HTMLElement>) => {
+                      event.preventDefault();
+                    }}
                     onClick={(event: React.MouseEvent<HTMLElement>) => {
                       previewProps.onClick?.(event);
                       if (event.defaultPrevented) return;
@@ -338,6 +341,9 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
                       cursor: 'pointer',
                       transition: 'opacity 0.15s',
                       '&:hover': { opacity: 0.85 },
+                      WebkitTouchCallout: 'none',
+                      WebkitUserSelect: 'none',
+                      userSelect: 'none',
                     }}
                   />
                 )}
