@@ -12,6 +12,8 @@ import {
   CircularProgress,
   Chip,
   Divider,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
@@ -30,6 +32,8 @@ export const ContactsPage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const { t } = useLanguage();
+  const theme = useTheme();
+  const isHoverCapable = useMediaQuery('(hover: hover) and (pointer: fine)');
   const currentUser = useSelector((state: RootState) => state.auth.user);
   const currentUserId = currentUser?.id;
   const isAdmin = Boolean(currentUser?.isAdmin);
@@ -267,6 +271,8 @@ export const ContactsPage: React.FC = () => {
                         src={req.fromUser.avatarUrl}
                         gender={req.fromUser.gender}
                         fallbackText={req.fromUser.displayName}
+                        previewMode={isHoverCapable ? 'hover' : 'tap'}
+                        closePreviewOnClick
                       />
                     </ListItemAvatar>
                     <ListItemText
@@ -330,6 +336,8 @@ export const ContactsPage: React.FC = () => {
                         src={user.avatarUrl}
                         gender={user.gender}
                         fallbackText={user.displayName}
+                        previewMode={isHoverCapable ? 'hover' : 'tap'}
+                        closePreviewOnClick
                       />
                     </ListItemAvatar>
                     <ListItemText
@@ -397,6 +405,8 @@ export const ContactsPage: React.FC = () => {
                         src={user.avatarUrl}
                         gender={user.gender}
                         fallbackText={user.displayName}
+                        previewMode={isHoverCapable ? 'hover' : 'tap'}
+                        closePreviewOnClick
                       />
                     </ListItemAvatar>
                     <ListItemText

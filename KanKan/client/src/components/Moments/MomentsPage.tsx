@@ -275,7 +275,14 @@ export const MomentsPage: React.FC = () => {
           moments.map((moment) => (
             <Card key={moment.id} sx={{ mb: 2 }}>
               <CardHeader
-                avatar={<UserAvatar src={moment.userAvatar} fallbackText={moment.userName} />}
+                avatar={
+                  <UserAvatar
+                    src={moment.userAvatar}
+                    fallbackText={moment.userName}
+                    previewMode={isHoverCapable ? 'hover' : 'tap'}
+                    closePreviewOnClick
+                  />
+                }
                 title={moment.userName}
                 subheader={formatDateTime(moment.createdAt)}
                 action={
