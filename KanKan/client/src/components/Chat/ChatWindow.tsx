@@ -38,6 +38,7 @@ import { signalRService } from '@/services/signalr.service';
 import { chatService, type Chat, type Message } from '@/services/chat.service';
 import { mediaService } from '@/services/media.service';
 import { avatarService, type EmotionThumbnailResult } from '@/services/avatar.service';
+import { contactService } from '@/services/contact.service';
 import { UserAvatar } from '@/components/Shared/UserAvatar';
 import { GroupAvatar } from '@/components/Shared/GroupAvatar';
 import {
@@ -441,6 +442,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
   const [uploading, setUploading] = useState(false);
   const [isRoom3D, setIsRoom3D] = useState(false);
   const [isRoom2D, setIsRoom2D] = useState(false);
+  const [otherAvatarImageId, setOtherAvatarImageId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRootHostRef = useRef<HTMLDivElement | null>(null);
   const inputRootRef = useRef<Root | null>(null);
@@ -709,7 +711,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
     }
     setLeftMood(null);
     setRightMood(null);
-    setLeftBroadcastAvatar('');
     lastBroadcastMoodRef.current = null;
     return () => {
       if (activeChat) {
@@ -831,6 +832,29 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
     ? getOtherRealParticipants(activeChat, user?.id)[0] || displayParticipant
     : undefined;
 
+  useEffect(() => {
+    if (!otherParticipant?.userId) {
+      setOtherAvatarImageId(null);
+      return;
+    }
+
+    let active = true;
+    contactService
+      .getUser(otherParticipant.userId)
+      .then((profile) => {
+        if (!active) return;
+        setOtherAvatarImageId(profile.avatarImageId || extractAvatarImageId(profile.avatarUrl) || null);
+      })
+      .catch(() => {
+        if (!active) return;
+        setOtherAvatarImageId(null);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [otherParticipant?.userId]);
+
   const latestRawTextBySenderId = useMemo(() => {
     const map: Record<string, string> = {};
     chatMessages.forEach((msg) => {
@@ -865,6 +889,28 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
     return latestRawTextBySenderId[senderId] || '';
   };
 
+  const latestReceivedText = useMemo(() => {
+    if (!user?.id || chatMessages.length === 0) return '';
+    for (let i = chatMessages.length - 1; i >= 0; i -= 1) {
+      const msg = chatMessages[i];
+      if (msg.messageType !== 'text' || msg.isDeleted) continue;
+      if (msg.senderId === user.id) continue;
+      return msg.text || '';
+    }
+    return '';
+  }, [chatMessages, user?.id]);
+
+  const latestReceivedAvatarUrl = useMemo(() => {
+    if (!user?.id || chatMessages.length === 0) return '';
+    for (let i = chatMessages.length - 1; i >= 0; i -= 1) {
+      const msg = chatMessages[i];
+      if (msg.isDeleted) continue;
+      if (msg.senderId === user.id) continue;
+      return msg.senderAvatar || '';
+    }
+    return '';
+  }, [chatMessages, user?.id]);
+
   const getLatest2DContentFor = (senderId?: string, draftText?: string): { text: string; mediaUrls: string[] } => {
     if (!senderId) return { text: draftText || '', mediaUrls: [] };
 
@@ -892,7 +938,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
   const [rightMood, setRightMood] = useState<MoodKey | null>(null);
   const [leftMoodAt, setLeftMoodAt] = useState(0);
   const [rightMoodAt, setRightMoodAt] = useState(0);
-  const [leftBroadcastAvatar, setLeftBroadcastAvatar] = useState<string>('');
   const moodCooldownMs = 5000;
 
   const otherDraft = draftMessages.find((d) => d.senderId === otherParticipant?.userId)?.text;
@@ -906,7 +951,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
     if (!isRoom2D) return { text: '', mediaUrls: [] };
     return getLatest2DContentFor(user?.id);
   }, [isRoom2D, user?.id, mergedMessages, chatMessages]);
-  const leftMoodText = otherDraft || getLatestRawTextFor(otherParticipant?.userId);
+  const leftMoodText = latestReceivedText;
 
   const extractAvatarImageId = (url?: string | null): string | null => {
     if (!url) return null;
@@ -973,28 +1018,14 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
   };
 
   useEffect(() => {
-    // Tag format: [mood:smile:https://...avatarUrl...]
-    const moodTagMatch = leftMoodText?.match(/\[mood:([^:\]]+):([^\]]*)\]/);
-    const next = moodTagMatch ? toMoodKey(moodTagMatch[1]) : getMoodFromText(leftMoodText);
+    const next = getMoodFromText(leftMoodText);
     if (!next) return;
     const now = Date.now();
     if (leftMood === null || now - leftMoodAt >= moodCooldownMs) {
       setLeftMood(next);
       setLeftMoodAt(now);
-      if (moodTagMatch?.[2]) setLeftBroadcastAvatar(moodTagMatch[2]);
     }
   }, [leftMoodText, leftMood, leftMoodAt]);
-
-
-  // When our own mood changes, broadcast mood + the resolved avatar URL via draft
-  useEffect(() => {
-    if (!activeChat || !rightMood) return;
-    if (lastBroadcastMoodRef.current === rightMood) return;
-    lastBroadcastMoodRef.current = rightMood;
-    const avatarUrl = rightMoodMap[rightMood] || '';
-    const tag = `[mood:${rightMood}:${avatarUrl}]`;
-    signalRService.sendDraftChanged(activeChat.id, tag);
-  }, [rightMood, rightMoodMap, activeChat]);
 
   useEffect(() => {
     let active = true;
@@ -1024,7 +1055,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
 
   useEffect(() => {
     let active = true;
-    const avatarImageId = extractAvatarImageId(otherParticipant?.avatarUrl);
+    const avatarImageId = otherAvatarImageId
+      || extractAvatarImageId(latestReceivedAvatarUrl || otherParticipant?.avatarUrl);
     if (!avatarImageId) {
       setLeftMoodMap({});
       return () => {
@@ -1046,9 +1078,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
     return () => {
       active = false;
     };
-  }, [otherParticipant?.avatarUrl]);
+  }, [otherAvatarImageId, latestReceivedAvatarUrl, otherParticipant?.avatarUrl]);
 
-  const leftAvatar = leftBroadcastAvatar || getAvatarForMood(leftMood, leftMoodMap, otherParticipant?.avatarUrl);
+  const leftAvatar = getAvatarForMood(leftMood, leftMoodMap, otherParticipant?.avatarUrl);
   const rightAvatar = getAvatarForMood(rightMood, rightMoodMap, user?.avatarUrl);
 
   const groupMembersCount = activeChat
