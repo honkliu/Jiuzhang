@@ -71,6 +71,7 @@ export const ChatLayout: React.FC = () => {
     const connectSignalR = async () => {
       try {
         await signalRService.connect();
+        dispatch(fetchChats());
       } catch (error) {
         console.error('Failed to connect to SignalR:', error);
       }

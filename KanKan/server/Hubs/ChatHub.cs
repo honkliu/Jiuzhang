@@ -25,8 +25,8 @@ public class ChatHub : Hub
     private readonly IAvatarService _avatarService;
     private readonly ILogger<ChatHub> _logger;
 
-    // Track online users: UserId -> ConnectionId
-    private static readonly Dictionary<string, string> _onlineUsers = new();
+    // Track online users: UserId -> ConnectionIds
+    private static readonly Dictionary<string, HashSet<string>> _onlineUsers = new();
     private static readonly object _lock = new();
 
     public ChatHub(
@@ -75,18 +75,37 @@ public class ChatHub : Hub
 
         if (!string.IsNullOrEmpty(userId))
         {
+            var isFirstConnection = false;
+            List<string> connectionIds;
             lock (_lock)
             {
-                _onlineUsers[userId] = Context.ConnectionId;
+                if (!_onlineUsers.TryGetValue(userId, out var connections))
+                {
+                    connections = new HashSet<string>(StringComparer.Ordinal);
+                    _onlineUsers[userId] = connections;
+                }
+
+                isFirstConnection = connections.Count == 0;
+                connections.Add(Context.ConnectionId);
+                connectionIds = connections.ToList();
             }
 
-            // Update user online status
-            var user = await _userRepository.GetByIdAsync(userId);
-            if (user != null)
+            _logger.LogWarning(
+                "User {UserId} connections={Count} ids=[{Ids}]",
+                userId,
+                connectionIds.Count,
+                string.Join(' ', connectionIds));
+
+            if (isFirstConnection)
             {
-                user.IsOnline = true;
-                user.LastSeen = DateTime.UtcNow;
-                await _userRepository.UpdateAsync(user);
+                // Update user online status
+                var user = await _userRepository.GetByIdAsync(userId);
+                if (user != null)
+                {
+                    user.IsOnline = true;
+                    user.LastSeen = DateTime.UtcNow;
+                    await _userRepository.UpdateAsync(user);
+                }
             }
 
             // Join all user's chat rooms
@@ -108,8 +127,11 @@ public class ChatHub : Hub
                 }
             }
 
-            // Notify contacts that user is online
-            await Clients.Others.SendAsync("UserOnline", userId);
+            if (isFirstConnection)
+            {
+                // Notify contacts that user is online
+                await Clients.Others.SendAsync("UserOnline", userId);
+            }
 
             _logger.LogInformation("User {UserId} connected with connection {ConnectionId}", userId, Context.ConnectionId);
         }
@@ -123,22 +145,46 @@ public class ChatHub : Hub
 
         if (!string.IsNullOrEmpty(userId))
         {
+            var isLastConnection = false;
+            List<string> connectionIds = new();
             lock (_lock)
             {
-                _onlineUsers.Remove(userId);
+                if (_onlineUsers.TryGetValue(userId, out var connections))
+                {
+                    connections.Remove(Context.ConnectionId);
+                    if (connections.Count == 0)
+                    {
+                        _onlineUsers.Remove(userId);
+                        isLastConnection = true;
+                        connectionIds = new List<string>();
+                    }
+                    else
+                    {
+                        connectionIds = connections.ToList();
+                    }
+                }
             }
 
-            // Update user offline status
-            var user = await _userRepository.GetByIdAsync(userId);
-            if (user != null)
+            _logger.LogWarning(
+                "User {UserId} connections={Count} ids=[{Ids}]",
+                userId,
+                connectionIds.Count,
+                string.Join(' ', connectionIds));
+
+            if (isLastConnection)
             {
-                user.IsOnline = false;
-                user.LastSeen = DateTime.UtcNow;
-                await _userRepository.UpdateAsync(user);
-            }
+                // Update user offline status
+                var user = await _userRepository.GetByIdAsync(userId);
+                if (user != null)
+                {
+                    user.IsOnline = false;
+                    user.LastSeen = DateTime.UtcNow;
+                    await _userRepository.UpdateAsync(user);
+                }
 
-            // Notify contacts that user is offline
-            await Clients.Others.SendAsync("UserOffline", userId);
+                // Notify contacts that user is offline
+                await Clients.Others.SendAsync("UserOffline", userId);
+            }
 
             _logger.LogInformation("User {UserId} disconnected", userId);
         }
@@ -513,7 +559,7 @@ public class ChatHub : Hub
     {
         lock (_lock)
         {
-            return _onlineUsers.ContainsKey(userId);
+            return _onlineUsers.TryGetValue(userId, out var connections) && connections.Count > 0;
         }
     }
 
