@@ -12,6 +12,7 @@ using KanKan.API.Models.DTOs.Chat;
 using KanKan.API.Models.DTOs.Notification;
 using KanKan.API.Models.Entities;
 using KanKan.API.Repositories.Interfaces;
+using KanKan.API.Services;
 using KanKan.API.Services.Interfaces;
 
 namespace KanKan.API.Controllers;
@@ -28,6 +29,7 @@ public class ChatController : ControllerBase
     private readonly IContactRepository _contactRepository;
     private readonly INotificationRepository _notificationRepository;
     private readonly IAgentService _agentService;
+    private readonly IAvatarService _avatarService;
     private readonly IHubContext<ChatHub> _hubContext;
     private readonly ILogger<ChatController> _logger;
     private readonly IServiceScopeFactory _scopeFactory;
@@ -42,6 +44,7 @@ public class ChatController : ControllerBase
         INotificationRepository notificationRepository,
         IAgentService agentService,
         IHubContext<ChatHub> hubContext,
+        IAvatarService avatarService,
         IServiceScopeFactory scopeFactory,
         ILogger<ChatController> logger)
     {
@@ -52,9 +55,30 @@ public class ChatController : ControllerBase
         _contactRepository = contactRepository;
         _notificationRepository = notificationRepository;
         _agentService = agentService;
+        _avatarService = avatarService;
         _hubContext = hubContext;
         _scopeFactory = scopeFactory;
         _logger = logger;
+    }
+
+    private static string? ExtractAvatarImageId(string? avatarUrl)
+    {
+        if (string.IsNullOrWhiteSpace(avatarUrl))
+        {
+            return null;
+        }
+
+        try
+        {
+            var uri = new Uri(avatarUrl, UriKind.RelativeOrAbsolute);
+            var path = uri.IsAbsoluteUri ? uri.AbsolutePath : uri.OriginalString;
+            var match = Regex.Match(path, @"/api/avatar/image/([^/?#]+)", RegexOptions.IgnoreCase);
+            return match.Success ? match.Groups[1].Value : null;
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     private string GetUserId() => User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
@@ -607,6 +631,8 @@ public class ChatController : ControllerBase
                 SenderId = m.SenderId,
                 SenderName = m.SenderName,
                 SenderAvatar = m.SenderAvatar,
+                SenderAvatarSourceId = m.SenderAvatarSourceId,
+                SenderAvatarEmotion = m.SenderAvatarEmotion,
                 SenderGender = senderGenderById.TryGetValue(m.SenderId, out var g) ? g : "male",
                 MessageType = m.MessageType,
                 Text = m.Content?.Text,
@@ -672,13 +698,22 @@ public class ChatController : ControllerBase
             request.ChatId = string.IsNullOrWhiteSpace(request.ChatId) ? chatId : request.ChatId;
             var user = currentUser;
 
+            var senderAvatarUrl = user?.AvatarUrl ?? "";
+            var avatarIdFromUrl = ExtractAvatarImageId(senderAvatarUrl);
+            var avatarIdForLookup = !string.IsNullOrWhiteSpace(avatarIdFromUrl)
+                ? avatarIdFromUrl
+                : user?.AvatarImageId;
+            var (sourceAvatarId, avatarEmotion) = await _avatarService.GetSourceAvatarAndEmotionAsync(avatarIdForLookup);
+
             var message = new Message
             {
                 Id = $"msg_{Guid.NewGuid()}",
                 ChatId = request.ChatId,
                 SenderId = userId,
                 SenderName = userName,
-                SenderAvatar = user?.AvatarUrl ?? "",
+                SenderAvatar = senderAvatarUrl,
+                SenderAvatarSourceId = sourceAvatarId,
+                SenderAvatarEmotion = avatarEmotion,
                 MessageType = request.MessageType ?? "text",
                 Content = new MessageContent
                 {
@@ -735,6 +770,8 @@ public class ChatController : ControllerBase
                 SenderId = message.SenderId,
                 SenderName = message.SenderName,
                 SenderAvatar = message.SenderAvatar,
+                SenderAvatarSourceId = message.SenderAvatarSourceId,
+                SenderAvatarEmotion = message.SenderAvatarEmotion,
                 SenderGender = user?.Gender ?? "male",
                 MessageType = message.MessageType,
                 Text = message.Content.Text,

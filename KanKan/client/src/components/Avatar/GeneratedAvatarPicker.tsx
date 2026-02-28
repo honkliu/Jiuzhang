@@ -64,7 +64,7 @@ export interface GeneratedAvatarPickerProps {
   onClose: () => void;
   avatarImageId?: string | null;
   currentAvatarUrl?: string | null;
-  onSelect: (avatarImageId: string, avatarUrl: string) => void;
+  onSelect: (avatarImageId: string, avatarUrl: string, sourceAvatarImageId?: string | null) => void;
 }
 
 export const GeneratedAvatarPicker: React.FC<GeneratedAvatarPickerProps> = ({
@@ -123,6 +123,30 @@ export const GeneratedAvatarPicker: React.FC<GeneratedAvatarPickerProps> = ({
     };
   }, [open, avatarImageId]);
 
+  React.useEffect(() => {
+    if (!open || !avatarImageId) return;
+
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<{ sourceAvatarId?: string }>).detail;
+      if (!detail?.sourceAvatarId || detail.sourceAvatarId !== avatarImageId) return;
+
+      avatarService.getEmotionThumbnails(avatarImageId)
+        .then((generated) => {
+          const sorted = sortGenerated(generated);
+          cacheRef.current.set(avatarImageId, sorted);
+          setItems(sorted);
+        })
+        .catch(() => {
+          // Ignore refresh failures; keep current tiles.
+        });
+    };
+
+    window.addEventListener('emotion-thumbnails-updated', handler as EventListener);
+    return () => {
+      window.removeEventListener('emotion-thumbnails-updated', handler as EventListener);
+    };
+  }, [open, avatarImageId]);
+
   const selectedId = extractAvatarImageId(currentAvatarUrl);
   const rawItem: GeneratedAvatarItem | null = avatarImageId
     ? {
@@ -160,7 +184,7 @@ export const GeneratedAvatarPicker: React.FC<GeneratedAvatarPickerProps> = ({
   while (tiles.length < 9) tiles.push(null);
 
   const handleSelect = (item: GeneratedAvatarItem) => {
-    onSelect(item.id, item.fullUrl);
+    onSelect(item.id, item.fullUrl, avatarImageId || item.id);
     setActivePreviewId(null);
     setIsPreviewOpen(false);
     onClose();
@@ -215,6 +239,7 @@ export const GeneratedAvatarPicker: React.FC<GeneratedAvatarPickerProps> = ({
           width: popoverW,
           maxWidth: '90vw',
           display: 'flex',
+                      cursor: 'pointer',
           flexDirection: 'column',
           alignItems: 'center',
         },
@@ -263,8 +288,11 @@ export const GeneratedAvatarPicker: React.FC<GeneratedAvatarPickerProps> = ({
                 alt={item.isRaw ? 'Raw avatar preview' : 'Generated avatar preview'}
                 maxSize={400}
                 disabled={Boolean(activePreviewId && activePreviewId !== item.id)}
+                openOnHover
+                openOnLongPress={false}
+                openOnTap
+                openOnClick
                 openOnDoubleClick={false}
-                openOnLongPress={isMobile}
                 closeOnClickWhenOpen
                 closeOnTriggerClickWhenOpen
                 onOpenChange={(open) => {
@@ -287,31 +315,6 @@ export const GeneratedAvatarPicker: React.FC<GeneratedAvatarPickerProps> = ({
                 {(previewProps) => (
                   <ButtonBase
                     {...previewProps}
-                    onClick={(event) => {
-                      previewProps.onClick?.(event);
-                      if (event.defaultPrevented) return;
-                      if (suppressClickRef.current) {
-                        suppressClickRef.current = false;
-                        return;
-                      }
-                      if (clickTimerRef.current) {
-                        window.clearTimeout(clickTimerRef.current);
-                      }
-                      clickTimerRef.current = window.setTimeout(() => {
-                        handleSelect(item);
-                        clickTimerRef.current = null;
-                      }, 300);
-                    }}
-                    onDoubleClick={(event) => {
-                      if (clickTimerRef.current) {
-                        window.clearTimeout(clickTimerRef.current);
-                        clickTimerRef.current = null;
-                      }
-                      suppressClickRef.current = true;
-                      event.preventDefault();
-                      event.stopPropagation();
-                      previewProps.onDoubleClick?.(event);
-                    }}
                     onClick={(event) => {
                       previewProps.onClick?.(event);
                       if (event.defaultPrevented) return;

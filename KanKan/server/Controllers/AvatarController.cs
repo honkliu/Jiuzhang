@@ -14,11 +14,6 @@ public class AvatarController : ControllerBase
     private readonly IAvatarService _avatarService;
     private readonly ILogger<AvatarController> _logger;
 
-    private static readonly string[] EmotionTypes =
-    {
-        "angry", "smile", "sad", "happy", "crying", "thinking", "surprised", "neutral", "excited"
-    };
-
     public AvatarController(
         IAvatarService avatarService,
         ILogger<AvatarController> logger)
@@ -191,6 +186,7 @@ public class AvatarController : ControllerBase
                 return BadRequest(new { message = "sourceAvatarId is required" });
 
             var avatars = await _avatarService.GetEmotionThumbnailsBySourceAvatarIdAsync(sourceAvatarId, includeFull);
+            var emotionLabels = await _avatarService.GetEmotionLabelsBySourceAvatarIdAsync(sourceAvatarId);
 
             var results = new List<object>();
             foreach (var avatar in avatars.Where(a => !string.IsNullOrWhiteSpace(a.Emotion)))
@@ -221,7 +217,7 @@ public class AvatarController : ControllerBase
             return Ok(new
             {
                 sourceAvatarId,
-                emotions = EmotionTypes,
+                emotions = emotionLabels,
                 count = results.Count,
                 results
             });

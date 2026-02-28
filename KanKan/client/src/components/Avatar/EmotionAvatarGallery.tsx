@@ -25,6 +25,7 @@ const BoxAny = Box as any;
 // Module-level caches — survive component unmount/remount so re-opening never re-fetches.
 const _thumbCache = new Map<string, EmotionThumbnailResult[]>();
 const _fullCache = new Map<string, EmotionFullResult[]>();
+const _labelCache = new Map<string, string[]>();
 // In-flight deduplication: if a request is already in-flight for an avatarId, reuse it.
 const _thumbInFlight = new Map<string, Promise<EmotionThumbnailResult[]>>();
 const _fullInFlight = new Map<string, Promise<EmotionFullResult[]>>();
@@ -45,10 +46,11 @@ export const EmotionAvatarGallery: React.FC<EmotionAvatarGalleryProps> = ({ user
     return imageUrl.includes('?') ? `${imageUrl}&size=thumbnail` : `${imageUrl}?size=thumbnail`;
   };
 
-  const emotionLabels = ['angry', 'smile', 'sad', 'happy', 'crying', 'thinking', 'surprised', 'neutral', 'excited'];
+  const defaultEmotionLabels = ['angry', 'smile', 'sad', 'happy', 'crying', 'thinking', 'surprised', 'neutral', 'excited'];
   const tileSize = isMobile ? 'calc((100vw - 48px) / 3)' : 125;
 
   const [emotions, setEmotions] = useState<EmotionThumbnailResult[]>([]);
+  const [emotionLabels, setEmotionLabels] = useState<string[]>(defaultEmotionLabels);
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState<string | null>(null);
   const [generatingAll, setGeneratingAll] = useState(false);
@@ -62,6 +64,12 @@ export const EmotionAvatarGallery: React.FC<EmotionAvatarGalleryProps> = ({ user
   const helpOpen = Boolean(helpAnchorEl);
   const helpId = helpOpen ? 'emotion-prompt-help' : undefined;
 
+  const notifyEmotionThumbnailsUpdated = (sourceAvatarId: string) => {
+    window.dispatchEvent(new CustomEvent('emotion-thumbnails-updated', {
+      detail: { sourceAvatarId },
+    }));
+  };
+
   useEffect(() => {
     avatarIdRef.current = avatarId;
     loadEmotionAvatars();
@@ -74,6 +82,11 @@ export const EmotionAvatarGallery: React.FC<EmotionAvatarGalleryProps> = ({ user
         if (avatarIdRef.current === targetAvatarId) {
           setEmotions(cached);
         }
+      }
+
+      const cachedLabels = targetAvatarId ? _labelCache.get(targetAvatarId) : null;
+      if (cachedLabels && avatarIdRef.current === targetAvatarId) {
+        setEmotionLabels(cachedLabels);
       }
 
       if (!silent && !cached) {
@@ -92,7 +105,17 @@ export const EmotionAvatarGallery: React.FC<EmotionAvatarGalleryProps> = ({ user
       // Deduplicate concurrent thumbnail requests for the same avatarId
       let thumbPromise = _thumbInFlight.get(targetAvatarId);
       if (!thumbPromise) {
-        thumbPromise = avatarService.getEmotionThumbnails(targetAvatarId);
+        thumbPromise = avatarService.getEmotionThumbnailsMeta(targetAvatarId)
+          .then((payload) => {
+            const labels = (payload.emotions || []).map((item) => (item || '').toLowerCase()).filter(Boolean);
+            if (labels.length > 0) {
+              _labelCache.set(targetAvatarId, labels);
+              if (avatarIdRef.current === targetAvatarId) {
+                setEmotionLabels(labels);
+              }
+            }
+            return payload.results || [];
+          });
         _thumbInFlight.set(targetAvatarId, thumbPromise);
         thumbPromise.finally(() => _thumbInFlight.delete(targetAvatarId));
       }
@@ -145,10 +168,85 @@ export const EmotionAvatarGallery: React.FC<EmotionAvatarGalleryProps> = ({ user
       const result = await imageGenerationService.pollJobUntilComplete(jobId);
 
       if (result.status === 'completed') {
-        // Invalidate caches so fresh data is fetched
-        _thumbCache.delete(targetAvatarId);
-        _fullCache.delete(targetAvatarId);
-        await loadEmotionAvatars(false, targetAvatarId);
+        const avatarIds = result.results?.avatarImageIds || [];
+        const newAvatarId = avatarIds.length > 0 ? avatarIds[avatarIds.length - 1] : null;
+        if (newAvatarId) {
+          const normalized = emotion.trim().toLowerCase();
+          const nextImageUrl = `/api/avatar/image/${newAvatarId}`;
+          let replacedId: string | null = null;
+
+          setEmotions((prev) => {
+            let replaced = false;
+            const next = prev.map((item) => {
+              if ((item.emotion || '').toLowerCase() === normalized) {
+                replaced = true;
+                replacedId = item.avatarImageId;
+                return {
+                  ...item,
+                  avatarImageId: newAvatarId,
+                  emotion,
+                  imageUrl: nextImageUrl,
+                  thumbnailDataUrl: null,
+                };
+              }
+              return item;
+            });
+            if (!replaced) {
+              next.push({
+                avatarImageId: newAvatarId,
+                emotion,
+                imageUrl: nextImageUrl,
+                thumbnailDataUrl: null,
+              });
+            }
+            _thumbCache.set(targetAvatarId, next);
+            return next;
+          });
+
+          notifyEmotionThumbnailsUpdated(targetAvatarId);
+
+          setFullById((prev) => {
+            const nextMap = new Map(prev);
+            if (replacedId) {
+              nextMap.delete(replacedId);
+            }
+            nextMap.set(newAvatarId, '');
+            return nextMap;
+          });
+
+          const cachedFull = _fullCache.get(targetAvatarId);
+          if (cachedFull) {
+            let fullReplaced = false;
+            const nextFull = cachedFull.map((item) => {
+              if ((item.emotion || '').toLowerCase() === normalized) {
+                fullReplaced = true;
+                return {
+                  ...item,
+                  avatarImageId: newAvatarId,
+                  emotion,
+                  imageUrl: nextImageUrl,
+                  fullImageDataUrl: null,
+                };
+              }
+              return item;
+            });
+            if (!fullReplaced) {
+              nextFull.push({
+                avatarImageId: newAvatarId,
+                emotion,
+                imageUrl: nextImageUrl,
+                fullImageDataUrl: null,
+              });
+            }
+            _fullCache.set(targetAvatarId, nextFull);
+          }
+
+        } else {
+          // Fallback: refresh all thumbnails if the job doesn't return an id.
+          _thumbCache.delete(targetAvatarId);
+          _fullCache.delete(targetAvatarId);
+          await loadEmotionAvatars(false, targetAvatarId);
+        }
       } else {
         setError(result.errorMessage || 'Generation failed');
       }
@@ -181,6 +279,7 @@ export const EmotionAvatarGallery: React.FC<EmotionAvatarGalleryProps> = ({ user
         _thumbCache.delete(targetAvatarId);
         _fullCache.delete(targetAvatarId);
         await loadEmotionAvatars(true, targetAvatarId);
+        notifyEmotionThumbnailsUpdated(targetAvatarId);
       } else {
         setError(result.errorMessage || 'Generation failed');
       }
@@ -279,14 +378,28 @@ export const EmotionAvatarGallery: React.FC<EmotionAvatarGalleryProps> = ({ user
             const match = emotions.find((e) => (e.emotion || '').toLowerCase() === label);
             return (
               <Grid item xs={4} key={label}>
-                <Card sx={{ p: 0.15, borderRadius: 1 }}>
+                <Card
+                  sx={{
+                    p: 0.15,
+                    borderRadius: 1,
+                    transition: 'transform 120ms ease, box-shadow 120ms ease',
+                    '&:hover': {
+                      transform: 'translateY(-1px)',
+                      boxShadow: '0 8px 16px rgba(2, 6, 23, 0.12)',
+                    },
+                  }}
+                >
                   {match ? (
                     <ImageHoverPreview
+                      key={`${label}-${match.avatarImageId}`}
                       src={fullById.get(match.avatarImageId) || match.imageUrl}
                       alt={`${match.emotion || label} preview`}
                       maxSize={400}
+                      openOnHover={false}
+                      openOnLongPress={false}
+                      openOnTap
+                      openOnClick
                       openOnDoubleClick={false}
-                      openOnLongPress
                       dismissOnHoverOut={false}
                       closeOnClickWhenOpen
                       closeOnTriggerClickWhenOpen
@@ -299,7 +412,7 @@ export const EmotionAvatarGallery: React.FC<EmotionAvatarGalleryProps> = ({ user
                             justifyContent: 'center',
                             alignItems: 'center',
                             width: '100%',
-                            cursor: 'default',
+                            cursor: 'pointer',
                           }}
                         >
                           <CardMedia

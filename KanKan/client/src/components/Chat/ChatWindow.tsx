@@ -906,10 +906,13 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
       const msg = chatMessages[i];
       if (msg.isDeleted) continue;
       if (msg.senderId === user.id) continue;
-      return msg.senderAvatar || '';
+      if (msg.senderAvatar) return msg.senderAvatar;
+      if (msg.senderAvatarSourceId) return `/api/avatar/image/${msg.senderAvatarSourceId}`;
+      return '';
     }
     return '';
   }, [chatMessages, user?.id]);
+
 
   const getLatest2DContentFor = (senderId?: string, draftText?: string): { text: string; mediaUrls: string[] } => {
     if (!senderId) return { text: draftText || '', mediaUrls: [] };
@@ -930,7 +933,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
     return { text, mediaUrls };
   };
 
-  type MoodKey = 'neutral' | 'smile' | 'angry' | 'sad' | 'surprised' | 'thinking' | 'happy' | 'crying' | 'excited';
+  type MoodKey = 'neutral' | 'smile' | 'angry' | 'sad' | 'surprised' | 'thinking' | 'happy' | 'crying' | 'excited' | 'flirty' | 'solo' | 'interact';
 
   const [leftMoodMap, setLeftMoodMap] = useState<Partial<Record<MoodKey, string>>>({});
   const [rightMoodMap, setRightMoodMap] = useState<Partial<Record<MoodKey, string>>>({});
@@ -977,6 +980,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
     if (normalized === 'thinking') return 'thinking';
     if (normalized === 'neutral') return 'neutral';
     if (normalized === 'excited') return 'excited';
+    if (normalized === 'flirty') return 'flirty';
+    if (normalized === 'solo') return 'solo';
+    if (normalized === 'interact') return 'interact';
     return null;
   };
 
@@ -995,6 +1001,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
   const getMoodFromText = (text: string): MoodKey | null => {
     const value = text.toLowerCase();
 
+    if (/暧昧|撩人|撩|心动|喜欢你|想你|性感|诱人|flirt|flirty|sexy|hot|attractive|turn\s?on|aroused|crush|😍|😘|😏/.test(value)) return 'flirty';
     if (/生气|气死|恼火|怒|愤怒|抓狂|angry|furious|mad|pissed|rage|🤬|😡|😤/.test(value)) return 'angry';
     if (/难过|伤心|忧伤|惆怅|sad|sorrow|upset|unhappy|😞|😔/.test(value)) return 'sad';
     if (/哭|呜呜|泪|大哭|哭泣|cry|crying|sob|😭|😢/.test(value)) return 'crying';
@@ -1073,6 +1080,37 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
       .catch(() => {
         if (!active) return;
         setLeftMoodMap({});
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [otherAvatarImageId, latestReceivedAvatarUrl, otherParticipant?.avatarUrl]);
+
+  const leftMoodRefreshAtRef = useRef(0);
+  const lastLeftAvatarIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    const avatarImageId = otherAvatarImageId
+      || extractAvatarImageId(latestReceivedAvatarUrl || otherParticipant?.avatarUrl);
+    if (!avatarImageId) return;
+
+    const lastAvatarId = lastLeftAvatarIdRef.current;
+    if (lastAvatarId && lastAvatarId === avatarImageId) return;
+
+    const now = Date.now();
+    if (now - leftMoodRefreshAtRef.current < 3000) return;
+    leftMoodRefreshAtRef.current = now;
+    lastLeftAvatarIdRef.current = avatarImageId;
+
+    let active = true;
+    avatarService
+      .getEmotionThumbnails(avatarImageId)
+      .then((items) => {
+        if (!active) return;
+        setLeftMoodMap(buildMoodMap(items));
+      })
+      .catch(() => {
+        // Ignore refresh failures; existing mood map is still valid.
       });
 
     return () => {

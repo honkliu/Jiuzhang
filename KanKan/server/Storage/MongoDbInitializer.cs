@@ -357,6 +357,7 @@ public class MongoDbInitializer : IHostedService
             var update = Builders<AvatarImage>.Update.Set(a => a.SourceAvatarId, predefined.Id);
             var filter = Builders<AvatarImage>.Filter.And(
                 Builders<AvatarImage>.Filter.Eq(a => a.ImageType, "emotion_generated"),
+                Builders<AvatarImage>.Filter.Eq(a => a.UserId, predefinedUserId),
                 Builders<AvatarImage>.Filter.In(a => a.SourceAvatarId, legacyOriginalIds));
 
             var result = await avatarImagesCollection.UpdateManyAsync(filter, update, cancellationToken: cancellationToken);

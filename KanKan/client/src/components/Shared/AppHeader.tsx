@@ -130,14 +130,18 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleSidebar, sidebarOp
     setAvatarAnchorEl(null);
   };
 
-  const handleSelectAvatar = async (avatarImageId: string, avatarUrl: string) => {
+  const handleSelectAvatar = async (
+    avatarImageId: string,
+    avatarUrl: string,
+    sourceAvatarImageId?: string | null
+  ) => {
     if (!user) return;
 
     try {
-      const sourceAvatarImageId = user.avatarImageId ?? avatarImageId;
+      const resolvedSourceId = sourceAvatarImageId || user.avatarImageId || avatarImageId;
       const updated = await contactService.updateProfile({
         avatarUrl,
-        avatarImageId: sourceAvatarImageId,
+        avatarImageId: resolvedSourceId,
       });
       dispatch(updateUser(updated));
       dispatch(

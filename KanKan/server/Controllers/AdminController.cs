@@ -5,6 +5,7 @@ using KanKan.API.Domain;
 using KanKan.API.Models.DTOs.User;
 using KanKan.API.Models.Entities;
 using KanKan.API.Repositories.Interfaces;
+using KanKan.API.Services;
 
 namespace KanKan.API.Controllers;
 
@@ -19,6 +20,7 @@ public class AdminController : ControllerBase
     private readonly IChatUserRepository _chatUserRepository;
     private readonly IMessageRepository _messageRepository;
     private readonly IMomentRepository _momentRepository;
+    private readonly IAvatarService _avatarService;
     private readonly ILogger<AdminController> _logger;
 
     public AdminController(
@@ -28,6 +30,7 @@ public class AdminController : ControllerBase
         IChatUserRepository chatUserRepository,
         IMessageRepository messageRepository,
         IMomentRepository momentRepository,
+        IAvatarService avatarService,
         ILogger<AdminController> logger)
     {
         _userRepository = userRepository;
@@ -36,6 +39,7 @@ public class AdminController : ControllerBase
         _chatUserRepository = chatUserRepository;
         _messageRepository = messageRepository;
         _momentRepository = momentRepository;
+        _avatarService = avatarService;
         _logger = logger;
     }
 
@@ -144,10 +148,11 @@ public class AdminController : ControllerBase
                 users = await _userRepository.GetUsersByDomainAsync(scope.Domain, currentUser.Id, safeLimit);
             }
 
-            var userDtos = users
+            var allowed = users
                 .Where(u => IsTargetInScope(scope, u))
-                .Select(u => ToAdminUserDto(u))
                 .ToList();
+
+            var userDtos = await Task.WhenAll(allowed.Select(u => ToAdminUserDtoNormalizedAsync(u)));
 
             return Ok(userDtos);
         }
@@ -177,8 +182,9 @@ public class AdminController : ControllerBase
             : user.Domain;
     }
 
-    private static UserDto ToAdminUserDto(User user)
+    private async Task<UserDto> ToAdminUserDtoNormalizedAsync(User user)
     {
+        var normalizedAvatarImageId = await _avatarService.NormalizeAvatarImageIdAsync(user.AvatarImageId);
         return new UserDto
         {
             Id = user.Id,
@@ -188,6 +194,7 @@ public class AdminController : ControllerBase
             Handle = user.Handle,
             DisplayName = user.DisplayName,
             AvatarUrl = user.AvatarUrl,
+            AvatarImageId = normalizedAvatarImageId,
             Gender = user.Gender,
             Bio = user.Bio,
             IsOnline = user.IsOnline,

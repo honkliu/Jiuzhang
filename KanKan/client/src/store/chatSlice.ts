@@ -219,6 +219,10 @@ const chatSlice = createSlice({
         Object.values(state.messages).forEach((chatMessages) => {
           chatMessages.forEach((message) => {
             if (message.senderId !== userId) return;
+            if (message.senderAvatarSourceId || message.senderAvatarEmotion) {
+              if (typeof gender === 'string') message.senderGender = gender;
+              return;
+            }
             if (typeof avatarUrl === 'string') message.senderAvatar = avatarUrl;
             if (typeof gender === 'string') message.senderGender = gender;
           });

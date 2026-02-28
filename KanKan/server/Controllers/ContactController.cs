@@ -8,6 +8,7 @@ using KanKan.API.Models.DTOs.User;
 using KanKan.API.Models.Entities;
 using KanKan.API.Hubs;
 using KanKan.API.Repositories.Interfaces;
+using KanKan.API.Services;
 
 namespace KanKan.API.Controllers;
 
@@ -20,6 +21,7 @@ public class ContactController : ControllerBase
     private readonly IContactRepository _contactRepository;
     private readonly IChatRepository _chatRepository;
     private readonly IChatUserRepository _chatUserRepository;
+    private readonly IAvatarService _avatarService;
     private readonly IHubContext<ChatHub> _hubContext;
     private readonly ILogger<ContactController> _logger;
 
@@ -28,6 +30,7 @@ public class ContactController : ControllerBase
         IContactRepository contactRepository,
         IChatRepository chatRepository,
         IChatUserRepository chatUserRepository,
+        IAvatarService avatarService,
         IHubContext<ChatHub> hubContext,
         ILogger<ContactController> logger)
     {
@@ -35,6 +38,7 @@ public class ContactController : ControllerBase
         _contactRepository = contactRepository;
         _chatRepository = chatRepository;
         _chatUserRepository = chatUserRepository;
+        _avatarService = avatarService;
         _hubContext = hubContext;
         _logger = logger;
     }
@@ -82,6 +86,19 @@ public class ContactController : ControllerBase
         LastSeen = user.LastSeen
     };
 
+    private async Task<UserDto> ToUserDtoNormalizedAsync(User user, bool includeDomain)
+    {
+        var normalizedAvatarImageId = await _avatarService.NormalizeAvatarImageIdAsync(user.AvatarImageId);
+        if (!string.Equals(normalizedAvatarImageId, user.AvatarImageId, StringComparison.Ordinal))
+        {
+            user.AvatarImageId = normalizedAvatarImageId;
+            user.UpdatedAt = DateTime.UtcNow;
+            await _userRepository.UpdateAsync(user);
+        }
+
+        return ToUserDto(user, includeDomain);
+    }
+
     /// <summary>
     /// Search for users by display name or handle
     /// </summary>
@@ -99,10 +116,11 @@ public class ContactController : ControllerBase
 
             var users = await _userRepository.SearchUsersAsync(q, currentUser.Id);
             var includeDomain = DomainRules.IsSuperDomain(ResolveDomain(currentUser));
-            var userDtos = users
+            var allowed = users
                 .Where(u => IsDomainAllowed(currentUser, u))
-                .Select(u => ToUserDto(u, includeDomain))
                 .ToList();
+
+            var userDtos = await Task.WhenAll(allowed.Select(u => ToUserDtoNormalizedAsync(u, includeDomain)));
 
             return Ok(userDtos);
         }
@@ -134,7 +152,7 @@ public class ContactController : ControllerBase
                 return Forbid();
 
             var includeDomain = DomainRules.IsSuperDomain(ResolveDomain(currentUser));
-            return Ok(ToUserDto(user, includeDomain));
+            return Ok(await ToUserDtoNormalizedAsync(user, includeDomain));
         }
         catch (Exception ex)
         {
@@ -157,10 +175,11 @@ public class ContactController : ControllerBase
 
             var users = await _userRepository.GetAllUsersAsync(currentUser.Id);
             var includeDomain = DomainRules.IsSuperDomain(ResolveDomain(currentUser));
-            var userDtos = users
+            var allowed = users
                 .Where(u => IsDomainAllowed(currentUser, u))
-                .Select(u => ToUserDto(u, includeDomain))
                 .ToList();
+
+            var userDtos = await Task.WhenAll(allowed.Select(u => ToUserDtoNormalizedAsync(u, includeDomain)));
 
             return Ok(userDtos);
         }
@@ -192,7 +211,7 @@ public class ContactController : ControllerBase
                 var user = await _userRepository.GetByIdAsync(contact.ContactId);
                 if (user != null && IsDomainAllowed(currentUser, user))
                 {
-                    users.Add(ToUserDto(user, includeDomain));
+                    users.Add(await ToUserDtoNormalizedAsync(user, includeDomain));
                 }
             }
 
@@ -226,6 +245,7 @@ public class ContactController : ControllerBase
                 var fromUser = await _userRepository.GetByIdAsync(contact.ContactId);
                 if (fromUser != null && IsDomainAllowed(currentUser, fromUser))
                 {
+                    var normalizedFromUser = await ToUserDtoNormalizedAsync(fromUser, includeDomain);
                     requests.Add(new FriendRequestDto
                     {
                         Id = contact.Id,
@@ -233,7 +253,7 @@ public class ContactController : ControllerBase
                         ToUserId = currentUser.Id,
                         Status = contact.Status,
                         CreatedAt = contact.AddedAt,
-                        FromUser = ToUserDto(fromUser, includeDomain)
+                        FromUser = normalizedFromUser
                     });
                 }
             }
@@ -441,7 +461,7 @@ public class ContactController : ControllerBase
             if (user == null)
                 return NotFound(new { message = "User not found" });
 
-            return Ok(ToUserDto(user, includeDomain: false));
+            return Ok(await ToUserDtoNormalizedAsync(user, includeDomain: false));
         }
         catch (Exception ex)
         {
@@ -474,7 +494,10 @@ public class ContactController : ControllerBase
                 user.AvatarUrl = request.AvatarUrl.Trim();
 
             if (request.AvatarImageId != null)
-                user.AvatarImageId = request.AvatarImageId.Trim();
+            {
+                var normalizedAvatarImageId = await _avatarService.NormalizeAvatarImageIdAsync(request.AvatarImageId.Trim());
+                user.AvatarImageId = normalizedAvatarImageId;
+            }
 
             if (!string.IsNullOrWhiteSpace(request.Gender))
             {
@@ -531,7 +554,7 @@ public class ContactController : ControllerBase
                 avatarImageId = user.AvatarImageId
             });
 
-            return Ok(ToUserDto(user, includeDomain: false));
+            return Ok(await ToUserDtoNormalizedAsync(user, includeDomain: false));
         }
         catch (Exception ex)
         {

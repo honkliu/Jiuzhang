@@ -15,9 +15,14 @@ public class ImageGenerationService : IImageGenerationService
     private readonly IWebHostEnvironment _environment;
     private readonly ILogger<ImageGenerationService> _logger;
 
-    private static readonly string[] EmotionTypes = new[]
+    private static readonly string[] BaseEmotionTypes = new[]
     {
         "angry", "smile", "sad", "happy", "crying", "thinking", "surprised", "neutral", "excited"
+    };
+
+    private static readonly string[] ExtraEmotionTypes = new[]
+    {
+        "flirty", "solo", "interact"
     };
 
     public ImageGenerationService(
@@ -79,6 +84,12 @@ public class ImageGenerationService : IImageGenerationService
         };
 
         await _generationJobs.InsertOneAsync(job);
+        _logger.LogWarning(
+            "Mongo insert imageGenerationJobs: {JobId} sourceType={SourceType} generationType={GenerationType} emotion={Emotion}",
+            job.JobId,
+            job.SourceType,
+            job.GenerationType,
+            job.Emotion ?? string.Empty);
 
         // Start background task based on source type
         if (request.SourceType == "avatar")
@@ -101,14 +112,7 @@ public class ImageGenerationService : IImageGenerationService
             return null;
         }
 
-        if (job.Status == "processing" && job.SourceType == "avatar" && !string.IsNullOrWhiteSpace(job.ComfyPromptId))
-        {
-            var recovered = await TryRecoverAvatarJobAsync(job);
-            if (recovered != null)
-            {
-                job = recovered;
-            }
-        }
+        // Recovery disabled for now; rely on normal processing/timeout handling.
 
         return job;
     }
@@ -135,7 +139,7 @@ public class ImageGenerationService : IImageGenerationService
                 .ToDictionary(g => g.Key, g => g.First());
 
             var ordered = new List<AvatarImage>();
-            foreach (var emotion in EmotionTypes)
+            foreach (var emotion in BaseEmotionTypes)
             {
                 if (latestByEmotion.TryGetValue(emotion, out var avatar))
                 {
@@ -143,11 +147,23 @@ public class ImageGenerationService : IImageGenerationService
                 }
             }
 
-            foreach (var extra in latestByEmotion)
+            var allowExtras = !string.IsNullOrWhiteSpace(avatarIdOrUserId) && await IsUserAvatarAsync(avatarIdOrUserId);
+            if (allowExtras)
             {
-                if (!EmotionTypes.Contains(extra.Key))
+                foreach (var extra in ExtraEmotionTypes)
                 {
-                    ordered.Add(extra.Value);
+                    if (latestByEmotion.TryGetValue(extra, out var avatar))
+                    {
+                        ordered.Add(avatar);
+                    }
+                }
+
+                foreach (var extra in latestByEmotion)
+                {
+                    if (!BaseEmotionTypes.Contains(extra.Key) && !ExtraEmotionTypes.Contains(extra.Key))
+                    {
+                        ordered.Add(extra.Value);
+                    }
                 }
             }
 
@@ -289,6 +305,7 @@ public class ImageGenerationService : IImageGenerationService
                 .Set(j => j.Status, "processing")
                 .Set(j => j.Progress, 0);
             await _generationJobs.UpdateOneAsync(j => j.JobId == jobId, updateStatus);
+            _logger.LogWarning("Mongo update imageGenerationJobs processing: {JobId}", jobId);
 
             // Fetch original avatar from MongoDB
             var originalAvatar = await _avatarImages.Find(a => a.Id == request.AvatarId).FirstOrDefaultAsync();
@@ -309,9 +326,12 @@ public class ImageGenerationService : IImageGenerationService
                 || (string.IsNullOrEmpty(request.Mode) && request.GenerationType == "emotions");
 
             // Determine prompts based on generation type
-            var prompts = GetPrompts(request.GenerationType, request.CustomPrompts, request.Emotion);
+            var emotionLabels = GetEmotionLabelsForAvatar(originalAvatar);
+            var prompts = GetPrompts(request.GenerationType, request.CustomPrompts, request.Emotion, emotionLabels);
             var generatedAvatarIds = new List<string>();
             var totalCount = prompts.Count;
+
+            var emotionLabelSet = new HashSet<string>(emotionLabels, StringComparer.OrdinalIgnoreCase);
 
             for (int i = 0; i < totalCount; i++)
             {
@@ -337,6 +357,7 @@ public class ImageGenerationService : IImageGenerationService
                             .Set(j => j.Prompt, fullPrompt)
                             .Set(j => j.Progress, 0);
                         await _generationJobs.UpdateOneAsync(j => j.JobId == jobId, updatePrompt);
+                        _logger.LogWarning("Mongo update imageGenerationJobs prompt: {JobId}", jobId);
 
                         try
                         {
@@ -344,10 +365,6 @@ public class ImageGenerationService : IImageGenerationService
                             var resizedBase64 = ResizeGeneratedBase64(generatedBase64, targetWidth, targetHeight, originalAvatar.ContentType);
                             var avatarId = await StoreGeneratedAvatarAsync(request, originalAvatar, label, resizedBase64, fullPrompt);
                             generatedAvatarIds.Add(avatarId);
-                            if (EmotionTypes.Contains(label))
-                            {
-                                await ReplaceEmotionAvatarAsync(request.AvatarId, label, avatarId);
-                            }
                         }
                         catch (TimeoutException)
                         {
@@ -357,6 +374,7 @@ public class ImageGenerationService : IImageGenerationService
                                 .Set(j => j.ErrorMessage, "Still processing in ComfyUI")
                                 .Set(j => j.Progress, 0);
                             await _generationJobs.UpdateOneAsync(j => j.JobId == jobId, updateProcessing);
+                            _logger.LogWarning("Mongo update imageGenerationJobs processing-timeout: {JobId}", jobId);
                             return;
                         }
                     }
@@ -366,10 +384,7 @@ public class ImageGenerationService : IImageGenerationService
                         var resizedBase64 = ResizeGeneratedBase64(generatedBase64, targetWidth, targetHeight, originalAvatar.ContentType);
                         var avatarId = await StoreGeneratedAvatarAsync(request, originalAvatar, label, resizedBase64, fullPrompt);
                         generatedAvatarIds.Add(avatarId);
-                        if (EmotionTypes.Contains(label))
-                        {
-                            await ReplaceEmotionAvatarAsync(request.AvatarId, label, avatarId);
-                        }
+                        // Always upsert per emotion; no delete needed.
                     }
 
                     var progress = (int)((i + 1) / (double)totalCount * 100);
@@ -383,13 +398,22 @@ public class ImageGenerationService : IImageGenerationService
             }
 
             // Update job as completed
+            var resultsToReturn = generatedAvatarIds;
+            if (request.GenerationType == "emotions" && !string.IsNullOrWhiteSpace(request.Emotion))
+            {
+                resultsToReturn = generatedAvatarIds.Count > 0
+                    ? new List<string> { generatedAvatarIds[^1] }
+                    : new List<string>();
+            }
+
             var updateComplete = Builders<ImageGenerationJob>.Update
                 .Set(j => j.Status, "completed")
                 .Set(j => j.Progress, 100)
-                .Set(j => j.Results, new GenerationResults { AvatarImageIds = generatedAvatarIds })
+                .Set(j => j.Results, new GenerationResults { AvatarImageIds = resultsToReturn })
                 .Set(j => j.CompletedAt, DateTime.UtcNow);
 
             await _generationJobs.UpdateOneAsync(j => j.JobId == jobId, updateComplete);
+            _logger.LogWarning("Mongo update imageGenerationJobs completed: {JobId}", jobId);
 
             _logger.LogInformation("Avatar generation completed for job {JobId}", jobId);
         }
@@ -403,6 +427,7 @@ public class ImageGenerationService : IImageGenerationService
                 .Set(j => j.CompletedAt, DateTime.UtcNow);
 
             await _generationJobs.UpdateOneAsync(j => j.JobId == jobId, updateFailed);
+            _logger.LogWarning("Mongo update imageGenerationJobs failed: {JobId}", jobId);
         }
     }
 
@@ -423,42 +448,57 @@ public class ImageGenerationService : IImageGenerationService
             thumbnailContentType = originalAvatar.ContentType;
         }
 
-        var generatedAvatar = new AvatarImage
-        {
-            UserId = originalAvatar.UserId,
-            ImageType = "emotion_generated",
-            Emotion = label,
-            ImageData = bytes,
-            ThumbnailData = thumbnailData,
-            ThumbnailContentType = thumbnailContentType,
-            ContentType = originalAvatar.ContentType,
-            FileName = $"{label}_{originalAvatar.FileName}",
-            FileSize = bytes.Length,
-            SourceAvatarId = request.AvatarId,
-            GenerationPrompt = fullPrompt,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
-        };
-
-        await _avatarImages.InsertOneAsync(generatedAvatar);
-        _logger.LogInformation("Generated {Label} avatar: {AvatarId}", label, generatedAvatar.Id);
-        return generatedAvatar.Id;
-    }
-
-    private async Task ReplaceEmotionAvatarAsync(string? sourceAvatarId, string emotion, string newAvatarId)
-    {
-        if (string.IsNullOrWhiteSpace(sourceAvatarId))
-        {
-            return;
-        }
+        var normalizedLabel = label.Trim().ToLowerInvariant();
+        var fileName = $"{normalizedLabel}_{originalAvatar.FileName}";
+        var now = DateTime.UtcNow;
 
         var filter = Builders<AvatarImage>.Filter.And(
-            Builders<AvatarImage>.Filter.Eq(a => a.SourceAvatarId, sourceAvatarId),
+            Builders<AvatarImage>.Filter.Eq(a => a.SourceAvatarId, request.AvatarId),
             Builders<AvatarImage>.Filter.Eq(a => a.ImageType, "emotion_generated"),
-            Builders<AvatarImage>.Filter.Eq(a => a.Emotion, emotion),
-            Builders<AvatarImage>.Filter.Ne(a => a.Id, newAvatarId));
+            Builders<AvatarImage>.Filter.Eq(a => a.Emotion, normalizedLabel));
 
-        await _avatarImages.DeleteManyAsync(filter);
+        var update = Builders<AvatarImage>.Update
+            .SetOnInsert(a => a.UserId, originalAvatar.UserId)
+            .SetOnInsert(a => a.ImageType, "emotion_generated")
+            .SetOnInsert(a => a.SourceAvatarId, request.AvatarId)
+            .SetOnInsert(a => a.CreatedAt, now)
+            .Set(a => a.Emotion, normalizedLabel)
+            .Set(a => a.ImageData, bytes)
+            .Set(a => a.ThumbnailData, thumbnailData)
+            .Set(a => a.ThumbnailContentType, thumbnailContentType)
+            .Set(a => a.ContentType, originalAvatar.ContentType)
+            .Set(a => a.FileName, fileName)
+            .Set(a => a.FileSize, bytes.Length)
+            .Set(a => a.GenerationPrompt, fullPrompt)
+            .Set(a => a.UpdatedAt, now);
+
+        try
+        {
+            var options = new FindOneAndUpdateOptions<AvatarImage>
+            {
+                IsUpsert = true,
+                ReturnDocument = ReturnDocument.After,
+            };
+            var updated = await _avatarImages.FindOneAndUpdateAsync(filter, update, options);
+            if (updated == null)
+            {
+                throw new InvalidOperationException("Upsert returned null for generated avatar.");
+            }
+
+            _logger.LogWarning(
+                "Mongo upsert generated {Label} avatar: {AvatarId}",
+                normalizedLabel,
+                updated.Id);
+            return updated.Id;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Failed to upsert generated {Label} avatar in Mongo",
+                normalizedLabel);
+            throw;
+        }
     }
 
     private async Task<ImageGenerationJob?> TryRecoverAvatarJobAsync(ImageGenerationJob job)
@@ -466,6 +506,39 @@ public class ImageGenerationService : IImageGenerationService
         if (string.IsNullOrWhiteSpace(job.SourceRef.AvatarId) || string.IsNullOrWhiteSpace(job.Emotion))
         {
             return null;
+        }
+
+        if (job.CompletedAt != null
+            || string.Equals(job.Status, "completed", StringComparison.OrdinalIgnoreCase)
+            || (job.Results?.AvatarImageIds?.Count ?? 0) > 0)
+        {
+            return job;
+        }
+
+        var normalizedEmotion = job.Emotion.Trim().ToLowerInvariant();
+        var existingFilter = Builders<AvatarImage>.Filter.And(
+            Builders<AvatarImage>.Filter.Eq(a => a.SourceAvatarId, job.SourceRef.AvatarId),
+            Builders<AvatarImage>.Filter.Eq(a => a.ImageType, "emotion_generated"),
+            Builders<AvatarImage>.Filter.Eq(a => a.Emotion, normalizedEmotion),
+            Builders<AvatarImage>.Filter.Gte(a => a.CreatedAt, job.CreatedAt));
+
+        var existingAvatar = await _avatarImages
+            .Find(existingFilter)
+            .SortByDescending(a => a.CreatedAt)
+            .FirstOrDefaultAsync();
+
+        if (existingAvatar != null)
+        {
+            var updateComplete = Builders<ImageGenerationJob>.Update
+                .Set(j => j.Status, "completed")
+                .Set(j => j.Progress, 100)
+                .Set(j => j.Results, new GenerationResults { AvatarImageIds = new List<string> { existingAvatar.Id } })
+                .Set(j => j.CompletedAt, DateTime.UtcNow)
+                .Set(j => j.ErrorMessage, null);
+
+            await _generationJobs.UpdateOneAsync(j => j.JobId == job.JobId, updateComplete);
+            _logger.LogWarning("Mongo update imageGenerationJobs recovered-existing: {JobId}", job.JobId);
+            return await _generationJobs.Find(j => j.JobId == job.JobId).FirstOrDefaultAsync();
         }
 
         var generatedBase64 = await _comfyUIService.TryFetchResultAsync(job.ComfyPromptId!);
@@ -487,19 +560,17 @@ public class ImageGenerationService : IImageGenerationService
             Emotion = job.Emotion
         }, originalAvatar, job.Emotion, generatedBase64, job.Prompt);
 
-        if (EmotionTypes.Contains(job.Emotion))
-        {
-            await ReplaceEmotionAvatarAsync(job.SourceRef.AvatarId, job.Emotion, avatarId);
-        }
+        // Always upsert per emotion; no delete needed.
 
-        var updateComplete = Builders<ImageGenerationJob>.Update
+        var updateCompleteRecovered = Builders<ImageGenerationJob>.Update
             .Set(j => j.Status, "completed")
             .Set(j => j.Progress, 100)
             .Set(j => j.Results, new GenerationResults { AvatarImageIds = new List<string> { avatarId } })
             .Set(j => j.CompletedAt, DateTime.UtcNow)
             .Set(j => j.ErrorMessage, null);
 
-        await _generationJobs.UpdateOneAsync(j => j.JobId == job.JobId, updateComplete);
+        await _generationJobs.UpdateOneAsync(j => j.JobId == job.JobId, updateCompleteRecovered);
+        _logger.LogWarning("Mongo update imageGenerationJobs recovered-complete: {JobId}", job.JobId);
         return await _generationJobs.Find(j => j.JobId == job.JobId).FirstOrDefaultAsync();
     }
 
@@ -518,6 +589,7 @@ public class ImageGenerationService : IImageGenerationService
                 .Set(j => j.Status, "processing")
                 .Set(j => j.Progress, 0);
             await _generationJobs.UpdateOneAsync(j => j.JobId == jobId, updateStatus);
+            _logger.LogWarning("Mongo update imageGenerationJobs chat processing: {JobId}", jobId);
 
             // Resolve source (for naming) and input (for editing)
             var message = await _messages.Find(m => m.Id == request.MessageId).FirstOrDefaultAsync();
@@ -548,7 +620,7 @@ public class ImageGenerationService : IImageGenerationService
             var imageBase64 = Convert.ToBase64String(imageBytes);
 
             // Determine prompts
-            var prompts = GetPrompts(request.GenerationType, request.CustomPrompts, null);
+            var prompts = GetPrompts(request.GenerationType, request.CustomPrompts, null, BaseEmotionTypes);
             var generatedUrls = new List<string>();
             var filePrefix = Path.GetFileNameWithoutExtension(sourceFileName);
             var fileExtension = Path.GetExtension(sourceFileName);
@@ -602,6 +674,7 @@ public class ImageGenerationService : IImageGenerationService
                 .Set(j => j.CompletedAt, DateTime.UtcNow);
 
             await _generationJobs.UpdateOneAsync(j => j.JobId == jobId, updateComplete);
+            _logger.LogWarning("Mongo update imageGenerationJobs chat completed: {JobId}", jobId);
 
             _logger.LogInformation("Chat image generation completed for job {JobId}", jobId);
         }
@@ -615,15 +688,46 @@ public class ImageGenerationService : IImageGenerationService
                 .Set(j => j.CompletedAt, DateTime.UtcNow);
 
             await _generationJobs.UpdateOneAsync(j => j.JobId == jobId, updateFailed);
+            _logger.LogWarning("Mongo update imageGenerationJobs chat failed: {JobId}", jobId);
         }
     }
 
-    private List<(string label, string prompt)> GetPrompts(string generationType, List<string>? customPrompts, string? emotion)
+    private static IReadOnlyList<string> GetEmotionLabelsForAvatar(AvatarImage avatar)
+    {
+        return string.Equals(avatar.UserId, "system_predefined", StringComparison.OrdinalIgnoreCase)
+            ? BaseEmotionTypes
+            : BaseEmotionTypes.Concat(ExtraEmotionTypes).ToList();
+    }
+
+    private async Task<bool> IsUserAvatarAsync(string sourceAvatarId)
+    {
+        var projection = Builders<AvatarImage>.Projection
+            .Include(a => a.Id)
+            .Include(a => a.UserId);
+
+        var avatar = await _avatarImages
+            .Find(a => a.Id == sourceAvatarId)
+            .Project<AvatarImage>(projection)
+            .FirstOrDefaultAsync();
+
+        if (avatar == null)
+        {
+            return false;
+        }
+
+        return !string.Equals(avatar.UserId, "system_predefined", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private List<(string label, string prompt)> GetPrompts(
+        string generationType,
+        List<string>? customPrompts,
+        string? emotion,
+        IReadOnlyList<string> emotionLabels)
     {
         if (generationType == "emotions" && !string.IsNullOrWhiteSpace(emotion))
         {
             var selected = emotion.Trim().ToLowerInvariant();
-            if (EmotionTypes.Contains(selected))
+            if (emotionLabels.Contains(selected))
             {
                 return new List<(string, string)>
                 {
@@ -634,7 +738,7 @@ public class ImageGenerationService : IImageGenerationService
 
         return generationType switch
         {
-            "emotions" => EmotionTypes.Select(e => (e, e))
+            "emotions" => emotionLabels.Select(e => (e, e))
                 .ToList(),
             "styles" => customPrompts?.Select(p => (p, $"in {p} style")).ToList() ?? new List<(string, string)>
             {

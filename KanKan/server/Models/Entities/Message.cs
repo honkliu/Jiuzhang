@@ -8,6 +8,8 @@ public class Message
     public string SenderId { get; set; } = string.Empty;
     public string SenderName { get; set; } = string.Empty;
     public string SenderAvatar { get; set; } = string.Empty;
+    public string? SenderAvatarSourceId { get; set; }
+    public string? SenderAvatarEmotion { get; set; }
     public string MessageType { get; set; } = "text"; // text, image, video, voice, file
     public MessageContent Content { get; set; } = new();
     public string? ReplyTo { get; set; }

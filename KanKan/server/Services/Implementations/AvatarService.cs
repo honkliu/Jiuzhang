@@ -11,9 +11,16 @@ public class AvatarService : IAvatarService
     private readonly IMongoCollection<User> _users;
     private readonly ILogger<AvatarService> _logger;
 
-    private static readonly string[] EmotionTypes =
+    private const string SystemPredefinedUserId = "system_predefined";
+
+    private static readonly string[] BaseEmotionTypes =
     {
         "angry", "smile", "sad", "happy", "crying", "thinking", "surprised", "neutral", "excited"
+    };
+
+    private static readonly string[] ExtraEmotionTypes =
+    {
+        "flirty", "solo", "interact"
     };
 
     public AvatarService(
@@ -27,6 +34,21 @@ public class AvatarService : IAvatarService
 
     public async Task<AvatarImage> UploadAvatarAsync(string userId, byte[] imageData, string contentType, string fileName)
     {
+        var extension = Path.GetExtension(fileName);
+        if (string.IsNullOrWhiteSpace(extension))
+        {
+            extension = contentType?.ToLowerInvariant() switch
+            {
+                "image/jpeg" => ".jpg",
+                "image/jpg" => ".jpg",
+                "image/png" => ".png",
+                "image/webp" => ".webp",
+                _ => ".img"
+            };
+        }
+
+        var storedFileName = $"{Guid.NewGuid():N}{extension}";
+
         // Generate thumbnail
         byte[] thumbnailData;
         string thumbnailContentType;
@@ -35,11 +57,11 @@ public class AvatarService : IAvatarService
             thumbnailData = ImageResizer.GenerateThumbnail(imageData);
             thumbnailContentType = "image/webp";
             _logger.LogDebug("Thumbnail generated for {FileName}: {OriginalSize}KB -> {ThumbnailSize}KB",
-                fileName, imageData.Length / 1024, thumbnailData.Length / 1024);
+                storedFileName, imageData.Length / 1024, thumbnailData.Length / 1024);
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to generate thumbnail for {FileName}, using original", fileName);
+            _logger.LogWarning(ex, "Failed to generate thumbnail for {FileName}, using original", storedFileName);
             thumbnailData = imageData;
             thumbnailContentType = contentType;
         }
@@ -53,7 +75,7 @@ public class AvatarService : IAvatarService
             ThumbnailData = thumbnailData,
             ThumbnailContentType = thumbnailContentType,
             ContentType = contentType,
-            FileName = fileName,
+            FileName = storedFileName,
             FileSize = imageData.Length,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
@@ -88,12 +110,46 @@ public class AvatarService : IAvatarService
             .FirstOrDefaultAsync();
     }
 
+    public async Task<(string? SourceAvatarId, string? Emotion)> GetSourceAvatarAndEmotionAsync(string? avatarImageId)
+    {
+        if (string.IsNullOrWhiteSpace(avatarImageId))
+        {
+            return (null, null);
+        }
+
+        var projection = Builders<AvatarImage>.Projection
+            .Include(a => a.Id)
+            .Include(a => a.ImageType)
+            .Include(a => a.SourceAvatarId)
+            .Include(a => a.Emotion);
+
+        var avatar = await _avatarImages
+            .Find(a => a.Id == avatarImageId)
+            .Project<AvatarImage>(projection)
+            .FirstOrDefaultAsync();
+
+        if (avatar == null)
+        {
+            return (avatarImageId, null);
+        }
+
+        if (string.Equals(avatar.ImageType, "emotion_generated", StringComparison.OrdinalIgnoreCase)
+            && !string.IsNullOrWhiteSpace(avatar.SourceAvatarId))
+        {
+            return (avatar.SourceAvatarId, avatar.Emotion);
+        }
+
+        return (avatar.Id, null);
+    }
+
     public async Task<List<AvatarImage>> GetEmotionThumbnailsBySourceAvatarIdAsync(string sourceAvatarId, bool includeFull = false)
     {
+        var emotionLabels = await GetEmotionLabelsBySourceAvatarIdAsync(sourceAvatarId);
+
         var filter = Builders<AvatarImage>.Filter.And(
             Builders<AvatarImage>.Filter.Eq(a => a.SourceAvatarId, sourceAvatarId),
             Builders<AvatarImage>.Filter.Eq(a => a.ImageType, "emotion_generated"),
-            Builders<AvatarImage>.Filter.In(a => a.Emotion, EmotionTypes));
+            Builders<AvatarImage>.Filter.In(a => a.Emotion, emotionLabels));
 
         var projection = Builders<AvatarImage>.Projection
             .Include(a => a.Id)
@@ -116,7 +172,7 @@ public class AvatarService : IAvatarService
         {
             Sort = sort,
             Projection = projection,
-            Limit = EmotionTypes.Length,
+            Limit = emotionLabels.Count,
         };
         var items = await (await _avatarImages.FindAsync(filter, findOptions)).ToListAsync();
         querySw.Stop();
@@ -126,7 +182,7 @@ public class AvatarService : IAvatarService
             sourceAvatarId, includeFull, querySw.ElapsedMilliseconds, items.Count);
 
         var ordered = new List<AvatarImage>();
-        foreach (var emotion in EmotionTypes)
+        foreach (var emotion in emotionLabels)
         {
             var match = items.FirstOrDefault(a => string.Equals(a.Emotion, emotion, StringComparison.OrdinalIgnoreCase));
             if (match != null)
@@ -134,6 +190,61 @@ public class AvatarService : IAvatarService
         }
 
         return ordered;
+    }
+
+    public async Task<IReadOnlyList<string>> GetEmotionLabelsBySourceAvatarIdAsync(string sourceAvatarId)
+    {
+        if (string.IsNullOrWhiteSpace(sourceAvatarId))
+        {
+            return BaseEmotionTypes;
+        }
+
+        var projection = Builders<AvatarImage>.Projection
+            .Include(a => a.Id)
+            .Include(a => a.UserId);
+
+        var avatar = await _avatarImages
+            .Find(a => a.Id == sourceAvatarId)
+            .Project<AvatarImage>(projection)
+            .FirstOrDefaultAsync();
+
+        if (avatar == null || string.Equals(avatar.UserId, SystemPredefinedUserId, StringComparison.OrdinalIgnoreCase))
+        {
+            return BaseEmotionTypes;
+        }
+
+        return BaseEmotionTypes.Concat(ExtraEmotionTypes).ToList();
+    }
+
+    public async Task<string?> NormalizeAvatarImageIdAsync(string? avatarImageId)
+    {
+        if (string.IsNullOrWhiteSpace(avatarImageId))
+        {
+            return avatarImageId;
+        }
+
+        var projection = Builders<AvatarImage>.Projection
+            .Include(a => a.Id)
+            .Include(a => a.ImageType)
+            .Include(a => a.SourceAvatarId);
+
+        var avatar = await _avatarImages
+            .Find(a => a.Id == avatarImageId)
+            .Project<AvatarImage>(projection)
+            .FirstOrDefaultAsync();
+
+        if (avatar == null)
+        {
+            return avatarImageId;
+        }
+
+        if (string.Equals(avatar.ImageType, "emotion_generated", StringComparison.OrdinalIgnoreCase)
+            && !string.IsNullOrWhiteSpace(avatar.SourceAvatarId))
+        {
+            return avatar.SourceAvatarId;
+        }
+
+        return avatarImageId;
     }
 
     public async Task<AvatarImage?> GetPredefinedAvatarByFileNameAsync(string fileName)

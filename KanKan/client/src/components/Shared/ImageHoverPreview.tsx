@@ -10,6 +10,7 @@ export interface ImageHoverPreviewProps {
   openOnHover?: boolean;
   openOnLongPress?: boolean;
   openOnTap?: boolean;
+  openOnClick?: boolean;
   openOnDoubleClick?: boolean;
   dismissOnHoverOut?: boolean;
   closeOnClickWhenOpen?: boolean;
@@ -40,6 +41,7 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
   openOnHover = true,
   openOnLongPress = true,
   openOnTap = false,
+  openOnClick = false,
   openOnDoubleClick = false,
   dismissOnHoverOut = true,
   closeOnClickWhenOpen = false,
@@ -143,6 +145,17 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
       window.clearTimeout(openTimerRef.current);
       openTimerRef.current = null;
     }
+    if (anchorEl && !isPreviewHoverRef.current && !isTouchDevice) {
+      if (closeTimerRef.current) {
+        window.clearTimeout(closeTimerRef.current);
+      }
+      closeTimerRef.current = window.setTimeout(() => {
+        if (!isPreviewHoverRef.current) {
+          closePreview(true);
+        }
+      }, 200);
+      return;
+    }
     if (!anchorEl && activePreviewOwnerId === popoverId) {
       activePreviewOwnerId = null;
     }
@@ -216,6 +229,31 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
   const id = open ? popoverId : undefined;
 
   const shouldCloseOnTriggerClick = closeOnClickWhenOpen || closeOnTriggerClickWhenOpen;
+
+  const handleClickOpen = (event: React.MouseEvent<HTMLElement>) => {
+    if (!src || disabled || isTouchDevice || !openOnClick) return;
+    if (activePreviewOwnerId && activePreviewOwnerId !== popoverId) return;
+    if (open) {
+      if (shouldCloseOnTriggerClick) {
+        event.preventDefault();
+        event.stopPropagation();
+        closePreview(true);
+      }
+      return;
+    }
+    activePreviewOwnerId = popoverId;
+    if (openTimerRef.current) {
+      window.clearTimeout(openTimerRef.current);
+      openTimerRef.current = null;
+    }
+    if (closeTimerRef.current) {
+      window.clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+    const currentTarget = event.currentTarget as HTMLElement;
+    setAnchorEl(currentTarget);
+    onOpenChange?.(true);
+  };
 
   const handleTriggerClick = (event: React.MouseEvent<HTMLElement>) => {
     if (suppressNextClickRef.current) {
@@ -292,7 +330,9 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
         onBlur: !isTouchDevice && openOnHover
           ? (dismissOnHoverOut ? handleClose : handleCancelPendingOpen)
           : (noopMouse as any),
-        onClick: shouldCloseOnTriggerClick ? handleTriggerClick : undefined,
+        onClick: !isTouchDevice && (openOnClick || shouldCloseOnTriggerClick)
+          ? (openOnClick ? handleClickOpen : handleTriggerClick)
+          : undefined,
         onDoubleClick: !isTouchDevice && openOnDoubleClick ? handleDoubleClick : undefined,
         onTouchStart: isTouchDevice && (openOnLongPress || openOnTap) ? handleTouchStart : undefined,
         onTouchEnd: isTouchDevice && (openOnLongPress || openOnDoubleClick || openOnTap) ? handleTouchEnd : undefined,

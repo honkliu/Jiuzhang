@@ -54,6 +54,12 @@ export interface EmotionFullResult {
   fullImageDataUrl?: string | null;
 }
 
+export interface EmotionThumbnailsResponse {
+  sourceAvatarId: string;
+  emotions: string[];
+  results: EmotionThumbnailResult[];
+}
+
 class AvatarService {
   async uploadAvatar(file: File): Promise<UploadAvatarResponse> {
     const formData = new FormData();
@@ -111,6 +117,13 @@ class AvatarService {
       `/avatar/emotion-thumbnails/${sourceAvatarId}`
     );
     return response.data.results || [];
+  }
+
+  async getEmotionThumbnailsMeta(sourceAvatarId: string): Promise<EmotionThumbnailsResponse> {
+    const response = await apiClient.get<EmotionThumbnailsResponse>(
+      `/avatar/emotion-thumbnails/${sourceAvatarId}`
+    );
+    return response.data;
   }
 
   async getEmotionThumbnailsFull(sourceAvatarId: string): Promise<EmotionFullResult[]> {

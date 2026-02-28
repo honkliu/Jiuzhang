@@ -16,7 +16,7 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material';
-import { Delete as DeleteIcon, ThumbUpAltOutlined as ThumbUpIcon, ChatBubbleOutline as CommentIcon } from '@mui/icons-material';
+import { Delete as DeleteIcon, ThumbUpAltOutlined as ThumbUpIcon, ChatBubbleOutline as CommentIcon, Close as CloseIcon } from '@mui/icons-material';
 import { AppHeader } from '@/components/Shared/AppHeader';
 import { UserAvatar } from '@/components/Shared/UserAvatar';
 import { momentService, Moment } from '../../services/moment.service';
@@ -131,6 +131,20 @@ export const MomentsPage: React.FC = () => {
     event.target.value = '';
   };
 
+  const handleRemovePendingImage = (index: number) => {
+    setPendingImages((prev) => {
+      if (index < 0 || index >= prev.length) return prev;
+      const next = prev.filter((_, idx) => idx !== index);
+      URL.revokeObjectURL(prev[index].previewUrl);
+      return next;
+    });
+  };
+
+  const handleClearPendingImages = () => {
+    pendingImages.forEach((item) => URL.revokeObjectURL(item.previewUrl));
+    setPendingImages([]);
+  };
+
   const buildMomentGroups = (moment: Moment, urls: string[]) => {
     const isOwner = moment.userId === user?.id;
     const isFriend = friendIdSet.has(moment.userId);
@@ -232,6 +246,11 @@ export const MomentsPage: React.FC = () => {
                   {t('moments.imagesSelected')} {pendingImages.length}
                 </Typography>
               ) : null}
+              {pendingImages.length > 0 ? (
+                <Button variant="text" onClick={handleClearPendingImages} disabled={posting}>
+                  {t('moments.clearImages')}
+                </Button>
+              ) : null}
             </Stack>
             {pendingImages.length > 0 ? (
               <BoxAny
@@ -245,17 +264,37 @@ export const MomentsPage: React.FC = () => {
                 {pendingImages.map((item, idx) => (
                   <BoxAny
                     key={`${item.previewUrl}-${idx}`}
-                    component="img"
-                    src={item.previewUrl}
-                    alt={t('moments.imagePreview')}
-                    sx={{
-                      width: '100%',
-                      aspectRatio: '1 / 1',
-                      objectFit: 'cover',
-                      borderRadius: 2,
-                      border: '1px solid rgba(15, 23, 42, 0.12)',
-                    }}
-                  />
+                    sx={{ position: 'relative' }}
+                  >
+                    <BoxAny
+                      component="img"
+                      src={item.previewUrl}
+                      alt={t('moments.imagePreview')}
+                      sx={{
+                        width: '100%',
+                        aspectRatio: '1 / 1',
+                        objectFit: 'cover',
+                        borderRadius: 2,
+                        border: '1px solid rgba(15, 23, 42, 0.12)',
+                        display: 'block',
+                      }}
+                    />
+                    <IconButton
+                      size="small"
+                      aria-label={t('moments.removeImage')}
+                      onClick={() => handleRemovePendingImage(idx)}
+                      sx={{
+                        position: 'absolute',
+                        top: 4,
+                        right: 4,
+                        bgcolor: 'rgba(15, 23, 42, 0.65)',
+                        color: 'white',
+                        '&:hover': { bgcolor: 'rgba(15, 23, 42, 0.85)' },
+                      }}
+                    >
+                      <CloseIcon fontSize="small" />
+                    </IconButton>
+                  </BoxAny>
                 ))}
               </BoxAny>
             ) : null}

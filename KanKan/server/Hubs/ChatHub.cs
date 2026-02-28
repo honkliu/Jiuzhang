@@ -8,6 +8,7 @@ using KanKan.API.Models.DTOs.Chat;
 using KanKan.API.Models.Entities;
 using KanKan.API.Models.DTOs.Notification;
 using KanKan.API.Repositories.Interfaces;
+using KanKan.API.Services;
 using KanKan.API.Services.Interfaces;
 
 namespace KanKan.API.Hubs;
@@ -21,6 +22,7 @@ public class ChatHub : Hub
     private readonly IUserRepository _userRepository;
     private readonly INotificationRepository _notificationRepository;
     private readonly IAgentService _agentService;
+    private readonly IAvatarService _avatarService;
     private readonly ILogger<ChatHub> _logger;
 
     // Track online users: UserId -> ConnectionId
@@ -34,6 +36,7 @@ public class ChatHub : Hub
         IUserRepository userRepository,
         INotificationRepository notificationRepository,
         IAgentService agentService,
+        IAvatarService avatarService,
         ILogger<ChatHub> logger)
     {
         _chatRepository = chatRepository;
@@ -42,7 +45,28 @@ public class ChatHub : Hub
         _userRepository = userRepository;
         _notificationRepository = notificationRepository;
         _agentService = agentService;
+        _avatarService = avatarService;
         _logger = logger;
+    }
+
+    private static string? ExtractAvatarImageId(string? avatarUrl)
+    {
+        if (string.IsNullOrWhiteSpace(avatarUrl))
+        {
+            return null;
+        }
+
+        try
+        {
+            var uri = new Uri(avatarUrl, UriKind.RelativeOrAbsolute);
+            var path = uri.IsAbsoluteUri ? uri.AbsolutePath : uri.OriginalString;
+            var match = Regex.Match(path, @"/api/avatar/image/([^/?#]+)", RegexOptions.IgnoreCase);
+            return match.Success ? match.Groups[1].Value : null;
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     public override async Task OnConnectedAsync()
@@ -168,6 +192,13 @@ public class ChatHub : Hub
         // Get user for avatar
         var user = await _userRepository.GetByIdAsync(userId);
 
+        var senderAvatarUrl = user?.AvatarUrl ?? "";
+        var avatarIdFromUrl = ExtractAvatarImageId(senderAvatarUrl);
+        var avatarIdForLookup = !string.IsNullOrWhiteSpace(avatarIdFromUrl)
+            ? avatarIdFromUrl
+            : user?.AvatarImageId;
+        var (sourceAvatarId, avatarEmotion) = await _avatarService.GetSourceAvatarAndEmotionAsync(avatarIdForLookup);
+
         // Create message entity
         var newMessage = new Models.Entities.Message
         {
@@ -175,7 +206,9 @@ public class ChatHub : Hub
             ChatId = message.ChatId,
             SenderId = userId,
             SenderName = userName ?? "Unknown",
-            SenderAvatar = user?.AvatarUrl ?? "",
+            SenderAvatar = senderAvatarUrl,
+            SenderAvatarSourceId = sourceAvatarId,
+            SenderAvatarEmotion = avatarEmotion,
             MessageType = message.MessageType ?? "text",
             Content = new Models.Entities.MessageContent
             {
@@ -273,6 +306,8 @@ public class ChatHub : Hub
             SenderId = newMessage.SenderId,
             SenderName = newMessage.SenderName,
             SenderAvatar = newMessage.SenderAvatar,
+            SenderAvatarSourceId = newMessage.SenderAvatarSourceId,
+            SenderAvatarEmotion = newMessage.SenderAvatarEmotion,
             SenderGender = user?.Gender ?? "male",
             MessageType = newMessage.MessageType,
             Text = newMessage.Content.Text,

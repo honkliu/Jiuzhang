@@ -7,6 +7,8 @@ export interface Message {
   senderId: string;
   senderName: string;
   senderAvatar: string;
+  senderAvatarSourceId?: string;
+  senderAvatarEmotion?: string;
   senderGender?: string;
   messageType: string;
   text?: string;

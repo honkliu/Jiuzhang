@@ -213,7 +213,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
       <BoxAny sx={{ width: 56, flexShrink: 0, textAlign: 'center' }}>
         {showAvatar && (
           <UserAvatar
-            src={message.senderAvatar}
+            src={message.senderAvatar || (message.senderAvatarSourceId ? `/api/avatar/image/${message.senderAvatarSourceId}` : '')}
             gender={message.senderGender}
             fallbackText={message.senderName}
             variant="rounded"

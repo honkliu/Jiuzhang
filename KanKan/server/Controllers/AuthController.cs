@@ -5,6 +5,7 @@ using KanKan.API.Domain;
 using KanKan.API.Models.DTOs.Auth;
 using KanKan.API.Models.DTOs.User;
 using KanKan.API.Services.Interfaces;
+using KanKan.API.Services;
 using UserEntity = KanKan.API.Models.Entities.User;
 
 namespace KanKan.API.Controllers;
@@ -15,15 +16,18 @@ public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;
     private readonly IEmailService _emailService;
+    private readonly IAvatarService _avatarService;
     private readonly ILogger<AuthController> _logger;
 
     public AuthController(
         IAuthService authService,
         IEmailService emailService,
+        IAvatarService avatarService,
         ILogger<AuthController> logger)
     {
         _authService = authService;
         _emailService = emailService;
+        _avatarService = avatarService;
         _logger = logger;
     }
 
@@ -94,7 +98,7 @@ public class AuthController : ControllerBase
             return Ok(new AuthResponse
             {
                 AccessToken = accessToken,
-                User = MapToUserDto(user)
+                User = await MapToUserDtoAsync(user)
             });
         }
         catch (Exception ex)
@@ -141,7 +145,7 @@ public class AuthController : ControllerBase
             return Ok(new AuthResponse
             {
                 AccessToken = accessToken,
-                User = MapToUserDto(user)
+                User = await MapToUserDtoAsync(user)
             });
         }
         catch (Exception ex)
@@ -302,8 +306,9 @@ public class AuthController : ControllerBase
         Response.Cookies.Append("refreshToken", token, cookieOptions);
     }
 
-    private UserDto MapToUserDto(UserEntity user)
+    private async Task<UserDto> MapToUserDtoAsync(UserEntity user)
     {
+        var normalizedAvatarImageId = await _avatarService.NormalizeAvatarImageIdAsync(user.AvatarImageId);
         return new UserDto
         {
             Id = user.Id,
@@ -312,7 +317,7 @@ public class AuthController : ControllerBase
             IsDisabled = user.IsDisabled,
             DisplayName = user.DisplayName,
             AvatarUrl = user.AvatarUrl,
-            AvatarImageId = user.AvatarImageId,
+            AvatarImageId = normalizedAvatarImageId,
             Gender = user.Gender,
             Bio = user.Bio,
             IsOnline = user.IsOnline,
