@@ -58,36 +58,10 @@ const sortGenerated = (items: EmotionThumbnailResult[]) => {
   });
 };
 
-export interface GeneratedAvatarPickerProps {
-  anchorEl: HTMLElement | null;
-  open: boolean;
-  onClose: () => void;
-  avatarImageId?: string | null;
-  currentAvatarUrl?: string | null;
-  onSelect: (avatarImageId: string, avatarUrl: string, sourceAvatarImageId?: string | null) => void;
-}
-
-export const GeneratedAvatarPicker: React.FC<GeneratedAvatarPickerProps> = ({
-  anchorEl,
-  open,
-  onClose,
-  avatarImageId,
-  currentAvatarUrl,
-  onSelect,
-}) => {
+const useMoodPickerData = (open: boolean, avatarImageId?: string | null) => {
   const [loading, setLoading] = React.useState(false);
   const [items, setItems] = React.useState<EmotionThumbnailResult[]>([]);
   const cacheRef = React.useRef<Map<string, EmotionThumbnailResult[]>>(new Map());
-  const [activePreviewId, setActivePreviewId] = React.useState<string | null>(null);
-  const [isPreviewOpen, setIsPreviewOpen] = React.useState(false);
-  const previewCloseTimerRef = React.useRef<number | null>(null);
-  const lastPreviewCloseAtRef = React.useRef<number | null>(null);
-  const clickTimerRef = React.useRef<number | null>(null);
-  const suppressClickRef = React.useRef(false);
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const tileW = isMobile ? 64 : 56;
-  const popoverW = isMobile ? tileW * 3 + 32 + 16 : 216;  // 3 tiles + gap + padding
 
   React.useEffect(() => {
     let active = true;
@@ -147,6 +121,32 @@ export const GeneratedAvatarPicker: React.FC<GeneratedAvatarPickerProps> = ({
     };
   }, [open, avatarImageId]);
 
+  return { loading, items };
+};
+
+export interface GeneratedAvatarPickerProps {
+  anchorEl: HTMLElement | null;
+  open: boolean;
+  onClose: () => void;
+  avatarImageId?: string | null;
+  currentAvatarUrl?: string | null;
+  onSelect: (avatarImageId: string, avatarUrl: string, sourceAvatarImageId?: string | null) => void;
+}
+
+export const GeneratedAvatarPicker: React.FC<GeneratedAvatarPickerProps> = ({
+  anchorEl,
+  open,
+  onClose,
+  avatarImageId,
+  currentAvatarUrl,
+  onSelect,
+}) => {
+  const { loading, items } = useMoodPickerData(open, avatarImageId);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const tileW = isMobile ? 64 : 56;
+  const popoverW = isMobile ? tileW * 3 + 32 + 16 : 216;  // 3 tiles + gap + padding
+
   const selectedId = extractAvatarImageId(currentAvatarUrl);
   const rawItem: GeneratedAvatarItem | null = avatarImageId
     ? {
@@ -185,52 +185,24 @@ export const GeneratedAvatarPicker: React.FC<GeneratedAvatarPickerProps> = ({
 
   const handleSelect = (item: GeneratedAvatarItem) => {
     onSelect(item.id, item.fullUrl, avatarImageId || item.id);
-    setActivePreviewId(null);
-    setIsPreviewOpen(false);
     onClose();
   };
 
-  const handlePopoverClose = (
-    _event: unknown,
-    reason?: 'backdropClick' | 'escapeKeyDown'
-  ) => {
-    const now = Date.now();
-    const justClosedPreview = lastPreviewCloseAtRef.current
-      ? now - lastPreviewCloseAtRef.current < 400
-      : false;
-
-    if (reason === 'backdropClick') {
-      if (isPreviewOpen || activePreviewId || justClosedPreview) {
-        setActivePreviewId(null);
-        setIsPreviewOpen(false);
-        return;
-      }
-
-      onClose();
-      return;
-    }
-
-    if (reason === 'escapeKeyDown') {
-      setActivePreviewId(null);
-      setIsPreviewOpen(false);
-      onClose();
-      return;
-    }
-
-    if (isPreviewOpen) {
-      setActivePreviewId(null);
-      setIsPreviewOpen(false);
-      return;
-    }
-
-    onClose();
-  };
+  const previewBehavior = {
+    openOnHover: true,
+    openOnLongPress: true,
+    openOnTap: false,
+    openOnClick: false,
+    openOnDoubleClick: false,
+    closeOnClickWhenOpen: true,
+    closeOnTriggerClickWhenOpen: true,
+  } as const;
 
   return (
     <Popover
       open={open}
       anchorEl={anchorEl}
-      onClose={handlePopoverClose}
+      onClose={onClose}
       anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       transformOrigin={{ vertical: 'top', horizontal: 'right' }}
       PaperProps={{
@@ -239,7 +211,7 @@ export const GeneratedAvatarPicker: React.FC<GeneratedAvatarPickerProps> = ({
           width: popoverW,
           maxWidth: '90vw',
           display: 'flex',
-                      cursor: 'pointer',
+          cursor: 'pointer',
           flexDirection: 'column',
           alignItems: 'center',
         },
@@ -287,58 +259,13 @@ export const GeneratedAvatarPicker: React.FC<GeneratedAvatarPickerProps> = ({
                 src={item.fullUrl}
                 alt={item.isRaw ? 'Raw avatar preview' : 'Generated avatar preview'}
                 maxSize={400}
-                disabled={Boolean(activePreviewId && activePreviewId !== item.id)}
-                openOnHover
-                openOnLongPress={false}
-                openOnTap
-                openOnClick
-                openOnDoubleClick={false}
-                closeOnClickWhenOpen
-                closeOnTriggerClickWhenOpen
-                onOpenChange={(open) => {
-                  if (open) {
-                    setActivePreviewId(item.id);
-                    setIsPreviewOpen(true);
-                  } else {
-                    setIsPreviewOpen(false);
-                    lastPreviewCloseAtRef.current = Date.now();
-                    if (previewCloseTimerRef.current) {
-                      window.clearTimeout(previewCloseTimerRef.current);
-                    }
-                    previewCloseTimerRef.current = window.setTimeout(() => {
-                      setActivePreviewId((prev) => (prev === item.id ? null : prev));
-                      previewCloseTimerRef.current = null;
-                    }, 150);
-                  }
-                }}
+                {...previewBehavior}
               >
                 {(previewProps) => (
                   <ButtonBase
                     {...previewProps}
-                    onClick={(event) => {
-                      previewProps.onClick?.(event);
-                      if (event.defaultPrevented) return;
-                      if (suppressClickRef.current) {
-                        suppressClickRef.current = false;
-                        return;
-                      }
-                      if (clickTimerRef.current) {
-                        window.clearTimeout(clickTimerRef.current);
-                      }
-                      clickTimerRef.current = window.setTimeout(() => {
-                        handleSelect(item);
-                        clickTimerRef.current = null;
-                      }, 300);
-                    }}
-                    onDoubleClick={(event) => {
-                      if (clickTimerRef.current) {
-                        window.clearTimeout(clickTimerRef.current);
-                        clickTimerRef.current = null;
-                      }
-                      suppressClickRef.current = true;
-                      event.preventDefault();
-                      event.stopPropagation();
-                      previewProps.onDoubleClick?.(event);
+                    onClick={() => {
+                      handleSelect(item);
                     }}
                     sx={{
                       width: tileW,
