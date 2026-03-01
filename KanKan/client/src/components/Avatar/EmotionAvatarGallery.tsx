@@ -382,11 +382,7 @@ export const EmotionAvatarGallery: React.FC<EmotionAvatarGalleryProps> = ({ user
                   sx={{
                     p: 0.15,
                     borderRadius: 1,
-                    transition: 'transform 120ms ease, box-shadow 120ms ease',
-                    '&:hover': {
-                      transform: 'translateY(-1px)',
-                      boxShadow: '0 8px 16px rgba(2, 6, 23, 0.12)',
-                    },
+                    transition: 'box-shadow 120ms ease',
                   }}
                 >
                   {match ? (
@@ -425,6 +421,10 @@ export const EmotionAvatarGallery: React.FC<EmotionAvatarGalleryProps> = ({ user
                               objectFit: 'cover',
                               borderRadius: 1.5,
                               display: 'block',
+                              transition: 'transform 120ms ease',
+                              '&:hover': {
+                                transform: 'translateY(-1px)',
+                              },
                               WebkitTouchCallout: 'none',
                               WebkitUserSelect: 'none',
                               userSelect: 'none',
