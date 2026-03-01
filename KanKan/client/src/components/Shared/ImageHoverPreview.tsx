@@ -30,7 +30,23 @@ export interface ImageHoverPreviewProps {
   }) => React.ReactNode;
 }
 
-let activePreviewOwnerId: string | null = null;
+type PreviewCloser = () => void;
+const previewRegistry = new Map<string, PreviewCloser>();
+
+const registerPreview = (id: string, close: PreviewCloser) => {
+  previewRegistry.set(id, close);
+  return () => {
+    previewRegistry.delete(id);
+  };
+};
+
+const closeOtherPreviews = (id: string) => {
+  previewRegistry.forEach((close, key) => {
+    if (key !== id) {
+      close();
+    }
+  });
+};
 
 export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
   src,
@@ -79,7 +95,6 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
 
   const handleOpen = (event: React.MouseEvent<HTMLElement> | React.FocusEvent<HTMLElement>) => {
     if (!src || disabled || isTouchDevice) return;
-    if (activePreviewOwnerId && activePreviewOwnerId !== popoverId) return;
     if (openTimerRef.current) {
       window.clearTimeout(openTimerRef.current);
       openTimerRef.current = null;
@@ -90,18 +105,14 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
     }
     const currentTarget = event.currentTarget as HTMLElement;
     openTimerRef.current = window.setTimeout(() => {
-      if (activePreviewOwnerId && activePreviewOwnerId !== popoverId) {
-        openTimerRef.current = null;
-        return;
-      }
-      activePreviewOwnerId = popoverId;
+      closeOtherPreviews(popoverId);
       setAnchorEl(currentTarget);
       onOpenChange?.(true);
       openTimerRef.current = null;
     }, 350);
   };
 
-  const closePreview = (force: boolean = false) => {
+  const closePreview = React.useCallback((force: boolean = false) => {
     if (openTimerRef.current) {
       window.clearTimeout(openTimerRef.current);
       openTimerRef.current = null;
@@ -113,9 +124,6 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
       setAnchorEl(null);
       setIsPreviewHover(false);
       isPreviewHoverRef.current = false;
-      if (activePreviewOwnerId === popoverId) {
-        activePreviewOwnerId = null;
-      }
       onOpenChange?.(false);
       closeTimerRef.current = null;
       return;
@@ -128,13 +136,10 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
       setAnchorEl(null);
       setIsPreviewHover(false);
       isPreviewHoverRef.current = false;
-      if (activePreviewOwnerId === popoverId) {
-        activePreviewOwnerId = null;
-      }
       onOpenChange?.(false);
       closeTimerRef.current = null;
     }, 0);
-  };
+  }, [interactive, onOpenChange]);
 
   const handleClose = () => {
     closePreview(false);
@@ -156,15 +161,10 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
       }, 200);
       return;
     }
-    if (!anchorEl && activePreviewOwnerId === popoverId) {
-      activePreviewOwnerId = null;
-    }
   };
 
   const handleDoubleClick = (event: React.MouseEvent<HTMLElement>) => {
     if (!src || disabled || isTouchDevice || !openOnDoubleClick) return;
-    if (activePreviewOwnerId && activePreviewOwnerId !== popoverId) return;
-    activePreviewOwnerId = popoverId;
     if (openTimerRef.current) {
       window.clearTimeout(openTimerRef.current);
       openTimerRef.current = null;
@@ -174,6 +174,7 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
       closeTimerRef.current = null;
     }
     const currentTarget = event.currentTarget as HTMLElement;
+    closeOtherPreviews(popoverId);
     setAnchorEl(currentTarget);
     onOpenChange?.(true);
   };
@@ -191,8 +192,7 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
     longPressOpenedRef.current = false;
     const currentTarget = event.currentTarget as HTMLElement;
     longPressTimerRef.current = window.setTimeout(() => {
-      if (activePreviewOwnerId && activePreviewOwnerId !== popoverId) return;
-      activePreviewOwnerId = popoverId;
+      closeOtherPreviews(popoverId);
       longPressOpenedRef.current = true;
       suppressNextClickRef.current = true;
       setAnchorEl(currentTarget);
@@ -216,8 +216,7 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
       return;
     }
     if (openOnTap && isTouchDevice) {
-      if (activePreviewOwnerId && activePreviewOwnerId !== popoverId) return;
-      activePreviewOwnerId = popoverId;
+      closeOtherPreviews(popoverId);
       const currentTarget = event.currentTarget as HTMLElement;
       setAnchorEl(currentTarget);
       onOpenChange?.(true);
@@ -232,7 +231,6 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
 
   const handleClickOpen = (event: React.MouseEvent<HTMLElement>) => {
     if (!src || disabled || isTouchDevice || !openOnClick) return;
-    if (activePreviewOwnerId && activePreviewOwnerId !== popoverId) return;
     if (open) {
       if (shouldCloseOnTriggerClick) {
         event.preventDefault();
@@ -241,7 +239,7 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
       }
       return;
     }
-    activePreviewOwnerId = popoverId;
+    closeOtherPreviews(popoverId);
     if (openTimerRef.current) {
       window.clearTimeout(openTimerRef.current);
       openTimerRef.current = null;
@@ -275,13 +273,13 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
 
   const noopMouse = (_event?: React.SyntheticEvent<HTMLElement>) => {};
 
+  React.useEffect(() => registerPreview(popoverId, () => closePreview(true)), [popoverId, closePreview]);
+
   React.useEffect(() => {
-    return () => {
-      if (activePreviewOwnerId === popoverId) {
-        activePreviewOwnerId = null;
-      }
-    };
-  }, [popoverId]);
+    if (!src || disabled) {
+      closePreview(true);
+    }
+  }, [src, disabled, closePreview]);
 
   React.useEffect(() => {
     if (!open) return;
