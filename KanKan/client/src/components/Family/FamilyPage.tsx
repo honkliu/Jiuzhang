@@ -21,10 +21,17 @@ const BoxAny = Box as any;
 
 type ViewMode = 'tree' | 'list' | 'generation';
 
+const MAX_VISIBLE_DEPTH = 4;
+
 function flattenTree(node: FamilyNode, result: FamilyNode[] = []): FamilyNode[] {
   result.push(node);
   node.children.forEach(c => flattenTree(c, result));
   return result;
+}
+
+function getTreeDepth(node: FamilyNode): number {
+  if (node.children.length === 0) return 0;
+  return 1 + Math.max(...node.children.map(getTreeDepth));
 }
 
 function getAncestorPath(node: FamilyNode, allNodes: FamilyNode[]): FamilyNode[] {
@@ -37,6 +44,21 @@ function getAncestorPath(node: FamilyNode, allNodes: FamilyNode[]): FamilyNode[]
     current = allNodes.find(n => n.id === parentId);
   }
   return path;
+}
+
+// Get 0-based depth of a person in the tree (depth from root)
+function getPersonTreeDepth(personId: string, allNodes: FamilyNode[]): number {
+  const node = allNodes.find(n => n.id === personId);
+  if (!node) return 0;
+  let depth = 0;
+  let current: FamilyNode | undefined = node;
+  while (current) {
+    if (current.parentRels.length === 0) break;
+    const parentId: string = current.parentRels[0].fromId;
+    current = allNodes.find(n => n.id === parentId);
+    depth++;
+  }
+  return depth;
 }
 
 export const FamilyPage: React.FC = () => {
@@ -52,9 +74,11 @@ export const FamilyPage: React.FC = () => {
   const [selectedPerson, setSelectedPerson] = useState<FamilyNode | null>(null);
   const [contextMenu, setContextMenu] = useState<{ node: FamilyNode; x: number; y: number } | null>(null);
   const [listSearch, setListSearch] = useState('');
+  const [visibleStartDepth, setVisibleStartDepth] = useState(0);
   const canvasRef = useRef<FamilyTreeCanvasHandle>(null);
 
   const selectedTree = trees.find(t => t.id === selectedTreeId) ?? null;
+  const treeMaxDepth = useMemo(() => rootNode ? getTreeDepth(rootNode) : 0, [rootNode]);
 
   // Load tree list on mount
   useEffect(() => {
@@ -71,6 +95,7 @@ export const FamilyPage: React.FC = () => {
     if (!selectedTreeId) return;
     setLoading(true);
     setError(null);
+    setVisibleStartDepth(0);
     familyService.getTree(selectedTreeId)
       .then(({ persons: p, relationships: r }) => {
         setPersons(p);
@@ -93,20 +118,43 @@ export const FamilyPage: React.FC = () => {
 
   const handleCloseContextMenu = useCallback(() => setContextMenu(null), []);
 
+  const handleExpandDepth = useCallback((personId: string) => {
+    // Shift the window so the person's children are visible.
+    // The person is at the bottom visible gen; shift down so their children appear.
+    const personDepth = getPersonTreeDepth(personId, allNodes);
+    // The children are at personDepth + 1. We want that depth inside the window.
+    // New start = personDepth + 1 - (MAX_VISIBLE_DEPTH - 1) = personDepth - MAX_VISIBLE_DEPTH + 2
+    // But at minimum, just shift down by 1 from current.
+    const newStart = Math.max(
+      visibleStartDepth + 1,
+      personDepth - MAX_VISIBLE_DEPTH + 2
+    );
+    const clamped = Math.min(newStart, Math.max(0, treeMaxDepth - MAX_VISIBLE_DEPTH + 1));
+    setVisibleStartDepth(clamped);
+    // Center on the person after the view shifts
+    setTimeout(() => canvasRef.current?.centerOnPerson(personId), 80);
+  }, [visibleStartDepth, treeMaxDepth, allNodes]);
+
   const navigateToPerson = useCallback((personId: string) => {
     const node = allNodes.find(n => n.id === personId);
     if (!node) return;
     setSelectedPerson(node);
     setViewMode('tree');
-    // Give react a tick to switch to tree view before centering
-    setTimeout(() => canvasRef.current?.centerOnPerson(personId), 50);
-  }, [allNodes]);
+
+    // Auto-adjust depth window so the person is visible
+    const personDepth = getPersonTreeDepth(personId, allNodes);
+    if (personDepth < visibleStartDepth || personDepth >= visibleStartDepth + MAX_VISIBLE_DEPTH) {
+      const newStart = Math.max(0, personDepth - Math.floor(MAX_VISIBLE_DEPTH / 2));
+      setVisibleStartDepth(Math.min(newStart, Math.max(0, treeMaxDepth - MAX_VISIBLE_DEPTH + 1)));
+    }
+
+    setTimeout(() => canvasRef.current?.centerOnPerson(personId), 80);
+  }, [allNodes, visibleStartDepth, treeMaxDepth]);
 
   const handleSearchSelect = useCallback((_: any, value: FamilyNode | null) => {
     if (value) navigateToPerson(value.id);
   }, [navigateToPerson]);
 
-  // Ancestor breadcrumb for selected person
   const ancestorPath = useMemo(() => {
     if (!selectedPerson) return [];
     return getAncestorPath(selectedPerson, allNodes);
@@ -116,13 +164,15 @@ export const FamilyPage: React.FC = () => {
     ? persons.filter(p => p.name.includes(listSearch) || (p.aliases ?? []).some(a => a.includes(listSearch)))
     : persons;
 
-  // Group persons by generation for generation view
   const byGeneration: Record<number, FamilyNode[]> = {};
   allNodes.forEach(n => {
     if (!byGeneration[n.generation]) byGeneration[n.generation] = [];
     byGeneration[n.generation].push(n);
   });
   const generations = Object.keys(byGeneration).map(Number).sort((a, b) => a - b);
+
+  const canGoUp = visibleStartDepth > 0;
+  const canGoDown = visibleStartDepth + MAX_VISIBLE_DEPTH <= treeMaxDepth;
 
   return (
     <BoxAny sx={{ display: 'flex', flexDirection: 'column', height: '100vh', pt: '61px' }}>
@@ -157,7 +207,7 @@ export const FamilyPage: React.FC = () => {
           <Tab label="世代" value="generation" />
         </Tabs>
 
-        {/* Search (always visible when tree loaded) */}
+        {/* Search */}
         {allNodes.length > 0 && (
           <Autocomplete
             size="small"
@@ -195,7 +245,7 @@ export const FamilyPage: React.FC = () => {
         )}
       </BoxAny>
 
-      {/* Breadcrumb for selected person */}
+      {/* Breadcrumb */}
       {selectedPerson && ancestorPath.length > 0 && viewMode === 'tree' && (
         <BoxAny sx={{
           px: 2, py: 0.5,
@@ -245,7 +295,6 @@ export const FamilyPage: React.FC = () => {
 
         {!loading && !error && trees.length > 0 && (
           <>
-            {/* ─── Tree view ─────────────────────────────────────────── */}
             {viewMode === 'tree' && (
               <BoxAny sx={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
                 {rootNode ? (
@@ -253,8 +302,21 @@ export const FamilyPage: React.FC = () => {
                     ref={canvasRef}
                     root={rootNode}
                     tree={selectedTree}
+                    visibleStartDepth={visibleStartDepth}
+                    maxVisibleDepth={MAX_VISIBLE_DEPTH}
+                    canShiftUp={canGoUp}
+                    canShiftDown={canGoDown}
                     onNodeClick={handleNodeClick}
                     onNodeRightClick={handleNodeRightClick}
+                    onExpandDepth={handleExpandDepth}
+                    onShiftUp={() => {
+                      setVisibleStartDepth(d => d - 1);
+                      if (selectedPerson) setTimeout(() => canvasRef.current?.centerOnPerson(selectedPerson.id), 80);
+                    }}
+                    onShiftDown={() => {
+                      setVisibleStartDepth(d => d + 1);
+                      if (selectedPerson) setTimeout(() => canvasRef.current?.centerOnPerson(selectedPerson.id), 80);
+                    }}
                   />
                 ) : (
                   <BoxAny sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
@@ -262,28 +324,9 @@ export const FamilyPage: React.FC = () => {
                   </BoxAny>
                 )}
 
-                {/* Help overlay */}
-                <Paper
-                  elevation={2}
-                  sx={{
-                    position: 'absolute', bottom: 16, right: 16,
-                    p: 1.5, fontSize: 12, lineHeight: 1.7,
-                    background: 'rgba(57,81,98,0.88)', color: '#fff',
-                    borderRadius: 2, backdropFilter: 'blur(4px)',
-                    maxWidth: 200,
-                  }}
-                >
-                  <Typography variant="caption" display="block" color="#2aad5a" fontWeight="bold" mb={0.5}>操作说明</Typography>
-                  <Typography variant="caption" display="block">滚轮：缩放</Typography>
-                  <Typography variant="caption" display="block">拖拽：平移画布</Typography>
-                  <Typography variant="caption" display="block">左键点击：高亮祖先 + 后代</Typography>
-                  <Typography variant="caption" display="block">右键点击：快捷菜单</Typography>
-                  <Typography variant="caption" display="block">搜索框：按名字定位</Typography>
-                </Paper>
               </BoxAny>
             )}
 
-            {/* ─── List view ─────────────────────────────────────────── */}
             {viewMode === 'list' && (
               <BoxAny sx={{ flex: 1, overflow: 'auto', p: 2 }}>
                 <TextField
@@ -340,7 +383,6 @@ export const FamilyPage: React.FC = () => {
               </BoxAny>
             )}
 
-            {/* ─── Generation view ───────────────────────────────────── */}
             {viewMode === 'generation' && (
               <BoxAny sx={{ flex: 1, overflow: 'auto', p: 2 }}>
                 {generations.map(gen => (
@@ -382,7 +424,6 @@ export const FamilyPage: React.FC = () => {
               </BoxAny>
             )}
 
-            {/* Person detail panel */}
             {selectedPerson && (
               <BoxAny sx={{ width: 300, flexShrink: 0, overflow: 'hidden', borderLeft: '1px solid rgba(15,23,42,0.08)' }}>
                 <FamilyPersonPanel
@@ -398,7 +439,6 @@ export const FamilyPage: React.FC = () => {
         )}
       </BoxAny>
 
-      {/* Context menu */}
       {contextMenu && (
         <FamilyNodeContextMenu
           x={contextMenu.x}
