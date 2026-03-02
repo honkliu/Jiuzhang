@@ -39,10 +39,11 @@ import { useSettings } from '@/settings/SettingsContext';
 const BoxAny = Box as any;
 
 const navItems = [
-  { label: 'Chats', path: '/chats' },
-  { label: 'Contacts', path: '/contacts' },
-  { label: 'Pa', path: '/pa' },
-  { label: 'Profile', path: '/profile' },
+  { label: 'Chats', path: '/chats', adminOnly: false },
+  { label: 'Contacts', path: '/contacts', adminOnly: false },
+  { label: 'Pa', path: '/pa', adminOnly: false },
+  { label: 'Profile', path: '/profile', adminOnly: false },
+  { label: '家谱', path: '/family', adminOnly: true },
 ];
 
 interface AppHeaderProps {
@@ -212,7 +213,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleSidebar, sidebarOp
             </IconButton>
           )}
           <BoxAny sx={{ display: { xs: 'none', md: 'flex' }, gap: 1, overflow: 'hidden' }}>
-            {navItems.map((item) => (
+            {navItems.filter(item => !item.adminOnly || user?.isAdmin).map((item) => (
               <Button
                 key={item.path}
                 color={location.pathname.startsWith(item.path) ? 'primary' : 'inherit'}
@@ -311,7 +312,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleSidebar, sidebarOp
             },
           }}
         >
-          {navItems.map((item) => (
+          {navItems.filter(item => !item.adminOnly || user?.isAdmin).map((item) => (
             <MenuItem
               key={item.path}
               selected={location.pathname.startsWith(item.path)}

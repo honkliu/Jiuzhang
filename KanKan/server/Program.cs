@@ -223,6 +223,10 @@ if (useInMemory)
     builder.Services.AddSingleton<IContactRepository, InMemoryContactRepository>();
     builder.Services.AddSingleton<INotificationRepository, InMemoryNotificationRepository>();
     builder.Services.AddScoped<IAuthService, InMemoryAuthService>();
+    // Family repos (InMemory stubs — returns empty data, writes are no-ops)
+    builder.Services.AddSingleton<KanKan.API.Repositories.Interfaces.IFamilyTreeRepository, KanKan.API.Repositories.Implementations.InMemoryFamilyRepository>();
+    builder.Services.AddSingleton<KanKan.API.Repositories.Interfaces.IFamilyPersonRepository, KanKan.API.Repositories.Implementations.InMemoryFamilyRepository>();
+    builder.Services.AddSingleton<KanKan.API.Repositories.Interfaces.IFamilyRelationshipRepository, KanKan.API.Repositories.Implementations.InMemoryFamilyRepository>();
 }
 else if (storageMode == "mongodb")
 {
@@ -234,6 +238,9 @@ else if (storageMode == "mongodb")
     builder.Services.AddScoped<IContactRepository, ContactRepository>();
     builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
     builder.Services.AddScoped<IAuthService, AuthService>();
+    builder.Services.AddScoped<KanKan.API.Repositories.Interfaces.IFamilyTreeRepository, KanKan.API.Repositories.Implementations.FamilyTreeRepository>();
+    builder.Services.AddScoped<KanKan.API.Repositories.Interfaces.IFamilyPersonRepository, KanKan.API.Repositories.Implementations.FamilyPersonRepository>();
+    builder.Services.AddScoped<KanKan.API.Repositories.Interfaces.IFamilyRelationshipRepository, KanKan.API.Repositories.Implementations.FamilyRelationshipRepository>();
 }
 
 builder.Services.AddScoped<IEmailService, EmailService>();

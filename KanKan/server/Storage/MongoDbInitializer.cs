@@ -52,6 +52,9 @@ public class MongoDbInitializer : IHostedService
             _configuration["MongoDB:Collections:Moments"] ?? "Moments",
             _configuration["MongoDB:Collections:EmailVerifications"] ?? "EmailVerifications",
             _configuration["MongoDB:Collections:Notifications"] ?? "Notifications",
+            _configuration["MongoDB:Collections:FamilyTrees"] ?? "FamilyTrees",
+            _configuration["MongoDB:Collections:FamilyPersons"] ?? "FamilyPersons",
+            _configuration["MongoDB:Collections:FamilyRelationships"] ?? "FamilyRelationships",
             "avatarImages",
             "imageGenerationJobs"
         };
@@ -70,6 +73,7 @@ public class MongoDbInitializer : IHostedService
 
         // Create indexes for better query performance
         await CreateIndexesAsync(database, cancellationToken);
+        await CreateFamilyIndexesAsync(database, cancellationToken);
 
         // Ensure the assistant user always exists for MongoDB mode.
         await EnsureAssistantUserAsync(database, cancellationToken);
@@ -80,6 +84,7 @@ public class MongoDbInitializer : IHostedService
         if (seedTestData)
         {
             await SeedTestDataAsync(database, cancellationToken);
+            await SeedFamilyDataAsync(database, cancellationToken);
         }
 
         _logger.LogInformation("MongoDB initialization completed successfully.");
@@ -235,6 +240,38 @@ public class MongoDbInitializer : IHostedService
             cancellationToken: cancellationToken);
 
         _logger.LogInformation("Created indexes for all collections.");
+    }
+
+    private async Task CreateFamilyIndexesAsync(IMongoDatabase database, CancellationToken cancellationToken)
+    {
+        var treesCol = database.GetCollection<FamilyTree>(
+            _configuration["MongoDB:Collections:FamilyTrees"] ?? "FamilyTrees");
+        await treesCol.Indexes.CreateOneAsync(
+            new CreateIndexModel<FamilyTree>(
+                Builders<FamilyTree>.IndexKeys.Ascending(t => t.Domain).Descending(t => t.UpdatedAt)),
+            cancellationToken: cancellationToken);
+
+        var personsCol = database.GetCollection<FamilyPerson>(
+            _configuration["MongoDB:Collections:FamilyPersons"] ?? "FamilyPersons");
+        await personsCol.Indexes.CreateOneAsync(
+            new CreateIndexModel<FamilyPerson>(
+                Builders<FamilyPerson>.IndexKeys.Ascending(p => p.TreeId)),
+            cancellationToken: cancellationToken);
+        await personsCol.Indexes.CreateOneAsync(
+            new CreateIndexModel<FamilyPerson>(
+                Builders<FamilyPerson>.IndexKeys.Ascending(p => p.TreeId).Ascending(p => p.Generation)),
+            cancellationToken: cancellationToken);
+
+        var relsCol = database.GetCollection<FamilyRelationship>(
+            _configuration["MongoDB:Collections:FamilyRelationships"] ?? "FamilyRelationships");
+        await relsCol.Indexes.CreateOneAsync(
+            new CreateIndexModel<FamilyRelationship>(
+                Builders<FamilyRelationship>.IndexKeys.Ascending(r => r.TreeId).Ascending(r => r.Type).Ascending(r => r.FromId)),
+            cancellationToken: cancellationToken);
+        await relsCol.Indexes.CreateOneAsync(
+            new CreateIndexModel<FamilyRelationship>(
+                Builders<FamilyRelationship>.IndexKeys.Ascending(r => r.TreeId).Ascending(r => r.Type).Ascending(r => r.ToId)),
+            cancellationToken: cancellationToken);
     }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
@@ -677,6 +714,184 @@ public class MongoDbInitializer : IHostedService
         await SeedTextAsync(groupChat, carol, "Welcome to the group chat!");
 
         _logger.LogInformation("Seeded test users and starter chats (Alice, Bob, Carol).");
+    }
+
+    private async Task SeedFamilyDataAsync(IMongoDatabase database, CancellationToken cancellationToken)
+    {
+        var treesCol = database.GetCollection<FamilyTree>(
+            _configuration["MongoDB:Collections:FamilyTrees"] ?? "FamilyTrees");
+        var personsCol = database.GetCollection<FamilyPerson>(
+            _configuration["MongoDB:Collections:FamilyPersons"] ?? "FamilyPersons");
+        var relsCol = database.GetCollection<FamilyRelationship>(
+            _configuration["MongoDB:Collections:FamilyRelationships"] ?? "FamilyRelationships");
+
+        const string treeId = "ftree_seed_li";
+        var existing = await treesCol.Find(t => t.Id == treeId).FirstOrDefaultAsync(cancellationToken);
+        if (existing != null)
+        {
+            _logger.LogInformation("Family seed data already exists, skipping.");
+            return;
+        }
+
+        var domain = DomainRules.GetDomain("kankan@kankan");
+        var now = DateTime.UtcNow;
+
+        var tree = new FamilyTree
+        {
+            Id = treeId,
+            Name = "李氏家谱",
+            Surname = "李",
+            OwnerId = "user_ai_wa",
+            Domain = domain,
+            RootGeneration = 1,
+            ZibeiPoem = new List<string> { "国", "志", "正", "朝", "文", "明", "德", "仁", "义", "礼" },
+            CreatedAt = now,
+            UpdatedAt = now
+        };
+        await treesCol.InsertOneAsync(tree, cancellationToken: cancellationToken);
+
+        // We'll generate 10 generations: each person (male) has 3-5 children.
+        // Generation 1: one couple (root)
+        var persons = new List<FamilyPerson>();
+        var rels = new List<FamilyRelationship>();
+        var rng = new Random(42);
+
+        // Chinese surname list for males: Li family
+        string[] maleGiven = { "国栋", "国梁", "志远", "志宏", "志伟", "志强", "志刚", "志华", "正豪", "正轩", "正宇", "正航", "正阳", "正明", "正清", "正华", "正文", "正武", "正飞", "正伟", "正勇", "朝阳", "朝晖", "朝辉", "朝东", "朝西", "朝南", "朝北", "朝林", "朝森", "文博", "文昊", "文轩", "文杰", "文浩", "文峰", "文涛", "文宇", "文凯", "文倩", "明哲", "明智", "明德", "明辉", "明亮", "明远", "明达", "明新", "明晖", "明军", "德明", "德强", "德华", "德志", "德才", "德兴", "德旺", "德荣", "德贵", "德仁", "仁义", "仁杰", "仁勇", "仁智", "仁厚", "仁光", "仁海", "仁山", "仁田", "仁心" };
+        string[] femaleGiven = { "国芬", "国秀", "志兰", "志梅", "志芳", "志春", "志英", "志霞", "正华", "正美", "正娟", "正艳", "正丽", "正蓉", "正琴", "正燕", "朝霞", "朝红", "朝玉", "朝珍", "文娟", "文静", "文慧", "文雅", "文秀", "明珠", "明玉", "明秀", "明芳", "明慧", "德芬", "德英", "德秀", "德慧", "德美", "仁芳", "仁慧", "仁秀", "仁珍", "仁美" };
+        string[] spouseSurnames = { "王", "张", "陈", "赵", "刘", "吴", "周", "孙", "杨", "黄", "林", "徐", "马", "何", "高", "郑", "谢", "宋", "唐", "许" };
+        string[] spouseGiven = { "氏", "芳", "英", "华", "梅", "秀", "燕", "玉", "珍", "静", "慧", "丽", "娟", "红", "云", "月", "桂", "香", "莲", "芬" };
+
+        int maleIdx = 0;
+        int femaleIdx = 0;
+        int spouseIdx = 0;
+
+        string NextMaleName()
+        {
+            var given = maleGiven[maleIdx % maleGiven.Length];
+            maleIdx++;
+            return $"李{given}";
+        }
+        string NextFemaleName()
+        {
+            var given = femaleGiven[femaleIdx % femaleGiven.Length];
+            femaleIdx++;
+            return $"李{given}";
+        }
+        string NextSpouseName()
+        {
+            var sur = spouseSurnames[spouseIdx % spouseSurnames.Length];
+            var giv = spouseGiven[spouseIdx % spouseGiven.Length];
+            spouseIdx++;
+            return $"{sur}{giv}";
+        }
+
+        FamilyPerson MakePerson(string name, string gender, int gen, int baseYear)
+        {
+            var birthYear = baseYear + rng.Next(-3, 4);
+            return new FamilyPerson
+            {
+                Id = $"fperson_{Guid.NewGuid():N}",
+                TreeId = treeId,
+                Domain = domain,
+                Name = name,
+                Gender = gender,
+                Generation = gen,
+                BirthDate = new FamilyDate { Year = birthYear },
+                IsAlive = birthYear > 1960,
+                CreatedAt = now,
+                UpdatedAt = now
+            };
+        }
+
+        FamilyRelationship MakeSpouseRel(string fromId, string toId) => new()
+        {
+            Id = $"frel_{Guid.NewGuid():N}",
+            TreeId = treeId,
+            Domain = domain,
+            Type = "spouse",
+            FromId = fromId,
+            ToId = toId,
+            UnionType = "married",
+            CreatedAt = now
+        };
+
+        FamilyRelationship MakeParentChildRel(string parentId, string childId, int sortOrder) => new()
+        {
+            Id = $"frel_{Guid.NewGuid():N}",
+            TreeId = treeId,
+            Domain = domain,
+            Type = "parent-child",
+            FromId = parentId,
+            ToId = childId,
+            ParentRole = "father",
+            ChildStatus = "biological",
+            SortOrder = sortOrder,
+            CreatedAt = now
+        };
+
+        // Generation birth year anchors (30 years per generation, starting 1824)
+        int[] genBirthYears = { 1824, 1854, 1884, 1914, 1944, 1966, 1990, 2012, 2030, 2048 };
+
+        // Build gen 1: root couple
+        var rootMale = MakePerson(NextMaleName(), "male", 1, genBirthYears[0]);
+        var rootFemale = MakePerson(NextSpouseName(), "female", 1, genBirthYears[0]);
+        persons.Add(rootMale);
+        persons.Add(rootFemale);
+        rels.Add(MakeSpouseRel(rootMale.Id, rootFemale.Id));
+
+        // currentGen holds the male "heads" whose children we need to generate
+        var currentGenMales = new List<FamilyPerson> { rootMale };
+
+        for (int gen = 2; gen <= 10; gen++)
+        {
+            var nextGenMales = new List<FamilyPerson>();
+            int baseYear = genBirthYears[gen - 1];
+
+            foreach (var father in currentGenMales)
+            {
+                int childCount = rng.Next(3, 6); // 3-5 children
+                for (int c = 0; c < childCount; c++)
+                {
+                    // ~75% chance each child is male
+                    bool isMale = rng.NextDouble() < 0.75;
+                    var childName = isMale ? NextMaleName() : NextFemaleName();
+                    var child = MakePerson(childName, isMale ? "male" : "female", gen, baseYear);
+                    persons.Add(child);
+                    rels.Add(MakeParentChildRel(father.Id, child.Id, c));
+
+                    // Give each child a spouse (except generation 10 which is very young)
+                    if (gen <= 9 && isMale)
+                    {
+                        var spouse = MakePerson(NextSpouseName(), "female", gen, baseYear);
+                        persons.Add(spouse);
+                        rels.Add(MakeSpouseRel(child.Id, spouse.Id));
+                        nextGenMales.Add(child); // only males carry the line
+                    }
+                }
+            }
+
+            currentGenMales = nextGenMales;
+
+            // Stop if the tree gets too large (cap at ~1000 persons)
+            if (persons.Count > 800) break;
+        }
+
+        // Insert in batches
+        const int batchSize = 100;
+        for (int i = 0; i < persons.Count; i += batchSize)
+        {
+            var batch = persons.Skip(i).Take(batchSize).ToList();
+            await personsCol.InsertManyAsync(batch, cancellationToken: cancellationToken);
+        }
+
+        for (int i = 0; i < rels.Count; i += batchSize)
+        {
+            var batch = rels.Skip(i).Take(batchSize).ToList();
+            await relsCol.InsertManyAsync(batch, cancellationToken: cancellationToken);
+        }
+
+        _logger.LogInformation("Seeded family tree with {PersonCount} persons and {RelCount} relationships across 10 generations.", persons.Count, rels.Count);
     }
 
     private async Task EnsureAssistantUserAsync(IMongoDatabase database, CancellationToken cancellationToken)

@@ -11,6 +11,7 @@ import { ContactsPage } from './components/Contacts/ContactsPage';
 import { MomentsPage } from './components/Moments/MomentsPage';
 import { ProfilePage } from './components/Profile/ProfilePage';
 import { ChatRoom3DTestPage } from './components/Chat/ChatRoom3DTestPage';
+import { FamilyPage } from './components/Family/FamilyPage';
 import { authService } from './services/auth.service';
 import { contactService } from './services/contact.service';
 import { LanguageProvider } from './i18n/LanguageContext';
@@ -282,6 +283,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <ProfilePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/family"
+                element={
+                  <ProtectedRoute>
+                    <FamilyPage />
                   </ProtectedRoute>
                 }
               />
