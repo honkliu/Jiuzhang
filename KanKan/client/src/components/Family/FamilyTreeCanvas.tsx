@@ -14,10 +14,12 @@ interface Props {
   onExpandDepth: (personId: string) => void;
   onShiftUp: () => void;
   onShiftDown: () => void;
+  onClearSelection: () => void;
 }
 
 export interface FamilyTreeCanvasHandle {
   centerOnPerson: (personId: string) => void;
+  setPendingHighlight: (personId: string | null) => void;
 }
 
 const NODE_GAP = 55;
@@ -186,7 +188,7 @@ interface GenCell {
 
 export const FamilyTreeCanvas = forwardRef<FamilyTreeCanvasHandle, Props>(
   ({ root, tree, visibleStartDepth, maxVisibleDepth, canShiftUp, canShiftDown,
-     onNodeClick, onNodeRightClick, onExpandDepth, onShiftUp, onShiftDown }, ref) => {
+     onNodeClick, onNodeRightClick, onExpandDepth, onShiftUp, onShiftDown, onClearSelection }, ref) => {
     const svgRef = useRef<SVGSVGElement>(null);
     const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
     const allLayoutNodesRef = useRef<LayoutNode[]>([]);
@@ -194,6 +196,7 @@ export const FamilyTreeCanvas = forwardRef<FamilyTreeCanvasHandle, Props>(
     const maxDepthRef = useRef(0);
     const visibleStartDepthRef = useRef(visibleStartDepth);
     visibleStartDepthRef.current = visibleStartDepth;
+    const pendingCenterRef = useRef<string | null>(null);
 
     const [genCells, setGenCells] = useState<GenCell[]>([]);
 
@@ -263,6 +266,9 @@ export const FamilyTreeCanvas = forwardRef<FamilyTreeCanvasHandle, Props>(
         const addDesc = (n: LayoutNode) => { if (n.depth >= 0) highlightedSetRef.current.add(n); n.children?.forEach(addDesc); };
         addDesc(target);
         applyHighlight();
+      },
+      setPendingHighlight: (personId: string | null) => {
+        pendingCenterRef.current = personId;
       },
     }));
 
@@ -534,7 +540,7 @@ export const FamilyTreeCanvas = forwardRef<FamilyTreeCanvasHandle, Props>(
         });
       zoomRef.current = zoom;
       svg.call(zoom);
-      svg.on('click.clear', () => { highlightedSetRef.current.clear(); applyHighlight(); });
+      svg.on('click.clear', () => { highlightedSetRef.current.clear(); applyHighlight(); onClearSelection(); });
 
       // Initial center
       drawTree();
@@ -558,11 +564,53 @@ export const FamilyTreeCanvas = forwardRef<FamilyTreeCanvasHandle, Props>(
     useEffect(() => {
       if (!svgRef.current || !root || !zoomRef.current) return;
       drawTree();
-      // Re-apply current transform through zoom handler so clamping runs with new layout
       const svg = d3.select(svgRef.current);
       const currentTransform = d3.zoomTransform(svgRef.current);
-      // Programmatically trigger zoom with current transform to update strip + clamping
       svg.call(zoomRef.current.transform, currentTransform);
+      // Re-highlight pending person after redraw
+      const pid = pendingCenterRef.current;
+      if (!pid) {
+        // No pending highlight — ensure cleared state is applied to DOM
+        applyHighlight();
+        return;
+      }
+      pendingCenterRef.current = null;
+        // Use requestAnimationFrame to ensure DOM is updated
+        requestAnimationFrame(() => {
+          const target = allLayoutNodesRef.current.find(n => n.data.id === pid);
+          if (target) {
+            // Re-highlight without animation
+            highlightedSetRef.current.clear();
+            let anc: LayoutNode | null = target;
+            while (anc) { if (anc.depth >= 0) highlightedSetRef.current.add(anc); anc = anc.parent; }
+            const addDesc = (n: LayoutNode) => { if (n.depth >= 0) highlightedSetRef.current.add(n); n.children?.forEach(addDesc); };
+            addDesc(target);
+            applyHighlight();
+          } else if (root) {
+            // Person not in layout — find nearest ancestor
+            const findInFullTree = (node: FamilyNode, id: string): FamilyNode | null => {
+              if (node.id === id) return node;
+              for (const c of node.children) { const f = findInFullTree(c, id); if (f) return f; }
+              return null;
+            };
+            const findAncestor = (id: string): LayoutNode | undefined => {
+              const p = findInFullTree(root, id);
+              if (!p || p.parentRels.length === 0) return undefined;
+              const parentInLayout = allLayoutNodesRef.current.find(n => n.data.id === p.parentRels[0].fromId);
+              if (parentInLayout) return parentInLayout;
+              return findAncestor(p.parentRels[0].fromId);
+            };
+            const ancestor = findAncestor(pid);
+            if (ancestor) {
+              highlightedSetRef.current.clear();
+              let anc2: LayoutNode | null = ancestor;
+              while (anc2) { if (anc2.depth >= 0) highlightedSetRef.current.add(anc2); anc2 = anc2.parent; }
+              const addDesc2 = (n: LayoutNode) => { if (n.depth >= 0) highlightedSetRef.current.add(n); n.children?.forEach(addDesc2); };
+              addDesc2(ancestor);
+              applyHighlight();
+            }
+          }
+        });
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [drawTree]);
 

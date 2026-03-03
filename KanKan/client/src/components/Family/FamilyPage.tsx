@@ -75,6 +75,7 @@ export const FamilyPage: React.FC = () => {
   const [contextMenu, setContextMenu] = useState<{ node: FamilyNode; x: number; y: number } | null>(null);
   const [listSearch, setListSearch] = useState('');
   const [visibleStartDepth, setVisibleStartDepth] = useState(0);
+  const [focusPersonId, setFocusPersonId] = useState<string | null>(null);
   const canvasRef = useRef<FamilyTreeCanvasHandle>(null);
 
   const selectedTree = trees.find(t => t.id === selectedTreeId) ?? null;
@@ -96,6 +97,7 @@ export const FamilyPage: React.FC = () => {
     setLoading(true);
     setError(null);
     setVisibleStartDepth(0);
+    setFocusPersonId(null);
     familyService.getTree(selectedTreeId)
       .then(({ persons: p, relationships: r }) => {
         setPersons(p);
@@ -110,6 +112,7 @@ export const FamilyPage: React.FC = () => {
 
   const handleNodeClick = useCallback((node: FamilyNode) => {
     setSelectedPerson(node);
+    setFocusPersonId(null);
   }, []);
 
   const handleNodeRightClick = useCallback((node: FamilyNode, x: number, y: number) => {
@@ -119,19 +122,15 @@ export const FamilyPage: React.FC = () => {
   const handleCloseContextMenu = useCallback(() => setContextMenu(null), []);
 
   const handleExpandDepth = useCallback((personId: string) => {
-    // Shift the window so the person's children are visible.
-    // The person is at the bottom visible gen; shift down so their children appear.
     const personDepth = getPersonTreeDepth(personId, allNodes);
-    // The children are at personDepth + 1. We want that depth inside the window.
-    // New start = personDepth + 1 - (MAX_VISIBLE_DEPTH - 1) = personDepth - MAX_VISIBLE_DEPTH + 2
-    // But at minimum, just shift down by 1 from current.
     const newStart = Math.max(
       visibleStartDepth + 1,
       personDepth - MAX_VISIBLE_DEPTH + 2
     );
     const clamped = Math.min(newStart, Math.max(0, treeMaxDepth - MAX_VISIBLE_DEPTH + 1));
+    canvasRef.current?.setPendingHighlight(personId);
+    setFocusPersonId(personId);
     setVisibleStartDepth(clamped);
-    // Center on the person after the view shifts
     setTimeout(() => canvasRef.current?.centerOnPerson(personId), 80);
   }, [visibleStartDepth, treeMaxDepth, allNodes]);
 
@@ -322,13 +321,18 @@ export const FamilyPage: React.FC = () => {
                     onNodeClick={handleNodeClick}
                     onNodeRightClick={handleNodeRightClick}
                     onExpandDepth={handleExpandDepth}
+                    onClearSelection={() => { setSelectedPerson(null); setFocusPersonId(null); }}
                     onShiftUp={() => {
+                      const pid = focusPersonId ?? selectedPerson?.id ?? null;
+                      if (pid) canvasRef.current?.setPendingHighlight(pid);
                       setVisibleStartDepth(d => d - 1);
-                      if (selectedPerson) setTimeout(() => canvasRef.current?.centerOnPerson(selectedPerson.id), 80);
+                      if (pid) setTimeout(() => canvasRef.current?.centerOnPerson(pid), 80);
                     }}
                     onShiftDown={() => {
+                      const pid = focusPersonId ?? selectedPerson?.id ?? null;
+                      if (pid) canvasRef.current?.setPendingHighlight(pid);
                       setVisibleStartDepth(d => d + 1);
-                      if (selectedPerson) setTimeout(() => canvasRef.current?.centerOnPerson(selectedPerson.id), 80);
+                      if (pid) setTimeout(() => canvasRef.current?.centerOnPerson(pid), 80);
                     }}
                   />
                 ) : (
