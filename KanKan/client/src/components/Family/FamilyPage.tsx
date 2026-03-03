@@ -21,7 +21,7 @@ const BoxAny = Box as any;
 
 type ViewMode = 'tree' | 'list' | 'generation';
 
-const MAX_VISIBLE_DEPTH = 4;
+const MAX_VISIBLE_DEPTH = 5;
 
 function flattenTree(node: FamilyNode, result: FamilyNode[] = []): FamilyNode[] {
   result.push(node);
@@ -295,6 +295,19 @@ export const FamilyPage: React.FC = () => {
 
         {!loading && !error && trees.length > 0 && (
           <>
+            {/* Person detail panel (left side) */}
+            {selectedPerson && (
+              <BoxAny sx={{ width: 300, flexShrink: 0, overflow: 'hidden', borderRight: '1px solid rgba(15,23,42,0.08)' }}>
+                <FamilyPersonPanel
+                  person={selectedPerson}
+                  tree={selectedTree}
+                  allPersons={allNodes}
+                  onClose={() => setSelectedPerson(null)}
+                  onNavigate={navigateToPerson}
+                />
+              </BoxAny>
+            )}
+
             {viewMode === 'tree' && (
               <BoxAny sx={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
                 {rootNode ? (
@@ -421,18 +434,6 @@ export const FamilyPage: React.FC = () => {
                     <Divider sx={{ mt: 1.5 }} />
                   </BoxAny>
                 ))}
-              </BoxAny>
-            )}
-
-            {selectedPerson && (
-              <BoxAny sx={{ width: 300, flexShrink: 0, overflow: 'hidden', borderLeft: '1px solid rgba(15,23,42,0.08)' }}>
-                <FamilyPersonPanel
-                  person={selectedPerson}
-                  tree={selectedTree}
-                  allPersons={allNodes}
-                  onClose={() => setSelectedPerson(null)}
-                  onNavigate={navigateToPerson}
-                />
               </BoxAny>
             )}
           </>

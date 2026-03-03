@@ -182,7 +182,6 @@ interface GenCell {
   screenY: number;
   cellHeight: number;
   fontSize: number;
-  borderWidth: number;
 }
 
 export const FamilyTreeCanvas = forwardRef<FamilyTreeCanvasHandle, Props>(
@@ -193,6 +192,8 @@ export const FamilyTreeCanvas = forwardRef<FamilyTreeCanvasHandle, Props>(
     const allLayoutNodesRef = useRef<LayoutNode[]>([]);
     const highlightedSetRef = useRef<Set<LayoutNode>>(new Set());
     const maxDepthRef = useRef(0);
+    const visibleStartDepthRef = useRef(visibleStartDepth);
+    visibleStartDepthRef.current = visibleStartDepth;
 
     const [genCells, setGenCells] = useState<GenCell[]>([]);
 
@@ -200,8 +201,8 @@ export const FamilyTreeCanvas = forwardRef<FamilyTreeCanvasHandle, Props>(
 
     const updateGenStrip = useCallback((transform: d3.ZoomTransform) => {
       const maxDepth = maxDepthRef.current;
+      const startDepth = visibleStartDepthRef.current;
       const cells: GenCell[] = [];
-      const bw = Math.max(0.5, transform.k);
 
       for (let depth = 0; depth <= maxDepth; depth++) {
         const treeTop = genZoneTop(depth);
@@ -210,24 +211,51 @@ export const FamilyTreeCanvas = forwardRef<FamilyTreeCanvasHandle, Props>(
         const screenBottom = treeBottom * transform.k + transform.y;
         cells.push({
           depth,
-          label: `第${rootGen + visibleStartDepth + depth}世`,
+          label: `第${rootGen + startDepth + depth}世`,
           screenY: screenTop,
           cellHeight: screenBottom - screenTop,
           fontSize: Math.max(9, Math.min(14, 14 * transform.k)),
-          borderWidth: bw,
         });
       }
       setGenCells(cells);
-    }, [rootGen, visibleStartDepth]);
+    }, [rootGen]);
 
     useImperativeHandle(ref, () => ({
       centerOnPerson: (personId: string) => {
         if (!svgRef.current || !zoomRef.current) return;
-        const target = allLayoutNodesRef.current.find(n => n.data.id === personId);
+        let target = allLayoutNodesRef.current.find(n => n.data.id === personId);
+
+        // If person not in visible tree, find their nearest visible ancestor
+        if (!target && root) {
+          const findAncestorInLayout = (id: string): LayoutNode | undefined => {
+            // Walk up through FamilyNode parentRels to find an ancestor in the layout
+            const findInFullTree = (node: FamilyNode, targetId: string): FamilyNode | null => {
+              if (node.id === targetId) return node;
+              for (const c of node.children) {
+                const found = findInFullTree(c, targetId);
+                if (found) return found;
+              }
+              return null;
+            };
+            const person = findInFullTree(root, id);
+            if (!person || person.parentRels.length === 0) return undefined;
+            const parentId = person.parentRels[0].fromId;
+            const parentInLayout = allLayoutNodesRef.current.find(n => n.data.id === parentId);
+            if (parentInLayout) return parentInLayout;
+            return findAncestorInLayout(parentId);
+          };
+          target = findAncestorInLayout(personId);
+        }
+
         if (!target) return;
         const svg = d3.select(svgRef.current);
         const width = svgRef.current.clientWidth;
-        const transform = d3.zoomIdentity.translate(width / 2 - target._x, 40).scale(1);
+        const height = svgRef.current.clientHeight;
+        const currentTransform = d3.zoomTransform(svgRef.current);
+        const scale = currentTransform.k;
+        const transform = d3.zoomIdentity
+          .translate(width / 2 - target._x * scale, height / 3 - target._y * scale)
+          .scale(scale);
         svg.transition().duration(600).call(zoomRef.current.transform, transform);
         highlightedSetRef.current.clear();
         let anc: LayoutNode | null = target;
@@ -270,8 +298,8 @@ export const FamilyTreeCanvas = forwardRef<FamilyTreeCanvasHandle, Props>(
       if (!svgRef.current || !root) return;
       const svg = d3.select(svgRef.current);
       let g = svg.select<SVGGElement>('g.tree-group');
-      if (!g.node()) { g = svg.append('g').attr('class', 'tree-group'); }
-      g.selectAll('*').remove();
+      if (g.node()) g.remove();
+      g = svg.append('g').attr('class', 'tree-group');
       highlightedSetRef.current.clear();
 
       const layoutRoot = buildVisibleTree(root, visibleStartDepth, maxVisibleDepth);
@@ -309,8 +337,7 @@ export const FamilyTreeCanvas = forwardRef<FamilyTreeCanvasHandle, Props>(
         d3.select(this).append('rect').attr('class', 'node-border')
           .attr('x', -boxW / 2).attr('y', BOX_Y_OFFSET).attr('width', boxW).attr('height', boxH)
           .attr('rx', 6).attr('ry', 6)
-          .attr('fill', COLORS.nodeBg).attr('stroke', COLORS.nodeBorder).attr('stroke-width', 1.2)
-          .attr('filter', 'drop-shadow(0 1px 2px rgba(0,0,0,0.08))');
+          .attr('fill', COLORS.nodeBg).attr('stroke', COLORS.nodeBorder).attr('stroke-width', 1.2);
       });
 
       // Name vertical text
@@ -357,29 +384,26 @@ export const FamilyTreeCanvas = forwardRef<FamilyTreeCanvasHandle, Props>(
       if (visibleStartDepth > 0) {
         const topNodes = allNodes.filter(n => n.depth === 0);
         const boxTop = BOX_Y_OFFSET;
-        const sibY = boxTop - STUB_LEN; // Y of horizontal sibling line
+        const sibY = boxTop - STUB_LEN;
 
-        // Draw AA (vertical line up) for every top-gen node
-        // The rightmost child in each sibling group (eldest) extends AA higher
-        // to show lineage connection to parent above the view
-        const eldestIds = new Set<string>();
-
-        // First, find eldest (rightmost) of each sibling group
-        const byParentForAA = new Map<string, LayoutNode[]>();
+        // Group top-gen nodes by parent
+        const byParent = new Map<string, LayoutNode[]>();
         for (const n of topNodes) {
           const pid = n.data.parentRels.length > 0 ? n.data.parentRels[0].fromId : n.data.id;
-          if (!byParentForAA.has(pid)) byParentForAA.set(pid, []);
-          byParentForAA.get(pid)!.push(n);
-        }
-        for (const [, siblings] of byParentForAA) {
-          const sorted = [...siblings].sort((a, b) => a._x - b._x);
-          eldestIds.add(sorted[sorted.length - 1].data.id); // rightmost = eldest
+          if (!byParent.has(pid)) byParent.set(pid, []);
+          byParent.get(pid)!.push(n);
         }
 
+        // Find eldest (rightmost) of each sibling group
+        const eldestIds = new Set<string>();
+        for (const [, siblings] of byParent) {
+          const sorted = [...siblings].sort((a, b) => a._x - b._x);
+          eldestIds.add(sorted[sorted.length - 1].data.id);
+        }
+
+        // Draw AA (vertical line up) for every top-gen node
         topNodes.forEach(n => {
           const isEldest = eldestIds.has(n.data.id);
-          // Eldest: AA extends to the top of the ▲ arrow zone (well above AB)
-          // Others: AA extends just to the AB sibling line
           const aaTopY = isEldest ? (sibY - STUB_LEN) : sibY;
           g.append('line')
             .attr('x1', n._x).attr('y1', n._y + boxTop)
@@ -387,55 +411,34 @@ export const FamilyTreeCanvas = forwardRef<FamilyTreeCanvasHandle, Props>(
             .attr('stroke', COLORS.link).attr('stroke-width', 1);
         });
 
-        // Group top-gen nodes by their parent ID to draw AB per sibling group
-        const byParent = new Map<string, LayoutNode[]>();
-        for (const n of topNodes) {
-          const parentId = n.data.parentRels.length > 0 ? n.data.parentRels[0].fromId : n.data.id;
-          if (!byParent.has(parentId)) byParent.set(parentId, []);
-          byParent.get(parentId)!.push(n);
-        }
+        // Draw AB (horizontal sibling connector) per parent group
+        // Helper to find a node in the full tree
+        const findInTree = (node: FamilyNode, id: string): FamilyNode | null => {
+          if (node.id === id) return node;
+          for (const c of node.children) {
+            const found = findInTree(c, id);
+            if (found) return found;
+          }
+          return null;
+        };
 
-        // For each sibling group, find the full sibling count from the original FamilyNode data
         for (const [, visibleSiblings] of byParent) {
           if (visibleSiblings.length === 0) continue;
 
-          // Find the actual parent's total children count
           const anyChild = visibleSiblings[0].data;
           let totalSiblingCount = visibleSiblings.length;
-          // Walk up to find parent in the full tree to get total children
           if (anyChild.parentRels.length > 0) {
-            // Find parent in full tree by traversing root
-            const findInTree = (node: FamilyNode, id: string): FamilyNode | null => {
-              if (node.id === id) return node;
-              for (const c of node.children) {
-                const found = findInTree(c, id);
-                if (found) return found;
-              }
-              return null;
-            };
             const fullParent = findInTree(root, anyChild.parentRels[0].fromId);
             if (fullParent) totalSiblingCount = fullParent.children.length;
           }
 
-          // Sort visible siblings by X position
+          if (totalSiblingCount <= 1) continue;
+
           const sorted = [...visibleSiblings].sort((a, b) => a._x - b._x);
-          const leftX = sorted[0]._x;
-          const rightX = sorted[sorted.length - 1]._x;
+          let abLeft = sorted[0]._x;
+          let abRight = sorted[sorted.length - 1]._x;
 
-          if (totalSiblingCount <= 1) {
-            // Only child — no horizontal line needed
-            continue;
-          }
-
-          // Determine if there are off-screen siblings
-          const hasOffScreen = totalSiblingCount > visibleSiblings.length;
-
-          // AB: horizontal sibling connector
-          let abLeft = leftX;
-          let abRight = rightX;
-
-          // Extend line if siblings are off-screen
-          if (hasOffScreen) { abLeft -= 15; abRight += 15; }
+          if (totalSiblingCount > visibleSiblings.length) { abLeft -= 15; abRight += 15; }
 
           const abLineY = sorted[0]._y + sibY;
           g.append('line')
@@ -477,26 +480,55 @@ export const FamilyTreeCanvas = forwardRef<FamilyTreeCanvasHandle, Props>(
       });
       node.on('mouseenter', function () {
         d3.select(this).select('.node-border').transition().duration(120)
-          .attr('stroke-width', 2.2).attr('filter', 'drop-shadow(0 2px 6px rgba(0,0,0,0.15))');
+          .attr('stroke-width', 2.2);
       });
       node.on('mouseleave', function (_, d) {
         const isHL = highlightedSetRef.current.has(d);
         d3.select(this).select('.node-border').transition().duration(200)
-          .attr('stroke-width', isHL ? 2.5 : 1.2).attr('filter', 'drop-shadow(0 1px 2px rgba(0,0,0,0.08))');
+          .attr('stroke-width', isHL ? 2.5 : 1.2);
       });
     }, [root, tree, visibleStartDepth, maxVisibleDepth, onNodeClick, onNodeRightClick, onExpandDepth, applyHighlight]);
 
-    // Zoom + initial render
+    // Zoom setup (once per root change)
     useEffect(() => {
       if (!svgRef.current || !root) return;
       const svg = d3.select(svgRef.current);
       svg.on('contextmenu', (e: Event) => e.preventDefault());
-      const fixedY = 40 + STUB_LEN; // extra offset to show AA stub at top
+
       const zoom = d3.zoom<SVGSVGElement, unknown>()
         .scaleExtent([0.1, 3])
         .on('zoom', event => {
           const t = event.transform;
-          const constrained = d3.zoomIdentity.translate(t.x, fixedY).scale(t.k);
+          const nodes = allLayoutNodesRef.current;
+          let cx = t.x;
+          let cy = t.y;
+          if (nodes.length > 0 && svgRef.current) {
+            const w = svgRef.current.clientWidth;
+            const h = svgRef.current.clientHeight;
+            const minNodeX = Math.min(...nodes.map(n => n._x));
+            const maxNodeX = Math.max(...nodes.map(n => n._x));
+            const minTx = -maxNodeX * t.k + w - 30 - GEN_STRIP_W;
+            const maxTx = -minNodeX * t.k + 30;
+            if (minTx < maxTx) {
+              cx = Math.max(minTx, Math.min(maxTx, cx));
+            } else {
+              // Tree fits in viewport — center it horizontally
+              const treeCenterX = (minNodeX + maxNodeX) / 2;
+              cx = (w - GEN_STRIP_W) / 2 - treeCenterX * t.k;
+            }
+            const minNodeY = genZoneTop(0);
+            const maxNodeY = genZoneBottom(maxDepthRef.current, maxDepthRef.current);
+            const minTy = -maxNodeY * t.k + h - 30;
+            const maxTy = -minNodeY * t.k + 30;
+            if (minTy < maxTy) {
+              cy = Math.max(minTy, Math.min(maxTy, cy));
+            } else {
+              // Tree fits in viewport — center it vertically
+              const treeCenterY = (minNodeY + maxNodeY) / 2;
+              cy = h / 2 - treeCenterY * t.k;
+            }
+          }
+          const constrained = d3.zoomIdentity.translate(cx, cy).scale(t.k);
           svg.select<SVGGElement>('g.tree-group').attr('transform', constrained.toString());
           updateGenStrip(constrained);
         });
@@ -504,29 +536,45 @@ export const FamilyTreeCanvas = forwardRef<FamilyTreeCanvasHandle, Props>(
       svg.call(zoom);
       svg.on('click.clear', () => { highlightedSetRef.current.clear(); applyHighlight(); });
 
+      // Initial center
       drawTree();
-
       const allNodes = allLayoutNodesRef.current;
       if (allNodes.length > 0) {
         const minX = Math.min(...allNodes.map(n => n._x));
         const maxX = Math.max(...allNodes.map(n => n._x));
         const centerX = (minX + maxX) / 2;
         const width = svgRef.current.clientWidth;
-        const initialTransform = d3.zoomIdentity.translate(width / 2 - centerX, fixedY);
+        const initialY = 40 + STUB_LEN;
+        const initialTransform = d3.zoomIdentity.translate(width / 2 - centerX, initialY);
         svg.call(zoom.transform, initialTransform);
         updateGenStrip(initialTransform);
       }
 
       return () => { svg.on('.zoom', null); svg.on('click.clear', null); };
-    }, [root, drawTree, applyHighlight, updateGenStrip]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [root]);
+
+    // Redraw tree when depth window changes (without resetting zoom)
+    useEffect(() => {
+      if (!svgRef.current || !root || !zoomRef.current) return;
+      drawTree();
+      // Re-apply current transform through zoom handler so clamping runs with new layout
+      const svg = d3.select(svgRef.current);
+      const currentTransform = d3.zoomTransform(svgRef.current);
+      // Programmatically trigger zoom with current transform to update strip + clamping
+      svg.call(zoomRef.current.transform, currentTransform);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [drawTree]);
 
     return (
-      <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>
+      <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden', transform: 'translateZ(0)' }}>
         <svg
           ref={svgRef}
           style={{
             width: '100%', height: '100%', background: COLORS.bg, display: 'block',
             fontFamily: '"Microsoft YaHei","PingFang SC",sans-serif',
+            textRendering: 'geometricPrecision',
+            shapeRendering: 'crispEdges',
           }}
         />
         {/* ─── Generation strip text + arrows ─── */}
@@ -537,11 +585,12 @@ export const FamilyTreeCanvas = forwardRef<FamilyTreeCanvasHandle, Props>(
           const tableBottom = last.screenY + last.cellHeight;
           const arrowH = 20;
           const arrowStyle: React.CSSProperties = {
-            position: 'absolute', right: 0, width: GEN_STRIP_W, height: arrowH,
+            position: 'absolute', right: 0, width: GEN_STRIP_W + 1, height: arrowH,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             background: 'rgba(71,85,105,0.10)',
             cursor: 'pointer', pointerEvents: 'auto', fontSize: 10,
             color: '#475569', userSelect: 'none',
+            boxSizing: 'border-box', padding: 0, margin: 0, lineHeight: 1,
           };
           return (
             <>
@@ -555,7 +604,7 @@ export const FamilyTreeCanvas = forwardRef<FamilyTreeCanvasHandle, Props>(
                     position: 'absolute',
                     top: cell.screenY,
                     right: 0,
-                    width: GEN_STRIP_W,
+                    width: GEN_STRIP_W + 1,
                     height: cell.cellHeight,
                     display: 'flex',
                     alignItems: 'center',
@@ -587,7 +636,7 @@ export const FamilyTreeCanvas = forwardRef<FamilyTreeCanvasHandle, Props>(
           <svg
             style={{
               position: 'absolute', top: 0, right: 0,
-              width: GEN_STRIP_W + 2, height: '100%',
+              width: GEN_STRIP_W + 1, height: '100%',
               pointerEvents: 'none', overflow: 'visible',
             }}
           >
