@@ -25,6 +25,9 @@ export interface FamilyTreeCanvasHandle {
 
 const NODE_GAP = 55;
 const GEN_STRIP_W = 34;
+const NODE_STEP_MS = 50;   // delay between each new node reveal
+const FADE_MS = 30;        // opacity transition for enter/exit
+const MOVE_MS = 40;        // position transition for sliding nodes
 
 // ─── Vertical zone constants (all in tree-coordinate px) ──────────────────
 // Each person occupies a vertical span:
@@ -90,6 +93,31 @@ function buildLayoutTree(
   return ln;
 }
 
+function buildLayoutTreeWithReveal(
+  node: FamilyNode, absoluteDepth: number, relativeDepth: number,
+  maxRelativeDepth: number, parent: LayoutNode | null, revealSet: Set<string>
+): LayoutNode | null {
+  if (!revealSet.has(node.id)) return null;
+  const hasRealChildren = node.children.length > 0;
+  const canExpand = relativeDepth < maxRelativeDepth && hasRealChildren;
+  const ln: LayoutNode = {
+    data: node, depth: relativeDepth, absoluteDepth,
+    children: null, hasHiddenChildren: hasRealChildren && !canExpand,
+    _x: 0, _y: relativeDepth * LEVEL_HEIGHT, parent,
+  };
+  if (canExpand) {
+    const kids: LayoutNode[] = [];
+    for (const c of node.children) {
+      const child = buildLayoutTreeWithReveal(
+        c, absoluteDepth + 1, relativeDepth + 1, maxRelativeDepth, ln, revealSet
+      );
+      if (child) kids.push(child);
+    }
+    ln.children = kids.length > 0 ? kids : null;
+  }
+  return ln;
+}
+
 function buildVisibleTree(fullRoot: FamilyNode, startDepth: number, maxVisible: number): LayoutNode | null {
   if (startDepth === 0) return buildLayoutTree(fullRoot, 0, 0, maxVisible - 1, null);
   const nodesAtStart: FamilyNode[] = [];
@@ -105,6 +133,33 @@ function buildVisibleTree(fullRoot: FamilyNode, startDepth: number, maxVisible: 
     children: [], hasHiddenChildren: false, _x: 0, _y: -LEVEL_HEIGHT, parent: null,
   };
   vRoot.children = nodesAtStart.map(n => buildLayoutTree(n, startDepth, 0, maxVisible - 1, vRoot));
+  return vRoot;
+}
+
+function buildVisibleTreeWithReveal(
+  fullRoot: FamilyNode, startDepth: number, maxVisible: number, revealSet: Set<string>
+): LayoutNode | null {
+  if (startDepth === 0) {
+    return buildLayoutTreeWithReveal(fullRoot, 0, 0, maxVisible - 1, null, revealSet);
+  }
+  const nodesAtStart: FamilyNode[] = [];
+  const find = (node: FamilyNode, depth: number) => {
+    if (depth === startDepth) { nodesAtStart.push(node); return; }
+    if (depth < startDepth) for (const c of node.children) find(c, depth + 1);
+  };
+  find(fullRoot, 0);
+  const visibleStarts = nodesAtStart.filter(n => revealSet.has(n.id));
+  if (visibleStarts.length === 0) return null;
+  if (visibleStarts.length === 1) {
+    return buildLayoutTreeWithReveal(visibleStarts[0], startDepth, 0, maxVisible - 1, null, revealSet);
+  }
+  const vRoot: LayoutNode = {
+    data: fullRoot, depth: -1, absoluteDepth: startDepth - 1,
+    children: [], hasHiddenChildren: false, _x: 0, _y: -LEVEL_HEIGHT, parent: null,
+  };
+  vRoot.children = visibleStarts
+    .map(n => buildLayoutTreeWithReveal(n, startDepth, 0, maxVisible - 1, vRoot, revealSet))
+    .filter((n): n is LayoutNode => Boolean(n));
   return vRoot;
 }
 
@@ -136,6 +191,23 @@ function getNodeBoxH(d: LayoutNode): number {
   const p = d.data;
   const hs = p.spouses.length > 0;
   return Math.max(p.name.length, hs ? p.spouses[0].name.length : 0) * 18 + 24;
+}
+
+interface StubLine {
+  key: string;
+  x1: number; y1: number;
+  x2: number; y2: number;
+}
+
+function linkKey(d: { source: LayoutNode; target: LayoutNode }): string {
+  return `${d.source.data.id}->${d.target.data.id}`;
+}
+
+function linkPath(d: { source: LayoutNode; target: LayoutNode }): string {
+  const srcBoxBottom = d.source._y + BOX_Y_OFFSET + getNodeBoxH(d.source);
+  const tgtBoxTop = d.target._y + BOX_Y_OFFSET;
+  const midY = (srcBoxBottom + tgtBoxTop) / 2;
+  return `M${d.source._x},${srcBoxBottom}V${midY}H${d.target._x}V${tgtBoxTop}`;
 }
 
 // ─── Vertical zone helpers (in tree coords) ──────────────────────────────
@@ -200,6 +272,14 @@ export const FamilyTreeCanvas = forwardRef<FamilyTreeCanvasHandle, Props>(
     const pendingCenterRef = useRef<string | null>(null);
 
     const [genCells, setGenCells] = useState<GenCell[]>([]);
+    const panBoundsRef = useRef<{ minX: number; maxX: number } | null>(null);
+    const prevPosRef = useRef<Map<string, { x: number; y: number }>>(new Map());
+    const animTimersRef = useRef<number[]>([]);
+    
+    const clearAnimTimers = useCallback(() => {
+      animTimersRef.current.forEach(t => window.clearTimeout(t));
+      animTimersRef.current = [];
+    }, []);
 
     const rootGen = tree?.rootGeneration ?? 1;
 
@@ -304,50 +384,76 @@ export const FamilyTreeCanvas = forwardRef<FamilyTreeCanvasHandle, Props>(
         .attr('opacity', d => !hasHL || (hl.has(d.source) && hl.has(d.target)) ? 1 : COLORS.dimOpacity);
     }, []);
 
-    const ANIM_MS = 1200;
     const shiftDirRef = useRef<number>(0); // -1=up, +1=down, 0=initial
 
-    const drawTree = useCallback((animated = false) => {
-      if (!svgRef.current || !root) return;
-      const svg = d3.select(svgRef.current);
-      highlightedSetRef.current.clear();
+    const renderLayout = useCallback(
+      (allNodes: LayoutNode[], allLinks: { source: LayoutNode; target: LayoutNode }[], animated: boolean) => {
+        if (!svgRef.current) return;
+        const svg = d3.select(svgRef.current);
+        const g = svg.selectAll<SVGGElement, unknown>('g.tree-group')
+          .data([null])
+          .join('g')
+          .attr('class', 'tree-group');
 
-      const layoutRoot = buildVisibleTree(root, visibleStartDepth, maxVisibleDepth);
-      if (!layoutRoot) return;
-      layoutSubtree(layoutRoot, 0);
-      const allNodes = collectNodes(layoutRoot);
-      const allLinks = collectLinks(layoutRoot);
-      allLayoutNodesRef.current = allNodes;
-      maxDepthRef.current = allNodes.length > 0 ? Math.max(...allNodes.map(n => n.depth)) : 0;
+        const prevPos = prevPosRef.current;
+        const nextPos = new Map<string, { x: number; y: number }>();
+        allNodes.forEach(n => nextPos.set(n.data.id, { x: n._x, y: n._y }));
 
-      const dir = shiftDirRef.current; // +1 = shift down (new gen appears), -1 = shift up
-      // Slide distance: one full generation height in SVG coords
-      const slideY = dir * LEVEL_HEIGHT;
+        // Cancel any in-progress transitions to avoid conflicts with rapid calls
+        g.selectAll('.node').interrupt('move').interrupt('fade');
+        g.selectAll('.link').interrupt('move').interrupt('fade');
+        g.selectAll('.stub-line').interrupt('move');
+        // Remove any elements mid-exit-transition (they have opacity 0 or are fading)
+        g.selectAll('.node-exiting').remove();
+        g.selectAll('.link-exiting').remove();
 
-      // ── Helper: fully draw a complete tree into a <g> ────────────────
-      const renderInto = (g: d3.Selection<SVGGElement, unknown, null, undefined>) => {
-        // Links
         const visibleLinks = allLinks.filter(l => l.source.depth >= 0 && l.target.depth >= 0);
-        g.selectAll<SVGPathElement, { source: LayoutNode; target: LayoutNode }>('.link')
-          .data(visibleLinks).join('path')
-          .attr('class', 'link').attr('fill', 'none')
-          .attr('stroke', COLORS.link).attr('stroke-width', 1).attr('stroke-linecap', 'round')
-          .attr('d', d => {
-            const srcBoxBottom = d.source._y + BOX_Y_OFFSET + getNodeBoxH(d.source);
-            const tgtBoxTop = d.target._y + BOX_Y_OFFSET;
-            const midY = (srcBoxBottom + tgtBoxTop) / 2;
-            return `M${d.source._x},${srcBoxBottom}V${midY}H${d.target._x}V${tgtBoxTop}`;
+        const linkSel = g.selectAll<SVGPathElement, { source: LayoutNode; target: LayoutNode }>('.link:not(.link-exiting)')
+          .data(visibleLinks, d => linkKey(d));
+
+        linkSel.exit()
+          .classed('link-exiting', true)
+          .transition('fade').duration(FADE_MS)
+          .attr('opacity', 0)
+          .remove();
+
+        const linkEnter = linkSel.enter()
+          .append('path')
+          .attr('class', 'link')
+          .attr('fill', 'none')
+          .attr('stroke', COLORS.link)
+          .attr('stroke-width', 1)
+          .attr('stroke-linecap', 'round')
+          .attr('opacity', animated ? 0 : 1)
+          .attr('d', d => linkPath(d));
+
+        linkSel.merge(linkEnter)
+          .transition('move').duration(MOVE_MS)
+          .attr('d', d => linkPath(d))
+          .attr('opacity', 1);
+
+        const nodeSel = g.selectAll<SVGGElement, LayoutNode>('.node:not(.node-exiting)')
+          .data(allNodes, d => d.data.id);
+
+        nodeSel.exit()
+          .classed('node-exiting', true)
+          .transition('fade').duration(FADE_MS)
+          .style('opacity', 0)
+          .remove();
+
+        const nodeEnter = nodeSel.enter().append('g')
+          .attr('class', 'node')
+          .style('cursor', 'pointer')
+          .style('opacity', animated ? 0 : 1)
+          .attr('transform', d => {
+            const prev = prevPos.get(d.data.id);
+            if (prev) return `translate(${prev.x},${prev.y})`;
+            return `translate(${d._x},${d._y})`;
           });
 
-        // Nodes
-        const node = g.selectAll<SVGGElement, LayoutNode>('.node')
-          .data(allNodes).join('g')
-          .attr('class', 'node')
-          .attr('transform', d => `translate(${d._x},${d._y})`)
-          .style('cursor', 'pointer');
-
-        node.each(function (d) {
-          const el = d3.select(this);
+        // Render node internals (used for both enter and update)
+        const renderNodeContent = (el: d3.Selection<SVGGElement, LayoutNode, null, undefined>, d: LayoutNode) => {
+          el.selectAll('*').remove(); // Clear old content
           const p = d.data; const hs = p.spouses.length > 0;
           const boxH = getNodeBoxH(d); const boxW = hs ? 42 : 26;
           el.append('rect').attr('class', 'node-border')
@@ -378,19 +484,43 @@ export const FamilyTreeCanvas = forwardRef<FamilyTreeCanvasHandle, Props>(
               .attr('text-anchor', 'middle').attr('font-size', '8px').attr('fill', '#94a3b8').text('†');
           if (d.hasHiddenChildren) {
             const boxBottom = BOX_Y_OFFSET + boxH;
-            el.append('line')
+            el.append('line').attr('class', 'expand-stub')
               .attr('x1', 0).attr('y1', boxBottom).attr('x2', 0).attr('y2', boxBottom + STUB_LEN)
               .attr('stroke', COLORS.link).attr('stroke-width', 1);
-            el.append('text')
+            el.append('text').attr('class', 'expand-stub')
               .attr('x', 0).attr('y', boxBottom + STUB_LEN + 10)
               .attr('text-anchor', 'middle').attr('font-size', '10px')
               .attr('fill', COLORS.stubLine).attr('cursor', 'pointer').text('▼')
               .on('click', (event: MouseEvent) => { event.stopPropagation(); onExpandDepth(d.data.id); });
           }
+        };
+
+        nodeEnter.each(function (d) {
+          renderNodeContent(d3.select<SVGGElement, LayoutNode>(this as SVGGElement), d);
         });
 
-        // Interactions
-        node.on('click', (event: MouseEvent, d) => {
+        // Update existing nodes: remove expand stub when children are revealed
+        nodeSel.each(function (d) {
+          if (!d.hasHiddenChildren) {
+            d3.select(this).selectAll('.expand-stub').remove();
+          }
+        });
+
+        const nodeMerged = nodeSel.merge(nodeEnter);
+        nodeMerged
+          .transition('move').duration(MOVE_MS)
+          .attr('transform', d => `translate(${d._x},${d._y})`);
+
+        if (animated) {
+          nodeEnter
+            .transition('fade').duration(FADE_MS)
+            .style('opacity', 1);
+          linkEnter
+            .transition('fade').duration(FADE_MS)
+            .attr('opacity', 1);
+        }
+
+        nodeMerged.on('click', (event: MouseEvent, d) => {
           event.stopPropagation();
           highlightedSetRef.current.clear();
           let anc: LayoutNode | null = d;
@@ -398,19 +528,19 @@ export const FamilyTreeCanvas = forwardRef<FamilyTreeCanvasHandle, Props>(
           const addDesc = (n: LayoutNode) => { if (n.depth >= 0) highlightedSetRef.current.add(n); n.children?.forEach(addDesc); };
           addDesc(d); applyHighlight(); onNodeClick(d.data);
         });
-        node.on('contextmenu', (event: MouseEvent, d) => {
+        nodeMerged.on('contextmenu', (event: MouseEvent, d) => {
           event.preventDefault(); event.stopPropagation();
           onNodeRightClick(d.data, event.pageX, event.pageY);
         });
-        node.on('mouseenter', function () {
+        nodeMerged.on('mouseenter', function () {
           d3.select(this).select('.node-border').transition().duration(120).attr('stroke-width', 2.2);
         });
-        node.on('mouseleave', function (_, d) {
+        nodeMerged.on('mouseleave', function (_, d) {
           const isHL = highlightedSetRef.current.has(d);
           d3.select(this).select('.node-border').transition().duration(200).attr('stroke-width', isHL ? 2.5 : 1.2);
         });
 
-        // AA + AB stubs
+        const stubLines: StubLine[] = [];
         if (visibleStartDepth > 0) {
           const topNodes = allNodes.filter(n => n.depth === 0);
           const sibY = BOX_Y_OFFSET - STUB_LEN;
@@ -427,10 +557,10 @@ export const FamilyTreeCanvas = forwardRef<FamilyTreeCanvasHandle, Props>(
           }
           topNodes.forEach(n => {
             const aaTopY = eldestIds.has(n.data.id) ? (sibY - STUB_LEN) : sibY;
-            g.append('line')
-              .attr('x1', n._x).attr('y1', n._y + BOX_Y_OFFSET)
-              .attr('x2', n._x).attr('y2', n._y + aaTopY)
-              .attr('stroke', COLORS.link).attr('stroke-width', 1);
+            stubLines.push({
+              key: `aa-${n.data.id}`,
+              x1: n._x, y1: n._y + BOX_Y_OFFSET, x2: n._x, y2: n._y + aaTopY,
+            });
           });
           const findInTree = (node: FamilyNode, id: string): FamilyNode | null => {
             if (node.id === id) return node;
@@ -442,65 +572,224 @@ export const FamilyTreeCanvas = forwardRef<FamilyTreeCanvasHandle, Props>(
             const anyChild = visibleSiblings[0].data;
             let total = visibleSiblings.length;
             if (anyChild.parentRels.length > 0) {
-              const fp = findInTree(root, anyChild.parentRels[0].fromId);
+              const fp = root ? findInTree(root, anyChild.parentRels[0].fromId) : null;
               if (fp) total = fp.children.length;
             }
             if (total <= 1) continue;
             const sorted = [...visibleSiblings].sort((a, b) => a._x - b._x);
             let abLeft = sorted[0]._x; let abRight = sorted[sorted.length - 1]._x;
             if (total > visibleSiblings.length) { abLeft -= 15; abRight += 15; }
-            g.append('line')
-              .attr('x1', abLeft).attr('y1', sorted[0]._y + sibY)
-              .attr('x2', abRight).attr('y2', sorted[0]._y + sibY)
-              .attr('stroke', COLORS.link).attr('stroke-width', 1);
+            stubLines.push({
+              key: `ab-${sorted[0].data.id}-${sorted[sorted.length - 1].data.id}`,
+              x1: abLeft, y1: sorted[0]._y + sibY, x2: abRight, y2: sorted[0]._y + sibY,
+            });
           }
         }
+
+        const stubSel = g.selectAll<SVGLineElement, StubLine>('.stub-line')
+          .data(stubLines, d => d.key);
+        stubSel.exit().transition('fade').duration(FADE_MS).attr('opacity', 0).remove();
+        const stubEnter = stubSel.enter().append('line')
+          .attr('class', 'stub-line')
+          .attr('stroke', COLORS.link).attr('stroke-width', 1)
+          .attr('opacity', animated ? 0 : 1);
+        stubSel.merge(stubEnter)
+          .transition('move').duration(MOVE_MS)
+          .attr('x1', d => d.x1).attr('y1', d => d.y1)
+          .attr('x2', d => d.x2).attr('y2', d => d.y2)
+          .attr('opacity', 1);
+
+        prevPosRef.current = nextPos;
+        allLayoutNodesRef.current = allNodes;
+      },
+      [applyHighlight, onExpandDepth, onNodeClick, onNodeRightClick, root, visibleStartDepth]
+    );
+
+    const drawTree = useCallback((animated = false) => {
+      if (!svgRef.current || !root) return;
+      clearAnimTimers();
+      highlightedSetRef.current.clear();
+
+      const prevLayoutNodes = allLayoutNodesRef.current;
+      const prevIds = new Set(prevLayoutNodes.map(n => n.data.id));
+
+      const fullRoot = buildVisibleTree(root, visibleStartDepth, maxVisibleDepth);
+      if (!fullRoot) return;
+      layoutSubtree(fullRoot, 0);
+      const fullNodes = collectNodes(fullRoot);
+      const fullLinks = collectLinks(fullRoot);
+      const fullMaxDepth = fullNodes.length > 0 ? Math.max(...fullNodes.map(n => n.depth)) : 0;
+      maxDepthRef.current = fullMaxDepth;
+      // Set pan bounds from the full tree so zoom constraints stay correct during animation
+      if (fullNodes.length > 0) {
+        panBoundsRef.current = {
+          minX: Math.min(...fullNodes.map(n => n._x)),
+          maxX: Math.max(...fullNodes.map(n => n._x)),
+        };
+      }
+
+      if (!animated || shiftDirRef.current === 0 || prevLayoutNodes.length === 0) {
+        renderLayout(fullNodes, fullLinks, animated);
+        return;
+      }
+
+      const dir = shiftDirRef.current; // +1 = down, -1 = up
+
+      // Build the final layout to know target positions and right edge
+      const fullById = new Map<string, LayoutNode>();
+      fullNodes.forEach(n => fullById.set(n.data.id, n));
+
+      // Update gen strip immediately with the final depth
+      if (svgRef.current) {
+        const currentTransform = d3.zoomTransform(svgRef.current);
+        updateGenStrip(currentTransform);
+      }
+
+      // Step 0: render only nodes that existed before (shifted to new positions)
+      const baseReveal = new Set<string>(prevIds);
+      const baseRoot = buildVisibleTreeWithReveal(root, visibleStartDepth, maxVisibleDepth, baseReveal);
+
+      // Right edge of the full tree — all incremental layouts align to this
+      const fullMaxX = Math.max(...fullNodes.map(n => n._x));
+
+      // Helper: align a tree so its rightmost node matches the full tree's right edge
+      const alignRight = (treeRoot: LayoutNode) => {
+        const nodes = collectNodes(treeRoot);
+        if (nodes.length === 0) return;
+        const maxX = Math.max(...nodes.map(n => n._x));
+        const dx = fullMaxX - maxX;
+        if (dx === 0) return;
+        const shift = (n: LayoutNode) => { n._x += dx; if (n.children) n.children.forEach(shift); };
+        shift(treeRoot);
       };
 
-      if (!animated) {
-        // ── Initial / non-animated draw ────────────────────────────────
-        let g = svg.select<SVGGElement>('g.tree-group');
-        if (g.node()) g.remove();
-        g = svg.append('g').attr('class', 'tree-group');
-        renderInto(g);
-      } else {
-        // ── Animated crossfade + slide ─────────────────────────────────
-        // 1. Rename old group to 'tree-group-old' so it won't conflict
-        const oldG = svg.select<SVGGElement>('g.tree-group');
-        if (oldG.node()) oldG.attr('class', 'tree-group-old');
+      const prevMaxDepth = prevLayoutNodes.length > 0
+        ? Math.max(...prevLayoutNodes.map(n => n.depth)) : 0;
 
-        // 2. Build new group, starting offset in the incoming direction
-        const newG = svg.append('g').attr('class', 'tree-group');
-        renderInto(newG);
-
-        // Read the current zoom transform so both groups start aligned
-        const currentXform = svg.select<SVGGElement>('g.tree-group-old').attr('transform') || '';
-
-        // New group: start offset in direction of travel, opacity 0
-        // e.g. shift-down (dir=+1): new content comes from below (+slideY), exits upward
-        newG.attr('transform', `${currentXform} translate(0,${slideY})`)
-            .attr('opacity', 0);
-
-        // 3. Animate old group: slide away opposite direction, fade out
-        if (oldG.node()) {
-          oldG.transition().duration(ANIM_MS)
-            .ease(d3.easeCubicInOut)
-            .attr('transform', `${currentXform} translate(0,${-slideY})`)
-            .attr('opacity', 0)
-            .on('end', function () { d3.select(this).remove(); });
-        }
-
-        // 4. Animate new group: slide into place, fade in
-        newG.transition().duration(ANIM_MS)
-          .ease(d3.easeCubicInOut)
-          .attr('transform', currentXform)
-          .attr('opacity', 1);
+      // Pan the view to show the right side of the tree
+      if (svgRef.current && zoomRef.current) {
+        const ct = d3.zoomTransform(svgRef.current);
+        const w = svgRef.current.clientWidth;
+        const rightPanX = -fullMaxX * ct.k + w - 60 - GEN_STRIP_W;
+        const newTransform = d3.zoomIdentity.translate(rightPanX, ct.y).scale(ct.k);
+        d3.select(svgRef.current).call(zoomRef.current.transform, newTransform);
       }
-    }, [root, tree, visibleStartDepth, maxVisibleDepth, onNodeClick, onNodeRightClick, onExpandDepth, applyHighlight]);
+
+      if (baseRoot) {
+        layoutSubtree(baseRoot, 0);
+        alignRight(baseRoot);
+        renderLayout(collectNodes(baseRoot), collectLinks(baseRoot), true);
+      }
+
+      // Build the ordered list of nodes to reveal one by one
+      const revealQueue: string[] = [];
+      const log: string[] = [];
+      const rootGen = tree?.rootGeneration ?? 1;
+      const absGen = (relDepth: number) => `第${rootGen + visibleStartDepth + relDepth}世`;
+
+      // Describe the current state before animation
+      const prevByDepth = new Map<number, LayoutNode[]>();
+      for (const n of prevLayoutNodes) {
+        if (!prevByDepth.has(n.depth)) prevByDepth.set(n.depth, []);
+        prevByDepth.get(n.depth)!.push(n);
+      }
+      log.push('=== BEFORE (current view) ===');
+      for (const [d, nodes] of [...prevByDepth.entries()].sort((a, b) => a[0] - b[0])) {
+        const gen = `第${rootGen + (visibleStartDepth - dir) + d}世`;
+        log.push(`  L${d} (${gen}): ${nodes.sort((a, b) => b._x - a._x).map(n => n.data.name).join(', ')}`);
+      }
+      log.push('');
+
+      // Describe animation steps
+      if (dir === 1) {
+        // Step 1: shift up
+        const exitNodes = prevLayoutNodes.filter(n => n.depth === 0);
+        log.push('=== STEP 0: Move up one level ===');
+        log.push(`  HIDE L0 (${absGen(-1)}): ${exitNodes.sort((a, b) => b._x - a._x).map(n => n.data.name).join(', ')}`);
+        const baseNodes = baseRoot ? collectNodes(baseRoot) : [];
+        const keptByDepth = new Map<number, LayoutNode[]>();
+        for (const n of baseNodes) {
+          if (!keptByDepth.has(n.depth)) keptByDepth.set(n.depth, []);
+          keptByDepth.get(n.depth)!.push(n);
+        }
+        for (const [d, nodes] of [...keptByDepth.entries()].sort((a, b) => a[0] - b[0])) {
+          log.push(`  KEEP L${d} (${absGen(d)}): ${nodes.sort((a, b) => b._x - a._x).map(n => n.data.name).join(', ')}`);
+        }
+        log.push('');
+
+        // Step 2+: reveal new descendants globally right-to-left
+        const allNewNodes = fullNodes
+          .filter(n => !baseReveal.has(n.data.id))
+          .sort((a, b) => b._x - a._x);
+        let stepNum = 1;
+        for (const dn of allNewNodes) {
+          revealQueue.push(dn.data.id);
+          log.push(`  STEP ${stepNum}: draw ${dn.data.name} (${absGen(dn.depth)}, x=${dn._x})`);
+          stepNum++;
+        }
+      } else {
+        // Shift UP
+        const exitNodes = prevLayoutNodes.filter(n => n.depth === prevMaxDepth);
+        log.push('=== STEP 0: Move down one level ===');
+        log.push(`  HIDE L${prevMaxDepth}: ${exitNodes.sort((a, b) => b._x - a._x).map(n => n.data.name).join(', ')}`);
+        log.push('');
+        const newNodes = fullNodes
+          .filter(n => !prevIds.has(n.data.id))
+          .sort((a, b) => (a.depth - b.depth) || (b._x - a._x));
+        let stepNum = 1;
+        log.push('=== DRAW new ancestors ===');
+        for (const n of newNodes) {
+          revealQueue.push(n.data.id);
+          log.push(`  STEP ${stepNum}: draw ${n.data.name} (${absGen(n.depth)})`);
+          stepNum++;
+        }
+      }
+
+      // Also include any remaining new nodes not yet queued
+      const extraNodes: string[] = [];
+      for (const n of fullNodes) {
+        if (!baseReveal.has(n.data.id) && !revealQueue.includes(n.data.id)) {
+          revealQueue.push(n.data.id);
+          extraNodes.push(n.data.name);
+        }
+      }
+      if (extraNodes.length > 0) {
+        log.push('');
+        log.push(`EXTRA: ${extraNodes.join(', ')}`);
+      }
+
+      log.push('');
+      log.push(`Total: ${revealQueue.length} steps`);
+      console.log(log.join('\n'));
+
+      // Schedule each node reveal with incremental delay
+      for (let i = 0; i < revealQueue.length; i++) {
+        const nodeId = revealQueue[i];
+        const delay = (i + 1) * NODE_STEP_MS;
+        const t = window.setTimeout(() => {
+          baseReveal.add(nodeId);
+          const stepRoot = buildVisibleTreeWithReveal(root, visibleStartDepth, maxVisibleDepth, baseReveal);
+          if (!stepRoot) return;
+          layoutSubtree(stepRoot, 0);
+          alignRight(stepRoot);
+          renderLayout(collectNodes(stepRoot), collectLinks(stepRoot), true);
+        }, delay);
+        animTimersRef.current.push(t);
+      }
+
+      // Final step: render the complete tree (catches any edge cases)
+      const finalDelay = (revealQueue.length + 1) * NODE_STEP_MS;
+      const tFinal = window.setTimeout(() => {
+        renderLayout(fullNodes, fullLinks, true);
+      }, finalDelay);
+      animTimersRef.current.push(tFinal);
+    }, [clearAnimTimers, maxVisibleDepth, renderLayout, root, visibleStartDepth]);
 
     // Zoom setup (once per root change)
     useEffect(() => {
       if (!svgRef.current || !root) return;
+      clearAnimTimers();
+      prevPosRef.current = new Map();
       const svg = d3.select(svgRef.current);
       svg.on('contextmenu', (e: Event) => e.preventDefault());
 
@@ -508,22 +797,25 @@ export const FamilyTreeCanvas = forwardRef<FamilyTreeCanvasHandle, Props>(
         .scaleExtent([0.1, 3])
         .on('zoom', event => {
           const t = event.transform;
-          const nodes = allLayoutNodesRef.current;
           let cx = t.x;
           let cy = t.y;
-          if (nodes.length > 0 && svgRef.current) {
+          if (svgRef.current) {
             const w = svgRef.current.clientWidth;
             const h = svgRef.current.clientHeight;
-            const minNodeX = Math.min(...nodes.map(n => n._x));
-            const maxNodeX = Math.max(...nodes.map(n => n._x));
-            const minTx = -maxNodeX * t.k + w - 30 - GEN_STRIP_W;
-            const maxTx = -minNodeX * t.k + 30;
-            if (minTx < maxTx) {
-              cx = Math.max(minTx, Math.min(maxTx, cx));
-            } else {
-              // Tree fits in viewport — center it horizontally
-              const treeCenterX = (minNodeX + maxNodeX) / 2;
-              cx = (w - GEN_STRIP_W) / 2 - treeCenterX * t.k;
+            // Use panBoundsRef (set from full tree) if available, else compute from current nodes
+            const bounds = panBoundsRef.current;
+            const nodes = allLayoutNodesRef.current;
+            const minNodeX = bounds ? bounds.minX : (nodes.length > 0 ? Math.min(...nodes.map(n => n._x)) : 0);
+            const maxNodeX = bounds ? bounds.maxX : (nodes.length > 0 ? Math.max(...nodes.map(n => n._x)) : 0);
+            if (minNodeX !== maxNodeX || nodes.length > 0) {
+              const minTx = -maxNodeX * t.k + w - 30 - GEN_STRIP_W;
+              const maxTx = -minNodeX * t.k + 30;
+              if (minTx < maxTx) {
+                cx = Math.max(minTx, Math.min(maxTx, cx));
+              } else {
+                const treeCenterX = (minNodeX + maxNodeX) / 2;
+                cx = (w - GEN_STRIP_W) / 2 - treeCenterX * t.k;
+              }
             }
             const minNodeY = genZoneTop(0);
             const maxNodeY = genZoneBottom(maxDepthRef.current, maxDepthRef.current);
@@ -532,7 +824,6 @@ export const FamilyTreeCanvas = forwardRef<FamilyTreeCanvasHandle, Props>(
             if (minTy < maxTy) {
               cy = Math.max(minTy, Math.min(maxTy, cy));
             } else {
-              // Tree fits in viewport — center it vertically
               const treeCenterY = (minNodeY + maxNodeY) / 2;
               cy = h / 2 - treeCenterY * t.k;
             }
