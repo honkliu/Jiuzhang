@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback, useImperativeHandle, forwardRef, useState } from 'react';
 import * as d3 from 'd3';
 import type { FamilyNode, FamilyTreeDto } from '@/services/family.service';
+import './FamilyTreeCanvas.css';
 
 interface Props {
   root: FamilyNode | null;
@@ -26,8 +27,8 @@ export interface FamilyTreeCanvasHandle {
 const NODE_GAP = 55;
 const GEN_STRIP_W = 34;
 const NODE_STEP_MS = 50;   // delay between each new node reveal
-const FADE_MS = 30;        // opacity transition for enter/exit
-const MOVE_MS = 40;        // position transition for sliding nodes
+const FADE_MS = 5;       // opacity transition for enter/exit
+const MOVE_MS = 5;       // position transition for sliding nodes
 
 // ─── Vertical zone constants (all in tree-coordinate px) ──────────────────
 // Each person occupies a vertical span:
@@ -74,6 +75,8 @@ interface LayoutNode {
   parent: LayoutNode | null;
 }
 
+type ZoomBehaviorRef = d3.ZoomBehavior<SVGSVGElement, unknown> | null;
+
 function buildLayoutTree(
   node: FamilyNode, absoluteDepth: number, relativeDepth: number,
   maxRelativeDepth: number, parent: LayoutNode | null
@@ -117,6 +120,7 @@ function buildLayoutTreeWithReveal(
   }
   return ln;
 }
+
 
 function buildVisibleTree(fullRoot: FamilyNode, startDepth: number, maxVisible: number): LayoutNode | null {
   if (startDepth === 0) return buildLayoutTree(fullRoot, 0, 0, maxVisible - 1, null);
@@ -162,6 +166,7 @@ function buildVisibleTreeWithReveal(
     .filter((n): n is LayoutNode => Boolean(n));
   return vRoot;
 }
+
 
 function layoutSubtree(node: LayoutNode, leftEdge: number): number {
   if (!node.children || node.children.length === 0) { node._x = leftEdge; return NODE_GAP; }
@@ -263,7 +268,7 @@ export const FamilyTreeCanvas = forwardRef<FamilyTreeCanvasHandle, Props>(
   ({ root, tree, visibleStartDepth, maxVisibleDepth, canShiftUp, canShiftDown,
      onNodeClick, onNodeRightClick, onExpandDepth, onShiftUp, onShiftDown, onClearSelection }, ref) => {
     const svgRef = useRef<SVGSVGElement>(null);
-    const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
+    const zoomRef = useRef<ZoomBehaviorRef>(null);
     const allLayoutNodesRef = useRef<LayoutNode[]>([]);
     const highlightedSetRef = useRef<Set<LayoutNode>>(new Set());
     const maxDepthRef = useRef(0);
@@ -274,11 +279,14 @@ export const FamilyTreeCanvas = forwardRef<FamilyTreeCanvasHandle, Props>(
     const [genCells, setGenCells] = useState<GenCell[]>([]);
     const panBoundsRef = useRef<{ minX: number; maxX: number } | null>(null);
     const prevPosRef = useRef<Map<string, { x: number; y: number }>>(new Map());
+    const lastTransformRef = useRef<d3.ZoomTransform>(d3.zoomIdentity);
+    const animatingRef = useRef(false);
     const animTimersRef = useRef<number[]>([]);
-    
+
     const clearAnimTimers = useCallback(() => {
       animTimersRef.current.forEach(t => window.clearTimeout(t));
       animTimersRef.current = [];
+      animatingRef.current = false;
     }, []);
 
     const rootGen = tree?.rootGeneration ?? 1;
@@ -403,19 +411,12 @@ export const FamilyTreeCanvas = forwardRef<FamilyTreeCanvasHandle, Props>(
         g.selectAll('.node').interrupt('move').interrupt('fade');
         g.selectAll('.link').interrupt('move').interrupt('fade');
         g.selectAll('.stub-line').interrupt('move');
-        // Remove any elements mid-exit-transition (they have opacity 0 or are fading)
-        g.selectAll('.node-exiting').remove();
-        g.selectAll('.link-exiting').remove();
 
         const visibleLinks = allLinks.filter(l => l.source.depth >= 0 && l.target.depth >= 0);
-        const linkSel = g.selectAll<SVGPathElement, { source: LayoutNode; target: LayoutNode }>('.link:not(.link-exiting)')
+        const linkSel = g.selectAll<SVGPathElement, { source: LayoutNode; target: LayoutNode }>('.link')
           .data(visibleLinks, d => linkKey(d));
 
-        linkSel.exit()
-          .classed('link-exiting', true)
-          .transition('fade').duration(FADE_MS)
-          .attr('opacity', 0)
-          .remove();
+        linkSel.exit().remove();
 
         const linkEnter = linkSel.enter()
           .append('path')
@@ -432,14 +433,10 @@ export const FamilyTreeCanvas = forwardRef<FamilyTreeCanvasHandle, Props>(
           .attr('d', d => linkPath(d))
           .attr('opacity', 1);
 
-        const nodeSel = g.selectAll<SVGGElement, LayoutNode>('.node:not(.node-exiting)')
+        const nodeSel = g.selectAll<SVGGElement, LayoutNode>('.node')
           .data(allNodes, d => d.data.id);
 
-        nodeSel.exit()
-          .classed('node-exiting', true)
-          .transition('fade').duration(FADE_MS)
-          .style('opacity', 0)
-          .remove();
+        nodeSel.exit().remove();
 
         const nodeEnter = nodeSel.enter().append('g')
           .attr('class', 'node')
@@ -588,7 +585,7 @@ export const FamilyTreeCanvas = forwardRef<FamilyTreeCanvasHandle, Props>(
 
         const stubSel = g.selectAll<SVGLineElement, StubLine>('.stub-line')
           .data(stubLines, d => d.key);
-        stubSel.exit().transition('fade').duration(FADE_MS).attr('opacity', 0).remove();
+        stubSel.exit().remove();
         const stubEnter = stubSel.enter().append('line')
           .attr('class', 'stub-line')
           .attr('stroke', COLORS.link).attr('stroke-width', 1)
@@ -609,18 +606,14 @@ export const FamilyTreeCanvas = forwardRef<FamilyTreeCanvasHandle, Props>(
       if (!svgRef.current || !root) return;
       clearAnimTimers();
       highlightedSetRef.current.clear();
-
-      const prevLayoutNodes = allLayoutNodesRef.current;
-      const prevIds = new Set(prevLayoutNodes.map(n => n.data.id));
+      const currentTransform = lastTransformRef.current ?? d3.zoomTransform(svgRef.current);
 
       const fullRoot = buildVisibleTree(root, visibleStartDepth, maxVisibleDepth);
       if (!fullRoot) return;
       layoutSubtree(fullRoot, 0);
       const fullNodes = collectNodes(fullRoot);
       const fullLinks = collectLinks(fullRoot);
-      const fullMaxDepth = fullNodes.length > 0 ? Math.max(...fullNodes.map(n => n.depth)) : 0;
-      maxDepthRef.current = fullMaxDepth;
-      // Set pan bounds from the full tree so zoom constraints stay correct during animation
+      maxDepthRef.current = fullNodes.length > 0 ? Math.max(...fullNodes.map(n => n.depth)) : 0;
       if (fullNodes.length > 0) {
         panBoundsRef.current = {
           minX: Math.min(...fullNodes.map(n => n._x)),
@@ -628,31 +621,34 @@ export const FamilyTreeCanvas = forwardRef<FamilyTreeCanvasHandle, Props>(
         };
       }
 
-      if (!animated || shiftDirRef.current === 0 || prevLayoutNodes.length === 0) {
+      // Update strip immediately for the new generation window.
+      updateGenStrip(currentTransform);
+
+      const prevLayoutNodes = allLayoutNodesRef.current;
+      const prevIds = new Set(prevLayoutNodes.map(n => n.data.id));
+      const canAnimate = animated && shiftDirRef.current !== 0 && prevLayoutNodes.length > 0;
+
+      if (!canAnimate) {
         renderLayout(fullNodes, fullLinks, animated);
+        applyHighlight();
         return;
       }
 
-      const dir = shiftDirRef.current; // +1 = down, -1 = up
+      animatingRef.current = true;
 
-      // Build the final layout to know target positions and right edge
-      const fullById = new Map<string, LayoutNode>();
-      fullNodes.forEach(n => fullById.set(n.data.id, n));
-
-      // Update gen strip immediately with the final depth
-      if (svgRef.current) {
-        const currentTransform = d3.zoomTransform(svgRef.current);
-        updateGenStrip(currentTransform);
-      }
-
-      // Step 0: render only nodes that existed before (shifted to new positions)
-      const baseReveal = new Set<string>(prevIds);
-      const baseRoot = buildVisibleTreeWithReveal(root, visibleStartDepth, maxVisibleDepth, baseReveal);
-
-      // Right edge of the full tree — all incremental layouts align to this
       const fullMaxX = Math.max(...fullNodes.map(n => n._x));
 
-      // Helper: align a tree so its rightmost node matches the full tree's right edge
+      // Reposition view so fullMaxX (rightmost node) stays near the right edge
+      if (svgRef.current && zoomRef.current) {
+        const w = svgRef.current.clientWidth;
+        const k = currentTransform.k;
+        const rightPadding = 30 + GEN_STRIP_W;
+        const newTx = w - rightPadding - fullMaxX * k;
+        const alignedTransform = d3.zoomIdentity.translate(newTx, currentTransform.y).scale(k);
+        lastTransformRef.current = alignedTransform;
+        d3.select(svgRef.current).call(zoomRef.current.transform, alignedTransform);
+      }
+
       const alignRight = (treeRoot: LayoutNode) => {
         const nodes = collectNodes(treeRoot);
         if (nodes.length === 0) return;
@@ -663,127 +659,71 @@ export const FamilyTreeCanvas = forwardRef<FamilyTreeCanvasHandle, Props>(
         shift(treeRoot);
       };
 
-      const prevMaxDepth = prevLayoutNodes.length > 0
-        ? Math.max(...prevLayoutNodes.map(n => n.depth)) : 0;
+      // ── Pre-compute all animation frames ──────────────────────────────
+      interface AnimFrame { nodes: LayoutNode[]; links: { source: LayoutNode; target: LayoutNode }[] }
+      const frames: AnimFrame[] = [];
 
-      // Pan the view to show the right side of the tree
-      if (svgRef.current && zoomRef.current) {
-        const ct = d3.zoomTransform(svgRef.current);
-        const w = svgRef.current.clientWidth;
-        const rightPanX = -fullMaxX * ct.k + w - 60 - GEN_STRIP_W;
-        const newTransform = d3.zoomIdentity.translate(rightPanX, ct.y).scale(ct.k);
-        d3.select(svgRef.current).call(zoomRef.current.transform, newTransform);
+      // Determine reveal order: new nodes sorted right-to-left
+      const baseReveal = new Set<string>(prevIds);
+      const revealQueue = fullNodes
+        .filter(n => !baseReveal.has(n.data.id))
+        .sort((a, b) => (b._x - a._x) || (b.depth - a.depth))
+        .map(n => n.data.id);
+
+      // Frame 0: only previously-existing nodes
+      const computeFrame = (reveal: Set<string>): AnimFrame => {
+        const stepRoot = buildVisibleTreeWithReveal(root, visibleStartDepth, maxVisibleDepth, reveal);
+        if (!stepRoot) return { nodes: [], links: [] };
+        layoutSubtree(stepRoot, 0);
+        alignRight(stepRoot);
+        return { nodes: collectNodes(stepRoot), links: collectLinks(stepRoot) };
+      };
+
+      frames.push(computeFrame(baseReveal));
+
+      // Frames 1..N: add one new node per frame
+      for (const nodeId of revealQueue) {
+        baseReveal.add(nodeId);
+        frames.push(computeFrame(baseReveal));
       }
 
-      if (baseRoot) {
-        layoutSubtree(baseRoot, 0);
-        alignRight(baseRoot);
-        renderLayout(collectNodes(baseRoot), collectLinks(baseRoot), true);
+      // Set panBoundsRef from the FINAL frame (all nodes, aligned)
+      const lastFrame = frames[frames.length - 1];
+      if (lastFrame.nodes.length > 0) {
+        panBoundsRef.current = {
+          minX: Math.min(...lastFrame.nodes.map(n => n._x)),
+          maxX: Math.max(...lastFrame.nodes.map(n => n._x)),
+        };
       }
 
-      // Build the ordered list of nodes to reveal one by one
-      const revealQueue: string[] = [];
-      const log: string[] = [];
-      const rootGen = tree?.rootGeneration ?? 1;
-      const absGen = (relDepth: number) => `第${rootGen + visibleStartDepth + relDepth}世`;
+      // ── Play animation frames ─────────────────────────────────────────
+      // Frame 0: render immediately (existing nodes shift to new positions)
+      renderLayout(frames[0].nodes, frames[0].links, true);
 
-      // Describe the current state before animation
-      const prevByDepth = new Map<number, LayoutNode[]>();
-      for (const n of prevLayoutNodes) {
-        if (!prevByDepth.has(n.depth)) prevByDepth.set(n.depth, []);
-        prevByDepth.get(n.depth)!.push(n);
-      }
-      log.push('=== BEFORE (current view) ===');
-      for (const [d, nodes] of [...prevByDepth.entries()].sort((a, b) => a[0] - b[0])) {
-        const gen = `第${rootGen + (visibleStartDepth - dir) + d}世`;
-        log.push(`  L${d} (${gen}): ${nodes.sort((a, b) => b._x - a._x).map(n => n.data.name).join(', ')}`);
-      }
-      log.push('');
-
-      // Describe animation steps
-      if (dir === 1) {
-        // Step 1: shift up
-        const exitNodes = prevLayoutNodes.filter(n => n.depth === 0);
-        log.push('=== STEP 0: Move up one level ===');
-        log.push(`  HIDE L0 (${absGen(-1)}): ${exitNodes.sort((a, b) => b._x - a._x).map(n => n.data.name).join(', ')}`);
-        const baseNodes = baseRoot ? collectNodes(baseRoot) : [];
-        const keptByDepth = new Map<number, LayoutNode[]>();
-        for (const n of baseNodes) {
-          if (!keptByDepth.has(n.depth)) keptByDepth.set(n.depth, []);
-          keptByDepth.get(n.depth)!.push(n);
-        }
-        for (const [d, nodes] of [...keptByDepth.entries()].sort((a, b) => a[0] - b[0])) {
-          log.push(`  KEEP L${d} (${absGen(d)}): ${nodes.sort((a, b) => b._x - a._x).map(n => n.data.name).join(', ')}`);
-        }
-        log.push('');
-
-        // Step 2+: reveal new descendants globally right-to-left
-        const allNewNodes = fullNodes
-          .filter(n => !baseReveal.has(n.data.id))
-          .sort((a, b) => b._x - a._x);
-        let stepNum = 1;
-        for (const dn of allNewNodes) {
-          revealQueue.push(dn.data.id);
-          log.push(`  STEP ${stepNum}: draw ${dn.data.name} (${absGen(dn.depth)}, x=${dn._x})`);
-          stepNum++;
-        }
-      } else {
-        // Shift UP
-        const exitNodes = prevLayoutNodes.filter(n => n.depth === prevMaxDepth);
-        log.push('=== STEP 0: Move down one level ===');
-        log.push(`  HIDE L${prevMaxDepth}: ${exitNodes.sort((a, b) => b._x - a._x).map(n => n.data.name).join(', ')}`);
-        log.push('');
-        const newNodes = fullNodes
-          .filter(n => !prevIds.has(n.data.id))
-          .sort((a, b) => (a.depth - b.depth) || (b._x - a._x));
-        let stepNum = 1;
-        log.push('=== DRAW new ancestors ===');
-        for (const n of newNodes) {
-          revealQueue.push(n.data.id);
-          log.push(`  STEP ${stepNum}: draw ${n.data.name} (${absGen(n.depth)})`);
-          stepNum++;
-        }
-      }
-
-      // Also include any remaining new nodes not yet queued
-      const extraNodes: string[] = [];
-      for (const n of fullNodes) {
-        if (!baseReveal.has(n.data.id) && !revealQueue.includes(n.data.id)) {
-          revealQueue.push(n.data.id);
-          extraNodes.push(n.data.name);
-        }
-      }
-      if (extraNodes.length > 0) {
-        log.push('');
-        log.push(`EXTRA: ${extraNodes.join(', ')}`);
-      }
-
-      log.push('');
-      log.push(`Total: ${revealQueue.length} steps`);
-      console.log(log.join('\n'));
-
-      // Schedule each node reveal with incremental delay
-      for (let i = 0; i < revealQueue.length; i++) {
-        const nodeId = revealQueue[i];
-        const delay = (i + 1) * NODE_STEP_MS;
+      // Frames 1..N: schedule with delay
+      for (let i = 1; i < frames.length; i++) {
+        const delay = i * NODE_STEP_MS;
+        const frame = frames[i];
         const t = window.setTimeout(() => {
-          baseReveal.add(nodeId);
-          const stepRoot = buildVisibleTreeWithReveal(root, visibleStartDepth, maxVisibleDepth, baseReveal);
-          if (!stepRoot) return;
-          layoutSubtree(stepRoot, 0);
-          alignRight(stepRoot);
-          renderLayout(collectNodes(stepRoot), collectLinks(stepRoot), true);
+          renderLayout(frame.nodes, frame.links, true);
         }, delay);
         animTimersRef.current.push(t);
       }
 
-      // Final step: render the complete tree (catches any edge cases)
-      const finalDelay = (revealQueue.length + 1) * NODE_STEP_MS;
+      // Final cleanup
+      const finalDelay = frames.length * NODE_STEP_MS;
       const tFinal = window.setTimeout(() => {
-        renderLayout(fullNodes, fullLinks, true);
+        animatingRef.current = false;
+        applyHighlight();
+        updateGenStrip(currentTransform);
+        // Re-apply zoom transform so constraints position the view correctly
+        if (svgRef.current && zoomRef.current) {
+          const ct = lastTransformRef.current;
+          d3.select(svgRef.current).call(zoomRef.current.transform, ct);
+        }
       }, finalDelay);
       animTimersRef.current.push(tFinal);
-    }, [clearAnimTimers, maxVisibleDepth, renderLayout, root, visibleStartDepth]);
+    }, [applyHighlight, clearAnimTimers, maxVisibleDepth, renderLayout, root, updateGenStrip, visibleStartDepth]);
 
     // Zoom setup (once per root change)
     useEffect(() => {
@@ -799,21 +739,18 @@ export const FamilyTreeCanvas = forwardRef<FamilyTreeCanvasHandle, Props>(
           const t = event.transform;
           let cx = t.x;
           let cy = t.y;
-          if (svgRef.current) {
+          // During animation, skip constraints — view stays where it was
+          if (!animatingRef.current && svgRef.current) {
             const w = svgRef.current.clientWidth;
             const h = svgRef.current.clientHeight;
-            // Use panBoundsRef (set from full tree) if available, else compute from current nodes
             const bounds = panBoundsRef.current;
-            const nodes = allLayoutNodesRef.current;
-            const minNodeX = bounds ? bounds.minX : (nodes.length > 0 ? Math.min(...nodes.map(n => n._x)) : 0);
-            const maxNodeX = bounds ? bounds.maxX : (nodes.length > 0 ? Math.max(...nodes.map(n => n._x)) : 0);
-            if (minNodeX !== maxNodeX || nodes.length > 0) {
-              const minTx = -maxNodeX * t.k + w - 30 - GEN_STRIP_W;
-              const maxTx = -minNodeX * t.k + 30;
+            if (bounds) {
+              const minTx = -bounds.maxX * t.k + w - 30 - GEN_STRIP_W;
+              const maxTx = -bounds.minX * t.k + 30;
               if (minTx < maxTx) {
                 cx = Math.max(minTx, Math.min(maxTx, cx));
               } else {
-                const treeCenterX = (minNodeX + maxNodeX) / 2;
+                const treeCenterX = (bounds.minX + bounds.maxX) / 2;
                 cx = (w - GEN_STRIP_W) / 2 - treeCenterX * t.k;
               }
             }
@@ -829,8 +766,17 @@ export const FamilyTreeCanvas = forwardRef<FamilyTreeCanvasHandle, Props>(
             }
           }
           const constrained = d3.zoomIdentity.translate(cx, cy).scale(t.k);
+          lastTransformRef.current = constrained;
           svg.select<SVGGElement>('g.tree-group').attr('transform', constrained.toString());
-          updateGenStrip(constrained);
+          if (!animatingRef.current && !event.sourceEvent) {
+            updateGenStrip(constrained);
+          }
+        })
+        .on('end', event => {
+          if (!event.sourceEvent) return;
+          const t = event.transform;
+          lastTransformRef.current = t;
+          if (!animatingRef.current) updateGenStrip(t);
         });
       zoomRef.current = zoom;
       svg.call(zoom);
@@ -841,12 +787,12 @@ export const FamilyTreeCanvas = forwardRef<FamilyTreeCanvasHandle, Props>(
       drawTree(false);
       const allNodes = allLayoutNodesRef.current;
       if (allNodes.length > 0) {
-        const minX = Math.min(...allNodes.map(n => n._x));
         const maxX = Math.max(...allNodes.map(n => n._x));
-        const centerX = (minX + maxX) / 2;
         const width = svgRef.current.clientWidth;
         const initialY = 40 + STUB_LEN;
-        const initialTransform = d3.zoomIdentity.translate(width / 2 - centerX, initialY);
+        const rightPadding = 30 + GEN_STRIP_W;
+        const initialTransform = d3.zoomIdentity.translate(width - rightPadding - maxX, initialY);
+        lastTransformRef.current = initialTransform;
         svg.call(zoom.transform, initialTransform);
         updateGenStrip(initialTransform);
       }
@@ -858,11 +804,8 @@ export const FamilyTreeCanvas = forwardRef<FamilyTreeCanvasHandle, Props>(
     // Redraw tree when depth window changes
     useEffect(() => {
       if (!svgRef.current || !root || !zoomRef.current) return;
-      const svg = d3.select(svgRef.current);
-      const currentTransform = d3.zoomTransform(svgRef.current);
       drawTree(true);
-      svg.call(zoomRef.current.transform, currentTransform);
-      // Re-highlight pending person after redraw
+      if (animatingRef.current) return;
       const pid = pendingCenterRef.current;
       if (!pid) { applyHighlight(); return; }
       pendingCenterRef.current = null;
@@ -903,96 +846,87 @@ export const FamilyTreeCanvas = forwardRef<FamilyTreeCanvasHandle, Props>(
     }, [drawTree]);
 
     return (
-      <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden', transform: 'translateZ(0)' }}>
-        <svg
-          ref={svgRef}
-          style={{
-            width: '100%', height: '100%', background: COLORS.bg, display: 'block',
-            fontFamily: '"Microsoft YaHei","PingFang SC",sans-serif',
-            textRendering: 'geometricPrecision',
-            shapeRendering: 'crispEdges',
-          }}
-        />
-        {/* ─── Generation strip text + arrows ─── */}
+      <div className="family-tree-container">
+        <svg ref={svgRef} className="family-tree-canvas" />
         {genCells.length > 0 && (() => {
           const first = genCells[0];
           const last = genCells[genCells.length - 1];
           const tableTop = first.screenY;
           const tableBottom = last.screenY + last.cellHeight;
           const arrowH = 20;
-          const arrowStyle: React.CSSProperties = {
-            position: 'absolute', right: 0, width: GEN_STRIP_W + 1, height: arrowH,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: 'rgba(71,85,105,0.10)',
-            cursor: 'pointer', pointerEvents: 'auto', fontSize: 10,
-            color: '#475569', userSelect: 'none',
-            boxSizing: 'border-box', padding: 0, margin: 0, lineHeight: 1,
-          };
+          const stripW = GEN_STRIP_W + 1;
+          const textX = stripW / 2;
+
           return (
-            <>
+            <svg className="family-strip-svg" width={stripW} height="100%">
               {canShiftUp && (
-                <div style={{ ...arrowStyle, top: tableTop - arrowH }} onClick={onShiftUp} title="上一代">▲</div>
+                <g onClick={onShiftUp}>
+                  <rect className="family-strip-arrow-hit" x={0} y={tableTop - arrowH} width={stripW} height={arrowH} />
+                  <text className="family-strip-arrow-text" x={textX} y={tableTop - arrowH / 2}>▲</text>
+                </g>
               )}
+
               {genCells.map(cell => (
-                <div
-                  key={cell.depth}
-                  style={{
-                    position: 'absolute',
-                    top: cell.screenY,
-                    right: 0,
-                    width: GEN_STRIP_W + 1,
-                    height: cell.cellHeight,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    background: cell.depth % 2 === 0 ? 'rgba(255,255,255,0.92)' : 'rgba(220,232,244,0.92)',
-                    pointerEvents: 'none',
-                    writingMode: 'vertical-rl',
-                    textOrientation: 'upright',
-                    fontFamily: '"Microsoft YaHei","PingFang SC",sans-serif',
-                    fontSize: cell.fontSize,
-                    fontWeight: 600,
-                    color: '#475569',
-                    letterSpacing: 2,
-                    lineHeight: 1,
-                    userSelect: 'none',
-                  }}
-                >
-                  {cell.label}
-                </div>
+                <g key={cell.depth}>
+                  <rect
+                    className={`family-strip-cell ${cell.depth % 2 === 0 ? 'even' : 'odd'}`}
+                    x={0}
+                    y={cell.screenY}
+                    width={stripW}
+                    height={cell.cellHeight}
+                  />
+                  <text
+                    className="family-strip-text"
+                    x={textX}
+                    y={cell.screenY + cell.cellHeight / 2}
+                    fontSize={cell.fontSize}
+                  >
+                    {cell.label}
+                  </text>
+                </g>
               ))}
+
               {canShiftDown && (
-                <div style={{ ...arrowStyle, top: tableBottom }} onClick={onShiftDown} title="下一代">▼</div>
+                <g onClick={onShiftDown}>
+                  <rect className="family-strip-arrow-hit" x={0} y={tableBottom} width={stripW} height={arrowH} />
+                  <text className="family-strip-arrow-text" x={textX} y={tableBottom + arrowH / 2}>▼</text>
+                </g>
               )}
-            </>
+
+              <line
+                className="family-strip-border"
+                x1={0.5}
+                y1={first.screenY}
+                x2={0.5}
+                y2={last.screenY + last.cellHeight}
+              />
+              <line
+                className="family-strip-border"
+                x1={GEN_STRIP_W + 0.5}
+                y1={first.screenY}
+                x2={GEN_STRIP_W + 0.5}
+                y2={last.screenY + last.cellHeight}
+              />
+              {genCells.map(cell => (
+                <line
+                  key={`top-${cell.depth}`}
+                  className="family-strip-border"
+                  x1={0}
+                  y1={cell.screenY}
+                  x2={stripW}
+                  y2={cell.screenY}
+                />
+              ))}
+              <line
+                className="family-strip-border"
+                x1={0}
+                y1={last.screenY + last.cellHeight}
+                x2={stripW}
+                y2={last.screenY + last.cellHeight}
+              />
+            </svg>
           );
         })()}
-        {/* ─── Strip border lines (SVG overlay ON TOP of backgrounds) ─── */}
-        {genCells.length > 0 && (
-          <svg
-            style={{
-              position: 'absolute', top: 0, right: 0,
-              width: GEN_STRIP_W + 1, height: '100%',
-              pointerEvents: 'none', overflow: 'visible',
-            }}
-          >
-            {/* Vertical left/right borders */}
-            <line x1={0.5} y1={genCells[0].screenY} x2={0.5} y2={genCells[genCells.length - 1].screenY + genCells[genCells.length - 1].cellHeight}
-              stroke="#90a4ae" strokeWidth={1} />
-            <line x1={GEN_STRIP_W + 0.5} y1={genCells[0].screenY} x2={GEN_STRIP_W + 0.5} y2={genCells[genCells.length - 1].screenY + genCells[genCells.length - 1].cellHeight}
-              stroke="#90a4ae" strokeWidth={1} />
-            {/* Horizontal cell borders (top of each cell + bottom of last) */}
-            {genCells.map(cell => (
-              <line key={`top-${cell.depth}`}
-                x1={0} y1={cell.screenY} x2={GEN_STRIP_W + 1} y2={cell.screenY}
-                stroke="#90a4ae" strokeWidth={1} />
-            ))}
-            <line
-              x1={0} y1={genCells[genCells.length - 1].screenY + genCells[genCells.length - 1].cellHeight}
-              x2={GEN_STRIP_W + 1} y2={genCells[genCells.length - 1].screenY + genCells[genCells.length - 1].cellHeight}
-              stroke="#90a4ae" strokeWidth={1} />
-          </svg>
-        )}
       </div>
     );
   }
