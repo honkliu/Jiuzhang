@@ -21,7 +21,7 @@ const BoxAny = Box as any;
 
 type ViewMode = 'tree' | 'list' | 'generation';
 
-const MAX_VISIBLE_DEPTH = 2;
+const MAX_VISIBLE_DEPTH = 4;
 
 function flattenTree(node: FamilyNode, result: FamilyNode[] = []): FamilyNode[] {
   result.push(node);

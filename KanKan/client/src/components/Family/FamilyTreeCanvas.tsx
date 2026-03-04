@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, useImperativeHandle, forwardRef, useState } from 'react';
+import { useEffect, useRef, useCallback, useImperativeHandle, forwardRef } from 'react';
 import * as d3 from 'd3';
 import type { FamilyNode, FamilyTreeDto } from '@/services/family.service';
 import './FamilyTreeCanvas.css';
@@ -27,8 +27,8 @@ export interface FamilyTreeCanvasHandle {
 const NODE_GAP = 55;
 const GEN_STRIP_W = 34;
 const NODE_STEP_MS = 50;   // delay between each new node reveal
-const FADE_MS = 5;       // opacity transition for enter/exit
-const MOVE_MS = 5;       // position transition for sliding nodes
+const FADE_MS = 20;       // opacity transition for enter/exit
+const MOVE_MS = 20;       // position transition for sliding nodes
 
 // ─── Vertical zone constants (all in tree-coordinate px) ──────────────────
 // Each person occupies a vertical span:
@@ -256,14 +256,6 @@ function genZoneBottom(depth: number, maxDepth: number): number {
 
 // ─── Generation strip state ──────────────────────────────────────────────
 
-interface GenCell {
-  depth: number;
-  label: string;
-  screenY: number;
-  cellHeight: number;
-  fontSize: number;
-}
-
 export const FamilyTreeCanvas = forwardRef<FamilyTreeCanvasHandle, Props>(
   ({ root, tree, visibleStartDepth, maxVisibleDepth, canShiftUp, canShiftDown,
      onNodeClick, onNodeRightClick, onExpandDepth, onShiftUp, onShiftDown, onClearSelection }, ref) => {
@@ -276,7 +268,6 @@ export const FamilyTreeCanvas = forwardRef<FamilyTreeCanvasHandle, Props>(
     visibleStartDepthRef.current = visibleStartDepth;
     const pendingCenterRef = useRef<string | null>(null);
 
-    const [genCells, setGenCells] = useState<GenCell[]>([]);
     const panBoundsRef = useRef<{ minX: number; maxX: number } | null>(null);
     const prevPosRef = useRef<Map<string, { x: number; y: number }>>(new Map());
     const lastTransformRef = useRef<d3.ZoomTransform>(d3.zoomIdentity);
@@ -291,26 +282,104 @@ export const FamilyTreeCanvas = forwardRef<FamilyTreeCanvasHandle, Props>(
 
     const rootGen = tree?.rootGeneration ?? 1;
 
+    // Render gen strip via D3 inside the main SVG (not React state)
     const updateGenStrip = useCallback((transform: d3.ZoomTransform) => {
+      if (!svgRef.current) return;
+      const svg = d3.select(svgRef.current);
+      const svgW = svgRef.current.clientWidth;
+      const stripW = GEN_STRIP_W + 1;
+      const stripX = svgW - stripW;
       const maxDepth = maxDepthRef.current;
       const startDepth = visibleStartDepthRef.current;
-      const cells: GenCell[] = [];
+      const arrowH = 20;
 
+      // Ensure strip group exists
+      let sg = svg.select<SVGGElement>('g.strip-group');
+      if (sg.empty()) sg = svg.append('g').attr('class', 'strip-group');
+      sg.attr('transform', `translate(${stripX},0)`);
+
+      // Compute cells
+      const cells: { depth: number; label: string; y: number; h: number; fontSize: number }[] = [];
       for (let depth = 0; depth <= maxDepth; depth++) {
         const treeTop = genZoneTop(depth);
         const treeBottom = genZoneBottom(depth, maxDepth);
-        const screenTop = treeTop * transform.k + transform.y;
-        const screenBottom = treeBottom * transform.k + transform.y;
+        const y = treeTop * transform.k + transform.y;
+        const h = (treeBottom - treeTop) * transform.k;
         cells.push({
           depth,
           label: `第${rootGen + startDepth + depth}世`,
-          screenY: screenTop,
-          cellHeight: screenBottom - screenTop,
+          y, h,
           fontSize: Math.max(9, Math.min(14, 14 * transform.k)),
         });
       }
-      setGenCells(cells);
-    }, [rootGen]);
+
+      // Cell backgrounds
+      const cellSel = sg.selectAll<SVGRectElement, typeof cells[0]>('.strip-cell')
+        .data(cells, d => String(d.depth));
+      cellSel.exit().remove();
+      const cellEnter = cellSel.enter().append('rect').attr('class', 'strip-cell');
+      cellSel.merge(cellEnter)
+        .attr('x', 0).attr('width', stripW)
+        .attr('y', d => d.y).attr('height', d => d.h)
+        .attr('fill', d => d.depth % 2 === 0 ? 'rgba(255,255,255,0.92)' : 'rgba(220,232,244,0.92)');
+
+      // Cell labels
+      const textSel = sg.selectAll<SVGTextElement, typeof cells[0]>('.strip-label')
+        .data(cells, d => String(d.depth));
+      textSel.exit().remove();
+      const textEnter = textSel.enter().append('text').attr('class', 'strip-label family-strip-text');
+      textSel.merge(textEnter)
+        .attr('x', stripW / 2).attr('y', d => d.y + d.h / 2)
+        .attr('font-size', d => d.fontSize)
+        .text(d => d.label);
+
+      // Borders
+      sg.selectAll('.strip-border-v').remove();
+      if (cells.length > 0) {
+        const first = cells[0];
+        const last = cells[cells.length - 1];
+        const top = first.y;
+        const bot = last.y + last.h;
+        sg.append('line').attr('class', 'strip-border-v family-strip-border')
+          .attr('x1', 0.5).attr('y1', top).attr('x2', 0.5).attr('y2', bot);
+        sg.append('line').attr('class', 'strip-border-v family-strip-border')
+          .attr('x1', GEN_STRIP_W + 0.5).attr('y1', top).attr('x2', GEN_STRIP_W + 0.5).attr('y2', bot);
+      }
+
+      sg.selectAll('.strip-border-h').remove();
+      cells.forEach(c => {
+        sg.append('line').attr('class', 'strip-border-h family-strip-border')
+          .attr('x1', 0).attr('y1', c.y).attr('x2', stripW).attr('y2', c.y);
+      });
+      if (cells.length > 0) {
+        const last = cells[cells.length - 1];
+        sg.append('line').attr('class', 'strip-border-h family-strip-border')
+          .attr('x1', 0).attr('y1', last.y + last.h).attr('x2', stripW).attr('y2', last.y + last.h);
+      }
+
+      // Up/Down arrows
+      sg.selectAll('.strip-arrow').remove();
+      if (cells.length > 0) {
+        const first = cells[0];
+        const last = cells[cells.length - 1];
+        if (canShiftUp) {
+          const ag = sg.append('g').attr('class', 'strip-arrow').style('cursor', 'pointer')
+            .on('click', () => onShiftUp());
+          ag.append('rect').attr('class', 'family-strip-arrow-hit')
+            .attr('x', 0).attr('y', first.y - arrowH).attr('width', stripW).attr('height', arrowH);
+          ag.append('text').attr('class', 'family-strip-arrow-text')
+            .attr('x', stripW / 2).attr('y', first.y - arrowH / 2).text('▲');
+        }
+        if (canShiftDown) {
+          const ag = sg.append('g').attr('class', 'strip-arrow').style('cursor', 'pointer')
+            .on('click', () => onShiftDown());
+          ag.append('rect').attr('class', 'family-strip-arrow-hit')
+            .attr('x', 0).attr('y', last.y + last.h).attr('width', stripW).attr('height', arrowH);
+          ag.append('text').attr('class', 'family-strip-arrow-text')
+            .attr('x', stripW / 2).attr('y', last.y + last.h + arrowH / 2).text('▼');
+        }
+      }
+    }, [rootGen, canShiftUp, canShiftDown, onShiftUp, onShiftDown]);
 
     useImperativeHandle(ref, () => ({
       centerOnPerson: (personId: string) => {
@@ -665,10 +734,22 @@ export const FamilyTreeCanvas = forwardRef<FamilyTreeCanvasHandle, Props>(
 
       // Determine reveal order: new nodes sorted right-to-left
       const baseReveal = new Set<string>(prevIds);
-      const revealQueue = fullNodes
-        .filter(n => !baseReveal.has(n.data.id))
-        .sort((a, b) => (b._x - a._x) || (b.depth - a.depth))
-        .map(n => n.data.id);
+      let revealQueue: string[];
+
+      if (shiftDirRef.current === -1) {
+        // Shift UP: redraw entire tree from right to left
+        // Start with no nodes revealed — every node gets animated in
+        baseReveal.clear();
+        revealQueue = fullNodes
+          .sort((a, b) => (b._x - a._x) || (b.depth - a.depth))
+          .map(n => n.data.id);
+      } else {
+        // Shift DOWN: reveal only new descendant nodes
+        revealQueue = fullNodes
+          .filter(n => !baseReveal.has(n.data.id))
+          .sort((a, b) => (b._x - a._x) || (b.depth - a.depth))
+          .map(n => n.data.id);
+      }
 
       // Frame 0: only previously-existing nodes
       const computeFrame = (reveal: Set<string>): AnimFrame => {
@@ -738,11 +819,11 @@ export const FamilyTreeCanvas = forwardRef<FamilyTreeCanvasHandle, Props>(
         .on('zoom', event => {
           const t = event.transform;
           let cx = t.x;
-          let cy = t.y;
-          // During animation, skip constraints — view stays where it was
+          // Always lock vertical position — no vertical panning
+          const cy = lastTransformRef.current.y;
+          // During animation, skip horizontal constraints — view stays where it was
           if (!animatingRef.current && svgRef.current) {
             const w = svgRef.current.clientWidth;
-            const h = svgRef.current.clientHeight;
             const bounds = panBoundsRef.current;
             if (bounds) {
               const minTx = -bounds.maxX * t.k + w - 30 - GEN_STRIP_W;
@@ -754,29 +835,13 @@ export const FamilyTreeCanvas = forwardRef<FamilyTreeCanvasHandle, Props>(
                 cx = (w - GEN_STRIP_W) / 2 - treeCenterX * t.k;
               }
             }
-            const minNodeY = genZoneTop(0);
-            const maxNodeY = genZoneBottom(maxDepthRef.current, maxDepthRef.current);
-            const minTy = -maxNodeY * t.k + h - 30;
-            const maxTy = -minNodeY * t.k + 30;
-            if (minTy < maxTy) {
-              cy = Math.max(minTy, Math.min(maxTy, cy));
-            } else {
-              const treeCenterY = (minNodeY + maxNodeY) / 2;
-              cy = h / 2 - treeCenterY * t.k;
-            }
           }
           const constrained = d3.zoomIdentity.translate(cx, cy).scale(t.k);
           lastTransformRef.current = constrained;
           svg.select<SVGGElement>('g.tree-group').attr('transform', constrained.toString());
-          if (!animatingRef.current && !event.sourceEvent) {
+          if (!animatingRef.current) {
             updateGenStrip(constrained);
           }
-        })
-        .on('end', event => {
-          if (!event.sourceEvent) return;
-          const t = event.transform;
-          lastTransformRef.current = t;
-          if (!animatingRef.current) updateGenStrip(t);
         });
       zoomRef.current = zoom;
       svg.call(zoom);
@@ -848,85 +913,6 @@ export const FamilyTreeCanvas = forwardRef<FamilyTreeCanvasHandle, Props>(
     return (
       <div className="family-tree-container">
         <svg ref={svgRef} className="family-tree-canvas" />
-        {genCells.length > 0 && (() => {
-          const first = genCells[0];
-          const last = genCells[genCells.length - 1];
-          const tableTop = first.screenY;
-          const tableBottom = last.screenY + last.cellHeight;
-          const arrowH = 20;
-          const stripW = GEN_STRIP_W + 1;
-          const textX = stripW / 2;
-
-          return (
-            <svg className="family-strip-svg" width={stripW} height="100%">
-              {canShiftUp && (
-                <g onClick={onShiftUp}>
-                  <rect className="family-strip-arrow-hit" x={0} y={tableTop - arrowH} width={stripW} height={arrowH} />
-                  <text className="family-strip-arrow-text" x={textX} y={tableTop - arrowH / 2}>▲</text>
-                </g>
-              )}
-
-              {genCells.map(cell => (
-                <g key={cell.depth}>
-                  <rect
-                    className={`family-strip-cell ${cell.depth % 2 === 0 ? 'even' : 'odd'}`}
-                    x={0}
-                    y={cell.screenY}
-                    width={stripW}
-                    height={cell.cellHeight}
-                  />
-                  <text
-                    className="family-strip-text"
-                    x={textX}
-                    y={cell.screenY + cell.cellHeight / 2}
-                    fontSize={cell.fontSize}
-                  >
-                    {cell.label}
-                  </text>
-                </g>
-              ))}
-
-              {canShiftDown && (
-                <g onClick={onShiftDown}>
-                  <rect className="family-strip-arrow-hit" x={0} y={tableBottom} width={stripW} height={arrowH} />
-                  <text className="family-strip-arrow-text" x={textX} y={tableBottom + arrowH / 2}>▼</text>
-                </g>
-              )}
-
-              <line
-                className="family-strip-border"
-                x1={0.5}
-                y1={first.screenY}
-                x2={0.5}
-                y2={last.screenY + last.cellHeight}
-              />
-              <line
-                className="family-strip-border"
-                x1={GEN_STRIP_W + 0.5}
-                y1={first.screenY}
-                x2={GEN_STRIP_W + 0.5}
-                y2={last.screenY + last.cellHeight}
-              />
-              {genCells.map(cell => (
-                <line
-                  key={`top-${cell.depth}`}
-                  className="family-strip-border"
-                  x1={0}
-                  y1={cell.screenY}
-                  x2={stripW}
-                  y2={cell.screenY}
-                />
-              ))}
-              <line
-                className="family-strip-border"
-                x1={0}
-                y1={last.screenY + last.cellHeight}
-                x2={stripW}
-                y2={last.screenY + last.cellHeight}
-              />
-            </svg>
-          );
-        })()}
       </div>
     );
   }
