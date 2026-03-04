@@ -21,7 +21,7 @@ const BoxAny = Box as any;
 
 type ViewMode = 'tree' | 'list' | 'generation';
 
-const MAX_VISIBLE_DEPTH = 5;
+const MAX_VISIBLE_DEPTH = 4;
 
 function flattenTree(node: FamilyNode, result: FamilyNode[] = []): FamilyNode[] {
   result.push(node);
@@ -323,12 +323,14 @@ export const FamilyPage: React.FC = () => {
                     onExpandDepth={handleExpandDepth}
                     onClearSelection={() => { setSelectedPerson(null); setFocusPersonId(null); }}
                     onShiftUp={() => {
+                      canvasRef.current?.setShiftDirection(-1);
                       const pid = focusPersonId ?? selectedPerson?.id ?? null;
                       if (pid) canvasRef.current?.setPendingHighlight(pid);
                       setVisibleStartDepth(d => d - 1);
                       if (pid) setTimeout(() => canvasRef.current?.centerOnPerson(pid), 80);
                     }}
                     onShiftDown={() => {
+                      canvasRef.current?.setShiftDirection(1);
                       const pid = focusPersonId ?? selectedPerson?.id ?? null;
                       if (pid) canvasRef.current?.setPendingHighlight(pid);
                       setVisibleStartDepth(d => d + 1);

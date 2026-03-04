@@ -20,6 +20,7 @@ interface Props {
 export interface FamilyTreeCanvasHandle {
   centerOnPerson: (personId: string) => void;
   setPendingHighlight: (personId: string | null) => void;
+  setShiftDirection: (dir: number) => void;
 }
 
 const NODE_GAP = 55;
@@ -270,6 +271,9 @@ export const FamilyTreeCanvas = forwardRef<FamilyTreeCanvasHandle, Props>(
       setPendingHighlight: (personId: string | null) => {
         pendingCenterRef.current = personId;
       },
+      setShiftDirection: (dir: number) => {
+        shiftDirRef.current = dir;
+      },
     }));
 
     const applyHighlight = useCallback(() => {
@@ -300,12 +304,12 @@ export const FamilyTreeCanvas = forwardRef<FamilyTreeCanvasHandle, Props>(
         .attr('opacity', d => !hasHL || (hl.has(d.source) && hl.has(d.target)) ? 1 : COLORS.dimOpacity);
     }, []);
 
-    const drawTree = useCallback(() => {
+    const ANIM_MS = 1200;
+    const shiftDirRef = useRef<number>(0); // -1=up, +1=down, 0=initial
+
+    const drawTree = useCallback((animated = false) => {
       if (!svgRef.current || !root) return;
       const svg = d3.select(svgRef.current);
-      let g = svg.select<SVGGElement>('g.tree-group');
-      if (g.node()) g.remove();
-      g = svg.append('g').attr('class', 'tree-group');
       highlightedSetRef.current.clear();
 
       const layoutRoot = buildVisibleTree(root, visibleStartDepth, maxVisibleDepth);
@@ -316,183 +320,182 @@ export const FamilyTreeCanvas = forwardRef<FamilyTreeCanvasHandle, Props>(
       allLayoutNodesRef.current = allNodes;
       maxDepthRef.current = allNodes.length > 0 ? Math.max(...allNodes.map(n => n.depth)) : 0;
 
-      // ─── Links (orthogonal step) ──────────────────────────────────
-      const visibleLinks = allLinks.filter(l => l.source.depth >= 0 && l.target.depth >= 0);
-      g.selectAll<SVGPathElement, { source: LayoutNode; target: LayoutNode }>('.link')
-        .data(visibleLinks).join('path')
-        .attr('class', 'link').attr('fill', 'none')
-        .attr('stroke', COLORS.link).attr('stroke-width', 1).attr('stroke-linecap', 'round')
-        .attr('d', d => {
-          const srcBoxBottom = d.source._y + BOX_Y_OFFSET + getNodeBoxH(d.source);
-          const tgtBoxTop = d.target._y + BOX_Y_OFFSET;
-          const midY = (srcBoxBottom + tgtBoxTop) / 2;
-          return `M${d.source._x},${srcBoxBottom}V${midY}H${d.target._x}V${tgtBoxTop}`;
-        });
+      const dir = shiftDirRef.current; // +1 = shift down (new gen appears), -1 = shift up
+      // Slide distance: one full generation height in SVG coords
+      const slideY = dir * LEVEL_HEIGHT;
 
-      // ─── Nodes ────────────────────────────────────────────────────
-      const node = g.selectAll<SVGGElement, LayoutNode>('.node')
-        .data(allNodes).join('g')
-        .attr('class', 'node')
-        .attr('transform', d => `translate(${d._x},${d._y})`)
-        .style('cursor', 'pointer');
+      // ── Helper: fully draw a complete tree into a <g> ────────────────
+      const renderInto = (g: d3.Selection<SVGGElement, unknown, null, undefined>) => {
+        // Links
+        const visibleLinks = allLinks.filter(l => l.source.depth >= 0 && l.target.depth >= 0);
+        g.selectAll<SVGPathElement, { source: LayoutNode; target: LayoutNode }>('.link')
+          .data(visibleLinks).join('path')
+          .attr('class', 'link').attr('fill', 'none')
+          .attr('stroke', COLORS.link).attr('stroke-width', 1).attr('stroke-linecap', 'round')
+          .attr('d', d => {
+            const srcBoxBottom = d.source._y + BOX_Y_OFFSET + getNodeBoxH(d.source);
+            const tgtBoxTop = d.target._y + BOX_Y_OFFSET;
+            const midY = (srcBoxBottom + tgtBoxTop) / 2;
+            return `M${d.source._x},${srcBoxBottom}V${midY}H${d.target._x}V${tgtBoxTop}`;
+          });
 
-      // Name box background
-      node.each(function (d) {
-        const p = d.data; const hs = p.spouses.length > 0;
-        const boxH = getNodeBoxH(d); const boxW = hs ? 42 : 26;
-        d3.select(this).append('rect').attr('class', 'node-border')
-          .attr('x', -boxW / 2).attr('y', BOX_Y_OFFSET).attr('width', boxW).attr('height', boxH)
-          .attr('rx', 6).attr('ry', 6)
-          .attr('fill', COLORS.nodeBg).attr('stroke', COLORS.nodeBorder).attr('stroke-width', 1.2);
-      });
+        // Nodes
+        const node = g.selectAll<SVGGElement, LayoutNode>('.node')
+          .data(allNodes).join('g')
+          .attr('class', 'node')
+          .attr('transform', d => `translate(${d._x},${d._y})`)
+          .style('cursor', 'pointer');
 
-      // Name vertical text
-      node.each(function (d) {
-        const p = d.data; const hs = p.spouses.length > 0; const xPos = hs ? -10 : 0;
-        const t = d3.select(this).append('text').attr('class', 'name-text').attr('y', BOX_Y_OFFSET + 14);
-        p.name.split('').forEach(ch => {
-          t.append('tspan').attr('class', 'name-char')
-            .attr('x', xPos).attr('dy', '1.25em').attr('text-anchor', 'middle')
-            .attr('font-size', '14px').attr('font-family', '"Microsoft YaHei","PingFang SC",sans-serif')
-            .attr('fill', COLORS.nameText).attr('font-weight', '500').text(ch);
-        });
-      });
-
-      // Spouse text
-      node.filter(d => d.data.spouses.length > 0).each(function (d) {
-        const t = d3.select(this).append('text').attr('y', BOX_Y_OFFSET + 14);
-        d.data.spouses[0].name.split('').forEach(ch => {
-          t.append('tspan').attr('x', 10).attr('dy', '1.25em').attr('text-anchor', 'middle')
-            .attr('font-size', '12px').attr('font-family', '"Microsoft YaHei","PingFang SC",sans-serif')
-            .attr('fill', COLORS.spouseText).text(ch);
-        });
-      });
-
-      // Gender dot
-      node.each(function (d) {
-        const hs = d.data.spouses.length > 0; const boxW = hs ? 42 : 26;
-        d3.select(this).append('circle')
-          .attr('cx', -(boxW / 2) + 5).attr('cy', BOX_Y_OFFSET + 6).attr('r', 3)
-          .attr('fill', d.data.gender === 'female' ? '#f472b6' : '#60a5fa');
-      });
-
-      // Deceased marker
-      node.filter(d => d.data.isAlive === false).each(function (d) {
-        const hs = d.data.spouses.length > 0; const boxW = hs ? 42 : 26;
-        d3.select(this).append('text')
-          .attr('x', (boxW / 2) - 5).attr('y', BOX_Y_OFFSET + 9)
-          .attr('text-anchor', 'middle').attr('font-size', '8px').attr('fill', '#94a3b8').text('†');
-      });
-
-      // ─── AA + AB for top-gen nodes (when visibleStartDepth > 0) ─────
-      // AA: vertical line up from box top to sibling connector height
-      // AB: horizontal sibling connector, grouped by parent
-      if (visibleStartDepth > 0) {
-        const topNodes = allNodes.filter(n => n.depth === 0);
-        const boxTop = BOX_Y_OFFSET;
-        const sibY = boxTop - STUB_LEN;
-
-        // Group top-gen nodes by parent
-        const byParent = new Map<string, LayoutNode[]>();
-        for (const n of topNodes) {
-          const pid = n.data.parentRels.length > 0 ? n.data.parentRels[0].fromId : n.data.id;
-          if (!byParent.has(pid)) byParent.set(pid, []);
-          byParent.get(pid)!.push(n);
-        }
-
-        // Find eldest (rightmost) of each sibling group
-        const eldestIds = new Set<string>();
-        for (const [, siblings] of byParent) {
-          const sorted = [...siblings].sort((a, b) => a._x - b._x);
-          eldestIds.add(sorted[sorted.length - 1].data.id);
-        }
-
-        // Draw AA (vertical line up) for every top-gen node
-        topNodes.forEach(n => {
-          const isEldest = eldestIds.has(n.data.id);
-          const aaTopY = isEldest ? (sibY - STUB_LEN) : sibY;
-          g.append('line')
-            .attr('x1', n._x).attr('y1', n._y + boxTop)
-            .attr('x2', n._x).attr('y2', n._y + aaTopY)
-            .attr('stroke', COLORS.link).attr('stroke-width', 1);
-        });
-
-        // Draw AB (horizontal sibling connector) per parent group
-        // Helper to find a node in the full tree
-        const findInTree = (node: FamilyNode, id: string): FamilyNode | null => {
-          if (node.id === id) return node;
-          for (const c of node.children) {
-            const found = findInTree(c, id);
-            if (found) return found;
+        node.each(function (d) {
+          const el = d3.select(this);
+          const p = d.data; const hs = p.spouses.length > 0;
+          const boxH = getNodeBoxH(d); const boxW = hs ? 42 : 26;
+          el.append('rect').attr('class', 'node-border')
+            .attr('x', -boxW / 2).attr('y', BOX_Y_OFFSET).attr('width', boxW).attr('height', boxH)
+            .attr('rx', 6).attr('ry', 6)
+            .attr('fill', COLORS.nodeBg).attr('stroke', COLORS.nodeBorder).attr('stroke-width', 1.2);
+          const xPos = hs ? -10 : 0;
+          const t = el.append('text').attr('class', 'name-text').attr('y', BOX_Y_OFFSET + 14);
+          p.name.split('').forEach(ch =>
+            t.append('tspan').attr('class', 'name-char')
+              .attr('x', xPos).attr('dy', '1.25em').attr('text-anchor', 'middle')
+              .attr('font-size', '14px').attr('font-family', '"Microsoft YaHei","PingFang SC",sans-serif')
+              .attr('fill', COLORS.nameText).attr('font-weight', '500').text(ch)
+          );
+          if (hs) {
+            const st = el.append('text').attr('y', BOX_Y_OFFSET + 14);
+            p.spouses[0].name.split('').forEach(ch =>
+              st.append('tspan').attr('x', 10).attr('dy', '1.25em').attr('text-anchor', 'middle')
+                .attr('font-size', '12px').attr('font-family', '"Microsoft YaHei","PingFang SC",sans-serif')
+                .attr('fill', COLORS.spouseText).text(ch)
+            );
           }
-          return null;
-        };
-
-        for (const [, visibleSiblings] of byParent) {
-          if (visibleSiblings.length === 0) continue;
-
-          const anyChild = visibleSiblings[0].data;
-          let totalSiblingCount = visibleSiblings.length;
-          if (anyChild.parentRels.length > 0) {
-            const fullParent = findInTree(root, anyChild.parentRels[0].fromId);
-            if (fullParent) totalSiblingCount = fullParent.children.length;
+          el.append('circle')
+            .attr('cx', -(boxW / 2) + 5).attr('cy', BOX_Y_OFFSET + 6).attr('r', 3)
+            .attr('fill', p.gender === 'female' ? '#f472b6' : '#60a5fa');
+          if (p.isAlive === false)
+            el.append('text').attr('x', (boxW / 2) - 5).attr('y', BOX_Y_OFFSET + 9)
+              .attr('text-anchor', 'middle').attr('font-size', '8px').attr('fill', '#94a3b8').text('†');
+          if (d.hasHiddenChildren) {
+            const boxBottom = BOX_Y_OFFSET + boxH;
+            el.append('line')
+              .attr('x1', 0).attr('y1', boxBottom).attr('x2', 0).attr('y2', boxBottom + STUB_LEN)
+              .attr('stroke', COLORS.link).attr('stroke-width', 1);
+            el.append('text')
+              .attr('x', 0).attr('y', boxBottom + STUB_LEN + 10)
+              .attr('text-anchor', 'middle').attr('font-size', '10px')
+              .attr('fill', COLORS.stubLine).attr('cursor', 'pointer').text('▼')
+              .on('click', (event: MouseEvent) => { event.stopPropagation(); onExpandDepth(d.data.id); });
           }
+        });
 
-          if (totalSiblingCount <= 1) continue;
+        // Interactions
+        node.on('click', (event: MouseEvent, d) => {
+          event.stopPropagation();
+          highlightedSetRef.current.clear();
+          let anc: LayoutNode | null = d;
+          while (anc) { if (anc.depth >= 0) highlightedSetRef.current.add(anc); anc = anc.parent; }
+          const addDesc = (n: LayoutNode) => { if (n.depth >= 0) highlightedSetRef.current.add(n); n.children?.forEach(addDesc); };
+          addDesc(d); applyHighlight(); onNodeClick(d.data);
+        });
+        node.on('contextmenu', (event: MouseEvent, d) => {
+          event.preventDefault(); event.stopPropagation();
+          onNodeRightClick(d.data, event.pageX, event.pageY);
+        });
+        node.on('mouseenter', function () {
+          d3.select(this).select('.node-border').transition().duration(120).attr('stroke-width', 2.2);
+        });
+        node.on('mouseleave', function (_, d) {
+          const isHL = highlightedSetRef.current.has(d);
+          d3.select(this).select('.node-border').transition().duration(200).attr('stroke-width', isHL ? 2.5 : 1.2);
+        });
 
-          const sorted = [...visibleSiblings].sort((a, b) => a._x - b._x);
-          let abLeft = sorted[0]._x;
-          let abRight = sorted[sorted.length - 1]._x;
-
-          if (totalSiblingCount > visibleSiblings.length) { abLeft -= 15; abRight += 15; }
-
-          const abLineY = sorted[0]._y + sibY;
-          g.append('line')
-            .attr('x1', abLeft).attr('y1', abLineY)
-            .attr('x2', abRight).attr('y2', abLineY)
-            .attr('stroke', COLORS.link).attr('stroke-width', 1);
+        // AA + AB stubs
+        if (visibleStartDepth > 0) {
+          const topNodes = allNodes.filter(n => n.depth === 0);
+          const sibY = BOX_Y_OFFSET - STUB_LEN;
+          const byParent = new Map<string, LayoutNode[]>();
+          for (const n of topNodes) {
+            const pid = n.data.parentRels.length > 0 ? n.data.parentRels[0].fromId : n.data.id;
+            if (!byParent.has(pid)) byParent.set(pid, []);
+            byParent.get(pid)!.push(n);
+          }
+          const eldestIds = new Set<string>();
+          for (const [, siblings] of byParent) {
+            const sorted = [...siblings].sort((a, b) => a._x - b._x);
+            eldestIds.add(sorted[sorted.length - 1].data.id);
+          }
+          topNodes.forEach(n => {
+            const aaTopY = eldestIds.has(n.data.id) ? (sibY - STUB_LEN) : sibY;
+            g.append('line')
+              .attr('x1', n._x).attr('y1', n._y + BOX_Y_OFFSET)
+              .attr('x2', n._x).attr('y2', n._y + aaTopY)
+              .attr('stroke', COLORS.link).attr('stroke-width', 1);
+          });
+          const findInTree = (node: FamilyNode, id: string): FamilyNode | null => {
+            if (node.id === id) return node;
+            for (const c of node.children) { const f = findInTree(c, id); if (f) return f; }
+            return null;
+          };
+          for (const [, visibleSiblings] of byParent) {
+            if (visibleSiblings.length === 0) continue;
+            const anyChild = visibleSiblings[0].data;
+            let total = visibleSiblings.length;
+            if (anyChild.parentRels.length > 0) {
+              const fp = findInTree(root, anyChild.parentRels[0].fromId);
+              if (fp) total = fp.children.length;
+            }
+            if (total <= 1) continue;
+            const sorted = [...visibleSiblings].sort((a, b) => a._x - b._x);
+            let abLeft = sorted[0]._x; let abRight = sorted[sorted.length - 1]._x;
+            if (total > visibleSiblings.length) { abLeft -= 15; abRight += 15; }
+            g.append('line')
+              .attr('x1', abLeft).attr('y1', sorted[0]._y + sibY)
+              .attr('x2', abRight).attr('y2', sorted[0]._y + sibY)
+              .attr('stroke', COLORS.link).attr('stroke-width', 1);
+          }
         }
+      };
+
+      if (!animated) {
+        // ── Initial / non-animated draw ────────────────────────────────
+        let g = svg.select<SVGGElement>('g.tree-group');
+        if (g.node()) g.remove();
+        g = svg.append('g').attr('class', 'tree-group');
+        renderInto(g);
+      } else {
+        // ── Animated crossfade + slide ─────────────────────────────────
+        // 1. Rename old group to 'tree-group-old' so it won't conflict
+        const oldG = svg.select<SVGGElement>('g.tree-group');
+        if (oldG.node()) oldG.attr('class', 'tree-group-old');
+
+        // 2. Build new group, starting offset in the incoming direction
+        const newG = svg.append('g').attr('class', 'tree-group');
+        renderInto(newG);
+
+        // Read the current zoom transform so both groups start aligned
+        const currentXform = svg.select<SVGGElement>('g.tree-group-old').attr('transform') || '';
+
+        // New group: start offset in direction of travel, opacity 0
+        // e.g. shift-down (dir=+1): new content comes from below (+slideY), exits upward
+        newG.attr('transform', `${currentXform} translate(0,${slideY})`)
+            .attr('opacity', 0);
+
+        // 3. Animate old group: slide away opposite direction, fade out
+        if (oldG.node()) {
+          oldG.transition().duration(ANIM_MS)
+            .ease(d3.easeCubicInOut)
+            .attr('transform', `${currentXform} translate(0,${-slideY})`)
+            .attr('opacity', 0)
+            .on('end', function () { d3.select(this).remove(); });
+        }
+
+        // 4. Animate new group: slide into place, fade in
+        newG.transition().duration(ANIM_MS)
+          .ease(d3.easeCubicInOut)
+          .attr('transform', currentXform)
+          .attr('opacity', 1);
       }
-
-      // ─── AC: child line (below box bottom, solid) ──────────────────
-      // For nodes with hidden children: solid vertical line down
-      node.filter(d => d.hasHiddenChildren).each(function (d) {
-        const boxBottom = BOX_Y_OFFSET + getNodeBoxH(d);
-        // AC: solid vertical line down from box bottom
-        d3.select(this).append('line')
-          .attr('x1', 0).attr('y1', boxBottom)
-          .attr('x2', 0).attr('y2', boxBottom + STUB_LEN)
-          .attr('stroke', COLORS.link).attr('stroke-width', 1);
-        // Clickable expand arrow
-        d3.select(this).append('text')
-          .attr('x', 0).attr('y', boxBottom + STUB_LEN + 10)
-          .attr('text-anchor', 'middle').attr('font-size', '10px')
-          .attr('fill', COLORS.stubLine).attr('cursor', 'pointer').text('▼')
-          .on('click', (event: MouseEvent) => { event.stopPropagation(); onExpandDepth(d.data.id); });
-      });
-
-      // ─── Interactions ─────────────────────────────────────────────
-      node.on('click', (event: MouseEvent, d) => {
-        event.stopPropagation();
-        highlightedSetRef.current.clear();
-        let anc: LayoutNode | null = d;
-        while (anc) { if (anc.depth >= 0) highlightedSetRef.current.add(anc); anc = anc.parent; }
-        const addDesc = (n: LayoutNode) => { if (n.depth >= 0) highlightedSetRef.current.add(n); n.children?.forEach(addDesc); };
-        addDesc(d); applyHighlight(); onNodeClick(d.data);
-      });
-      node.on('contextmenu', (event: MouseEvent, d) => {
-        event.preventDefault(); event.stopPropagation();
-        onNodeRightClick(d.data, event.pageX, event.pageY);
-      });
-      node.on('mouseenter', function () {
-        d3.select(this).select('.node-border').transition().duration(120)
-          .attr('stroke-width', 2.2);
-      });
-      node.on('mouseleave', function (_, d) {
-        const isHL = highlightedSetRef.current.has(d);
-        d3.select(this).select('.node-border').transition().duration(200)
-          .attr('stroke-width', isHL ? 2.5 : 1.2);
-      });
     }, [root, tree, visibleStartDepth, maxVisibleDepth, onNodeClick, onNodeRightClick, onExpandDepth, applyHighlight]);
 
     // Zoom setup (once per root change)
@@ -543,7 +546,8 @@ export const FamilyTreeCanvas = forwardRef<FamilyTreeCanvasHandle, Props>(
       svg.on('click.clear', () => { highlightedSetRef.current.clear(); applyHighlight(); onClearSelection(); });
 
       // Initial center
-      drawTree();
+      shiftDirRef.current = 0;
+      drawTree(false);
       const allNodes = allLayoutNodesRef.current;
       if (allNodes.length > 0) {
         const minX = Math.min(...allNodes.map(n => n._x));
@@ -560,57 +564,50 @@ export const FamilyTreeCanvas = forwardRef<FamilyTreeCanvasHandle, Props>(
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [root]);
 
-    // Redraw tree when depth window changes (without resetting zoom)
+    // Redraw tree when depth window changes
     useEffect(() => {
       if (!svgRef.current || !root || !zoomRef.current) return;
-      drawTree();
       const svg = d3.select(svgRef.current);
       const currentTransform = d3.zoomTransform(svgRef.current);
+      drawTree(true);
       svg.call(zoomRef.current.transform, currentTransform);
       // Re-highlight pending person after redraw
       const pid = pendingCenterRef.current;
-      if (!pid) {
-        // No pending highlight — ensure cleared state is applied to DOM
-        applyHighlight();
-        return;
-      }
+      if (!pid) { applyHighlight(); return; }
       pendingCenterRef.current = null;
-        // Use requestAnimationFrame to ensure DOM is updated
-        requestAnimationFrame(() => {
-          const target = allLayoutNodesRef.current.find(n => n.data.id === pid);
-          if (target) {
-            // Re-highlight without animation
+      requestAnimationFrame(() => {
+        const target = allLayoutNodesRef.current.find(n => n.data.id === pid);
+        if (target) {
+          highlightedSetRef.current.clear();
+          let anc: LayoutNode | null = target;
+          while (anc) { if (anc.depth >= 0) highlightedSetRef.current.add(anc); anc = anc.parent; }
+          const addDesc = (n: LayoutNode) => { if (n.depth >= 0) highlightedSetRef.current.add(n); n.children?.forEach(addDesc); };
+          addDesc(target);
+          applyHighlight();
+        } else if (root) {
+          const findInFullTree = (node: FamilyNode, id: string): FamilyNode | null => {
+            if (node.id === id) return node;
+            for (const c of node.children) { const f = findInFullTree(c, id); if (f) return f; }
+            return null;
+          };
+          const findAncestor = (id: string): LayoutNode | undefined => {
+            const p = findInFullTree(root, id);
+            if (!p || p.parentRels.length === 0) return undefined;
+            const parentInLayout = allLayoutNodesRef.current.find(n => n.data.id === p.parentRels[0].fromId);
+            if (parentInLayout) return parentInLayout;
+            return findAncestor(p.parentRels[0].fromId);
+          };
+          const ancestor = findAncestor(pid);
+          if (ancestor) {
             highlightedSetRef.current.clear();
-            let anc: LayoutNode | null = target;
-            while (anc) { if (anc.depth >= 0) highlightedSetRef.current.add(anc); anc = anc.parent; }
-            const addDesc = (n: LayoutNode) => { if (n.depth >= 0) highlightedSetRef.current.add(n); n.children?.forEach(addDesc); };
-            addDesc(target);
+            let anc2: LayoutNode | null = ancestor;
+            while (anc2) { if (anc2.depth >= 0) highlightedSetRef.current.add(anc2); anc2 = anc2.parent; }
+            const addDesc2 = (n: LayoutNode) => { if (n.depth >= 0) highlightedSetRef.current.add(n); n.children?.forEach(addDesc2); };
+            addDesc2(ancestor);
             applyHighlight();
-          } else if (root) {
-            // Person not in layout — find nearest ancestor
-            const findInFullTree = (node: FamilyNode, id: string): FamilyNode | null => {
-              if (node.id === id) return node;
-              for (const c of node.children) { const f = findInFullTree(c, id); if (f) return f; }
-              return null;
-            };
-            const findAncestor = (id: string): LayoutNode | undefined => {
-              const p = findInFullTree(root, id);
-              if (!p || p.parentRels.length === 0) return undefined;
-              const parentInLayout = allLayoutNodesRef.current.find(n => n.data.id === p.parentRels[0].fromId);
-              if (parentInLayout) return parentInLayout;
-              return findAncestor(p.parentRels[0].fromId);
-            };
-            const ancestor = findAncestor(pid);
-            if (ancestor) {
-              highlightedSetRef.current.clear();
-              let anc2: LayoutNode | null = ancestor;
-              while (anc2) { if (anc2.depth >= 0) highlightedSetRef.current.add(anc2); anc2 = anc2.parent; }
-              const addDesc2 = (n: LayoutNode) => { if (n.depth >= 0) highlightedSetRef.current.add(n); n.children?.forEach(addDesc2); };
-              addDesc2(ancestor);
-              applyHighlight();
-            }
           }
-        });
+        }
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [drawTree]);
 
