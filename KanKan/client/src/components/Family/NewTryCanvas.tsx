@@ -297,31 +297,8 @@ export const NewTryCanvas = forwardRef<NewTryCanvasHandle, Props>((props, ref) =
   // State-driven highlight: bump version to trigger re-apply via useEffect
   const [highlightVersion, setHighlightVersion] = useState(0);
   const triggerHighlight = useCallback(() => setHighlightVersion(v => v + 1), []);
-  // Debug output
-  const [debugInfo, setDebugInfo] = useState('');
-  // Helper to update debug info — appends lines
-  const updateDebug = useCallback((context: string) => {
-    const svg = svgRef.current;
-    if (!svg) return;
-    const nodeIds: string[] = [];
-    d3.select(svg).selectAll<SVGGElement, unknown>('.node').each(function () {
-      nodeIds.push(d3.select(this).attr('data-id') ?? '?');
-    });
-    const hSet = highlightSetRef.current;
-    const hIds = [...hSet].slice(0, 20);
-    const pending = pendingHighlightRef.current;
-    const ts = `${new Date().toLocaleTimeString('en', { hour12: false })}.${String(Date.now() % 1000).padStart(3, '0')}`;
-    const line =
-      `[${ts} ${context}] vs=${visibleStartDepthRef.current} | ` +
-      `nodes(${nodeIds.length}): ${nodeIds.map(id => { const n = allFlatRef.current.find(x => x.id === id); return n ? n.data.name : id.slice(0,6); }).join(', ')} | ` +
-      `hl(${hSet.size}): ${hIds.map(id => { const n = allFlatRef.current.find(x => x.id === id); return n ? n.data.name : id.slice(0,6); }).join(', ')}${hSet.size > 20 ? '...' : ''} | ` +
-      `pend=${pending ? 'yes' : 'no'} anim=${animatingRef.current}`;
-    setDebugInfo(prev => {
-      const lines = prev.split('\n');
-      if (lines.length > 30) lines.splice(0, lines.length - 30);
-      return [...lines, line].join('\n');
-    });
-  }, []);
+  // Rendering indicator
+  const [rendering, setRendering] = useState(false);
   const onClearSelectionRef = useRef(onClearSelection);
   onClearSelectionRef.current = onClearSelection;
   const onNodeClickRef = useRef(onNodeClick);
@@ -629,7 +606,6 @@ export const NewTryCanvas = forwardRef<NewTryCanvasHandle, Props>((props, ref) =
         highlightSetRef.current = hSet;
         applyHighlight(hSet);
         onNodeClickRef.current(d.data);
-        updateDebug('click-immediate');
       })
       .on('contextmenu', function (event, d) {
         event.preventDefault();
@@ -825,6 +801,7 @@ export const NewTryCanvas = forwardRef<NewTryCanvasHandle, Props>((props, ref) =
     animTimersRef.current = [];
 
     animatingRef.current = true;
+    setRendering(true);
     const treeG = d3.select(svg).select<SVGGElement>('.tree-group');
 
     // Sort reveal queue: descending x, tie-break by deeper (larger depth) first
@@ -977,7 +954,6 @@ export const NewTryCanvas = forwardRef<NewTryCanvasHandle, Props>((props, ref) =
               highlightSetRef.current = hSet;
               applyHighlight(hSet);
               onNodeClickRef.current(layoutNode.data);
-              updateDebug('click-anim-node');
             })
             .on('contextmenu', function (event) {
               event.preventDefault();
@@ -1012,6 +988,7 @@ export const NewTryCanvas = forwardRef<NewTryCanvasHandle, Props>((props, ref) =
         // Last frame: cleanup
         if (idx === frames.length - 1) {
           animatingRef.current = false;
+          setRendering(false);
           prevPosRef.current = new Map(positions);
 
           // Restore highlight if pending
@@ -1024,7 +1001,6 @@ export const NewTryCanvas = forwardRef<NewTryCanvasHandle, Props>((props, ref) =
           if (highlightSetRef.current.size > 0) {
             triggerHighlight();
           }
-          updateDebug('anim-last-frame');
 
           // Update strip with final transform
           const rootGen = tree?.rootGeneration ?? 1;
@@ -1038,6 +1014,7 @@ export const NewTryCanvas = forwardRef<NewTryCanvasHandle, Props>((props, ref) =
     // If no frames (all base), finish immediately
     if (frames.length === 0) {
       animatingRef.current = false;
+      setRendering(false);
       if (pendingHighlightRef.current) {
         const pid = pendingHighlightRef.current;
         highlightSetRef.current = collectFullBranch(pid);
@@ -1046,7 +1023,6 @@ export const NewTryCanvas = forwardRef<NewTryCanvasHandle, Props>((props, ref) =
       if (highlightSetRef.current.size > 0) {
         triggerHighlight();
       }
-      updateDebug('no-frames');
     }
   }, [tree, visibleStartDepth, collectFullBranch, triggerHighlight, renderStrip, onExpandDepth]);
 
@@ -1287,7 +1263,6 @@ export const NewTryCanvas = forwardRef<NewTryCanvasHandle, Props>((props, ref) =
     // Delay to let pending D3 transitions / DOM mutations settle
     const raf = requestAnimationFrame(() => {
       applyHighlight(highlightSetRef.current);
-      updateDebug('highlight-effect-raf');
     });
     return () => cancelAnimationFrame(raf);
   }, [highlightVersion, applyHighlight]);
@@ -1304,22 +1279,26 @@ export const NewTryCanvas = forwardRef<NewTryCanvasHandle, Props>((props, ref) =
   }, []);
 
   return (
-    <div style={{ width: '100%', height: '100%', position: 'relative', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
       <div
         ref={containerRef}
-        style={{ flex: 1, position: 'relative' }}
+        style={{ width: '100%', height: '100%' }}
       />
-      <div
-        id="newtry-debug"
-        ref={el => { if (el) el.scrollTop = el.scrollHeight; }}
-        style={{
-          height: 100, overflow: 'auto', background: '#1e293b', color: '#e2e8f0',
-          fontFamily: 'monospace', fontSize: 11, padding: '4px 8px', lineHeight: 1.4,
-          borderTop: '1px solid #334155', whiteSpace: 'pre-wrap', wordBreak: 'break-all',
-        }}
-      >
-        {debugInfo || 'Debug: waiting...'}
-      </div>
+      {rendering && (
+        <div style={{
+          position: 'absolute', inset: 0,
+          display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
+          paddingTop: 16, pointerEvents: 'all', cursor: 'wait',
+        }}>
+          <div style={{
+            background: 'rgba(30,41,59,0.75)', color: '#e2e8f0',
+            borderRadius: 6, padding: '6px 18px',
+            fontSize: 13, fontFamily: 'sans-serif',
+          }}>
+            家谱绘制中
+          </div>
+        </div>
+      )}
     </div>
   );
 });
