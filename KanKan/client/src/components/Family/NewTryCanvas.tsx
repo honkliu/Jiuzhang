@@ -782,7 +782,8 @@ export const NewTryCanvas = forwardRef<NewTryCanvasHandle, Props>((props, ref) =
         highlightSetRef.current = hSet;
         applyHighlight(hSet);
         onNodeClickRef.current(d.data);
-        // Step 2: trigger shift down (same as strip ▼)
+        // Step 2: set shift direction then trigger expand (same as strip ▼)
+        shiftDirRef.current = 1;
         onExpandDepth(d.id);
       });
   }
