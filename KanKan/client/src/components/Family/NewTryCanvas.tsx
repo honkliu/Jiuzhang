@@ -9,7 +9,7 @@ const NODE_GAP = 55;
 const STUB_LEN = 20;
 const TYPICAL_BOX_H = 78;
 const LEVEL_HEIGHT = STUB_LEN + TYPICAL_BOX_H + STUB_LEN + 32; // 150
-const BOX_Y_OFFSET = -16;
+const BOX_Y_OFFSET = 0;
 const GEN_STRIP_W = 34;
 const NODE_STEP_MS = 20;
 
@@ -458,8 +458,14 @@ export const NewTryCanvas = forwardRef<NewTryCanvasHandle, Props>((props, ref) =
     const stripX = svgW - GEN_STRIP_W;
     stripG.attr('transform', `translate(${stripX}, 0)`);
 
+    const rowTopByIndex = (i: number) => {
+      const parentBottom = (i - 1) * LEVEL_HEIGHT + BOX_Y_OFFSET + TYPICAL_BOX_H;
+      const childTop = i * LEVEL_HEIGHT + BOX_Y_OFFSET;
+      return (parentBottom + childTop) / 2;
+    };
+
     for (let i = 0; i < depthCount; i++) {
-      const genZoneTop = i * LEVEL_HEIGHT + BOX_Y_OFFSET - STUB_LEN;
+      const genZoneTop = rowTopByIndex(i);
       const genZoneBottom = genZoneTop + LEVEL_HEIGHT;
       const screenTop = genZoneTop * transform.k + transform.y;
       const screenH = (genZoneBottom - genZoneTop) * transform.k;
@@ -488,7 +494,7 @@ export const NewTryCanvas = forwardRef<NewTryCanvasHandle, Props>((props, ref) =
 
     // ▲ button
     if (canShiftUpRef.current) {
-      const topY = BOX_Y_OFFSET * transform.k + transform.y - STUB_LEN * transform.k;
+      const topY = rowTopByIndex(0) * transform.k + transform.y;
       stripG.append('text')
         .attr('x', GEN_STRIP_W / 2)
         .attr('y', topY - 8)
@@ -505,7 +511,7 @@ export const NewTryCanvas = forwardRef<NewTryCanvasHandle, Props>((props, ref) =
 
     // ▼ button
     if (canShiftDownRef.current) {
-      const botZoneBottom = (depthCount - 1) * LEVEL_HEIGHT + BOX_Y_OFFSET - STUB_LEN + LEVEL_HEIGHT;
+      const botZoneBottom = rowTopByIndex(depthCount - 1) + LEVEL_HEIGHT;
       const screenBot = botZoneBottom * transform.k + transform.y;
       stripG.append('text')
         .attr('x', GEN_STRIP_W / 2)
@@ -648,16 +654,21 @@ export const NewTryCanvas = forwardRef<NewTryCanvasHandle, Props>((props, ref) =
 
     for (const [parentId, group] of parentGroupsMap) {
       if (parentId === '__none__') continue;
+      const parentNode = parentId === '__none__' ? null : findParent(root, group[0].id);
+      const parentH = parentNode ? boxDims(parentNode).h : TYPICAL_BOX_H;
       // Eldest (rightmost) sibling — parent junction is at eldest's x
       const eldest = group[group.length - 1];
-      const junctionY = eldest._y + BOX_Y_OFFSET - 2 * STUB_LEN;
-      const siblingY = eldest._y + BOX_Y_OFFSET - STUB_LEN;
+      const parentRowY = eldest._y - LEVEL_HEIGHT;
+      const parentBottom = parentRowY + BOX_Y_OFFSET + parentH;
+      const childTop = eldest._y + BOX_Y_OFFSET;
+      const siblingY = (parentBottom + childTop) / 2;
+      const junctionY = siblingY;
 
       for (const n of group) {
         let pathD: string;
         if (n.id === eldest.id) {
           // Eldest: straight vertical from box top to junction
-          pathD = `M${n._x},${n._y + BOX_Y_OFFSET} V${junctionY}`;
+          pathD = `M${n._x},${n._y + BOX_Y_OFFSET} V${junctionY - 20}`;
         } else {
           // Non-eldest: vertical up, horizontal to eldest x, vertical up to junction
           pathD = `M${n._x},${n._y + BOX_Y_OFFSET} V${siblingY} H${eldest._x} V${junctionY}`;
@@ -670,7 +681,12 @@ export const NewTryCanvas = forwardRef<NewTryCanvasHandle, Props>((props, ref) =
     for (const [, group] of parentGroupsMap) {
       if (group.length >= 1 && group[0].totalSiblingsInData > group.length) {
         const eldest = group[group.length - 1];
-        const siblingY = eldest._y + BOX_Y_OFFSET - STUB_LEN;
+        const parentNode = findParent(root, group[0].id);
+        const parentH = parentNode ? boxDims(parentNode).h : TYPICAL_BOX_H;
+        const parentRowY = eldest._y - LEVEL_HEIGHT;
+        const parentBottom = parentRowY + BOX_Y_OFFSET + parentH;
+        const childTop = eldest._y + BOX_Y_OFFSET;
+        const siblingY = (parentBottom + childTop) / 2;
         const leftmost = group[0];
         result.push({
           srcId: '__ext__',
