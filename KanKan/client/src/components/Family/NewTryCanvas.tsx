@@ -817,6 +817,7 @@ export const NewTryCanvas = forwardRef<NewTryCanvasHandle, Props>((props, ref) =
     interface Frame {
       nodeId: string;
       positions: Map<string, { x: number; y: number }>;
+      linkData: { srcId: string; tgtId: string; d: string }[];
     }
 
     const frames: Frame[] = [];
@@ -839,7 +840,16 @@ export const NewTryCanvas = forwardRef<NewTryCanvasHandle, Props>((props, ref) =
         positions.set(n.id, { x: n._x, y: n._y });
       }
 
-      frames.push({ nodeId: rNode.id, positions });
+      const frameNodes = allFlat
+        .filter(n => positions.has(n.id))
+        .map(n => ({
+          ...n,
+          _x: positions.get(n.id)!.x,
+          _y: positions.get(n.id)!.y,
+        }));
+      const linkData = buildLinkData(frameNodes, parentMap, new Set(positions.keys()));
+
+      frames.push({ nodeId: rNode.id, positions, linkData });
     }
 
     // Now also render the base state first (nodes in baseRevealIds)
@@ -904,13 +914,14 @@ export const NewTryCanvas = forwardRef<NewTryCanvasHandle, Props>((props, ref) =
       }
 
       // Render base links
-      renderLinksForRevealed(treeG, baseFlat, parentMap, baseRevealIds);
+      const baseLinkData = buildLinkData(baseFlat, parentMap, baseRevealIds);
+      renderLinkData(treeG, baseLinkData);
     }
 
     // Execute frames sequentially
     frames.forEach((frame, idx) => {
       const timer = window.setTimeout(() => {
-        const { nodeId, positions } = frame;
+        const { nodeId, positions, linkData } = frame;
 
         // Move existing nodes to new positions
         treeG.selectAll<SVGGElement, LayoutNode>('.node').each(function () {
@@ -974,17 +985,7 @@ export const NewTryCanvas = forwardRef<NewTryCanvasHandle, Props>((props, ref) =
             });
         }
 
-        // Rebuild links for all currently revealed nodes
-        const currentlyRevealed = new Set(baseRevealIds);
-        for (let j = 0; j <= idx; j++) {
-          currentlyRevealed.add(frames[j].nodeId);
-        }
-        const revPartial = pruneToRevealed(topNodes, currentlyRevealed);
-        let c2 = 0;
-        for (const tn of revPartial) { c2 += layoutSubtree(tn, c2); }
-        const revFlat = flattenLayout(revPartial);
-        alignRight(revFlat, fullMaxX);
-        renderLinksForRevealed(treeG, revFlat, parentMap, currentlyRevealed);
+        renderLinkData(treeG, linkData);
 
         // Last frame: cleanup
         if (idx === frames.length - 1) {
@@ -1053,34 +1054,47 @@ export const NewTryCanvas = forwardRef<NewTryCanvasHandle, Props>((props, ref) =
     parentMap: Map<string, string>,
     visibleIds?: Set<string>,
   ) {
+    const linkData = buildLinkData(flatNodes, parentMap, visibleIds);
+    renderLinkData(treeG, linkData);
+  }
+
+  function buildLinkData(
+    flatNodes: LayoutNode[],
+    parentMap: Map<string, string>,
+    visibleIds?: Set<string>,
+  ): { srcId: string; tgtId: string; d: string }[] {
     const linkData: { srcId: string; tgtId: string; d: string }[] = [];
     const nodeMap = new Map(flatNodes.map(n => [n.id, n]));
     for (const node of flatNodes) {
-      // Only create links where both endpoints are visible (have DOM elements)
       if (visibleIds && !visibleIds.has(node.id)) continue;
       const pId = parentMap.get(node.id);
-      if (pId) {
-        if (visibleIds && !visibleIds.has(pId)) continue;
-        const parent = nodeMap.get(pId);
-        if (parent) {
-          const { h: pH } = boxDims(parent.data);
-          linkData.push({
-            srcId: pId,
-            tgtId: node.id,
-            d: linkPath(parent._x, parent._y, pH, node._x, node._y),
-          });
-        }
-      }
+      if (!pId) continue;
+      if (visibleIds && !visibleIds.has(pId)) continue;
+      const parent = nodeMap.get(pId);
+      if (!parent) continue;
+      const { h: pH } = boxDims(parent.data);
+      linkData.push({
+        srcId: pId,
+        tgtId: node.id,
+        d: linkPath(parent._x, parent._y, pH, node._x, node._y),
+      });
     }
-    // Add L0 stub links — filter by visibleIds for the child endpoint
+
     for (const sl of buildStubLinkData(flatNodes)) {
       if (sl.srcId === '__ext__') {
-        linkData.push(sl); // extension indicators always shown
+        linkData.push(sl);
       } else if (!visibleIds || visibleIds.has(sl.tgtId)) {
         linkData.push(sl);
       }
     }
 
+    return linkData;
+  }
+
+  function renderLinkData(
+    treeG: d3.Selection<SVGGElement, unknown, null, undefined>,
+    linkData: { srcId: string; tgtId: string; d: string }[],
+  ) {
     const links = treeG.selectAll<SVGPathElement, typeof linkData[0]>('.link')
       .data(linkData, d => `${d.srcId}->${d.tgtId}`);
     links.exit().remove();
