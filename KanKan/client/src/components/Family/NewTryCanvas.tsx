@@ -25,7 +25,6 @@ const C = {
   stub: '#94a3b8',
   maleGender: '#60a5fa',
   femaleGender: '#f472b6',
-  dimOpacity: 0.15,
 };
 
 // ─── Internal tree node used for layout ───
@@ -440,32 +439,30 @@ export const NewTryCanvas = forwardRef<NewTryCanvasHandle, Props>((props, ref) =
     const svg = svgRef.current;
     if (!svg) return;
     const sel = d3.select(svg);
+    const active = hSet.size > 0;
 
     sel.selectAll<SVGGElement, unknown>('.node').each(function () {
       const g = d3.select(this);
       const id = g.attr('data-id');
-      const highlighted = hSet.size === 0 || hSet.has(id);
-      g.transition().duration(250)
-        .style('opacity', highlighted ? 1 : C.dimOpacity);
-      g.select('.node-border')
-        .transition().duration(250)
-        .attr('stroke', highlighted && hSet.size > 0 ? C.highlight : C.nodeBorder)
-        .attr('stroke-width', highlighted && hSet.size > 0 ? 2.5 : 1.2);
-      g.select('.name-text')
-        .transition().duration(250)
-        .attr('fill', highlighted && hSet.size > 0 ? C.highlight : C.nameText)
-        .attr('font-weight', highlighted && hSet.size > 0 ? 700 : 500);
+      const highlighted = active && hSet.has(id);
+      g.interrupt().style('opacity', 1);
+      g.select('.node-border').interrupt()
+        .attr('stroke', highlighted ? C.highlight : C.nodeBorder)
+        .attr('stroke-width', highlighted ? 2.5 : 1.2);
+      g.select('.name-text').interrupt()
+        .attr('fill', highlighted ? C.highlight : C.nameText)
+        .attr('font-weight', highlighted ? 700 : 500);
     });
 
     sel.selectAll<SVGPathElement, unknown>('.link').each(function () {
       const path = d3.select(this);
       const srcId = path.attr('data-source');
       const tgtId = path.attr('data-target');
-      const highlighted = hSet.size === 0 || (hSet.has(srcId) && hSet.has(tgtId));
-      path.transition().duration(250)
-        .attr('stroke', highlighted && hSet.size > 0 ? C.highlight : C.link)
-        .attr('stroke-width', highlighted && hSet.size > 0 ? 2 : 1.2)
-        .style('opacity', highlighted ? 1 : C.dimOpacity);
+      const highlighted = active && hSet.has(srcId) && hSet.has(tgtId);
+      path.interrupt()
+        .attr('stroke', highlighted ? C.highlight : C.link)
+        .attr('stroke-width', highlighted ? 2 : 1.2)
+        .style('opacity', 1);
     });
   }, []);
 
@@ -804,6 +801,12 @@ export const NewTryCanvas = forwardRef<NewTryCanvasHandle, Props>((props, ref) =
       .text('▼')
       .on('click', (event) => {
         event.stopPropagation();
+        // Step 1: highlight this node's branch
+        const hSet = collectFullBranch(d.id);
+        highlightSetRef.current = hSet;
+        applyHighlight(hSet);
+        onNodeClickRef.current(d.data);
+        // Step 2: trigger shift down (same as strip ▼)
         onExpandDepth(d.id);
       });
   }
@@ -881,11 +884,11 @@ export const NewTryCanvas = forwardRef<NewTryCanvasHandle, Props>((props, ref) =
         basePositions.set(n.id, { x: n._x, y: n._y });
       }
 
-      // Remove nodes not in base
+      // Remove nodes not in base — immediate removal, no fade
       treeG.selectAll<SVGGElement, unknown>('.node').each(function () {
         const id = d3.select(this).attr('data-id');
         if (!baseRevealIds.has(id) && !revealedIds.has(id)) {
-          d3.select(this).transition().duration(150).style('opacity', 0).remove();
+          d3.select(this).remove();
         }
       });
 
@@ -963,12 +966,9 @@ export const NewTryCanvas = forwardRef<NewTryCanvasHandle, Props>((props, ref) =
             .attr('data-x', newPos.x)
             .attr('data-y', newPos.y)
             .attr('transform', `translate(${newPos.x},${newPos.y})`)
-            .style('opacity', 0)
+            .style('opacity', 1)
             .datum(layoutNode);
           appendNodeContent(g as any, layoutNode);
-
-          g.transition().duration(NODE_STEP_MS * 0.8)
-            .style('opacity', 1);
 
           // Add event handlers — use refs for stable callbacks
           g.on('click', function (event) {
@@ -1107,7 +1107,7 @@ export const NewTryCanvas = forwardRef<NewTryCanvasHandle, Props>((props, ref) =
     const links = treeG.selectAll<SVGPathElement, typeof linkData[0]>('.link')
       .data(linkData, d => `${d.srcId}->${d.tgtId}`);
     links.exit().remove();
-    const entered = links.enter()
+    links.enter()
       .append('path')
       .attr('class', 'link')
       .attr('fill', 'none')
@@ -1116,9 +1116,8 @@ export const NewTryCanvas = forwardRef<NewTryCanvasHandle, Props>((props, ref) =
       .attr('data-source', d => d.srcId)
       .attr('data-target', d => d.tgtId)
       .attr('d', d => d.d)
-      .style('opacity', 0);
-    entered.transition().duration(NODE_STEP_MS * 0.8).style('opacity', 1);
-    links.transition().duration(NODE_STEP_MS * 0.8).attr('d', d => d.d);
+      .style('opacity', 1);
+    links.attr('d', d => d.d);
   }
 
   // ─── Main draw effect ───
@@ -1204,8 +1203,18 @@ export const NewTryCanvas = forwardRef<NewTryCanvasHandle, Props>((props, ref) =
     shiftDirRef.current = 0;
 
     // Determine view transform (Right.md §4.1 step 5)
+    // When a branch is highlighted, anchor on the highlighted branch's rightmost
+    // visible node instead of the global maxX (Right.md §11.1)
     const rightPadding = 30 + GEN_STRIP_W;
-    const initX = svgW - rightPadding - maxX;
+    const hSet = highlightSetRef.current;
+    let anchorX = maxX;
+    if (hSet.size > 0) {
+      const highlightedVisible = allFlat.filter(n => hSet.has(n.id));
+      if (highlightedVisible.length > 0) {
+        anchorX = Math.max(...highlightedVisible.map(n => n._x));
+      }
+    }
+    const initX = svgW - rightPadding - anchorX;
     const initY = 40 + STUB_LEN;
     const newTransform = d3.zoomIdentity.translate(initX, initY);
 
@@ -1247,8 +1256,17 @@ export const NewTryCanvas = forwardRef<NewTryCanvasHandle, Props>((props, ref) =
       // Initial render with animation (Right.md §4.2)
       animatedReveal(svg, topNodes, allFlat, parentMap, maxX, new Set());
     } else {
-      // No shift, just immediate re-render (e.g., data change)
+      // No shift, just immediate re-render (e.g., data change or node expand)
       renderNodesImmediate(svg, allFlat, parentMap);
+      // Check pending highlight (e.g., from node ▼ expand)
+      if (pendingHighlightRef.current) {
+        const pid = pendingHighlightRef.current;
+        highlightSetRef.current = collectFullBranch(pid);
+        pendingHighlightRef.current = null;
+      }
+      if (highlightSetRef.current.size > 0) {
+        triggerHighlight();
+      }
     }
 
   }, [root, visibleStartDepth, maxVisibleDepth, tree]);
