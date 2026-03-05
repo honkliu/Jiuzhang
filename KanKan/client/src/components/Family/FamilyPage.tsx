@@ -10,6 +10,9 @@ import {
 } from '@mui/icons-material';
 import { AppHeader } from '@/components/Shared/AppHeader';
 import { FamilyTreeCanvas, type FamilyTreeCanvasHandle } from './FamilyTreeCanvas';
+import { NewFamilyTreeCanvas, type NewFamilyTreeCanvasHandle } from './NewFamilyTreeCanvas';
+import { OneFamilyTreeCanvas, type OneFamilyTreeCanvasHandle } from './OneFamilyTreeCanvas';
+import { NewTryCanvas, type NewTryCanvasHandle } from './NewTryCanvas';
 import { FamilyPersonPanel } from './FamilyPersonPanel';
 import { FamilyNodeContextMenu } from './FamilyNodeContextMenu';
 import {
@@ -19,9 +22,9 @@ import {
 
 const BoxAny = Box as any;
 
-type ViewMode = 'tree' | 'list' | 'generation';
+type ViewMode = 'tree' | 'newtree' | 'onetree' | 'newtry' | 'list' | 'generation';
 
-const MAX_VISIBLE_DEPTH = 4;
+const MAX_VISIBLE_DEPTH = 3;
 
 function flattenTree(node: FamilyNode, result: FamilyNode[] = []): FamilyNode[] {
   result.push(node);
@@ -77,6 +80,9 @@ export const FamilyPage: React.FC = () => {
   const [visibleStartDepth, setVisibleStartDepth] = useState(0);
   const [focusPersonId, setFocusPersonId] = useState<string | null>(null);
   const canvasRef = useRef<FamilyTreeCanvasHandle>(null);
+  const newCanvasRef = useRef<NewFamilyTreeCanvasHandle>(null);
+  const oneCanvasRef = useRef<OneFamilyTreeCanvasHandle>(null);
+  const newTryRef = useRef<NewTryCanvasHandle>(null);
 
   const selectedTree = trees.find(t => t.id === selectedTreeId) ?? null;
   const treeMaxDepth = useMemo(() => rootNode ? getTreeDepth(rootNode) : 0, [rootNode]);
@@ -121,6 +127,13 @@ export const FamilyPage: React.FC = () => {
 
   const handleCloseContextMenu = useCallback(() => setContextMenu(null), []);
 
+  const pickCanvasRef = useCallback((mode: ViewMode) => {
+    if (mode === 'newtree') return newCanvasRef;
+    if (mode === 'onetree') return oneCanvasRef;
+    if (mode === 'newtry') return newTryRef;
+    return canvasRef;
+  }, []);
+
   const handleExpandDepth = useCallback((personId: string) => {
     const personDepth = getPersonTreeDepth(personId, allNodes);
     const newStart = Math.max(
@@ -128,11 +141,12 @@ export const FamilyPage: React.FC = () => {
       personDepth - MAX_VISIBLE_DEPTH + 2
     );
     const clamped = Math.min(newStart, Math.max(0, treeMaxDepth - MAX_VISIBLE_DEPTH + 1));
-    canvasRef.current?.setPendingHighlight(personId);
+    const activeRef = pickCanvasRef(viewMode);
+    activeRef.current?.setPendingHighlight(personId);
     setFocusPersonId(personId);
     setVisibleStartDepth(clamped);
-    setTimeout(() => canvasRef.current?.centerOnPerson(personId), 80);
-  }, [visibleStartDepth, treeMaxDepth, allNodes]);
+    setTimeout(() => activeRef.current?.centerOnPerson(personId), 80);
+  }, [visibleStartDepth, treeMaxDepth, allNodes, viewMode, pickCanvasRef]);
 
   const navigateToPerson = useCallback((personId: string) => {
     const node = allNodes.find(n => n.id === personId);
@@ -147,8 +161,11 @@ export const FamilyPage: React.FC = () => {
       setVisibleStartDepth(Math.min(newStart, Math.max(0, treeMaxDepth - MAX_VISIBLE_DEPTH + 1)));
     }
 
-    setTimeout(() => canvasRef.current?.centerOnPerson(personId), 80);
-  }, [allNodes, visibleStartDepth, treeMaxDepth]);
+    setTimeout(() => {
+      const activeRef = pickCanvasRef(viewMode);
+      activeRef.current?.centerOnPerson(personId);
+    }, 80);
+  }, [allNodes, visibleStartDepth, treeMaxDepth, viewMode, pickCanvasRef]);
 
   const handleSearchSelect = useCallback((_: any, value: FamilyNode | null) => {
     if (value) navigateToPerson(value.id);
@@ -202,6 +219,9 @@ export const FamilyPage: React.FC = () => {
           sx={{ minHeight: 36, '& .MuiTab-root': { minHeight: 36, py: 0, fontSize: 13 } }}
         >
           <Tab label="树形" value="tree" />
+          <Tab label="新树形" value="newtree" />
+          <Tab label="One树形" value="onetree" />
+          <Tab label="NewTry" value="newtry" />
           <Tab label="列表" value="list" />
           <Tab label="世代" value="generation" />
         </Tabs>
@@ -245,7 +265,7 @@ export const FamilyPage: React.FC = () => {
       </BoxAny>
 
       {/* Breadcrumb */}
-      {selectedPerson && ancestorPath.length > 0 && viewMode === 'tree' && (
+      {selectedPerson && ancestorPath.length > 0 && (viewMode === 'tree' || viewMode === 'newtree' || viewMode === 'newtry') && (
         <BoxAny sx={{
           px: 2, py: 0.5,
           borderBottom: '1px solid rgba(15,23,42,0.05)',
@@ -294,9 +314,12 @@ export const FamilyPage: React.FC = () => {
 
         {!loading && !error && trees.length > 0 && (
           <>
-            {/* Person detail panel (left side) */}
-            {selectedPerson && (
-              <BoxAny sx={{ width: 300, flexShrink: 0, overflow: 'hidden', borderRight: '1px solid rgba(15,23,42,0.08)' }}>
+            {/* Person detail panel — hidden for newtry mode */}
+            {selectedPerson && viewMode !== 'newtry' && (
+              <BoxAny sx={{
+                width: 300, flexShrink: 0, overflow: 'hidden',
+                borderRight: '1px solid rgba(15,23,42,0.08)',
+              }}>
                 <FamilyPersonPanel
                   person={selectedPerson}
                   tree={selectedTree}
@@ -343,6 +366,120 @@ export const FamilyPage: React.FC = () => {
                   </BoxAny>
                 )}
 
+              </BoxAny>
+            )}
+
+            {viewMode === 'newtree' && (
+              <BoxAny sx={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+                {rootNode ? (
+                  <NewFamilyTreeCanvas
+                    ref={newCanvasRef}
+                    root={rootNode}
+                    tree={selectedTree}
+                    visibleStartDepth={visibleStartDepth}
+                    maxVisibleDepth={MAX_VISIBLE_DEPTH}
+                    canShiftUp={canGoUp}
+                    canShiftDown={canGoDown}
+                    onNodeClick={handleNodeClick}
+                    onNodeRightClick={handleNodeRightClick}
+                    onExpandDepth={handleExpandDepth}
+                    onClearSelection={() => { setSelectedPerson(null); setFocusPersonId(null); }}
+                    onShiftUp={() => {
+                      newCanvasRef.current?.setShiftDirection(-1);
+                      const pid = focusPersonId ?? selectedPerson?.id ?? null;
+                      if (pid) newCanvasRef.current?.setPendingHighlight(pid);
+                      setVisibleStartDepth(d => d - 1);
+                      if (pid) setTimeout(() => newCanvasRef.current?.centerOnPerson(pid), 80);
+                    }}
+                    onShiftDown={() => {
+                      newCanvasRef.current?.setShiftDirection(1);
+                      const pid = focusPersonId ?? selectedPerson?.id ?? null;
+                      if (pid) newCanvasRef.current?.setPendingHighlight(pid);
+                      setVisibleStartDepth(d => d + 1);
+                      if (pid) setTimeout(() => newCanvasRef.current?.centerOnPerson(pid), 80);
+                    }}
+                  />
+                ) : (
+                  <BoxAny sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                    <Typography color="text.secondary">该家谱暂无人员数据</Typography>
+                  </BoxAny>
+                )}
+              </BoxAny>
+            )}
+
+            {viewMode === 'onetree' && (
+              <BoxAny sx={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+                {rootNode ? (
+                  <OneFamilyTreeCanvas
+                    ref={oneCanvasRef}
+                    root={rootNode}
+                    tree={selectedTree}
+                    visibleStartDepth={visibleStartDepth}
+                    maxVisibleDepth={MAX_VISIBLE_DEPTH}
+                    canShiftUp={canGoUp}
+                    canShiftDown={canGoDown}
+                    onNodeClick={handleNodeClick}
+                    onNodeRightClick={handleNodeRightClick}
+                    onExpandDepth={handleExpandDepth}
+                    onClearSelection={() => { setSelectedPerson(null); setFocusPersonId(null); }}
+                    onShiftUp={() => {
+                      oneCanvasRef.current?.setShiftDirection(-1);
+                      const pid = focusPersonId ?? selectedPerson?.id ?? null;
+                      if (pid) oneCanvasRef.current?.setPendingHighlight(pid);
+                      setVisibleStartDepth(d => d - 1);
+                      if (pid) setTimeout(() => oneCanvasRef.current?.centerOnPerson(pid), 80);
+                    }}
+                    onShiftDown={() => {
+                      oneCanvasRef.current?.setShiftDirection(1);
+                      const pid = focusPersonId ?? selectedPerson?.id ?? null;
+                      if (pid) oneCanvasRef.current?.setPendingHighlight(pid);
+                      setVisibleStartDepth(d => d + 1);
+                      if (pid) setTimeout(() => oneCanvasRef.current?.centerOnPerson(pid), 80);
+                    }}
+                  />
+                ) : (
+                  <BoxAny sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                    <Typography color="text.secondary">该家谱暂无人员数据</Typography>
+                  </BoxAny>
+                )}
+              </BoxAny>
+            )}
+
+            {viewMode === 'newtry' && (
+              <BoxAny sx={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+                {rootNode ? (
+                  <NewTryCanvas
+                    ref={newTryRef}
+                    root={rootNode}
+                    tree={selectedTree}
+                    visibleStartDepth={visibleStartDepth}
+                    maxVisibleDepth={MAX_VISIBLE_DEPTH}
+                    canShiftUp={canGoUp}
+                    canShiftDown={canGoDown}
+                    onNodeClick={handleNodeClick}
+                    onNodeRightClick={handleNodeRightClick}
+                    onExpandDepth={handleExpandDepth}
+                    onClearSelection={() => { setSelectedPerson(null); setFocusPersonId(null); }}
+                    onShiftUp={() => {
+                      newTryRef.current?.setShiftDirection(-1);
+                      const pid = focusPersonId ?? selectedPerson?.id ?? null;
+                      if (pid) newTryRef.current?.setPendingHighlight(pid);
+                      setVisibleStartDepth(d => d - 1);
+                      if (pid) setTimeout(() => newTryRef.current?.centerOnPerson(pid), 80);
+                    }}
+                    onShiftDown={() => {
+                      newTryRef.current?.setShiftDirection(1);
+                      const pid = focusPersonId ?? selectedPerson?.id ?? null;
+                      if (pid) newTryRef.current?.setPendingHighlight(pid);
+                      setVisibleStartDepth(d => d + 1);
+                      if (pid) setTimeout(() => newTryRef.current?.centerOnPerson(pid), 80);
+                    }}
+                  />
+                ) : (
+                  <BoxAny sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                    <Typography color="text.secondary">该家谱暂无人员数据</Typography>
+                  </BoxAny>
+                )}
               </BoxAny>
             )}
 
