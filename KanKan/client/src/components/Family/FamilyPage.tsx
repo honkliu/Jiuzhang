@@ -9,7 +9,7 @@ import {
   Search as SearchIcon,
 } from '@mui/icons-material';
 import { AppHeader } from '@/components/Shared/AppHeader';
-import { NewTryCanvas, type NewTryCanvasHandle } from './NewTryCanvas';
+import { FamilyHisto, type FamilyHistoHandle } from './FamilyHisto';
 import { FamilyPersonPanel } from './FamilyPersonPanel';
 import { FamilyNodeContextMenu } from './FamilyNodeContextMenu';
 import {
@@ -64,7 +64,7 @@ export const FamilyPage: React.FC = () => {
   const [listSearch, setListSearch] = useState('');
   const [visibleStartDepth, setVisibleStartDepth] = useState(0);
   const [focusPersonId, setFocusPersonId] = useState<string | null>(null);
-  const canvasRef = useRef<NewTryCanvasHandle>(null);
+  const canvasRef = useRef<FamilyHistoHandle>(null);
 
   const selectedTree = trees.find(t => t.id === selectedTreeId) ?? null;
   const treeMaxDepth = useMemo(() => rootNode ? getTreeDepth(rootNode) : 0, [rootNode]);
@@ -277,7 +277,7 @@ export const FamilyPage: React.FC = () => {
             {viewMode === 'tree' && (
               <BoxAny sx={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
                 {rootNode ? (
-                  <NewTryCanvas
+                  <FamilyHisto
                     ref={canvasRef}
                     root={rootNode}
                     tree={selectedTree}

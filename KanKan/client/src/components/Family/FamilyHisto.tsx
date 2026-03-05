@@ -45,7 +45,7 @@ interface LayoutNode {
   isEldestSibling: boolean;
 }
 
-export interface NewTryCanvasHandle {
+export interface FamilyHistoHandle {
   centerOnPerson: (personId: string) => void;
   setPendingHighlight: (personId: string) => void;
   setShiftDirection: (dir: number) => void;
@@ -271,7 +271,7 @@ function linkPath(
 
 // ─── Component ───
 
-export const NewTryCanvas = forwardRef<NewTryCanvasHandle, Props>((props, ref) => {
+export const FamilyHisto = forwardRef<FamilyHistoHandle, Props>((props, ref) => {
   const {
     root, tree, visibleStartDepth, maxVisibleDepth,
     canShiftUp, canShiftDown,
@@ -1389,4 +1389,4 @@ export const NewTryCanvas = forwardRef<NewTryCanvasHandle, Props>((props, ref) =
   );
 });
 
-NewTryCanvas.displayName = 'NewTryCanvas';
+FamilyHisto.displayName = 'FamilyHisto';
