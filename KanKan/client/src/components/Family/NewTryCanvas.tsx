@@ -569,6 +569,8 @@ export const NewTryCanvas = forwardRef<NewTryCanvasHandle, Props>((props, ref) =
       .attr('d', d => d.d);
     links.attr('d', d => d.d);
 
+    renderRootStubs(treeG, allFlat);
+
     // Nodes (Right.md §12.1)
     const nodesSel = treeG.selectAll<SVGGElement, LayoutNode>('.node')
       .data(allFlat, d => d.id);
@@ -1009,6 +1011,8 @@ export const NewTryCanvas = forwardRef<NewTryCanvasHandle, Props>((props, ref) =
           setRendering(false);
           prevPosRef.current = new Map(positions);
 
+          renderRootStubs(treeG, allFlat);
+
           // Restore highlight if pending
           if (pendingHighlightRef.current) {
             const pid = pendingHighlightRef.current;
@@ -1033,6 +1037,7 @@ export const NewTryCanvas = forwardRef<NewTryCanvasHandle, Props>((props, ref) =
     if (frames.length === 0) {
       animatingRef.current = false;
       setRendering(false);
+      renderRootStubs(treeG, allFlat);
       if (pendingHighlightRef.current) {
         const pid = pendingHighlightRef.current;
         highlightSetRef.current = collectFullBranch(pid);
@@ -1105,6 +1110,56 @@ export const NewTryCanvas = forwardRef<NewTryCanvasHandle, Props>((props, ref) =
     }
 
     return linkData;
+  }
+
+  function renderRootStubs(
+    treeG: d3.Selection<SVGGElement, unknown, null, undefined>,
+    flatNodes: LayoutNode[],
+    visibleIds?: Set<string>,
+  ) {
+    if (visibleStartDepthRef.current !== 0) {
+      treeG.selectAll('.root-stub-line').remove();
+      treeG.selectAll('.root-stub-circle').remove();
+      return;
+    }
+
+    const topRow = flatNodes.filter(n => n.depth === 0);
+    const stubData = topRow
+      .filter(n => !visibleIds || visibleIds.has(n.id))
+      .map(n => ({
+        id: n.id,
+        x: n._x,
+        yBottom: n._y + BOX_Y_OFFSET,
+        yTop: n._y + BOX_Y_OFFSET - LEVEL_HEIGHT / 4,
+      }));
+
+    const lines = treeG.selectAll<SVGLineElement, typeof stubData[0]>('.root-stub-line')
+      .data(stubData, d => d.id);
+    lines.exit().remove();
+    lines.enter()
+      .append('line')
+      .attr('class', 'root-stub-line')
+      .attr('stroke', C.stub)
+      .attr('stroke-width', 1)
+      .merge(lines as any)
+      .attr('x1', d => d.x)
+      .attr('y1', d => d.yBottom)
+      .attr('x2', d => d.x)
+      .attr('y2', d => d.yTop);
+
+    const circles = treeG.selectAll<SVGCircleElement, typeof stubData[0]>('.root-stub-circle')
+      .data(stubData, d => d.id);
+    circles.exit().remove();
+    circles.enter()
+      .append('circle')
+      .attr('class', 'root-stub-circle')
+      .attr('stroke', C.stub)
+      .attr('stroke-width', 1)
+      .attr('fill', 'none')
+      .attr('r', 3)
+      .merge(circles as any)
+      .attr('cx', d => d.x)
+      .attr('cy', d => d.yTop);
   }
 
   function renderLinkData(
