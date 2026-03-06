@@ -3,10 +3,12 @@ import {
   Box, Typography, CircularProgress, Alert, Select, MenuItem,
   FormControl, InputLabel, Tabs, Tab, Divider, Drawer,
   Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  TextField, Chip, Autocomplete, useMediaQuery, useTheme,
+  TextField, Chip, Autocomplete, useMediaQuery, useTheme, IconButton,
 } from '@mui/material';
 import {
   Search as SearchIcon,
+  ExpandLess as ExpandLessIcon,
+  ExpandMore as ExpandMoreIcon,
 } from '@mui/icons-material';
 import { AppHeader } from '@/components/Shared/AppHeader';
 import { FamilyHisto, type FamilyHistoHandle } from './FamilyHisto';
@@ -66,6 +68,7 @@ export const FamilyPage: React.FC = () => {
   const [listSearch, setListSearch] = useState('');
   const [visibleStartDepth, setVisibleStartDepth] = useState(0);
   const [focusPersonId, setFocusPersonId] = useState<string | null>(null);
+  const [mobileBarExpanded, setMobileBarExpanded] = useState(false);
   const canvasRef = useRef<FamilyHistoHandle>(null);
 
   const selectedTree = trees.find(t => t.id === selectedTreeId) ?? null;
@@ -185,65 +188,7 @@ export const FamilyPage: React.FC = () => {
         borderBottom: '1px solid rgba(15,23,42,0.08)', flexWrap: 'wrap',
         background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(8px)',
       }}>
-        <FormControl size="small" sx={{ minWidth: 160 }} disabled={trees.length === 0}>
-          <InputLabel>家谱</InputLabel>
-          <Select
-            label="家谱"
-            value={selectedTreeId ?? ''}
-            onChange={e => setSelectedTreeId(e.target.value as string)}
-          >
-            {trees.map(t => <MenuItem key={t.id} value={t.id}>{t.name}</MenuItem>)}
-          </Select>
-        </FormControl>
 
-        <Tabs
-          value={viewMode}
-          onChange={(_, v) => setViewMode(v as ViewMode)}
-          textColor="primary"
-          indicatorColor="primary"
-          sx={{ minHeight: 36, '& .MuiTab-root': { minHeight: 36, py: 0, fontSize: 13 } }}
-        >
-          <Tab label="树形" value="tree" />
-          <Tab label="列表" value="list" />
-          <Tab label="世代" value="generation" />
-        </Tabs>
-
-        {/* Search */}
-        {allNodes.length > 0 && (
-          <Autocomplete
-            size="small"
-            options={allNodes}
-            getOptionLabel={(n: FamilyNode) => `${n.name}（第${n.generation}世）`}
-            filterOptions={(opts, { inputValue }) =>
-              inputValue.length > 0
-                ? opts.filter(o =>
-                    o.name.includes(inputValue) ||
-                    (o.aliases ?? []).some(a => a.includes(inputValue))
-                  ).slice(0, 15)
-                : []
-            }
-            onChange={handleSearchSelect}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                placeholder="搜索人名…"
-                InputProps={{
-                  ...params.InputProps,
-                  startAdornment: <SearchIcon sx={{ fontSize: 16, color: 'text.secondary', mr: 0.5 }} />,
-                }}
-              />
-            )}
-            sx={{ width: 200 }}
-            clearOnBlur
-            blurOnSelect
-          />
-        )}
-
-        {selectedTree && (
-          <Typography variant="caption" color="text.secondary" sx={{ ml: 'auto' }}>
-            {selectedTree.surname ? `${selectedTree.surname}氏` : ''} · 共{persons.length}人 · {generations.length}代
-          </Typography>
-        )}
       </BoxAny>
 
       {/* Main content */}
@@ -448,6 +393,139 @@ export const FamilyPage: React.FC = () => {
             )}
           </>
         )}
+      </BoxAny>
+
+      {/* Bottom control bar */}
+      <BoxAny sx={{
+        borderTop: '1px solid rgba(15,23,42,0.08)',
+        background: 'rgba(255,255,255,0.95)',
+        px: 2, py: 1,
+        display: 'flex', justifyContent: 'flex-end',
+      }}>
+        <BoxAny sx={{
+          display: 'flex', alignItems: 'center', gap: 1,
+          flexWrap: 'wrap', justifyContent: 'flex-end',
+          ...(isMobile ? { width: '100%' } : {}),
+        }}>
+          {isMobile && !mobileBarExpanded && (
+            <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
+              {allNodes.length > 0 && (
+                <Autocomplete
+                  size="small"
+                  options={allNodes}
+                  getOptionLabel={(n: FamilyNode) => `${n.name}（第${n.generation}世）`}
+                  filterOptions={(opts, { inputValue }) =>
+                    inputValue.length > 0
+                      ? opts.filter(o =>
+                          o.name.includes(inputValue) ||
+                          (o.aliases ?? []).some(a => a.includes(inputValue))
+                        ).slice(0, 15)
+                      : []
+                  }
+                  onChange={handleSearchSelect}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      placeholder="搜索人名…"
+                      InputProps={{
+                        ...params.InputProps,
+                        startAdornment: <SearchIcon sx={{ fontSize: 16, color: 'text.secondary', mr: 0.5 }} />,
+                      }}
+                    />
+                  )}
+                  sx={{ flex: 1 }}
+                  clearOnBlur
+                  blurOnSelect
+                />
+              )}
+              <IconButton
+                size="small"
+                onClick={() => setMobileBarExpanded(true)}
+                aria-label="expand controls"
+              >
+                <ExpandLessIcon fontSize="small" />
+              </IconButton>
+            </BoxAny>
+          )}
+
+          {(!isMobile || mobileBarExpanded) && (
+            <BoxAny sx={{
+              display: 'flex', alignItems: 'center', gap: 1,
+              flexWrap: 'wrap', justifyContent: 'flex-end',
+              ...(isMobile ? { width: '100%' } : {}),
+            }}>
+              {allNodes.length > 0 && (
+                <Autocomplete
+                  size="small"
+                  options={allNodes}
+                  getOptionLabel={(n: FamilyNode) => `${n.name}（第${n.generation}世）`}
+                  filterOptions={(opts, { inputValue }) =>
+                    inputValue.length > 0
+                      ? opts.filter(o =>
+                          o.name.includes(inputValue) ||
+                          (o.aliases ?? []).some(a => a.includes(inputValue))
+                        ).slice(0, 15)
+                      : []
+                  }
+                  onChange={handleSearchSelect}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      placeholder="搜索人名…"
+                      InputProps={{
+                        ...params.InputProps,
+                        startAdornment: <SearchIcon sx={{ fontSize: 16, color: 'text.secondary', mr: 0.5 }} />,
+                      }}
+                    />
+                  )}
+                  sx={isMobile ? { width: '100%' } : { width: 200 }}
+                  clearOnBlur
+                  blurOnSelect
+                />
+              )}
+              <FormControl size="small" sx={isMobile ? { width: '100%' } : { minWidth: 140 }} disabled={trees.length === 0}>
+                <InputLabel>家谱</InputLabel>
+                <Select
+                  label="家谱"
+                  value={selectedTreeId ?? ''}
+                  onChange={e => setSelectedTreeId(e.target.value as string)}
+                >
+                  {trees.map(t => <MenuItem key={t.id} value={t.id}>{t.name}</MenuItem>)}
+                </Select>
+              </FormControl>
+
+              <Tabs
+                value={viewMode}
+                onChange={(_, v) => setViewMode(v as ViewMode)}
+                textColor="primary"
+                indicatorColor="primary"
+                variant={isMobile ? 'scrollable' : 'standard'}
+                allowScrollButtonsMobile
+                sx={{ minHeight: 32, '& .MuiTab-root': { minHeight: 32, px: 1, py: 0, fontSize: 12 } }}
+              >
+                <Tab label="树形" value="tree" />
+                <Tab label="列表" value="list" />
+                <Tab label="世代" value="generation" />
+              </Tabs>
+
+              {selectedTree && (
+                <Typography variant="caption" color="text.secondary" sx={{ ml: 0.5 }}>
+                  {selectedTree.surname ? `${selectedTree.surname}氏` : ''} · 共{persons.length}人 · {generations.length}代
+                </Typography>
+              )}
+
+              {isMobile && (
+                <IconButton
+                  size="small"
+                  onClick={() => setMobileBarExpanded(false)}
+                  aria-label="collapse controls"
+                >
+                  <ExpandMoreIcon fontSize="small" />
+                </IconButton>
+              )}
+            </BoxAny>
+          )}
+        </BoxAny>
       </BoxAny>
 
       {contextMenu && !isMobile && (

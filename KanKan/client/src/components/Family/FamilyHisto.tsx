@@ -27,6 +27,15 @@ const C = {
   femaleGender: '#f472b6',
 };
 
+function findNodeById(root: FamilyNode, id: string): FamilyNode | null {
+  if (root.id === id) return root;
+  for (const child of root.children) {
+    const found = findNodeById(child, id);
+    if (found) return found;
+  }
+  return null;
+}
+
 // ─── Internal tree node used for layout ───
 interface LayoutNode {
   id: string;
@@ -299,6 +308,7 @@ export const FamilyHisto = forwardRef<FamilyHistoHandle, Props>((props, ref) => 
   const triggerHighlight = useCallback(() => setHighlightVersion(v => v + 1), []);
   // Rendering indicator
   const [rendering, setRendering] = useState(false);
+  const rightmostVisibleRef = useRef<{ L0?: { id: string; name: string; depth: number }; L1?: { id: string; name: string; depth: number }; L2?: { id: string; name: string; depth: number } }>({});
   const onClearSelectionRef = useRef(onClearSelection);
   onClearSelectionRef.current = onClearSelection;
   const onNodeClickRef = useRef(onNodeClick);
@@ -316,6 +326,41 @@ export const FamilyHisto = forwardRef<FamilyHistoHandle, Props>((props, ref) => 
   onShiftUpRef.current = onShiftUp;
   const onShiftDownRef = useRef(onShiftDown);
   onShiftDownRef.current = onShiftDown;
+
+  const updateRightmostVisible = useCallback((svg: SVGSVGElement, t: d3.ZoomTransform) => {
+    const nodes = allFlatRef.current;
+    if (nodes.length === 0) return;
+
+    const viewW = svg.clientWidth - GEN_STRIP_W;
+    const viewH = svg.clientHeight;
+    const bestByDepth: Record<number, { id: string; name: string; screenX: number } | null> = {
+      0: null,
+      1: null,
+      2: null,
+    };
+
+    for (const node of nodes) {
+      if (node.depth > 2) continue;
+      const dims = boxDims(node.data);
+      const left = (node._x - dims.w / 2) * t.k + t.x;
+      const right = (node._x + dims.w / 2) * t.k + t.x;
+      const top = (node._y + BOX_Y_OFFSET) * t.k + t.y;
+      const bottom = (node._y + BOX_Y_OFFSET + dims.h) * t.k + t.y;
+      const visible = right >= 0 && left <= viewW && bottom >= 0 && top <= viewH;
+      if (!visible) continue;
+
+      const current = bestByDepth[node.depth];
+      if (!current || right > current.screenX) {
+        bestByDepth[node.depth] = { id: node.id, name: node.data.name, screenX: right };
+      }
+    }
+
+    rightmostVisibleRef.current = {
+      L0: bestByDepth[0] ? { id: bestByDepth[0].id, name: bestByDepth[0].name, depth: 0 } : undefined,
+      L1: bestByDepth[1] ? { id: bestByDepth[1].id, name: bestByDepth[1].name, depth: 1 } : undefined,
+      L2: bestByDepth[2] ? { id: bestByDepth[2].id, name: bestByDepth[2].name, depth: 2 } : undefined,
+    };
+  }, [root]);
 
   // ─── Imperative handle (Right.md §11.3) ───
   useImperativeHandle(ref, () => ({
@@ -1234,6 +1279,8 @@ export const FamilyHisto = forwardRef<FamilyHistoHandle, Props>((props, ref) => 
           d3.select(svgRef.current!).select<SVGGElement>('.tree-group')
             .attr('transform', finalT.toString());
 
+          updateRightmostVisible(svgRef.current!, finalT);
+
           // Sync strip (Right.md §5.3)
           if (!animatingRef.current) {
             const rg = tree?.rootGeneration ?? 1;
@@ -1275,6 +1322,44 @@ export const FamilyHisto = forwardRef<FamilyHistoHandle, Props>((props, ref) => 
       if (highlightedVisible.length > 0) {
         anchorX = Math.max(...highlightedVisible.map(n => n._x));
       }
+    } else if (shiftDir !== 0) {
+      const prev = rightmostVisibleRef.current;
+      const pickDeepest = () => prev.L2 || prev.L1 || prev.L0;
+      let anchorId: string | null = null;
+      const base = pickDeepest();
+      if (shiftDir > 0) {
+        if (base?.depth === 2) {
+          anchorId = base.id;
+        } else if (base?.id) {
+          const baseNode = findNodeById(root, base.id);
+          const eldestChild = baseNode && baseNode.children.length > 0
+            ? baseNode.children[baseNode.children.length - 1]
+            : null;
+          if (eldestChild) {
+            anchorId = eldestChild.id;
+          } else {
+            anchorId = base.id;
+          }
+        }
+      } else {
+        if (base?.id) {
+          const baseNode = findNodeById(root, base.id);
+          const parentId = baseNode?.parentRels?.[0]?.fromId ?? null;
+          if (parentId) {
+            const parentNode = findNodeById(root, parentId);
+            anchorId = parentId;
+          } else {
+            anchorId = base.id;
+          }
+        }
+      }
+
+      if (anchorId) {
+        const anchorNode = allFlat.find(n => n.id === anchorId);
+        if (anchorNode) {
+          anchorX = anchorNode._x;
+        }
+      }
     }
     const hasPrevTransform = prevPosRef.current.size > 0;
     const prevT = lastTransformRef.current;
@@ -1289,6 +1374,7 @@ export const FamilyHisto = forwardRef<FamilyHistoHandle, Props>((props, ref) => 
       .call(zoomRef.current!.transform as any, newTransform);
     d3.select(svg).select<SVGGElement>('.tree-group')
       .attr('transform', newTransform.toString());
+    updateRightmostVisible(svg, newTransform);
 
     // Render strip (Right.md §5)
     renderStrip(svg, visibleStartDepth, maxDepthRef.current, newTransform, rootGen);
@@ -1334,7 +1420,7 @@ export const FamilyHisto = forwardRef<FamilyHistoHandle, Props>((props, ref) => 
       }
     }
 
-  }, [root, visibleStartDepth, maxVisibleDepth, tree]);
+  }, [root, visibleStartDepth, maxVisibleDepth, tree, updateRightmostVisible]);
 
   // ─── Update strip when shift buttons change ───
   useEffect(() => {
