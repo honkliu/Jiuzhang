@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   Box, Typography, CircularProgress, Alert, Select, MenuItem,
-  FormControl, InputLabel, Tabs, Tab, Divider, Drawer,
+  FormControl, InputLabel, Divider, Drawer, Button, Menu,
   Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  TextField, Chip, Autocomplete, useMediaQuery, useTheme, IconButton,
+  TextField, Chip, Autocomplete, useMediaQuery, useTheme,
 } from '@mui/material';
 import {
   Search as SearchIcon,
+  ExpandMore as ExpandMoreIcon,
 } from '@mui/icons-material';
 import { AppHeader } from '@/components/Shared/AppHeader';
 import { FamilyHisto, type FamilyHistoHandle } from './FamilyHisto';
@@ -66,6 +67,7 @@ export const FamilyPage: React.FC = () => {
   const [listSearch, setListSearch] = useState('');
   const [visibleStartDepth, setVisibleStartDepth] = useState(0);
   const [focusPersonId, setFocusPersonId] = useState<string | null>(null);
+  const [viewMenuEl, setViewMenuEl] = useState<null | HTMLElement>(null);
   const canvasRef = useRef<FamilyHistoHandle>(null);
 
   const selectedTree = trees.find(t => t.id === selectedTreeId) ?? null;
@@ -174,6 +176,8 @@ export const FamilyPage: React.FC = () => {
 
   const canGoUp = visibleStartDepth > 0;
   const canGoDown = visibleStartDepth + MAX_VISIBLE_DEPTH <= treeMaxDepth;
+  const viewMenuOpen = Boolean(viewMenuEl);
+  const viewLabel = viewMode === 'tree' ? '树形' : viewMode === 'list' ? '列表' : '世代';
 
   return (
     <BoxAny sx={{ display: 'flex', flexDirection: 'column', height: '100vh', pt: '61px' }}>
@@ -398,7 +402,10 @@ export const FamilyPage: React.FC = () => {
         background: 'rgba(255,255,255,0.95)',
         px: 2, py: 1,
         display: 'flex', justifyContent: 'flex-end',
-        ...(isMobile ? { position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 20, px: 1, py: 0.5 } : {}),
+        ...(isMobile ? {
+          position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 20, px: 1, py: 1,
+          minHeight: 52, overflow: 'visible',
+        } : {}),
       }}>
         <BoxAny sx={{
           display: 'flex', alignItems: 'center', gap: 1,
@@ -446,7 +453,7 @@ export const FamilyPage: React.FC = () => {
             />
           )}
           <FormControl size="small" sx={isMobile ? { minWidth: 88, flexShrink: 0 } : { minWidth: 140 }} disabled={trees.length === 0}>
-            <InputLabel>家谱</InputLabel>
+            <InputLabel shrink sx={{ lineHeight: 1 }}>家谱</InputLabel>
             <Select
               label="家谱"
               value={selectedTreeId ?? ''}
@@ -456,22 +463,32 @@ export const FamilyPage: React.FC = () => {
             </Select>
           </FormControl>
 
-          <Tabs
-            value={viewMode}
-            onChange={(_, v) => setViewMode(v as ViewMode)}
-            textColor="primary"
-            indicatorColor="primary"
-            variant="standard"
+          <Button
+            size="small"
+            variant="outlined"
+            onClick={(event) => setViewMenuEl(event.currentTarget)}
+            endIcon={<ExpandMoreIcon />}
             sx={{
               minHeight: 28,
               ...(isMobile ? { flexShrink: 0 } : {}),
-              '& .MuiTab-root': { minHeight: 28, px: 0.5, py: 0, fontSize: 11, minWidth: 0 },
+              px: 1,
+              fontSize: 11,
             }}
           >
-            <Tab label="树形" value="tree" />
-            <Tab label="列表" value="list" />
-            <Tab label="世代" value="generation" />
-          </Tabs>
+            {viewLabel}
+          </Button>
+
+          <Menu
+            anchorEl={viewMenuEl}
+            open={viewMenuOpen}
+            onClose={() => setViewMenuEl(null)}
+            anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+            transformOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+          >
+            <MenuItem onClick={() => { setViewMode('tree'); setViewMenuEl(null); }}>树形</MenuItem>
+            <MenuItem onClick={() => { setViewMode('list'); setViewMenuEl(null); }}>列表</MenuItem>
+            <MenuItem onClick={() => { setViewMode('generation'); setViewMenuEl(null); }}>世代</MenuItem>
+          </Menu>
 
           {selectedTree && (
             <Typography variant="caption" color="text.secondary" sx={{ ml: 0.5, whiteSpace: 'nowrap', flexShrink: 0, fontSize: 10 }}>
