@@ -11,7 +11,7 @@ const TYPICAL_BOX_H = 78;
 const LEVEL_HEIGHT = STUB_LEN + TYPICAL_BOX_H + STUB_LEN + 32; // 150
 const BOX_Y_OFFSET = 0;
 const GEN_STRIP_W = 34;
-const NODE_STEP_MS = 20;
+const NODE_STEP_MS = 10;
 
 // ─── Colors (Right.md §13) ───
 const C = {
@@ -1276,9 +1276,12 @@ export const FamilyHisto = forwardRef<FamilyHistoHandle, Props>((props, ref) => 
         anchorX = Math.max(...highlightedVisible.map(n => n._x));
       }
     }
-    const initX = svgW - rightPadding - anchorX;
-    const initY = 40 + STUB_LEN;
-    const newTransform = d3.zoomIdentity.translate(initX, initY);
+    const hasPrevTransform = prevPosRef.current.size > 0;
+    const prevT = lastTransformRef.current;
+    const k = hasPrevTransform ? prevT.k : 1;
+    const initX = svgW - rightPadding - anchorX * k;
+    const initY = hasPrevTransform ? prevT.y : 40 + STUB_LEN;
+    const newTransform = d3.zoomIdentity.translate(initX, initY).scale(k);
 
     // Apply initial transform
     lastTransformRef.current = newTransform;
