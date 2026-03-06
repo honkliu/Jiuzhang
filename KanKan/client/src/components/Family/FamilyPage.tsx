@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   Box, Typography, CircularProgress, Alert, Select, MenuItem,
-  FormControl, InputLabel, Tabs, Tab, Divider,
+  FormControl, InputLabel, Tabs, Tab, Divider, Drawer,
   Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  TextField, Chip, Autocomplete,
+  TextField, Chip, Autocomplete, useMediaQuery, useTheme,
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -21,7 +21,7 @@ const BoxAny = Box as any;
 
 type ViewMode = 'tree' | 'list' | 'generation';
 
-const MAX_VISIBLE_DEPTH = 4;
+const MAX_VISIBLE_DEPTH = 3;
 
 function flattenTree(node: FamilyNode, result: FamilyNode[] = []): FamilyNode[] {
   result.push(node);
@@ -50,6 +50,8 @@ function getPersonTreeDepth(personId: string, allNodes: FamilyNode[]): number {
 }
 
 export const FamilyPage: React.FC = () => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [trees, setTrees] = useState<FamilyTreeDto[]>([]);
   const [selectedTreeId, setSelectedTreeId] = useState<string | null>(null);
   const [persons, setPersons] = useState<FamilyPersonDto[]>([]);
@@ -104,8 +106,19 @@ export const FamilyPage: React.FC = () => {
   }, []);
 
   const handleNodeRightClick = useCallback((node: FamilyNode, x: number, y: number) => {
-    setContextMenu({ node, x, y });
-  }, []);
+    if (isMobile) {
+      setSelectedPerson(node);
+      return;
+    }
+
+    const menuW = 200;
+    const menuH = 96;
+    const viewportW = typeof window !== 'undefined' ? window.innerWidth : x + menuW;
+    const viewportH = typeof window !== 'undefined' ? window.innerHeight : y + menuH;
+    const clampedX = Math.min(x, viewportW - menuW - 8);
+    const clampedY = Math.min(y, viewportH - menuH - 8);
+    setContextMenu({ node, x: Math.max(8, clampedX), y: Math.max(8, clampedY) });
+  }, [isMobile]);
 
   const handleCloseContextMenu = useCallback(() => setContextMenu(null), []);
 
@@ -254,7 +267,7 @@ export const FamilyPage: React.FC = () => {
         {!loading && !error && trees.length > 0 && (
           <>
             {/* Person detail panel — floating for tree mode */}
-            {selectedPerson && (
+            {selectedPerson && !isMobile && (
               <BoxAny sx={{
                 width: 300, flexShrink: 0, overflow: 'hidden',
                 borderRight: '1px solid rgba(15,23,42,0.08)',
@@ -272,6 +285,31 @@ export const FamilyPage: React.FC = () => {
                   onNavigate={navigateToPerson}
                 />
               </BoxAny>
+            )}
+
+            {isMobile && (
+              <Drawer
+                anchor="bottom"
+                open={Boolean(selectedPerson)}
+                onClose={() => setSelectedPerson(null)}
+                ModalProps={{ keepMounted: true }}
+                PaperProps={{
+                  sx: {
+                    borderTopLeftRadius: 16,
+                    borderTopRightRadius: 16,
+                    maxHeight: '80vh',
+                  },
+                }}
+              >
+                <FamilyPersonPanel
+                  person={selectedPerson}
+                  tree={selectedTree}
+                  allPersons={allNodes}
+                  onClose={() => setSelectedPerson(null)}
+                  onNavigate={navigateToPerson}
+                  fullWidth
+                />
+              </Drawer>
             )}
 
             {viewMode === 'tree' && (
@@ -412,7 +450,7 @@ export const FamilyPage: React.FC = () => {
         )}
       </BoxAny>
 
-      {contextMenu && (
+      {contextMenu && !isMobile && (
         <FamilyNodeContextMenu
           x={contextMenu.x}
           y={contextMenu.y}

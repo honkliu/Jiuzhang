@@ -13,6 +13,7 @@ interface Props {
   allPersons: FamilyNode[];
   onClose: () => void;
   onNavigate: (personId: string) => void;
+  fullWidth?: boolean;
 }
 
 function formatDate(d?: { year: number; month?: number; day?: number }) {
@@ -40,7 +41,9 @@ const PersonLink: React.FC<{ node: FamilyNode; onNavigate: (id: string) => void;
   </Link>
 );
 
-export const FamilyPersonPanel: React.FC<Props> = ({ person, tree, allPersons, onClose, onNavigate }) => {
+export const FamilyPersonPanel: React.FC<Props> = ({
+  person, tree, allPersons, onClose, onNavigate, fullWidth = false,
+}) => {
   if (!person) return null;
 
   const rootGen = tree?.rootGeneration ?? 1;
@@ -57,12 +60,12 @@ export const FamilyPersonPanel: React.FC<Props> = ({ person, tree, allPersons, o
     <Paper
       elevation={3}
       sx={{
-        width: 300,
+        width: fullWidth ? '100%' : 300,
         height: '100%',
         overflowY: 'auto',
         display: 'flex',
         flexDirection: 'column',
-        borderRadius: 0,
+        borderRadius: fullWidth ? 2 : 0,
         p: 0,
       }}
     >
