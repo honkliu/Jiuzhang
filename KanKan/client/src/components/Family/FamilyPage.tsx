@@ -398,12 +398,12 @@ export const FamilyPage: React.FC = () => {
         background: 'rgba(255,255,255,0.95)',
         px: 2, py: 1,
         display: 'flex', justifyContent: 'flex-end',
-        ...(isMobile ? { position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 20 } : {}),
+        ...(isMobile ? { position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 20, px: 1, py: 0.5 } : {}),
       }}>
         <BoxAny sx={{
           display: 'flex', alignItems: 'center', gap: 1,
           flexWrap: 'wrap', justifyContent: 'flex-end',
-          ...(isMobile ? { width: '100%' } : {}),
+          ...(isMobile ? { width: '100%', flexWrap: 'nowrap', gap: 0.5 } : {}),
         }}>
           {allNodes.length > 0 && (
             <Autocomplete
@@ -419,22 +419,26 @@ export const FamilyPage: React.FC = () => {
                   : []
               }
               onChange={handleSearchSelect}
+              forcePopupIcon={!isMobile}
+              popupIcon={isMobile ? null : undefined}
+              disableClearable={isMobile}
               renderInput={(params) => (
                 <TextField
                   {...params}
                   placeholder="搜索人名…"
                   InputProps={{
                     ...params.InputProps,
+                    endAdornment: isMobile ? null : params.InputProps.endAdornment,
                     startAdornment: <SearchIcon sx={{ fontSize: 16, color: 'text.secondary', mr: 0.5 }} />,
                   }}
                 />
               )}
-              sx={isMobile ? { width: 120 } : { width: 200 }}
+              sx={isMobile ? { width: 120, flexShrink: 0 } : { width: 200 }}
               clearOnBlur
               blurOnSelect
             />
           )}
-          <FormControl size="small" sx={isMobile ? { width: '100%' } : { minWidth: 140 }} disabled={trees.length === 0}>
+          <FormControl size="small" sx={isMobile ? { minWidth: 88, flexShrink: 0 } : { minWidth: 140 }} disabled={trees.length === 0}>
             <InputLabel>家谱</InputLabel>
             <Select
               label="家谱"
@@ -450,9 +454,12 @@ export const FamilyPage: React.FC = () => {
             onChange={(_, v) => setViewMode(v as ViewMode)}
             textColor="primary"
             indicatorColor="primary"
-            variant={isMobile ? 'scrollable' : 'standard'}
-            allowScrollButtonsMobile
-            sx={{ minHeight: 32, '& .MuiTab-root': { minHeight: 32, px: 1, py: 0, fontSize: 12 } }}
+            variant="standard"
+            sx={{
+              minHeight: 28,
+              ...(isMobile ? { flexShrink: 0 } : {}),
+              '& .MuiTab-root': { minHeight: 28, px: 0.5, py: 0, fontSize: 11, minWidth: 0 },
+            }}
           >
             <Tab label="树形" value="tree" />
             <Tab label="列表" value="list" />
@@ -460,7 +467,7 @@ export const FamilyPage: React.FC = () => {
           </Tabs>
 
           {selectedTree && (
-            <Typography variant="caption" color="text.secondary" sx={{ ml: 0.5 }}>
+            <Typography variant="caption" color="text.secondary" sx={{ ml: 0.5, whiteSpace: 'nowrap', flexShrink: 0, fontSize: 10 }}>
               {selectedTree.surname ? `${selectedTree.surname}氏` : ''} · 共{persons.length}人 · {generations.length}代
             </Typography>
           )}
