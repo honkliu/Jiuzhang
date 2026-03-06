@@ -403,7 +403,14 @@ export const FamilyPage: React.FC = () => {
         <BoxAny sx={{
           display: 'flex', alignItems: 'center', gap: 1,
           flexWrap: 'wrap', justifyContent: 'flex-end',
-          ...(isMobile ? { width: '100%', flexWrap: 'nowrap', gap: 0.5 } : {}),
+          ...(isMobile ? {
+            width: '100%',
+            flexWrap: 'nowrap',
+            gap: 0.5,
+            justifyContent: 'flex-start',
+            overflowX: 'auto',
+            WebkitOverflowScrolling: 'touch',
+          } : {}),
         }}>
           {allNodes.length > 0 && (
             <Autocomplete
