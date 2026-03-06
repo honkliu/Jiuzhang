@@ -434,7 +434,7 @@ export const FamilyPage: React.FC = () => {
                       }}
                     />
                   )}
-                  sx={{ flex: 1 }}
+                  sx={{ width: 120 }}
                   clearOnBlur
                   blurOnSelect
                 />
@@ -479,7 +479,7 @@ export const FamilyPage: React.FC = () => {
                       }}
                     />
                   )}
-                  sx={isMobile ? { width: '100%' } : { width: 200 }}
+                  sx={isMobile ? { width: 120 } : { width: 200 }}
                   clearOnBlur
                   blurOnSelect
                 />
