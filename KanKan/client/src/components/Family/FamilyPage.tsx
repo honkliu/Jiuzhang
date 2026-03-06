@@ -296,7 +296,7 @@ export const FamilyPage: React.FC = () => {
             )}
 
             {viewMode === 'list' && (
-              <BoxAny sx={{ flex: 1, overflow: 'auto', p: 2 }}>
+              <BoxAny sx={{ flex: 1, overflow: 'auto', p: 2, pb: isMobile ? 10 : 2 }}>
                 <TextField
                   size="small"
                   placeholder="搜索姓名或别名…"
@@ -352,7 +352,7 @@ export const FamilyPage: React.FC = () => {
             )}
 
             {viewMode === 'generation' && (
-              <BoxAny sx={{ flex: 1, overflow: 'auto', p: 2 }}>
+              <BoxAny sx={{ flex: 1, overflow: 'auto', p: 2, pb: isMobile ? 10 : 2 }}>
                 {generations.map(gen => (
                   <BoxAny key={gen} sx={{ mb: 2 }}>
                     <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.75 }}>
@@ -401,6 +401,7 @@ export const FamilyPage: React.FC = () => {
         background: 'rgba(255,255,255,0.95)',
         px: 2, py: 1,
         display: 'flex', justifyContent: 'flex-end',
+        ...(isMobile ? { position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 20 } : {}),
       }}>
         <BoxAny sx={{
           display: 'flex', alignItems: 'center', gap: 1,
