@@ -453,13 +453,17 @@ export const FamilyPage: React.FC = () => {
             />
           )}
           <FormControl size="small" sx={isMobile ? { minWidth: 88, flexShrink: 0 } : { minWidth: 140 }} disabled={trees.length === 0}>
-            <InputLabel shrink sx={{ lineHeight: 1 }}>家谱</InputLabel>
+            <InputLabel shrink sx={{ lineHeight: 1, fontSize: 11 }}>家谱</InputLabel>
             <Select
               label="家谱"
               value={selectedTreeId ?? ''}
               onChange={e => setSelectedTreeId(e.target.value as string)}
             >
-              {trees.map(t => <MenuItem key={t.id} value={t.id}>{t.name}</MenuItem>)}
+              {trees.map(t => (
+                <MenuItem key={t.id} value={t.id} sx={{ fontSize: 12 }}>
+                  {t.name}
+                </MenuItem>
+              ))}
             </Select>
           </FormControl>
 
