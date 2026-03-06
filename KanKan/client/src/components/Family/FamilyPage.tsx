@@ -452,10 +452,12 @@ export const FamilyPage: React.FC = () => {
               blurOnSelect
             />
           )}
-          <FormControl size="small" sx={isMobile ? { minWidth: 88, flexShrink: 0 } : { minWidth: 140 }} disabled={trees.length === 0}>
-            <InputLabel shrink sx={{ lineHeight: 1, fontSize: 11 }}>家谱</InputLabel>
+          <FormControl
+            size="small"
+            sx={isMobile ? { minWidth: 88, flexShrink: 0 } : { minWidth: 140 }}
+            disabled={trees.length === 0}
+          >
             <Select
-              label="家谱"
               value={selectedTreeId ?? ''}
               onChange={e => setSelectedTreeId(e.target.value as string)}
             >
