@@ -10,14 +10,17 @@ import {
   Popover,
   CircularProgress,
   Box,
+  Chip,
   TextField,
   useMediaQuery,
   useTheme,
 } from '@mui/material';
-import { AutoAwesome as MagicIcon } from '@mui/icons-material';
+import { AutoAwesome as MagicIcon, LibraryBooks as LibraryBooksIcon } from '@mui/icons-material';
 import { avatarService, type EmotionFullResult, type EmotionThumbnailResult } from '@/services/avatar.service';
 import { imageGenerationService } from '@/services/imageGeneration.service';
 import { ImageHoverPreview } from '@/components/Shared/ImageHoverPreview';
+import { AvatarQuickPicker } from '@/components/Avatar/AvatarQuickPicker';
+import { PromptComposer, type SelectedPrompt } from '@/components/Avatar/PromptComposer';
 import { useLanguage } from '@/i18n/LanguageContext';
 
 const BoxAny = Box as any;
@@ -36,7 +39,7 @@ interface EmotionAvatarGalleryProps {
 }
 
 export const EmotionAvatarGallery: React.FC<EmotionAvatarGalleryProps> = ({ userId, avatarId }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
@@ -60,6 +63,8 @@ export const EmotionAvatarGallery: React.FC<EmotionAvatarGalleryProps> = ({ user
   const [fullById, setFullById] = useState<Map<string, string>>(new Map());
   const [promptValue, setPromptValue] = useState('');
   const [helpAnchorEl, setHelpAnchorEl] = useState<HTMLElement | null>(null);
+  const [composerOpen, setComposerOpen] = useState(false);
+  const [selectedPrompts, setSelectedPrompts] = useState<SelectedPrompt[]>([]);
 
   const helpOpen = Boolean(helpAnchorEl);
   const helpId = helpOpen ? 'emotion-prompt-help' : undefined;
@@ -210,36 +215,24 @@ export const EmotionAvatarGallery: React.FC<EmotionAvatarGalleryProps> = ({ user
             if (replacedId) {
               nextMap.delete(replacedId);
             }
-            nextMap.set(newAvatarId, '');
+            // Clear cached entry so the popup uses the fresh server URL
+            nextMap.delete(newAvatarId);
             return nextMap;
           });
 
-          const cachedFull = _fullCache.get(targetAvatarId);
-          if (cachedFull) {
-            let fullReplaced = false;
-            const nextFull = cachedFull.map((item) => {
-              if ((item.emotion || '').toLowerCase() === normalized) {
-                fullReplaced = true;
-                return {
-                  ...item,
-                  avatarImageId: newAvatarId,
-                  emotion,
-                  imageUrl: nextImageUrl,
-                  fullImageDataUrl: null,
-                };
+          // Invalidate full cache so next load fetches fresh data including the new emotion
+          _fullCache.delete(targetAvatarId);
+          _fullInFlight.delete(targetAvatarId);
+
+          // Background re-fetch full-res images so popup shows the updated image
+          avatarService.getEmotionThumbnailsFull(targetAvatarId)
+            .then((items) => {
+              _fullCache.set(targetAvatarId, items);
+              if (avatarIdRef.current === targetAvatarId) {
+                setFullById(new Map(items.map((item) => [item.avatarImageId, item.fullImageDataUrl || ''])));
               }
-              return item;
-            });
-            if (!fullReplaced) {
-              nextFull.push({
-                avatarImageId: newAvatarId,
-                emotion,
-                imageUrl: nextImageUrl,
-                fullImageDataUrl: null,
-              });
-            }
-            _fullCache.set(targetAvatarId, nextFull);
-          }
+            })
+            .catch(() => { /* ignore */ });
 
         } else {
           // Fallback: refresh all thumbnails if the job doesn't return an id.
@@ -291,7 +284,13 @@ export const EmotionAvatarGallery: React.FC<EmotionAvatarGalleryProps> = ({ user
   };
 
   const handlePromptSubmit = async (emotion?: string) => {
-    const extraPrompt = promptValue.trim();
+    const parts: string[] = [];
+    const typed = promptValue.trim();
+    if (typed) parts.push(typed);
+    for (const sp of selectedPrompts) {
+      parts.push(language === 'zh' ? sp.zh : sp.en);
+    }
+    const extraPrompt = parts.join(', ');
     if (emotion) {
       await handleGenerateEmotion(emotion, extraPrompt);
       return;
@@ -348,7 +347,7 @@ export const EmotionAvatarGallery: React.FC<EmotionAvatarGalleryProps> = ({ user
           display: 'flex',
           alignItems: 'center',
           gap: 1,
-          mb: 1,
+          mb: 0.5,
         }}
       >
         <TextField
@@ -360,7 +359,47 @@ export const EmotionAvatarGallery: React.FC<EmotionAvatarGalleryProps> = ({ user
           value={promptValue}
           onChange={(e) => setPromptValue(e.target.value)}
         />
+        <IconButton
+          size="small"
+          title={t('promptComposer.browsePrompts')}
+          onClick={() => setComposerOpen(true)}
+        >
+          <LibraryBooksIcon fontSize="small" />
+        </IconButton>
       </BoxAny>
+
+      <AvatarQuickPicker
+        selectedKeys={new Set(selectedPrompts.map((p) => p.key))}
+        onSelect={(sp) => setSelectedPrompts((prev) => [...prev, sp])}
+        onDeselect={(key) => setSelectedPrompts((prev) => prev.filter((p) => p.key !== key))}
+      />
+
+      {selectedPrompts.length > 0 && (
+        <BoxAny sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 1 }}>
+          {selectedPrompts.map((sp) => (
+            <Chip
+              key={sp.key}
+              label={language === 'zh' ? sp.zh : sp.en}
+              size="small"
+              onDelete={() => setSelectedPrompts((prev) => prev.filter((p) => p.key !== sp.key))}
+              sx={{ maxWidth: 220, fontSize: '0.7rem' }}
+            />
+          ))}
+        </BoxAny>
+      )}
+
+      <PromptComposer
+        open={composerOpen}
+        onClose={() => setComposerOpen(false)}
+        onApply={(prompts) => {
+          setSelectedPrompts((prev) => {
+            const existing = new Set(prev.map((p) => p.key));
+            const added = prompts.filter((p) => !existing.has(p.key));
+            return [...prev, ...added];
+          });
+          setComposerOpen(false);
+        }}
+      />
 
       {error && (
         <Typography color="error" sx={{ mb: '6px' }}>

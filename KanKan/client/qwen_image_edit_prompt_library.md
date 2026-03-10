@@ -1,0 +1,3808 @@
+# Qwen-Image-Edit Comprehensive Prompt Library / 通义千问图片编辑提示词大全
+
+> **3,600+ bilingual copy-paste-ready prompts** for Qwen-Image-Edit (2509/2511)
+> GitHub: [QwenLM/Qwen-Image](https://github.com/QwenLM/Qwen-Image) | HuggingFace: [Qwen/Qwen-Image-Edit-2511](https://huggingface.co/Qwen/Qwen-Image-Edit-2511)
+
+---
+
+## Quick Reference / 快速参考
+
+| Parameter | Editing | Generation | Description |
+|-----------|:------:|:----------:|-------------|
+| `num_inference_steps` | 40 | 50 | Inference steps |
+| `true_cfg_scale` | 4.0 | 4.0 | CFG scale |
+| `guidance_scale` | 1.0 | 1.0 | Guidance |
+| `negative_prompt` | `" "` | `" "` | Must be a space |
+
+---
+
+
+# Part 1: Clothing & Fashion / 服装与时尚
+
+
+> **Total entries: 1500+** | Generated for comprehensive coverage of all clothing subcategories.
+
+---
+
+## Section 1: Tops (Entries 1-220)
+
+| # | English Prompt | 中文提示词 | Category | Config Notes |
+|---|---------------|-----------|----------|--------------|
+| 1 | Change the top to a white crew neck cotton t-shirt | 将上衣换成白色圆领纯棉T恤 | Tops / T-shirt | steps=40, cfg=4.0 |
+| 2 | Replace the shirt with a black V-neck t-shirt | 将衬衫换成黑色V领T恤 | Tops / T-shirt | steps=40, cfg=4.0 |
+| 3 | Change to a heather gray henley t-shirt with three buttons | 换成浅灰色三扣亨利领T恤 | Tops / T-shirt | steps=40, cfg=4.0 |
+| 4 | Replace the top with an oversized beige drop-shoulder t-shirt | 将上衣换成米色落肩宽松T恤 | Tops / T-shirt | steps=40, cfg=4.5 |
+| 5 | Change to a white crop top t-shirt showing midriff | 换成露脐白色短款T恤 | Tops / T-shirt | steps=40, cfg=4.0, works best with full-body shot |
+| 6 | Replace with a navy blue graphic tee featuring a vintage band logo | 换成印有复古乐队标志的深蓝色图案T恤 | Tops / T-shirt | steps=45, cfg=4.5 |
+| 7 | Change the top to a burgundy crew neck t-shirt with rolled sleeves | 将上衣换成酒红色卷袖圆领T恤 | Tops / T-shirt | steps=40, cfg=4.0 |
+| 8 | Replace with a striped navy and white Breton-style t-shirt | 换成海军蓝白条纹布列塔尼风格T恤 | Tops / T-shirt | steps=40, cfg=4.5 |
+| 9 | Change to a dusty pink V-neck t-shirt in soft jersey | 换成烟粉色柔软针织V领T恤 | Tops / T-shirt | steps=40, cfg=4.0 |
+| 10 | Replace the top with an olive green pocket t-shirt | 将上衣换成橄榄绿口袋T恤 | Tops / T-shirt | steps=40, cfg=4.0 |
+| 11 | Change to a tie-dye blue and purple oversized t-shirt | 换成蓝紫色扎染宽松T恤 | Tops / T-shirt | steps=45, cfg=4.5 |
+| 12 | Replace with a mustard yellow crew neck t-shirt | 换成芥末黄圆领T恤 | Tops / T-shirt | steps=40, cfg=4.0 |
+| 13 | Change the shirt to a classic white polo shirt with navy collar | 将衬衫换成经典白色带深蓝领的Polo衫 | Tops / Polo | steps=40, cfg=4.0 |
+| 14 | Replace with a forest green slim-fit polo shirt | 换成森林绿修身Polo衫 | Tops / Polo | steps=40, cfg=4.0 |
+| 15 | Change to a long-sleeve navy blue polo shirt | 换成深蓝色长袖Polo衫 | Tops / Polo | steps=40, cfg=4.0 |
+| 16 | Replace the top with a coral pink pique polo shirt | 将上衣换成珊瑚粉珠地棉Polo衫 | Tops / Polo | steps=40, cfg=4.0 |
+| 17 | Change to a burgundy polo shirt with contrasting white piping | 换成酒红色带白色滚边的Polo衫 | Tops / Polo | steps=40, cfg=4.0 |
+| 18 | Replace with a striped sky blue and white polo shirt | 换成天蓝白条纹Polo衫 | Tops / Polo | steps=40, cfg=4.0 |
+| 19 | Change to a black slim-fit polo with a mandarin collar | 换成黑色立领修身Polo衫 | Tops / Polo | steps=40, cfg=4.0 |
+| 20 | Replace the shirt with a crisp white cotton dress shirt with French cuffs | 将衬衫换成带法式袖口的白色纯棉正装衬衫 | Tops / Dress Shirt | steps=40, cfg=4.0 |
+| 21 | Change to a light blue pinpoint oxford dress shirt | 换成浅蓝色牛津纺正装衬衫 | Tops / Dress Shirt | steps=40, cfg=4.0 |
+| 22 | Replace with a blue and white Bengal-striped dress shirt | 换成蓝白孟加拉条纹正装衬衫 | Tops / Dress Shirt | steps=40, cfg=4.5 |
+| 23 | Change the top to a pale pink checkered dress shirt with spread collar | 将上衣换成粉色格纹宽角领正装衬衫 | Tops / Dress Shirt | steps=40, cfg=4.0 |
+| 24 | Replace with a white dress shirt with button-down collar | 换成白色纽扣领正装衬衫 | Tops / Dress Shirt | steps=40, cfg=4.0 |
+| 25 | Change to a lavender micro-check dress shirt | 换成薰衣草色细格纹正装衬衫 | Tops / Dress Shirt | steps=40, cfg=4.0 |
+| 26 | Replace the shirt with a charcoal gray herringbone dress shirt | 将衬衫换成碳灰色人字纹正装衬衫 | Tops / Dress Shirt | steps=40, cfg=4.0 |
+| 27 | Change to a white dress shirt with a wingtip collar for tuxedo | 换成搭配晚礼服的翼领白色正装衬衫 | Tops / Dress Shirt | steps=40, cfg=4.0 |
+| 28 | Replace with an ecru linen dress shirt with a camp collar | 换成米白色亚麻古巴领衬衫 | Tops / Dress Shirt | steps=40, cfg=4.0 |
+| 29 | Change to a mint green end-on-end dress shirt | 换成薄荷绿色平纹正装衬衫 | Tops / Dress Shirt | steps=40, cfg=4.0 |
+| 30 | Replace the top with an ivory silk blouse with a pussy-bow tie | 将上衣换成象牙白丝绸蝴蝶结系带衬衫 | Tops / Blouse | steps=45, cfg=4.5 |
+| 31 | Change to a dusty rose chiffon blouse with ruffle front | 换成玫瑰粉色雪纺荷叶边衬衫 | Tops / Blouse | steps=45, cfg=4.5 |
+| 32 | Replace with a black wrap blouse with a V-neckline | 换成黑色V领裹身衬衫 | Tops / Blouse | steps=40, cfg=4.0 |
+| 33 | Change the top to a white peplum blouse with short sleeves | 将上衣换成白色短袖荷叶下摆衬衫 | Tops / Blouse | steps=40, cfg=4.5 |
+| 34 | Replace with a sage green peasant blouse with embroidered neckline | 换成鼠尾草绿色刺绣领口田园风衬衫 | Tops / Blouse | steps=45, cfg=4.5 |
+| 35 | Change to a cream silk blouse with pearl button detail | 换成奶油色丝绸珍珠扣衬衫 | Tops / Blouse | steps=45, cfg=4.5 |
+| 36 | Replace the top with a navy chiffon blouse with bishop sleeves | 将上衣换成深蓝色雪纺灯笼袖衬衫 | Tops / Blouse | steps=45, cfg=4.5 |
+| 37 | Change to a floral print ruffle blouse in soft pink tones | 换成柔粉色调碎花荷叶边衬衫 | Tops / Blouse | steps=45, cfg=4.5 |
+| 38 | Replace with a lavender satin blouse with draped front | 换成薰衣草色缎面垂褶前身衬衫 | Tops / Blouse | steps=45, cfg=4.5 |
+| 39 | Change the top to a white eyelet cotton blouse | 将上衣换成白色镂空刺绣棉衬衫 | Tops / Blouse | steps=40, cfg=4.0 |
+| 40 | Replace with a polka-dot black and white blouse | 换成黑白波点衬衫 | Tops / Blouse | steps=40, cfg=4.5 |
+| 41 | Change to a camel cashmere crewneck sweater | 换成驼色羊绒圆领毛衣 | Tops / Sweater | steps=40, cfg=4.0 |
+| 42 | Replace the top with a charcoal gray turtleneck sweater | 将上衣换成碳灰色高领毛衣 | Tops / Sweater | steps=40, cfg=4.0 |
+| 43 | Change to an ivory cable-knit fisherman sweater | 换成象牙白色麻花编织渔夫毛衣 | Tops / Sweater | steps=45, cfg=4.5 |
+| 44 | Replace with a navy blue merino wool V-neck sweater | 换成海军蓝美利奴羊毛V领毛衣 | Tops / Sweater | steps=40, cfg=4.0 |
+| 45 | Change the top to a burgundy cardigan with gold buttons | 将上衣换成酒红色金扣开衫 | Tops / Sweater | steps=40, cfg=4.5 |
+| 46 | Replace with a chunky oatmeal-colored oversized knit sweater | 换成燕麦色粗针宽松毛衣 | Tops / Sweater | steps=45, cfg=4.5 |
+| 47 | Change to a black cashmere turtleneck fitted sweater | 换成黑色修身羊绒高领毛衣 | Tops / Sweater | steps=40, cfg=4.0 |
+| 48 | Replace the top with a forest green mohair sweater | 将上衣换成森林绿安哥拉羊毛衣 | Tops / Sweater | steps=40, cfg=4.0 |
+| 49 | Change to a cream-colored cropped cardigan with pearl buttons | 换成奶油色珍珠扣短款开衫 | Tops / Sweater | steps=40, cfg=4.5 |
+| 50 | Replace with a Fair Isle patterned sweater in red and cream | 换成红色和奶油色费尔岛图案毛衣 | Tops / Sweater | steps=45, cfg=4.5 |
+| 51 | Change the top to a heather gray cotton pullover hoodie | 将上衣换成浅灰色纯棉套头连帽衫 | Tops / Hoodie | steps=40, cfg=4.0 |
+| 52 | Replace with a black zip-up hoodie with white drawstrings | 换成黑色白色抽绳拉链连帽衫 | Tops / Hoodie | steps=40, cfg=4.0 |
+| 53 | Change to a cropped sage green hoodie | 换成鼠尾草绿短款连帽衫 | Tops / Hoodie | steps=40, cfg=4.0 |
+| 54 | Replace the top with a navy blue fleece-lined pullover hoodie | 将上衣换成深蓝色抓绒内衬套头连帽衫 | Tops / Hoodie | steps=40, cfg=4.0 |
+| 55 | Change to an oversized cream terry cloth hoodie | 换成超大版型奶油色毛巾布连帽衫 | Tops / Hoodie | steps=40, cfg=4.0 |
+| 56 | Replace with a tie-dye pastel pink and blue hoodie | 换成粉蓝色渐变扎染连帽衫 | Tops / Hoodie | steps=45, cfg=4.5 |
+| 57 | Change the top to a white ribbed tank top | 将上衣换成白色螺纹背心 | Tops / Tank Top | steps=40, cfg=4.0 |
+| 58 | Replace with a black satin camisole with lace trim | 换成黑色蕾丝边缎面吊带衫 | Tops / Camisole | steps=40, cfg=4.5 |
+| 59 | Change to a red strapless tube top | 换成红色无肩带抹胸上衣 | Tops / Tube Top | steps=40, cfg=4.0 |
+| 60 | Replace the top with a white off-shoulder ruched blouse | 将上衣换成白色褶皱一字肩上衣 | Tops / Off-shoulder | steps=40, cfg=4.5 |
+| 61 | Change to a coral halter top with a keyhole neckline | 换成珊瑚色挂脖锁孔领上衣 | Tops / Halter | steps=40, cfg=4.0 |
+| 62 | Replace with a chambray button-down shirt with chest pockets | 换成带胸袋的牛仔布纽扣衬衫 | Tops / Button-down | steps=40, cfg=4.0 |
+| 63 | Change the top to a red and black plaid flannel shirt | 将上衣换成红黑格纹法兰绒衬衫 | Tops / Flannel | steps=40, cfg=4.0 |
+| 64 | Replace with a medium-wash denim shirt with snap buttons | 换成中色水洗按扣牛仔衬衫 | Tops / Denim Shirt | steps=40, cfg=4.0 |
+| 65 | Change to a white linen shirt with a relaxed fit | 换成白色宽松亚麻衬衫 | Tops / Linen Shirt | steps=40, cfg=4.0 |
+| 66 | Replace the top with a tropical print Hawaiian shirt | 将上衣换成热带印花夏威夷衬衫 | Tops / Hawaiian | steps=45, cfg=4.5 |
+| 67 | Change to a dark green V-neck t-shirt in modal fabric | 换成深绿色莫代尔V领T恤 | Tops / T-shirt | steps=40, cfg=4.0 |
+| 68 | Replace with a vintage-wash charcoal graphic tee with skull design | 换成复古做旧碳灰色骷髅图案T恤 | Tops / T-shirt | steps=45, cfg=4.5 |
+| 69 | Change the top to a coral crew neck t-shirt with small chest logo | 将上衣换成珊瑚色胸口小标志圆领T恤 | Tops / T-shirt | steps=40, cfg=4.0 |
+| 70 | Replace with a stone-washed light gray oversized t-shirt | 换成石洗浅灰色宽松T恤 | Tops / T-shirt | steps=40, cfg=4.0 |
+| 71 | Change to a black and gold metallic t-shirt | 换成黑色金属光泽金色T恤 | Tops / T-shirt | steps=45, cfg=4.5 |
+| 72 | Replace the top with a deep plum V-neck bamboo fiber t-shirt | 将上衣换成深紫红色竹纤维V领T恤 | Tops / T-shirt | steps=40, cfg=4.0 |
+| 73 | Change to a white crop top t-shirt with rainbow stripe detail | 换成白色彩虹条纹细节短款T恤 | Tops / T-shirt | steps=40, cfg=4.5 |
+| 74 | Replace with a rust orange henley long-sleeve t-shirt | 换成铁锈橘色长袖亨利领T恤 | Tops / T-shirt | steps=40, cfg=4.0 |
+| 75 | Change the top to a teal green moisture-wicking performance t-shirt | 将上衣换成蓝绿色吸湿排汗运动T恤 | Tops / T-shirt | steps=40, cfg=4.0 |
+| 76 | Replace with a cream-colored linen blend relaxed t-shirt | 换成奶油色亚麻混纺宽松T恤 | Tops / T-shirt | steps=40, cfg=4.0 |
+| 77 | Change to a red polo shirt with navy blue horse embroidery | 换成红色带深蓝马刺绣的Polo衫 | Tops / Polo | steps=40, cfg=4.5 |
+| 78 | Replace the top with a yellow slim-fit polo with tipped collar | 将上衣换成黄色撞色领修身Polo衫 | Tops / Polo | steps=40, cfg=4.0 |
+| 79 | Change to a gray marl pique knit polo shirt | 换成灰色混色珠地针织Polo衫 | Tops / Polo | steps=40, cfg=4.0 |
+| 80 | Replace with a lilac linen-blend polo with short sleeves | 换成丁香紫亚麻混纺短袖Polo衫 | Tops / Polo | steps=40, cfg=4.0 |
+| 81 | Change the top to a khaki performance polo with moisture-wicking | 将上衣换成卡其色排汗功能性Polo衫 | Tops / Polo | steps=40, cfg=4.0 |
+| 82 | Replace with a deep teal silk dress shirt with mother-of-pearl buttons | 换成深青色丝绸贝母扣正装衬衫 | Tops / Dress Shirt | steps=45, cfg=4.5 |
+| 83 | Change to a white cotton sateen dress shirt with a tab collar | 换成白色棉质缎面搭扣领正装衬衫 | Tops / Dress Shirt | steps=40, cfg=4.0 |
+| 84 | Replace the top with a baby blue gingham check dress shirt | 将上衣换成浅蓝色小方格正装衬衫 | Tops / Dress Shirt | steps=40, cfg=4.5 |
+| 85 | Change to a white twill dress shirt with a cutaway collar | 换成白色斜纹布敞角领正装衬衫 | Tops / Dress Shirt | steps=40, cfg=4.0 |
+| 86 | Replace with a soft pink royal oxford dress shirt | 换成柔粉色皇家牛津正装衬衫 | Tops / Dress Shirt | steps=40, cfg=4.0 |
+| 87 | Change the top to a mauve silk blouse with tie-front detail | 将上衣换成淡紫色丝绸前系带衬衫 | Tops / Blouse | steps=45, cfg=4.5 |
+| 88 | Replace with a white organza blouse with balloon sleeves | 换成白色欧根纱泡泡袖衬衫 | Tops / Blouse | steps=45, cfg=4.5 |
+| 89 | Change to a leopard print satin blouse with a notched collar | 换成豹纹缎面翻领衬衫 | Tops / Blouse | steps=45, cfg=4.5 |
+| 90 | Replace the top with a powder blue pin-tucked cotton blouse | 将上衣换成粉蓝色细褶棉布衬衫 | Tops / Blouse | steps=40, cfg=4.0 |
+| 91 | Change to a coral chiffon wrap blouse with flutter sleeves | 换成珊瑚色雪纺飘袖裹身衬衫 | Tops / Blouse | steps=45, cfg=4.5 |
+| 92 | Replace with a cream victorian-style blouse with high lace collar | 换成奶油色维多利亚风格高领蕾丝衬衫 | Tops / Blouse | steps=45, cfg=4.5 |
+| 93 | Change the top to a black silk blouse with gold chain neck detail | 将上衣换成黑色丝绸金链领口衬衫 | Tops / Blouse | steps=45, cfg=4.5 |
+| 94 | Replace with a striped blue and cream linen blouse | 换成蓝色奶油色条纹亚麻衬衫 | Tops / Blouse | steps=40, cfg=4.0 |
+| 95 | Change to a maroon ribbed knit mock-neck sweater | 换成栗色罗纹针织半高领毛衣 | Tops / Sweater | steps=40, cfg=4.0 |
+| 96 | Replace the top with a dove gray cashmere wrap sweater | 将上衣换成鸽灰色羊绒裹身毛衣 | Tops / Sweater | steps=40, cfg=4.5 |
+| 97 | Change to a mustard yellow chunky cable-knit turtleneck | 换成芥末黄色粗线麻花高领毛衣 | Tops / Sweater | steps=45, cfg=4.5 |
+| 98 | Replace with a cream and brown argyle pattern sweater vest | 换成奶油色棕色菱形格纹毛衣背心 | Tops / Sweater | steps=40, cfg=4.5 |
+| 99 | Change the top to a soft pink angora blend pullover sweater | 将上衣换成柔粉色安哥拉混纺套头毛衣 | Tops / Sweater | steps=40, cfg=4.0 |
+| 100 | Replace with a hunter green shawl-collar cardigan | 换成猎人绿青果领开衫 | Tops / Sweater | steps=40, cfg=4.0 |
+| 101 | Change to a lavender lightweight cotton crewneck sweater | 换成薰衣草色轻薄棉质圆领毛衣 | Tops / Sweater | steps=40, cfg=4.0 |
+| 102 | Replace the top with a rust-colored waffle-knit thermal henley | 将上衣换成铁锈色华夫格针织亨利热力衫 | Tops / Sweater | steps=40, cfg=4.0 |
+| 103 | Change to a black and white color-block sweater | 换成黑白拼色毛衣 | Tops / Sweater | steps=40, cfg=4.0 |
+| 104 | Replace with a taupe alpaca wool oversized turtleneck | 换成灰褐色羊驼毛宽松高领毛衣 | Tops / Sweater | steps=45, cfg=4.5 |
+| 105 | Change the top to a wine red zip-up hoodie with fleece lining | 将上衣换成酒红色抓绒内衬拉链连帽衫 | Tops / Hoodie | steps=40, cfg=4.0 |
+| 106 | Replace with a washed-out pale blue vintage hoodie | 换成褪色浅蓝复古连帽衫 | Tops / Hoodie | steps=40, cfg=4.0 |
+| 107 | Change to a forest green heavyweight pullover hoodie | 换成森林绿重磅套头连帽衫 | Tops / Hoodie | steps=40, cfg=4.0 |
+| 108 | Replace the top with a lilac cropped zip hoodie with thumb holes | 将上衣换成丁香紫带指洞短款拉链连帽衫 | Tops / Hoodie | steps=40, cfg=4.5 |
+| 109 | Change to a charcoal acid-wash hoodie with kangaroo pocket | 换成碳灰色酸洗袋鼠口袋连帽衫 | Tops / Hoodie | steps=40, cfg=4.0 |
+| 110 | Replace with a military green ribbed tank top | 换成军绿色螺纹背心 | Tops / Tank Top | steps=40, cfg=4.0 |
+| 111 | Change the top to a blush pink silk camisole with spaghetti straps | 将上衣换成腮红粉丝绸细肩带吊带衫 | Tops / Camisole | steps=40, cfg=4.0 |
+| 112 | Replace with a burgundy velvet tube top with ruching | 换成酒红色丝绒褶皱抹胸上衣 | Tops / Tube Top | steps=40, cfg=4.5 |
+| 113 | Change to a white lace off-shoulder crop top | 换成白色蕾丝一字肩短款上衣 | Tops / Off-shoulder | steps=40, cfg=4.5 |
+| 114 | Replace the top with a seafoam green halter neck top with twist front | 将上衣换成海绿色扭结前身挂脖上衣 | Tops / Halter | steps=40, cfg=4.5 |
+| 115 | Change to a denim button-down western shirt with pearl snaps | 换成珍珠按扣西部风格牛仔衬衫 | Tops / Button-down | steps=40, cfg=4.0 |
+| 116 | Replace with a green and navy buffalo-check flannel shirt | 换成绿色深蓝大格纹法兰绒衬衫 | Tops / Flannel | steps=40, cfg=4.0 |
+| 117 | Change the top to a light-wash denim shirt with raw hems | 将上衣换成浅色水洗毛边牛仔衬衫 | Tops / Denim Shirt | steps=40, cfg=4.0 |
+| 118 | Replace with a natural beige linen shirt with shell buttons | 换成自然米色贝壳扣亚麻衬衫 | Tops / Linen Shirt | steps=40, cfg=4.0 |
+| 119 | Change to a bright Hawaiian shirt with hibiscus flower print | 换成鲜艳木槿花印花夏威夷衬衫 | Tops / Hawaiian | steps=45, cfg=4.5 |
+| 120 | Replace the top with a sunset orange rayon Hawaiian shirt | 将上衣换成日落橙色人造丝夏威夷衬衫 | Tops / Hawaiian | steps=45, cfg=4.5 |
+| 121 | Change to a slate blue Mandarin collar linen shirt | 换成石板蓝立领亚麻衬衫 | Tops / Linen Shirt | steps=40, cfg=4.0 |
+| 122 | Replace with a peach-colored poplin button-down with rounded collar | 换成桃色府绸圆角领纽扣衬衫 | Tops / Button-down | steps=40, cfg=4.0 |
+| 123 | Change the top to a black mesh long-sleeve top | 将上衣换成黑色网纱长袖上衣 | Tops / Specialty | steps=40, cfg=4.5 |
+| 124 | Replace with a rose gold sequined tank top | 换成玫瑰金亮片背心 | Tops / Tank Top | steps=45, cfg=4.5 |
+| 125 | Change to a white linen camp collar short-sleeve shirt | 换成白色亚麻古巴领短袖衬衫 | Tops / Linen Shirt | steps=40, cfg=4.0 |
+| 126 | Replace the top with a terracotta ribbed knit long-sleeve top | 将上衣换成赤陶色罗纹针织长袖上衣 | Tops / Knit Top | steps=40, cfg=4.0 |
+| 127 | Change to a sky blue seersucker short-sleeve button-down | 换成天蓝色泡泡纱短袖纽扣衬衫 | Tops / Button-down | steps=40, cfg=4.0 |
+| 128 | Replace with a black turtleneck bodysuit top | 换成黑色高领连体衣上衣 | Tops / Bodysuit | steps=40, cfg=4.0 |
+| 129 | Change the top to a salmon pink ruched mesh top | 将上衣换成三文鱼粉褶皱网纱上衣 | Tops / Specialty | steps=45, cfg=4.5 |
+| 130 | Replace with a cream waffle-knit henley with wooden buttons | 换成奶油色华夫格木扣亨利衫 | Tops / T-shirt | steps=40, cfg=4.0 |
+| 131 | Change to a cadet blue french terry sweatshirt | 换成军蓝色毛圈布卫衣 | Tops / Sweatshirt | steps=40, cfg=4.0 |
+| 132 | Replace the top with a vintage red raglan-sleeve baseball tee | 将上衣换成复古红色插肩袖棒球T恤 | Tops / T-shirt | steps=40, cfg=4.0 |
+| 133 | Change to a white broderie anglaise blouse with cap sleeves | 换成白色镂空刺绣荷叶袖衬衫 | Tops / Blouse | steps=45, cfg=4.5 |
+| 134 | Replace with a jade green silk charmeuse blouse | 换成翡翠绿丝绸双绉衬衫 | Tops / Blouse | steps=45, cfg=4.5 |
+| 135 | Change the top to a taupe suede-look western shirt | 将上衣换成灰褐色仿麂皮西部衬衫 | Tops / Button-down | steps=40, cfg=4.0 |
+| 136 | Replace with a hot pink ribbed crop top | 换成亮粉色罗纹短款上衣 | Tops / Crop Top | steps=40, cfg=4.0 |
+| 137 | Change to a sand-colored linen blend grandad collar shirt | 换成砂色亚麻混纺圆领无领衬衫 | Tops / Linen Shirt | steps=40, cfg=4.0 |
+| 138 | Replace the top with a deep emerald velvet long-sleeve top | 将上衣换成深祖母绿丝绒长袖上衣 | Tops / Specialty | steps=45, cfg=4.5 |
+| 139 | Change to a white scallop-edge knit polo | 换成白色扇形边针织Polo衫 | Tops / Polo | steps=40, cfg=4.0 |
+| 140 | Replace with a charcoal merino wool zip-neck sweater | 换成碳灰色美利奴半拉链毛衣 | Tops / Sweater | steps=40, cfg=4.0 |
+| 141 | Change the top to a pale yellow lace-trimmed camisole | 将上衣换成浅黄色蕾丝边吊带衫 | Tops / Camisole | steps=40, cfg=4.0 |
+| 142 | Replace with a royal blue athletic fit crew neck tee | 换成宝蓝色运动版型圆领T恤 | Tops / T-shirt | steps=40, cfg=4.0 |
+| 143 | Change to a plaid red and cream flannel button-up | 换成红色奶油色格纹法兰绒衬衫 | Tops / Flannel | steps=40, cfg=4.0 |
+| 144 | Replace the top with a midnight blue silk camisole | 将上衣换成午夜蓝丝绸吊带衫 | Tops / Camisole | steps=40, cfg=4.0 |
+| 145 | Change to a cherry red fitted turtleneck sweater | 换成樱桃红修身高领毛衣 | Tops / Sweater | steps=40, cfg=4.0 |
+| 146 | Replace with a stone gray cotton crew neck sweatshirt | 换成石灰色纯棉圆领卫衣 | Tops / Sweatshirt | steps=40, cfg=4.0 |
+| 147 | Change the top to a bronze metallic halter top | 将上衣换成青铜色金属光泽挂脖上衣 | Tops / Halter | steps=45, cfg=4.5 |
+| 148 | Replace with a periwinkle blue popover tunic blouse | 换成长春花蓝色套头式长衬衫 | Tops / Blouse | steps=40, cfg=4.0 |
+| 149 | Change to a bright coral long-sleeve henley | 换成亮珊瑚色长袖亨利领上衣 | Tops / T-shirt | steps=40, cfg=4.0 |
+| 150 | Replace the top with a dove white swiss-dot blouse | 将上衣换成白鸽色瑞士点衬衫 | Tops / Blouse | steps=40, cfg=4.5 |
+| 151 | Change to a tan suede button-front vest top | 换成棕褐色麂皮前扣背心上衣 | Tops / Vest Top | steps=40, cfg=4.0 |
+| 152 | Replace with a black cut-out shoulder long-sleeve top | 换成黑色露肩长袖上衣 | Tops / Specialty | steps=40, cfg=4.5 |
+| 153 | Change the top to a terracotta smocked off-shoulder top | 将上衣换成赤陶色褶饰一字肩上衣 | Tops / Off-shoulder | steps=40, cfg=4.5 |
+| 154 | Replace with a teal green silk wrap top with side tie | 换成青绿色丝绸侧系带裹身上衣 | Tops / Blouse | steps=45, cfg=4.5 |
+| 155 | Change to a gray marled pocket tee in organic cotton | 换成灰色混色有机棉口袋T恤 | Tops / T-shirt | steps=40, cfg=4.0 |
+| 156 | Replace the top with a cream cable-knit cropped sweater vest | 将上衣换成奶油色麻花编织短款毛衣背心 | Tops / Sweater | steps=40, cfg=4.5 |
+| 157 | Change to a cornflower blue cotton voile blouse | 换成矢车菊蓝棉质薄纱衬衫 | Tops / Blouse | steps=40, cfg=4.0 |
+| 158 | Replace with a black one-shoulder asymmetric top | 换成黑色单肩不对称上衣 | Tops / Specialty | steps=40, cfg=4.5 |
+| 159 | Change the top to a dusty mauve oversized linen blouse | 将上衣换成烟粉紫色宽松亚麻衬衫 | Tops / Blouse | steps=40, cfg=4.0 |
+| 160 | Replace with a copper satin tank top with cowl neck | 换成铜色缎面堆领背心 | Tops / Tank Top | steps=40, cfg=4.5 |
+| 161 | Change to a light olive green utility button-down shirt | 换成浅橄榄绿工装纽扣衬衫 | Tops / Button-down | steps=40, cfg=4.0 |
+| 162 | Replace the top with a snow white poplin blouse with Peter Pan collar | 将上衣换成雪白色府绸彼得潘领衬衫 | Tops / Blouse | steps=40, cfg=4.0 |
+| 163 | Change to a neon green compression long-sleeve top | 换成荧光绿压缩长袖上衣 | Tops / Specialty | steps=40, cfg=4.0 |
+| 164 | Replace with a cobalt blue cashmere V-neck pullover | 换成钴蓝色羊绒V领套头衫 | Tops / Sweater | steps=40, cfg=4.0 |
+| 165 | Change the top to a tobacco brown corduroy button-down shirt | 将上衣换成烟草棕灯芯绒纽扣衬衫 | Tops / Button-down | steps=40, cfg=4.0 |
+| 166 | Replace with a powder pink off-shoulder knit sweater | 换成粉色一字肩针织毛衣 | Tops / Sweater | steps=40, cfg=4.5 |
+| 167 | Change to a classic navy and white striped long-sleeve top | 换成经典海军蓝白条纹长袖上衣 | Tops / T-shirt | steps=40, cfg=4.0 |
+| 168 | Replace the top with a vermillion red silk pussy-bow blouse | 将上衣换成朱红色丝绸蝴蝶结领衬衫 | Tops / Blouse | steps=45, cfg=4.5 |
+| 169 | Change to a chartreuse green ribbed mock-neck top | 换成黄绿色罗纹半高领上衣 | Tops / Knit Top | steps=40, cfg=4.0 |
+| 170 | Replace with a multi-colored abstract print silk blouse | 换成多色抽象印花丝绸衬衫 | Tops / Blouse | steps=45, cfg=4.5 |
+| 171 | Change the top to a gray melange quarter-zip pullover | 将上衣换成灰色混色四分之一拉链套头衫 | Tops / Sweater | steps=40, cfg=4.0 |
+| 172 | Replace with a bone white pointelle knit tank top | 换成骨白色镂空针织背心 | Tops / Tank Top | steps=40, cfg=4.0 |
+| 173 | Change to a black sequined long-sleeve party top | 换成黑色亮片长袖派对上衣 | Tops / Specialty | steps=45, cfg=4.5 |
+| 174 | Replace the top with a sage green linen tunic top | 将上衣换成鼠尾草绿亚麻长款上衣 | Tops / Linen Shirt | steps=40, cfg=4.0 |
+| 175 | Change to a fuchsia pink wrap-front knit top | 换成紫红色裹身前针织上衣 | Tops / Knit Top | steps=40, cfg=4.0 |
+| 176 | Replace with a cream cotton eyelet puff-sleeve top | 换成奶油色棉质镂空泡泡袖上衣 | Tops / Blouse | steps=40, cfg=4.5 |
+| 177 | Change the top to a caramel brown turtleneck cashmere sweater | 将上衣换成焦糖棕高领羊绒毛衣 | Tops / Sweater | steps=40, cfg=4.0 |
+| 178 | Replace with a heather navy French terry crewneck sweatshirt | 换成杂色海军蓝毛圈布圆领卫衣 | Tops / Sweatshirt | steps=40, cfg=4.0 |
+| 179 | Change to a tropical teal printed short-sleeve camp shirt | 换成热带青绿印花短袖古巴领衬衫 | Tops / Hawaiian | steps=45, cfg=4.5 |
+| 180 | Replace the top with an ivory crepe de chine blouse | 将上衣换成象牙白双绉衬衫 | Tops / Blouse | steps=40, cfg=4.5 |
+| 181 | Change to a bright tangerine cotton polo shirt | 换成明亮橘色棉质Polo衫 | Tops / Polo | steps=40, cfg=4.0 |
+| 182 | Replace with a dark indigo chambray work shirt | 换成深靛蓝色水洗做旧工装衬衫 | Tops / Denim Shirt | steps=40, cfg=4.0 |
+| 183 | Change the top to a pale aqua waffle-knit thermal top | 将上衣换成浅水蓝华夫格保暖上衣 | Tops / Knit Top | steps=40, cfg=4.0 |
+| 184 | Replace with a black leather-look crop top | 换成黑色仿皮短款上衣 | Tops / Crop Top | steps=40, cfg=4.0 |
+| 185 | Change to an apricot chiffon flutter-sleeve blouse | 换成杏色雪纺飘袖衬衫 | Tops / Blouse | steps=45, cfg=4.5 |
+| 186 | Replace the top with a cream chunky ribbed mock-neck sweater | 将上衣换成奶油色粗罗纹半高领毛衣 | Tops / Sweater | steps=40, cfg=4.0 |
+| 187 | Change to a deep violet satin draped blouse | 换成深紫色缎面垂褶衬衫 | Tops / Blouse | steps=45, cfg=4.5 |
+| 188 | Replace with a washed black boxy crop tee | 换成水洗黑宽松短款T恤 | Tops / T-shirt | steps=40, cfg=4.0 |
+| 189 | Change the top to a cloud white oversized cotton Oxford shirt | 将上衣换成云白色宽松牛津棉衬衫 | Tops / Dress Shirt | steps=40, cfg=4.0 |
+| 190 | Replace with a bright magenta silk draped top | 换成亮洋红丝绸垂褶上衣 | Tops / Blouse | steps=45, cfg=4.5 |
+| 191 | Change to a gray plaid flannel boyfriend shirt | 换成灰色格纹法兰绒男友风衬衫 | Tops / Flannel | steps=40, cfg=4.0 |
+| 192 | Replace the top with a butter yellow knit polo with contrast trim | 将上衣换成奶油黄撞色边针织Polo衫 | Tops / Polo | steps=40, cfg=4.0 |
+| 193 | Change to a mocha brown cable-knit cropped cardigan | 换成摩卡棕麻花编织短款开衫 | Tops / Sweater | steps=40, cfg=4.5 |
+| 194 | Replace with a white pirate blouse with billowing sleeves | 换成白色海盗风灯笼袖衬衫 | Tops / Blouse | steps=45, cfg=4.5 |
+| 195 | Change the top to a graphite micro-stripe dress shirt | 将上衣换成石墨色细条纹正装衬衫 | Tops / Dress Shirt | steps=40, cfg=4.0 |
+| 196 | Replace with a dusty cedar long cardigan with belt | 换成暗雪松色带腰带长款开衫 | Tops / Sweater | steps=40, cfg=4.5 |
+| 197 | Change to a seafoam green linen band-collar shirt | 换成海绿色亚麻立领衬衫 | Tops / Linen Shirt | steps=40, cfg=4.0 |
+| 198 | Replace the top with a burnt sienna fitted henley top | 将上衣换成赭色修身亨利领上衣 | Tops / T-shirt | steps=40, cfg=4.0 |
+| 199 | Change to a silver gray mesh overlay long-sleeve top | 换成银灰色网纱叠层长袖上衣 | Tops / Specialty | steps=45, cfg=4.5 |
+| 200 | Replace with a plum purple cowl-neck jersey top | 换成李子紫堆领针织上衣 | Tops / Knit Top | steps=40, cfg=4.0 |
+| 201 | Change the top to a sage green cotton poplin shirt with patch pockets | 将上衣换成鼠尾草绿全棉府绸贴袋衬衫 | Tops / Button-down | steps=40, cfg=4.0 |
+| 202 | Replace with a cream poet blouse with lace-up front | 换成奶油色系带前身诗人衬衫 | Tops / Blouse | steps=45, cfg=4.5 |
+| 203 | Change to a heather purple drop-shoulder sweatshirt | 换成杂色紫落肩卫衣 | Tops / Sweatshirt | steps=40, cfg=4.0 |
+| 204 | Replace the top with a cherry red silk charmeuse wrap top | 将上衣换成樱桃红丝绸裹身上衣 | Tops / Blouse | steps=45, cfg=4.5 |
+| 205 | Change to a navy blue pinpoint button-down collar shirt | 换成深蓝色精梳棉纽扣领衬衫 | Tops / Dress Shirt | steps=40, cfg=4.0 |
+| 206 | Replace with a palm leaf print rayon camp shirt | 换成棕榈叶印花人造丝古巴领衬衫 | Tops / Hawaiian | steps=45, cfg=4.5 |
+| 207 | Change the top to a light gray oversized boyfriend cardigan | 将上衣换成浅灰色宽松男友风开衫 | Tops / Sweater | steps=40, cfg=4.0 |
+| 208 | Replace with a tangerine orange fitted crew neck tee | 换成橘红色修身圆领T恤 | Tops / T-shirt | steps=40, cfg=4.0 |
+| 209 | Change to a white tiered ruffle sleeveless top | 换成白色层叠荷叶边无袖上衣 | Tops / Blouse | steps=40, cfg=4.5 |
+| 210 | Replace the top with a steel blue chambray band-collar shirt | 将上衣换成钢蓝色水洗棉立领衬衫 | Tops / Button-down | steps=40, cfg=4.0 |
+| 211 | Change to a soft peach lace bralette top | 换成柔桃色蕾丝内搭上衣 | Tops / Specialty | steps=40, cfg=4.5 |
+| 212 | Replace with a kelly green slim-fit polo with white piping | 换成凯利绿修身白色滚边Polo衫 | Tops / Polo | steps=40, cfg=4.0 |
+| 213 | Change the top to a marigold yellow peplum blouse | 将上衣换成金盏花黄荷叶下摆衬衫 | Tops / Blouse | steps=40, cfg=4.5 |
+| 214 | Replace with a snow white oversized linen button-through shirt | 换成雪白色宽松亚麻全开襟衬衫 | Tops / Linen Shirt | steps=40, cfg=4.0 |
+| 215 | Change to a wine-colored stretch jersey mock-wrap top | 换成酒色弹力针织假裹身上衣 | Tops / Knit Top | steps=40, cfg=4.0 |
+| 216 | Replace the top with a pastel mint cotton crop hoodie | 将上衣换成粉绿色棉质短款连帽衫 | Tops / Hoodie | steps=40, cfg=4.0 |
+| 217 | Change to a dark chocolate brown merino wool sweater | 换成深巧克力棕美利奴羊毛毛衣 | Tops / Sweater | steps=40, cfg=4.0 |
+| 218 | Replace with a bright white crisp cotton band-collar dress shirt | 换成亮白色硬挺棉质立领正装衬衫 | Tops / Dress Shirt | steps=40, cfg=4.0 |
+| 219 | Change the top to a watermelon pink chiffon sleeveless blouse | 将上衣换成西瓜粉雪纺无袖衬衫 | Tops / Blouse | steps=45, cfg=4.5 |
+| 220 | Replace with a stone washed indigo denim western shirt | 换成石洗靛蓝牛仔西部衬衫 | Tops / Denim Shirt | steps=40, cfg=4.0 |
+
+## Section 2: Bottoms (Entries 221-390)
+
+| # | English Prompt | 中文提示词 | Category | Config Notes |
+|---|---------------|-----------|----------|--------------|
+| 221 | Change the pants to dark indigo skinny jeans | 将裤子换成深靛蓝色紧身牛仔裤 | Bottoms / Jeans | steps=40, cfg=4.0 |
+| 222 | Replace the bottoms with light-wash bootcut jeans | 换成浅色水洗喇叭口牛仔裤 | Bottoms / Jeans | steps=40, cfg=4.0 |
+| 223 | Change to mid-rise straight leg raw denim jeans | 换成中腰直筒原色牛仔裤 | Bottoms / Jeans | steps=40, cfg=4.0 |
+| 224 | Replace the pants with wide-leg dark wash jeans | 将裤子换成深色水洗阔腿牛仔裤 | Bottoms / Jeans | steps=40, cfg=4.0 |
+| 225 | Change to vintage-wash flared jeans with raw hem | 换成复古水洗毛边喇叭牛仔裤 | Bottoms / Jeans | steps=40, cfg=4.0 |
+| 226 | Replace the bottoms with high-waisted light blue mom jeans | 换成高腰浅蓝色妈妈牛仔裤 | Bottoms / Jeans | steps=40, cfg=4.0 |
+| 227 | Change to relaxed-fit medium-wash boyfriend jeans | 换成中色水洗宽松男友风牛仔裤 | Bottoms / Jeans | steps=40, cfg=4.0 |
+| 228 | Replace the pants with heavily distressed ripped skinny jeans | 将裤子换成破洞做旧紧身牛仔裤 | Bottoms / Jeans | steps=40, cfg=4.5 |
+| 229 | Change to high-waisted black skinny jeans | 换成黑色高腰紧身牛仔裤 | Bottoms / Jeans | steps=40, cfg=4.0 |
+| 230 | Replace the bottoms with white straight-leg jeans | 换成白色直筒牛仔裤 | Bottoms / Jeans | steps=40, cfg=4.0 |
+| 231 | Change to acid-wash gray skinny jeans | 换成酸洗灰色紧身牛仔裤 | Bottoms / Jeans | steps=40, cfg=4.0 |
+| 232 | Replace the pants with dark navy selvedge denim jeans | 将裤子换成深蓝色赤耳牛仔裤 | Bottoms / Jeans | steps=40, cfg=4.0 |
+| 233 | Change to cropped wide-leg light-wash jeans | 换成浅色水洗九分阔腿牛仔裤 | Bottoms / Jeans | steps=40, cfg=4.0 |
+| 234 | Replace the bottoms with high-waisted flared jeans in medium indigo | 换成中靛蓝色高腰喇叭牛仔裤 | Bottoms / Jeans | steps=40, cfg=4.0 |
+| 235 | Change to mid-rise boyfriend jeans with turn-up cuffs | 换成中腰翻边男友风牛仔裤 | Bottoms / Jeans | steps=40, cfg=4.0 |
+| 236 | Replace the pants with charcoal gray slim-fit dress pants | 将裤子换成碳灰色修身正装裤 | Bottoms / Trousers | steps=40, cfg=4.0 |
+| 237 | Change to navy blue flat-front chinos | 换成深蓝色平前卡其裤 | Bottoms / Trousers | steps=40, cfg=4.0 |
+| 238 | Replace the bottoms with olive green cargo pants with side pockets | 换成橄榄绿侧袋工装裤 | Bottoms / Trousers | steps=40, cfg=4.0 |
+| 239 | Change to black wide-leg palazzo pants | 换成黑色阔腿宽松裤 | Bottoms / Trousers | steps=40, cfg=4.0 |
+| 240 | Replace the pants with tan paperbag-waist trousers with belt | 将裤子换成棕褐色纸袋腰带长裤 | Bottoms / Trousers | steps=40, cfg=4.5 |
+| 241 | Change to gray pleated wide-leg trousers | 换成灰色褶裥阔腿裤 | Bottoms / Trousers | steps=40, cfg=4.0 |
+| 242 | Replace the bottoms with khaki slim-fit chinos | 换成卡其色修身棉质休闲裤 | Bottoms / Trousers | steps=40, cfg=4.0 |
+| 243 | Change to black high-waisted cigarette pants | 换成黑色高腰烟管裤 | Bottoms / Trousers | steps=40, cfg=4.0 |
+| 244 | Replace the pants with cream linen wide-leg trousers | 将裤子换成奶油色亚麻阔腿裤 | Bottoms / Trousers | steps=40, cfg=4.0 |
+| 245 | Change to camel pleated front dress pants | 换成驼色前褶正装裤 | Bottoms / Trousers | steps=40, cfg=4.0 |
+| 246 | Replace the bottoms with dark green corduroy trousers | 换成深绿色灯芯绒长裤 | Bottoms / Trousers | steps=40, cfg=4.0 |
+| 247 | Change to burgundy wool dress trousers with a crease | 换成酒红色有折线羊毛正装裤 | Bottoms / Trousers | steps=40, cfg=4.0 |
+| 248 | Replace the pants with stone-gray tapered chinos | 将裤子换成石灰色锥形卡其裤 | Bottoms / Trousers | steps=40, cfg=4.0 |
+| 249 | Change to white linen drawstring trousers | 换成白色亚麻抽绳长裤 | Bottoms / Trousers | steps=40, cfg=4.0 |
+| 250 | Replace the bottoms with light blue denim shorts | 换成浅蓝色牛仔短裤 | Bottoms / Shorts | steps=40, cfg=4.0, works best with full-body shot |
+| 251 | Change to khaki cargo shorts with multiple pockets | 换成卡其色多口袋工装短裤 | Bottoms / Shorts | steps=40, cfg=4.0, full-body shot recommended |
+| 252 | Replace the pants with navy blue bermuda shorts | 将裤子换成深蓝色百慕大短裤 | Bottoms / Shorts | steps=40, cfg=4.0 |
+| 253 | Change to black athletic running shorts | 换成黑色运动跑步短裤 | Bottoms / Shorts | steps=40, cfg=4.0 |
+| 254 | Replace the bottoms with tan linen shorts | 换成棕褐色亚麻短裤 | Bottoms / Shorts | steps=40, cfg=4.0 |
+| 255 | Change to paperbag-waist cream shorts with belt | 换成奶油色纸袋腰系带短裤 | Bottoms / Shorts | steps=40, cfg=4.5 |
+| 256 | Replace the pants with distressed denim cutoff shorts | 将裤子换成做旧牛仔割边短裤 | Bottoms / Shorts | steps=40, cfg=4.0 |
+| 257 | Change to olive green chino shorts | 换成橄榄绿卡其短裤 | Bottoms / Shorts | steps=40, cfg=4.0 |
+| 258 | Replace the bottoms with white high-waisted tailored shorts | 换成白色高腰定制短裤 | Bottoms / Shorts | steps=40, cfg=4.0 |
+| 259 | Change to floral printed cotton shorts | 换成碎花棉质短裤 | Bottoms / Shorts | steps=40, cfg=4.5 |
+| 260 | Replace the pants with a black leather mini skirt | 将裤子换成黑色皮革迷你裙 | Bottoms / Skirt | steps=40, cfg=4.0 |
+| 261 | Change to a navy blue pleated midi skirt | 换成深蓝色百褶中长裙 | Bottoms / Skirt | steps=40, cfg=4.0 |
+| 262 | Replace the bottoms with a burgundy A-line midi skirt | 换成酒红色A字中长裙 | Bottoms / Skirt | steps=40, cfg=4.0 |
+| 263 | Change to a black pencil skirt with back slit | 换成黑色后开衩铅笔裙 | Bottoms / Skirt | steps=40, cfg=4.0 |
+| 264 | Replace the pants with a floral-print wrap midi skirt | 将裤子换成碎花裹身中长裙 | Bottoms / Skirt | steps=40, cfg=4.5 |
+| 265 | Change to a white tulle ballerina midi skirt | 换成白色薄纱芭蕾中长裙 | Bottoms / Skirt | steps=45, cfg=4.5 |
+| 266 | Replace the bottoms with a camel suede mini skirt with button front | 换成驼色前扣麂皮迷你裙 | Bottoms / Skirt | steps=40, cfg=4.0 |
+| 267 | Change to a dark wash denim A-line skirt | 换成深色水洗牛仔A字裙 | Bottoms / Skirt | steps=40, cfg=4.0 |
+| 268 | Replace the pants with a sage green tiered maxi skirt | 将裤子换成鼠尾草绿层叠长裙 | Bottoms / Skirt | steps=40, cfg=4.5 |
+| 269 | Change to a black satin high-slit maxi skirt | 换成黑色缎面高开衩长裙 | Bottoms / Skirt | steps=40, cfg=4.5 |
+| 270 | Replace the bottoms with a red tartan plaid mini skirt | 换成红色苏格兰格纹迷你裙 | Bottoms / Skirt | steps=40, cfg=4.5 |
+| 271 | Change to a cream pleated chiffon maxi skirt | 换成奶油色褶裥雪纺长裙 | Bottoms / Skirt | steps=45, cfg=4.5 |
+| 272 | Replace the pants with a leopard print midi skirt | 将裤子换成豹纹中长裙 | Bottoms / Skirt | steps=40, cfg=4.5 |
+| 273 | Change to a blush pink satin midi skirt | 换成腮红粉缎面中长裙 | Bottoms / Skirt | steps=40, cfg=4.0 |
+| 274 | Replace the bottoms with a forest green velvet mini skirt | 换成森林绿丝绒迷你裙 | Bottoms / Skirt | steps=40, cfg=4.0 |
+| 275 | Change to a houndstooth check pencil skirt | 换成千鸟格铅笔裙 | Bottoms / Skirt | steps=40, cfg=4.5 |
+| 276 | Replace the pants with black high-waisted leggings | 将裤子换成黑色高腰紧身裤 | Bottoms / Leggings | steps=40, cfg=4.0 |
+| 277 | Change to heather gray cotton joggers with drawstring waist | 换成浅灰色棉质抽绳束脚裤 | Bottoms / Joggers | steps=40, cfg=4.0 |
+| 278 | Replace the bottoms with black wide-leg culottes | 换成黑色阔腿裙裤 | Bottoms / Culottes | steps=40, cfg=4.0 |
+| 279 | Change to dark wash denim overalls | 换成深色水洗牛仔背带裤 | Bottoms / Overalls | steps=40, cfg=4.5, full-body shot recommended |
+| 280 | Replace the pants with a navy tailored jumpsuit | 将裤子换成深蓝色定制连体裤 | Bottoms / Jumpsuit | steps=40, cfg=4.5, full-body shot recommended |
+| 281 | Change to olive green slim-fit cargo pants | 换成橄榄绿修身工装裤 | Bottoms / Trousers | steps=40, cfg=4.0 |
+| 282 | Replace the bottoms with high-waisted black faux-leather leggings | 换成高腰黑色仿皮紧身裤 | Bottoms / Leggings | steps=40, cfg=4.0 |
+| 283 | Change to navy blue tapered joggers with zip pockets | 换成深蓝色拉链袋锥形束脚裤 | Bottoms / Joggers | steps=40, cfg=4.0 |
+| 284 | Replace the pants with striped navy and white culottes | 将裤子换成海军蓝白条纹裙裤 | Bottoms / Culottes | steps=40, cfg=4.0 |
+| 285 | Change to light-wash denim short overalls | 换成浅色水洗牛仔短款背带裤 | Bottoms / Overalls | steps=40, cfg=4.5, full-body shot recommended |
+| 286 | Replace the bottoms with a black wide-leg jumpsuit | 换成黑色阔腿连体裤 | Bottoms / Jumpsuit | steps=40, cfg=4.5, full-body shot recommended |
+| 287 | Change to chocolate brown corduroy wide-leg trousers | 换成巧克力棕灯芯绒阔腿裤 | Bottoms / Trousers | steps=40, cfg=4.0 |
+| 288 | Replace the pants with emerald green silk palazzo pants | 将裤子换成祖母绿丝绸阔腿裤 | Bottoms / Trousers | steps=45, cfg=4.5 |
+| 289 | Change to dark gray wool flannel trousers | 换成深灰色羊毛法兰绒长裤 | Bottoms / Trousers | steps=40, cfg=4.0 |
+| 290 | Replace the bottoms with stone-washed boyfriend jeans with patches | 换成石洗贴布补丁男友风牛仔裤 | Bottoms / Jeans | steps=40, cfg=4.5 |
+| 291 | Change to a dusty rose pleated midi skirt | 换成玫瑰灰百褶中长裙 | Bottoms / Skirt | steps=40, cfg=4.0 |
+| 292 | Replace the pants with high-waisted pinstripe trousers | 将裤子换成高腰细条纹长裤 | Bottoms / Trousers | steps=40, cfg=4.0 |
+| 293 | Change to medium-wash raw-hem straight jeans | 换成中色水洗毛边直筒牛仔裤 | Bottoms / Jeans | steps=40, cfg=4.0 |
+| 294 | Replace the bottoms with a sequined gold mini skirt | 换成金色亮片迷你裙 | Bottoms / Skirt | steps=45, cfg=4.5 |
+| 295 | Change to navy blue high-waisted sailor pants with gold buttons | 换成深蓝色高腰金扣水手裤 | Bottoms / Trousers | steps=40, cfg=4.5 |
+| 296 | Replace the pants with dark olive linen shorts with front pleats | 将裤子换成深橄榄色前褶亚麻短裤 | Bottoms / Shorts | steps=40, cfg=4.0 |
+| 297 | Change to ivory silk wide-leg trousers | 换成象牙白丝绸阔腿裤 | Bottoms / Trousers | steps=45, cfg=4.5 |
+| 298 | Replace the bottoms with a black leather A-line midi skirt | 换成黑色皮革A字中长裙 | Bottoms / Skirt | steps=40, cfg=4.0 |
+| 299 | Change to medium-blue high-rise skinny jeans | 换成中蓝色高腰紧身牛仔裤 | Bottoms / Jeans | steps=40, cfg=4.0 |
+| 300 | Replace the pants with dark burgundy velvet trousers | 将裤子换成深酒红丝绒长裤 | Bottoms / Trousers | steps=40, cfg=4.0 |
+| 301 | Change to a white eyelet cotton midi skirt | 换成白色镂空刺绣棉质中长裙 | Bottoms / Skirt | steps=40, cfg=4.5 |
+| 302 | Replace the bottoms with teal green cropped chinos | 换成青绿色九分卡其裤 | Bottoms / Trousers | steps=40, cfg=4.0 |
+| 303 | Change to distressed medium-wash mom jeans with rolled cuffs | 换成中色水洗做旧卷边妈妈牛仔裤 | Bottoms / Jeans | steps=40, cfg=4.0 |
+| 304 | Replace the pants with a champagne satin bias-cut midi skirt | 将裤子换成香槟色缎面斜裁中长裙 | Bottoms / Skirt | steps=45, cfg=4.5 |
+| 305 | Change to black ponte knit ankle pants | 换成黑色罗马布踝长裤 | Bottoms / Trousers | steps=40, cfg=4.0 |
+| 306 | Replace the bottoms with camel wide-leg wool trousers | 换成驼色阔腿羊毛长裤 | Bottoms / Trousers | steps=40, cfg=4.0 |
+| 307 | Change to a deep teal pleated chiffon maxi skirt | 换成深青色褶裥雪纺长裙 | Bottoms / Skirt | steps=45, cfg=4.5 |
+| 308 | Replace the pants with gray glen-check wide-leg trousers | 将裤子换成灰色格伦格纹阔腿裤 | Bottoms / Trousers | steps=40, cfg=4.5 |
+| 309 | Change to faded black stretchy skinny jeans | 换成褪色黑弹力紧身牛仔裤 | Bottoms / Jeans | steps=40, cfg=4.0 |
+| 310 | Replace the bottoms with a coral tiered ruffle midi skirt | 换成珊瑚色层叠荷叶边中长裙 | Bottoms / Skirt | steps=40, cfg=4.5 |
+| 311 | Change to beige relaxed-fit linen trousers | 换成米色宽松亚麻长裤 | Bottoms / Trousers | steps=40, cfg=4.0 |
+| 312 | Replace the pants with high-waisted wide-leg jeans in ecru | 将裤子换成米白色高腰阔腿牛仔裤 | Bottoms / Jeans | steps=40, cfg=4.0 |
+| 313 | Change to a dusty blue denim midi skirt with front buttons | 换成灰蓝色前扣牛仔中长裙 | Bottoms / Skirt | steps=40, cfg=4.0 |
+| 314 | Replace the bottoms with slate gray tailored slim trousers | 换成板岩灰修身定制长裤 | Bottoms / Trousers | steps=40, cfg=4.0 |
+| 315 | Change to a polka-dot navy and white A-line skirt | 换成深蓝白色波点A字裙 | Bottoms / Skirt | steps=40, cfg=4.5 |
+| 316 | Replace the pants with rust orange linen bermuda shorts | 将裤子换成铁锈橙亚麻百慕大短裤 | Bottoms / Shorts | steps=40, cfg=4.0 |
+| 317 | Change to black high-waisted paperbag trousers | 换成黑色高腰纸袋裤 | Bottoms / Trousers | steps=40, cfg=4.0 |
+| 318 | Replace the bottoms with a hunter green pleated mini skirt | 换成猎人绿百褶迷你裙 | Bottoms / Skirt | steps=40, cfg=4.0 |
+| 319 | Change to washed black wide-leg jeans | 换成水洗黑色阔腿牛仔裤 | Bottoms / Jeans | steps=40, cfg=4.0 |
+| 320 | Replace the pants with a metallic silver pleated midi skirt | 将裤子换成金属银百褶中长裙 | Bottoms / Skirt | steps=45, cfg=4.5 |
+| 321 | Change to navy blue slim-fit joggers with side stripe | 换成深蓝色侧条纹修身束脚裤 | Bottoms / Joggers | steps=40, cfg=4.0 |
+| 322 | Replace the bottoms with light khaki Bermuda shorts | 换成浅卡其百慕大短裤 | Bottoms / Shorts | steps=40, cfg=4.0 |
+| 323 | Change to bright white wide-leg linen trousers | 换成亮白色阔腿亚麻长裤 | Bottoms / Trousers | steps=40, cfg=4.0 |
+| 324 | Replace the pants with a black velvet maxi skirt | 将裤子换成黑色丝绒长裙 | Bottoms / Skirt | steps=40, cfg=4.0 |
+| 325 | Change to forest green corduroy A-line mini skirt | 换成森林绿灯芯绒A字迷你裙 | Bottoms / Skirt | steps=40, cfg=4.0 |
+| 326 | Replace the bottoms with dark navy pleated dress pants | 换成深蓝色褶裥正装裤 | Bottoms / Trousers | steps=40, cfg=4.0 |
+| 327 | Change to printed tropical pattern loose shorts | 换成热带印花宽松短裤 | Bottoms / Shorts | steps=40, cfg=4.5 |
+| 328 | Replace the pants with light-wash high-waisted wide-leg jeans | 将裤子换成浅色水洗高腰阔腿牛仔裤 | Bottoms / Jeans | steps=40, cfg=4.0 |
+| 329 | Change to a cranberry red wrap midi skirt | 换成蔓越莓红裹身中长裙 | Bottoms / Skirt | steps=40, cfg=4.0 |
+| 330 | Replace the bottoms with maroon velvet leggings | 换成栗色丝绒紧身裤 | Bottoms / Leggings | steps=40, cfg=4.0 |
+| 331 | Change to dark indigo carpenter jeans | 换成深靛蓝色木匠牛仔裤 | Bottoms / Jeans | steps=40, cfg=4.0 |
+| 332 | Replace the pants with a lavender tulle midi skirt | 将裤子换成薰衣草色薄纱中长裙 | Bottoms / Skirt | steps=45, cfg=4.5 |
+| 333 | Change to stone beige chino shorts with woven belt | 换成石灰色编织腰带卡其短裤 | Bottoms / Shorts | steps=40, cfg=4.0 |
+| 334 | Replace the bottoms with powder blue high-waisted palazzo pants | 换成粉蓝色高腰阔腿裤 | Bottoms / Trousers | steps=40, cfg=4.0 |
+| 335 | Change to a black denim A-line mini skirt | 换成黑色牛仔A字迷你裙 | Bottoms / Skirt | steps=40, cfg=4.0 |
+| 336 | Replace the pants with olive green relaxed joggers | 将裤子换成橄榄绿宽松束脚裤 | Bottoms / Joggers | steps=40, cfg=4.0 |
+| 337 | Change to cognac brown leather pants | 换成干邑棕皮革长裤 | Bottoms / Trousers | steps=40, cfg=4.0 |
+| 338 | Replace the bottoms with a gingham check black and white mini skirt | 换成黑白格子迷你裙 | Bottoms / Skirt | steps=40, cfg=4.5 |
+| 339 | Change to sand-colored cotton twill chinos | 换成砂色棉斜纹卡其裤 | Bottoms / Trousers | steps=40, cfg=4.0 |
+| 340 | Replace the pants with dark purple linen palazzo pants | 将裤子换成深紫色亚麻阔腿裤 | Bottoms / Trousers | steps=40, cfg=4.0 |
+| 341 | Change to a copper-toned satin midi skirt | 换成铜色缎面中长裙 | Bottoms / Skirt | steps=45, cfg=4.5 |
+| 342 | Replace the bottoms with faded vintage blue bootcut jeans | 换成褪色复古蓝喇叭口牛仔裤 | Bottoms / Jeans | steps=40, cfg=4.0 |
+| 343 | Change to a black asymmetric-hem midi skirt | 换成黑色不对称下摆中长裙 | Bottoms / Skirt | steps=40, cfg=4.0 |
+| 344 | Replace the pants with white tailored bermuda shorts | 将裤子换成白色定制百慕大短裤 | Bottoms / Shorts | steps=40, cfg=4.0 |
+| 345 | Change to a terracotta linen wrap skirt | 换成赤陶色亚麻裹身裙 | Bottoms / Skirt | steps=40, cfg=4.0 |
+| 346 | Replace the bottoms with charcoal wool-blend tapered trousers | 换成碳灰色羊毛混纺锥形裤 | Bottoms / Trousers | steps=40, cfg=4.0 |
+| 347 | Change to high-waisted blue-black skinny jeans | 换成高腰蓝黑色紧身牛仔裤 | Bottoms / Jeans | steps=40, cfg=4.0 |
+| 348 | Replace the pants with a cobalt blue pencil skirt | 将裤子换成钴蓝色铅笔裙 | Bottoms / Skirt | steps=40, cfg=4.0 |
+| 349 | Change to cream cotton cargo shorts | 换成奶油色棉质工装短裤 | Bottoms / Shorts | steps=40, cfg=4.0 |
+| 350 | Replace the bottoms with a black and red tartan pleated skirt | 换成黑红苏格兰格纹百褶裙 | Bottoms / Skirt | steps=40, cfg=4.5 |
+| 351 | Change to dark camel wool cigarette pants | 换成深驼色羊毛烟管裤 | Bottoms / Trousers | steps=40, cfg=4.0 |
+| 352 | Replace the pants with light-wash denim cutoff shorts with frayed hem | 将裤子换成浅色水洗毛边牛仔短裤 | Bottoms / Shorts | steps=40, cfg=4.0 |
+| 353 | Change to a sage green utility mini skirt with pockets | 换成鼠尾草绿工装口袋迷你裙 | Bottoms / Skirt | steps=40, cfg=4.0 |
+| 354 | Replace the bottoms with black leather straight-leg trousers | 换成黑色皮革直筒长裤 | Bottoms / Trousers | steps=40, cfg=4.0 |
+| 355 | Change to a mustard yellow corduroy mini skirt | 换成芥末黄灯芯绒迷你裙 | Bottoms / Skirt | steps=40, cfg=4.0 |
+| 356 | Replace the pants with dark navy stretch chinos | 将裤子换成深蓝色弹力卡其裤 | Bottoms / Trousers | steps=40, cfg=4.0 |
+| 357 | Change to loose-fit stone-washed jeans with carpenter loop | 换成石洗宽松木匠环牛仔裤 | Bottoms / Jeans | steps=40, cfg=4.0 |
+| 358 | Replace the bottoms with a periwinkle blue chiffon midi skirt | 换成长春花蓝色雪纺中长裙 | Bottoms / Skirt | steps=45, cfg=4.5 |
+| 359 | Change to dark olive twill jogger pants | 换成深橄榄色斜纹束脚裤 | Bottoms / Joggers | steps=40, cfg=4.0 |
+| 360 | Replace the pants with a rose-pink satin wrap skirt | 将裤子换成玫瑰粉缎面裹身裙 | Bottoms / Skirt | steps=45, cfg=4.5 |
+| 361 | Change to medium-wash barrel-leg jeans | 换成中色水洗桶形腿牛仔裤 | Bottoms / Jeans | steps=40, cfg=4.0 |
+| 362 | Replace the bottoms with striped blue seersucker shorts | 换成蓝色条纹泡泡纱短裤 | Bottoms / Shorts | steps=40, cfg=4.0 |
+| 363 | Change to a deep navy knife-pleat midi skirt | 换成深蓝色刀褶中长裙 | Bottoms / Skirt | steps=40, cfg=4.0 |
+| 364 | Replace the pants with gray herringbone wool trousers | 将裤子换成灰色人字纹羊毛长裤 | Bottoms / Trousers | steps=40, cfg=4.0 |
+| 365 | Change to mid-rise light-wash relaxed straight jeans | 换成中腰浅色水洗宽松直筒牛仔裤 | Bottoms / Jeans | steps=40, cfg=4.0 |
+| 366 | Replace the bottoms with a floral embroidered denim mini skirt | 换成彩色刺绣牛仔迷你裙 | Bottoms / Skirt | steps=40, cfg=4.5 |
+| 367 | Change to wine red tailored trousers with center crease | 换成酒红色有中线定制长裤 | Bottoms / Trousers | steps=40, cfg=4.0 |
+| 368 | Replace the pants with athletic heathered gray sweatpants | 将裤子换成杂色灰运动卫裤 | Bottoms / Joggers | steps=40, cfg=4.0 |
+| 369 | Change to a peach-colored linen midi skirt with side slit | 换成桃色亚麻侧开衩中长裙 | Bottoms / Skirt | steps=40, cfg=4.0 |
+| 370 | Replace the bottoms with tan corduroy straight-leg pants | 换成棕褐色灯芯绒直筒裤 | Bottoms / Trousers | steps=40, cfg=4.0 |
+| 371 | Change to pastel pink high-waisted denim shorts | 换成粉彩粉高腰牛仔短裤 | Bottoms / Shorts | steps=40, cfg=4.0 |
+| 372 | Replace the pants with a black knit bodycon midi skirt | 将裤子换成黑色针织紧身中长裙 | Bottoms / Skirt | steps=40, cfg=4.0 |
+| 373 | Change to dark brown wool tweed trousers | 换成深棕色羊毛花呢长裤 | Bottoms / Trousers | steps=40, cfg=4.0 |
+| 374 | Replace the bottoms with pale yellow linen shorts | 换成淡黄色亚麻短裤 | Bottoms / Shorts | steps=40, cfg=4.0 |
+| 375 | Change to a steel blue ponte pencil skirt | 换成钢蓝色罗马布铅笔裙 | Bottoms / Skirt | steps=40, cfg=4.0 |
+| 376 | Replace the pants with black stretch bootcut jeans | 将裤子换成黑色弹力微喇牛仔裤 | Bottoms / Jeans | steps=40, cfg=4.0 |
+| 377 | Change to blush pink pleated culottes | 换成腮红粉百褶裙裤 | Bottoms / Culottes | steps=40, cfg=4.0 |
+| 378 | Replace the bottoms with dark wash denim pinafore overalls | 换成深色水洗牛仔围裙背带裤 | Bottoms / Overalls | steps=40, cfg=4.5, full-body shot recommended |
+| 379 | Change to a mocha brown suede A-line skirt | 换成摩卡棕麂皮A字裙 | Bottoms / Skirt | steps=40, cfg=4.0 |
+| 380 | Replace the pants with mint green cropped wide-leg pants | 将裤子换成薄荷绿九分阔腿裤 | Bottoms / Trousers | steps=40, cfg=4.0 |
+| 381 | Change to double-pleat cream wool trousers | 换成奶油色双褶羊毛长裤 | Bottoms / Trousers | steps=40, cfg=4.0 |
+| 382 | Replace the bottoms with a white denim mini skirt | 换成白色牛仔迷你裙 | Bottoms / Skirt | steps=40, cfg=4.0 |
+| 383 | Change to faded gray high-waisted straight jeans | 换成褪色灰高腰直筒牛仔裤 | Bottoms / Jeans | steps=40, cfg=4.0 |
+| 384 | Replace the pants with a toffee brown leather mini skirt | 将裤子换成太妃棕皮革迷你裙 | Bottoms / Skirt | steps=40, cfg=4.0 |
+| 385 | Change to black crepe wide-leg jumpsuit | 换成黑色绉纱阔腿连体裤 | Bottoms / Jumpsuit | steps=40, cfg=4.5, full-body shot recommended |
+| 386 | Replace the bottoms with charcoal stretch leggings with mesh panels | 换成碳灰色网纱拼接弹力紧身裤 | Bottoms / Leggings | steps=40, cfg=4.5 |
+| 387 | Change to ecru cotton twill paperbag shorts | 换成原白色棉斜纹纸袋腰短裤 | Bottoms / Shorts | steps=40, cfg=4.0 |
+| 388 | Replace the pants with an olive green linen jumpsuit | 将裤子换成橄榄绿亚麻连体裤 | Bottoms / Jumpsuit | steps=40, cfg=4.5, full-body shot recommended |
+| 389 | Change to cobalt blue high-waisted wide-leg trousers | 换成钴蓝色高腰阔腿裤 | Bottoms / Trousers | steps=40, cfg=4.0 |
+| 390 | Replace the bottoms with a burnt orange corduroy midi skirt | 换成焦橙色灯芯绒中长裙 | Bottoms / Skirt | steps=40, cfg=4.0 |
+
+## Section 3: Dresses (Entries 391-600)
+
+| # | English Prompt | 中文提示词 | Category | Config Notes |
+|---|---------------|-----------|----------|--------------|
+| 391 | Change the outfit to a white cotton sundress with spaghetti straps | 将服装换成白色棉质细肩带太阳裙 | Dresses / Casual | steps=45, cfg=4.5, full-body shot recommended |
+| 392 | Replace with a navy blue striped shirt dress with waist tie | 换成深蓝色条纹系腰衬衫裙 | Dresses / Casual | steps=45, cfg=4.5, full-body shot recommended |
+| 393 | Change to a burgundy wrap dress with V-neckline | 换成酒红色V领裹身连衣裙 | Dresses / Casual | steps=45, cfg=4.5 |
+| 394 | Replace the outfit with a sage green t-shirt dress in soft cotton | 将服装换成鼠尾草绿柔软棉质T恤裙 | Dresses / Casual | steps=40, cfg=4.0 |
+| 395 | Change to a floral print maxi dress with empire waist | 换成碎花高腰长裙 | Dresses / Casual | steps=45, cfg=4.5, full-body shot recommended |
+| 396 | Replace with a rust orange midi dress with button-down front | 换成铁锈橙色前扣中长连衣裙 | Dresses / Casual | steps=45, cfg=4.5 |
+| 397 | Change the outfit to a black mini dress with cap sleeves | 将服装换成黑色荷叶袖迷你裙 | Dresses / Casual | steps=40, cfg=4.0 |
+| 398 | Replace with a cream linen shift dress | 换成奶油色亚麻直身连衣裙 | Dresses / Casual | steps=40, cfg=4.0 |
+| 399 | Change to a blush pink satin slip dress with cowl neck | 换成腮红粉缎面堆领吊带裙 | Dresses / Casual | steps=45, cfg=4.5 |
+| 400 | Replace the outfit with a yellow floral sundress with tie shoulders | 将服装换成黄色碎花系肩太阳裙 | Dresses / Casual | steps=45, cfg=4.5 |
+| 401 | Change to a denim shirt dress with rolled sleeves and belt | 换成卷袖系带牛仔衬衫裙 | Dresses / Casual | steps=45, cfg=4.5 |
+| 402 | Replace with a polka-dot black and white midi wrap dress | 换成黑白波点中长裹身连衣裙 | Dresses / Casual | steps=45, cfg=4.5 |
+| 403 | Change the outfit to a terracotta linen midi dress with pockets | 将服装换成赤陶色带口袋亚麻中长连衣裙 | Dresses / Casual | steps=45, cfg=4.5 |
+| 404 | Replace with a coral cotton poplin mini dress with puff sleeves | 换成珊瑚色棉府绸泡泡袖迷你裙 | Dresses / Casual | steps=45, cfg=4.5 |
+| 405 | Change to a striped blue and white maxi dress with halter neck | 换成蓝白条纹挂脖长裙 | Dresses / Casual | steps=45, cfg=4.5, full-body shot recommended |
+| 406 | Replace the outfit with a forest green jersey wrap midi dress | 将服装换成森林绿针织裹身中长连衣裙 | Dresses / Casual | steps=45, cfg=4.5 |
+| 407 | Change to a lavender eyelet cotton mini dress | 换成薰衣草色镂空刺绣棉质迷你连衣裙 | Dresses / Casual | steps=45, cfg=4.5 |
+| 408 | Replace with a mustard yellow knit sweater dress | 换成芥末黄针织毛衣连衣裙 | Dresses / Casual | steps=40, cfg=4.0 |
+| 409 | Change the outfit to an olive green utility shirt dress with drawstring waist | 将服装换成橄榄绿抽绳腰工装衬衫裙 | Dresses / Casual | steps=45, cfg=4.5 |
+| 410 | Replace with a black bodycon mini dress with long sleeves | 换成黑色长袖紧身迷你连衣裙 | Dresses / Casual | steps=40, cfg=4.0 |
+| 411 | Change to a floor-length black velvet evening gown with off-shoulder design | 换成黑色丝绒一字肩落地晚礼服 | Dresses / Formal | steps=50, cfg=5.0, full-body shot recommended |
+| 412 | Replace the outfit with a champagne gold ball gown with tulle skirt | 将服装换成香槟金色薄纱裙摆舞会礼服 | Dresses / Formal | steps=50, cfg=5.0, full-body shot recommended |
+| 413 | Change to a red satin cocktail dress with halter neck | 换成红色缎面挂脖鸡尾酒裙 | Dresses / Formal | steps=45, cfg=4.5 |
+| 414 | Replace with a navy blue sheath dress with bateau neckline | 换成深蓝色船领鞘形连衣裙 | Dresses / Formal | steps=45, cfg=4.5 |
+| 415 | Change the outfit to a black mermaid gown with sequin bodice | 将服装换成黑色亮片上身鱼尾礼服 | Dresses / Formal | steps=50, cfg=5.0, full-body shot recommended |
+| 416 | Replace with an emerald green A-line formal dress with cap sleeves | 换成祖母绿荷叶袖A字正装连衣裙 | Dresses / Formal | steps=45, cfg=4.5 |
+| 417 | Change to a blush pink fit-and-flare cocktail dress with lace overlay | 换成腮红粉蕾丝覆层收腰伞裙鸡尾酒裙 | Dresses / Formal | steps=50, cfg=5.0 |
+| 418 | Replace the outfit with a deep plum empire waist chiffon evening gown | 将服装换成深紫红色高腰雪纺晚礼服 | Dresses / Formal | steps=50, cfg=5.0, full-body shot recommended |
+| 419 | Change to a silver sequined floor-length column dress | 换成银色亮片落地直身连衣裙 | Dresses / Formal | steps=50, cfg=5.0, full-body shot recommended |
+| 420 | Replace with a royal blue one-shoulder draped formal gown | 换成宝蓝色单肩垂褶正装礼服 | Dresses / Formal | steps=50, cfg=5.0, full-body shot recommended |
+| 421 | Change the outfit to a white strapless ball gown with ruched bodice | 将服装换成白色抹胸褶饰紧身舞会礼服 | Dresses / Formal | steps=50, cfg=5.0, full-body shot recommended |
+| 422 | Replace with a black lace cocktail dress with three-quarter sleeves | 换成黑色七分袖蕾丝鸡尾酒裙 | Dresses / Formal | steps=45, cfg=4.5 |
+| 423 | Change to a dusty rose chiffon V-neck evening gown with side slit | 换成玫瑰灰雪纺V领侧开衩晚礼服 | Dresses / Formal | steps=50, cfg=5.0, full-body shot recommended |
+| 424 | Replace the outfit with a wine red velvet sheath dress with long sleeves | 将服装换成酒红色丝绒长袖鞘形连衣裙 | Dresses / Formal | steps=45, cfg=4.5 |
+| 425 | Change to a gold lamé halter-neck formal gown | 换成金色金属丝挂脖正装礼服 | Dresses / Formal | steps=50, cfg=5.0 |
+| 426 | Replace with a midnight blue beaded ceiling-length gown | 换成午夜蓝珠饰拖地长裙 | Dresses / Formal | steps=50, cfg=5.0, full-body shot recommended |
+| 427 | Change the outfit to a teal satin off-shoulder mermaid evening dress | 将服装换成青色缎面一字肩鱼尾晚礼服 | Dresses / Formal | steps=50, cfg=5.0, full-body shot recommended |
+| 428 | Replace with a white classical Greek-draped one-shoulder evening gown | 换成白色希腊式单肩垂褶晚礼服 | Dresses / Formal | steps=50, cfg=5.0 |
+| 429 | Replace the outfit with a traditional red silk qipao with gold phoenix embroidery | 将服装换成红色丝绸金凤凰刺绣旗袍 | Dresses / Cultural | steps=50, cfg=5.0 |
+| 430 | Change to a jade green satin cheongsam with mandarin collar | 换成翡翠绿缎面立领旗袍 | Dresses / Cultural | steps=50, cfg=5.0 |
+| 431 | Replace with a pink floral silk kimono with obi belt | 换成粉色碎花丝绸和服配腰带 | Dresses / Cultural | steps=50, cfg=5.0, full-body shot recommended |
+| 432 | Change the outfit to a white and blue Ming-dynasty style hanfu | 将服装换成白蓝色明制汉服 | Dresses / Cultural | steps=50, cfg=5.0, full-body shot recommended |
+| 433 | Replace with a deep red bridal saree with gold zari border | 换成深红色金丝边新娘纱丽 | Dresses / Cultural | steps=50, cfg=5.0, full-body shot recommended |
+| 434 | Change to a Bavarian dirndl dress in blue with white blouse | 换成蓝色配白衬衫巴伐利亚连衣裙 | Dresses / Cultural | steps=50, cfg=5.0, full-body shot recommended |
+| 435 | Replace the outfit with a white ao dai with blue floral embroidery | 将服装换成蓝色花卉刺绣白色奥黛 | Dresses / Cultural | steps=50, cfg=5.0, full-body shot recommended |
+| 436 | Change to a turquoise Moroccan kaftan with gold trim | 换成绿松石色金边摩洛哥长袍 | Dresses / Cultural | steps=50, cfg=5.0 |
+| 437 | Replace with a black embroidered abaya with gold accents | 换成黑色金色点缀刺绣阿拉伯长袍 | Dresses / Cultural | steps=50, cfg=5.0, full-body shot recommended |
+| 438 | Change the outfit to an ivory lace classic wedding dress with cathedral train | 将服装换成象牙白蕾丝大教堂拖尾经典婚纱 | Dresses / Wedding | steps=50, cfg=5.0, full-body shot recommended |
+| 439 | Replace with a bohemian crochet lace wedding dress with bell sleeves | 换成波西米亚钩针蕾丝喇叭袖婚纱 | Dresses / Wedding | steps=50, cfg=5.0, full-body shot recommended |
+| 440 | Change to a princess-style tulle ball gown wedding dress with beaded bodice | 换成公主风薄纱珠饰紧身舞会婚纱 | Dresses / Wedding | steps=50, cfg=5.0, full-body shot recommended |
+| 441 | Replace the outfit with a vintage 1950s tea-length wedding dress | 将服装换成复古1950年代茶歇长度婚纱 | Dresses / Wedding | steps=50, cfg=5.0 |
+| 442 | Change to a minimalist crepe column wedding dress with high neck | 换成极简绉纱高领直筒婚纱 | Dresses / Wedding | steps=50, cfg=5.0 |
+| 443 | Replace with a romantic blush pink organza wedding gown with ruffles | 换成浪漫腮红粉欧根纱荷叶边婚纱 | Dresses / Wedding | steps=50, cfg=5.0, full-body shot recommended |
+| 444 | Change the outfit to a fitted lace wedding dress with illusion back | 换成修身蕾丝幻觉后背婚纱 | Dresses / Wedding | steps=50, cfg=5.0 |
+| 445 | Replace with a simple satin slip wedding dress with cowl neckline | 换成简约缎面堆领吊带婚纱 | Dresses / Wedding | steps=45, cfg=4.5 |
+| 446 | Change to a red floral print cotton sundress with tiered skirt | 换成红色碎花棉质层叠裙摆太阳裙 | Dresses / Casual | steps=45, cfg=4.5 |
+| 447 | Replace the outfit with a black and white gingham check mini dress | 将服装换成黑白格子迷你连衣裙 | Dresses / Casual | steps=45, cfg=4.5 |
+| 448 | Change to a cobalt blue smocked bodice midi dress | 换成钴蓝色褶饰胸衣中长连衣裙 | Dresses / Casual | steps=45, cfg=4.5 |
+| 449 | Replace with a peach chiffon tiered maxi dress with flutter sleeves | 换成桃色雪纺飘袖层叠长裙 | Dresses / Casual | steps=45, cfg=4.5, full-body shot recommended |
+| 450 | Change the outfit to a leopard print wrap midi dress | 将服装换成豹纹裹身中长连衣裙 | Dresses / Casual | steps=45, cfg=4.5 |
+| 451 | Replace with a teal green ribbed knit bodycon midi dress | 换成青绿色罗纹针织紧身中长连衣裙 | Dresses / Casual | steps=40, cfg=4.0 |
+| 452 | Change to a strawberry red off-shoulder mini sundress | 换成草莓红一字肩迷你太阳裙 | Dresses / Casual | steps=45, cfg=4.5 |
+| 453 | Replace the outfit with a camel corduroy pinafore dress | 将服装换成驼色灯芯绒背带裙 | Dresses / Casual | steps=45, cfg=4.5 |
+| 454 | Change to a white broderie anglaise midi dress with square neckline | 换成白色方领镂空刺绣中长连衣裙 | Dresses / Casual | steps=45, cfg=4.5 |
+| 455 | Replace with a tropical print rayon maxi wrap dress | 换成热带印花人造丝长款裹身裙 | Dresses / Casual | steps=45, cfg=4.5, full-body shot recommended |
+| 456 | Change the outfit to a dove gray cashmere sweater dress with turtleneck | 将服装换成鸽灰色高领羊绒毛衣裙 | Dresses / Casual | steps=40, cfg=4.0 |
+| 457 | Replace with a powder blue linen shirt dress with three-quarter sleeves | 换成粉蓝色七分袖亚麻衬衫裙 | Dresses / Casual | steps=45, cfg=4.5 |
+| 458 | Change to a cherry red fit-and-flare mini dress with Peter Pan collar | 换成樱桃红彼得潘领收腰伞裙迷你连衣裙 | Dresses / Casual | steps=45, cfg=4.5 |
+| 459 | Replace the outfit with a dusty blue chambray midi dress with tie waist | 将服装换成灰蓝色系腰水洗棉中长连衣裙 | Dresses / Casual | steps=45, cfg=4.5 |
+| 460 | Change to a black velvet mini dress with puff sleeves | 换成黑色丝绒泡泡袖迷你连衣裙 | Dresses / Casual | steps=45, cfg=4.5 |
+| 461 | Replace with a marigold yellow chiffon maxi dress with pleated skirt | 换成金盏花黄色雪纺百褶裙摆长裙 | Dresses / Casual | steps=45, cfg=4.5, full-body shot recommended |
+| 462 | Change the outfit to an ivory crepe midi dress with draped front | 将服装换成象牙白绉纱垂褶前身中长连衣裙 | Dresses / Formal | steps=45, cfg=4.5 |
+| 463 | Replace with a deep burgundy off-shoulder velvet evening gown | 换成深酒红色一字肩丝绒晚礼服 | Dresses / Formal | steps=50, cfg=5.0, full-body shot recommended |
+| 464 | Change to a forest green satin A-line cocktail dress | 换成森林绿缎面A字鸡尾酒裙 | Dresses / Formal | steps=45, cfg=4.5 |
+| 465 | Replace the outfit with a black crepe jumpsuit dress with wide legs | 将服装换成黑色绉纱阔腿连身裤裙 | Dresses / Formal | steps=45, cfg=4.5, full-body shot recommended |
+| 466 | Change to a coral chiffon high-low formal dress | 换成珊瑚色雪纺前短后长正装裙 | Dresses / Formal | steps=50, cfg=5.0 |
+| 467 | Replace with a lilac tulle off-shoulder ball gown with floral appliqué | 换成丁香紫一字肩花卉贴花薄纱舞会礼服 | Dresses / Formal | steps=50, cfg=5.0, full-body shot recommended |
+| 468 | Change the outfit to a pewter gray silk charmeuse slip gown | 将服装换成锡灰色丝绸吊带礼服 | Dresses / Formal | steps=50, cfg=5.0 |
+| 469 | Replace with a ruby red strapless sweetheart neckline ball gown | 换成宝石红抹胸心形领舞会礼服 | Dresses / Formal | steps=50, cfg=5.0, full-body shot recommended |
+| 470 | Change to a black and gold brocade cocktail dress with boat neck | 换成黑金织锦船领鸡尾酒裙 | Dresses / Formal | steps=50, cfg=5.0 |
+| 471 | Replace the outfit with a sky blue organza ball gown with layered skirt | 将服装换成天蓝色欧根纱层叠裙摆舞会礼服 | Dresses / Formal | steps=50, cfg=5.0, full-body shot recommended |
+| 472 | Change to a vermillion red satin one-shoulder cocktail dress | 换成朱红色缎面单肩鸡尾酒裙 | Dresses / Formal | steps=45, cfg=4.5 |
+| 473 | Replace with a black sequined mini cocktail dress | 换成黑色亮片迷你鸡尾酒裙 | Dresses / Formal | steps=45, cfg=4.5 |
+| 474 | Change the outfit to a sapphire blue mermaid gown with beaded straps | 将服装换成宝石蓝珠饰肩带鱼尾礼服 | Dresses / Formal | steps=50, cfg=5.0, full-body shot recommended |
+| 475 | Replace with a champagne tulle A-line formal dress with embroidered bodice | 换成香槟色刺绣紧身上衣薄纱A字正式裙 | Dresses / Formal | steps=50, cfg=5.0 |
+| 476 | Change to a black silk qipao with white magnolia print | 换成黑色白色玉兰花印花丝绸旗袍 | Dresses / Cultural | steps=50, cfg=5.0 |
+| 477 | Replace the outfit with a pastel pink cherry-blossom print kimono | 将服装换成粉色樱花印花和服 | Dresses / Cultural | steps=50, cfg=5.0, full-body shot recommended |
+| 478 | Change to a royal blue Tang dynasty-style hanfu with wide sleeves | 换成宝蓝色唐制大袖汉服 | Dresses / Cultural | steps=50, cfg=5.0, full-body shot recommended |
+| 479 | Replace with a golden yellow lehenga choli with red dupatta | 换成金黄色红色披巾半裙套装 | Dresses / Cultural | steps=50, cfg=5.0, full-body shot recommended |
+| 480 | Change the outfit to a multicolor Korean hanbok with rainbow sleeves | 将服装换成彩色彩虹袖韩服 | Dresses / Cultural | steps=50, cfg=5.0, full-body shot recommended |
+| 481 | Replace with a white linen Victorian-style dress with high collar and lace | 换成白色亚麻维多利亚风格高领蕾丝连衣裙 | Dresses / Cultural | steps=50, cfg=5.0 |
+| 482 | Change to an indigo and white batik print wrap dress | 换成靛蓝白色蜡染印花裹身裙 | Dresses / Cultural | steps=45, cfg=4.5 |
+| 483 | Replace the outfit with a Song dynasty cross-collar hanfu in pale green | 将服装换成浅绿色宋制交领汉服 | Dresses / Cultural | steps=50, cfg=5.0, full-body shot recommended |
+| 484 | Change to a magenta silk saree with gold thread work | 换成品红色金丝工艺丝绸纱丽 | Dresses / Cultural | steps=50, cfg=5.0, full-body shot recommended |
+| 485 | Replace with a lavender purple Vietnamese ao dai with floral embroidery | 换成薰衣草紫碎花刺绣越南奥黛 | Dresses / Cultural | steps=50, cfg=5.0, full-body shot recommended |
+| 486 | Change the outfit to a long-sleeve V-neck wrap dress in teal green jersey | 将服装换成青绿色针织长袖V领裹身连衣裙 | Dresses / Casual | steps=45, cfg=4.5 |
+| 487 | Replace with a white Swiss-dot midi dress with ruffled hem | 换成白色瑞士点荷叶边中长连衣裙 | Dresses / Casual | steps=45, cfg=4.5 |
+| 488 | Change to a black sleeveless turtleneck knit dress | 换成黑色无袖高领针织连衣裙 | Dresses / Casual | steps=40, cfg=4.0 |
+| 489 | Replace the outfit with a pink gingham check babydoll dress | 将服装换成粉色格子娃娃裙 | Dresses / Casual | steps=45, cfg=4.5 |
+| 490 | Change to an abstract print silk midi dress in blue and orange | 换成蓝橙色抽象印花丝绸中长连衣裙 | Dresses / Casual | steps=45, cfg=4.5 |
+| 491 | Replace with a classic little black dress with a-line silhouette | 换成经典A字小黑裙 | Dresses / Casual | steps=40, cfg=4.0 |
+| 492 | Change the outfit to a moss green silk midi slip dress | 将服装换成苔绿色丝绸吊带中长连衣裙 | Dresses / Casual | steps=45, cfg=4.5 |
+| 493 | Replace with a bright coral asymmetric-hem jersey dress | 换成亮珊瑚色不对称下摆针织连衣裙 | Dresses / Casual | steps=45, cfg=4.5 |
+| 494 | Change to a stone gray oversized hoodie dress | 换成石灰色宽松连帽衫裙 | Dresses / Casual | steps=40, cfg=4.0 |
+| 495 | Replace the outfit with a periwinkle blue pleated chiffon midi dress | 将服装换成长春花蓝百褶雪纺中长连衣裙 | Dresses / Casual | steps=45, cfg=4.5 |
+| 496 | Change to a caramel brown suede button-front mini dress | 换成焦糖棕麂皮前扣迷你连衣裙 | Dresses / Casual | steps=45, cfg=4.5 |
+| 497 | Replace with a white cotton broderie anglaise maxi dress | 换成白色棉质镂空刺绣长裙 | Dresses / Casual | steps=45, cfg=4.5, full-body shot recommended |
+| 498 | Change the outfit to a maroon ribbed knit midi dress with side slit | 将服装换成栗色罗纹针织侧开衩中长连衣裙 | Dresses / Casual | steps=40, cfg=4.0 |
+| 499 | Replace with a lemon yellow cotton poplin A-line mini dress | 换成柠檬黄棉府绸A字迷你连衣裙 | Dresses / Casual | steps=45, cfg=4.5 |
+| 500 | Change to a deep olive satin cowl-neck midi slip dress | 换成深橄榄色缎面堆领吊带中长连衣裙 | Dresses / Casual | steps=45, cfg=4.5 |
+| 501 | Replace the outfit with a black lace-trim velvet midi dress | 将服装换成黑色蕾丝边丝绒中长连衣裙 | Dresses / Casual | steps=45, cfg=4.5 |
+| 502 | Change to a copper satin wrap cocktail dress with flutter sleeves | 换成铜色缎面飘袖裹身鸡尾酒裙 | Dresses / Formal | steps=45, cfg=4.5 |
+| 503 | Replace with an ivory satin backless formal gown | 换成象牙白缎面露背正装礼服 | Dresses / Formal | steps=50, cfg=5.0, full-body shot recommended |
+| 504 | Change the outfit to a deep navy velvet long-sleeve cocktail dress | 将服装换成深海军蓝丝绒长袖鸡尾酒裙 | Dresses / Formal | steps=45, cfg=4.5 |
+| 505 | Replace with a peony pink tulle prom dress with sweetheart neckline | 换成牡丹粉薄纱心形领舞会裙 | Dresses / Formal | steps=50, cfg=5.0 |
+| 506 | Change to a canary yellow one-shoulder draped cocktail dress | 换成金丝雀黄单肩垂褶鸡尾酒裙 | Dresses / Formal | steps=45, cfg=4.5 |
+| 507 | Replace the outfit with a black crepe cape-back formal dress | 将服装换成黑色绉纱披肩后背正装连衣裙 | Dresses / Formal | steps=50, cfg=5.0 |
+| 508 | Change to a rose gold metallic pleated maxi gown | 换成玫瑰金金属色百褶长礼服 | Dresses / Formal | steps=50, cfg=5.0, full-body shot recommended |
+| 509 | Replace with an amethyst purple chiffon goddess gown with keyhole | 换成紫水晶色雪纺锁孔领女神裙 | Dresses / Formal | steps=50, cfg=5.0 |
+| 510 | Change the outfit to an emerald green velvet strapless cocktail dress | 将服装换成祖母绿丝绒抹胸鸡尾酒裙 | Dresses / Formal | steps=45, cfg=4.5 |
+| 511 | Replace with a black qipao mini dress with red peony embroidery | 换成黑色红牡丹刺绣短款旗袍 | Dresses / Cultural | steps=50, cfg=5.0 |
+| 512 | Change to a burnt orange African ankara print wrap dress | 换成焦橙色非洲安卡拉印花裹身裙 | Dresses / Cultural | steps=50, cfg=5.0 |
+| 513 | Replace the outfit with a cream and gold embroidered Indian anarkali dress | 将服装换成奶油金色刺绣印度阿纳卡利裙 | Dresses / Cultural | steps=50, cfg=5.0, full-body shot recommended |
+| 514 | Change to a sky blue cotton summer yukata with white floral pattern | 换成天蓝色白色碎花棉质浴衣 | Dresses / Cultural | steps=50, cfg=5.0, full-body shot recommended |
+| 515 | Replace with a deep red Wei/Jin dynasty hanfu with flowing train | 换成深红色魏晋风汉服带飘逸裙摆 | Dresses / Cultural | steps=50, cfg=5.0, full-body shot recommended |
+| 516 | Change the outfit to a royal purple Moroccan kaftan with silver beading | 将服装换成皇家紫银色串珠摩洛哥长袍 | Dresses / Cultural | steps=50, cfg=5.0 |
+| 517 | Replace with a pink and green traditional Korean hanbok | 换成粉绿色传统韩服 | Dresses / Cultural | steps=50, cfg=5.0, full-body shot recommended |
+| 518 | Change to a teal green silk cheongsam with bamboo embroidery | 换成青绿色丝绸竹子刺绣旗袍 | Dresses / Cultural | steps=50, cfg=5.0 |
+| 519 | Replace the outfit with a Renaissance-style emerald green velvet dress | 将服装换成文艺复兴风格祖母绿丝绒连衣裙 | Dresses / Cultural | steps=50, cfg=5.0 |
+| 520 | Change to a white off-shoulder bohemian lace wedding dress | 换成白色一字肩波西米亚蕾丝婚纱 | Dresses / Wedding | steps=50, cfg=5.0, full-body shot recommended |
+| 521 | Replace with a champagne sheath wedding dress with illusion lace bodice | 换成香槟色幻觉蕾丝上身鞘形婚纱 | Dresses / Wedding | steps=50, cfg=5.0 |
+| 522 | Change the outfit to a red Chinese traditional wedding qipao with gold dragons | 将服装换成红色金龙传统中式婚礼旗袍 | Dresses / Wedding | steps=50, cfg=5.0 |
+| 523 | Replace with a sleek modern minimalist wedding jumpsuit in ivory | 换成象牙白现代极简婚礼连体裤 | Dresses / Wedding | steps=45, cfg=4.5 |
+| 524 | Change to a vintage-inspired tea-length lace wedding dress with long sleeves | 换成复古风格长袖茶歇长度蕾丝婚纱 | Dresses / Wedding | steps=50, cfg=5.0 |
+| 525 | Replace the outfit with a pastel ombré tulle ball gown wedding dress | 将服装换成粉彩渐变薄纱舞会婚纱 | Dresses / Wedding | steps=50, cfg=5.0, full-body shot recommended |
+| 526 | Change to a dark emerald green satin evening gown with high slit | 换成深祖母绿缎面高开衩晚礼服 | Dresses / Formal | steps=50, cfg=5.0, full-body shot recommended |
+| 527 | Replace with a navy blue chiffon maxi dress with embellished waistband | 换成深蓝色雪纺串珠腰带长裙 | Dresses / Formal | steps=50, cfg=5.0, full-body shot recommended |
+| 528 | Change the outfit to a white and navy nautical striped midi dress | 将服装换成白色海军蓝航海条纹中长连衣裙 | Dresses / Casual | steps=45, cfg=4.5 |
+| 529 | Replace with a burnt orange smocked bodice maxi dress | 换成焦橙色褶饰胸衣长裙 | Dresses / Casual | steps=45, cfg=4.5, full-body shot recommended |
+| 530 | Change to a plaid red and dark green flannel shirt dress | 换成红色深绿格纹法兰绒衬衫裙 | Dresses / Casual | steps=45, cfg=4.5 |
+| 531 | Replace the outfit with a black jersey wrap dress with three-quarter sleeves | 将服装换成黑色七分袖针织裹身连衣裙 | Dresses / Casual | steps=40, cfg=4.0 |
+| 532 | Change to a magenta fuchsia crepe sheath dress | 换成品红色绉纱鞘形连衣裙 | Dresses / Formal | steps=45, cfg=4.5 |
+| 533 | Replace with a sky blue embroidered Mexican-style sundress | 换成天蓝色刺绣墨西哥风格太阳裙 | Dresses / Cultural | steps=50, cfg=5.0 |
+| 534 | Change the outfit to a seafoam green halter-neck maxi dress | 将服装换成海绿色挂脖长裙 | Dresses / Casual | steps=45, cfg=4.5, full-body shot recommended |
+| 535 | Replace with a black tulle cocktail dress with velvet bodice | 换成黑色丝绒上身薄纱鸡尾酒裙 | Dresses / Formal | steps=50, cfg=5.0 |
+| 536 | Change to a pale blush midi dress with delicate lace sleeves | 换成浅腮红色精致蕾丝袖中长连衣裙 | Dresses / Formal | steps=45, cfg=4.5 |
+| 537 | Replace the outfit with a charcoal gray wool blazer dress with belt | 将服装换成碳灰色羊毛西装裙配腰带 | Dresses / Casual | steps=45, cfg=4.5 |
+| 538 | Change to an electric blue body-hugging midi dress with cut-outs | 换成电光蓝镂空紧身中长连衣裙 | Dresses / Formal | steps=45, cfg=4.5 |
+| 539 | Replace with an apricot chiffon wrap maxi dress with ruffled hem | 换成杏色雪纺荷叶边裹身长裙 | Dresses / Casual | steps=45, cfg=4.5, full-body shot recommended |
+| 540 | Change the outfit to a jade green silk mandarin-collar dress | 将服装换成翡翠绿丝绸立领连衣裙 | Dresses / Cultural | steps=50, cfg=5.0 |
+| 541 | Replace with a black strappy backless mini dress | 换成黑色系带露背迷你连衣裙 | Dresses / Formal | steps=45, cfg=4.5 |
+| 542 | Change to a tangerine orange cotton midi sundress with shirred bodice | 换成橘红色棉质褶皱胸衣中长太阳裙 | Dresses / Casual | steps=45, cfg=4.5 |
+| 543 | Replace the outfit with a white crochet lace beach cover-up dress | 将服装换成白色钩针蕾丝海滩罩裙 | Dresses / Casual | steps=45, cfg=4.5 |
+| 544 | Change to a pastel watercolor-print chiffon maxi dress | 换成粉彩水彩印花雪纺长裙 | Dresses / Casual | steps=45, cfg=4.5, full-body shot recommended |
+| 545 | Replace with a deep wine red crushed velvet mini dress | 换成深葡萄酒红碎丝绒迷你连衣裙 | Dresses / Casual | steps=45, cfg=4.5 |
+| 546 | Change the outfit to a lilac satin bias-cut slip midi dress | 将服装换成丁香紫缎面斜裁吊带中长裙 | Dresses / Casual | steps=45, cfg=4.5 |
+| 547 | Replace with a sunflower yellow off-shoulder ruffle maxi dress | 换成向日葵黄一字肩荷叶边长裙 | Dresses / Casual | steps=45, cfg=4.5, full-body shot recommended |
+| 548 | Change to a midnight blue sequined mini cocktail dress | 换成午夜蓝亮片迷你鸡尾酒裙 | Dresses / Formal | steps=45, cfg=4.5 |
+| 549 | Replace the outfit with an olive green linen button-through midi dress | 将服装换成橄榄绿亚麻全开襟中长连衣裙 | Dresses / Casual | steps=45, cfg=4.5 |
+| 550 | Change to a white and blue porcelain-print cheongsam | 换成蓝白青花瓷印花旗袍 | Dresses / Cultural | steps=50, cfg=5.0 |
+| 551 | Replace with a deep teal one-shoulder draped jersey evening dress | 换成深青色单肩垂褶针织晚礼服 | Dresses / Formal | steps=50, cfg=5.0 |
+| 552 | Change the outfit to a cream and gold Indian salwar kameez | 将服装换成奶油色金色印度萨瓦尔卡米兹 | Dresses / Cultural | steps=50, cfg=5.0, full-body shot recommended |
+| 553 | Replace with a black and white houndstooth shift dress | 换成黑白千鸟格直身连衣裙 | Dresses / Casual | steps=45, cfg=4.5 |
+| 554 | Change to a baby blue tulle princess-style ball gown | 换成婴儿蓝薄纱公主风舞会礼服 | Dresses / Formal | steps=50, cfg=5.0, full-body shot recommended |
+| 555 | Replace the outfit with a red silk Miao-embroidered ethnic dress | 将服装换成红色苗族刺绣丝绸民族裙 | Dresses / Cultural | steps=50, cfg=5.0 |
+| 556 | Change to a noir crêpe blazer-style mini dress | 换成黑色绉纱西装风迷你连衣裙 | Dresses / Casual | steps=45, cfg=4.5 |
+| 557 | Replace with a sunset gradient chiffon maxi formal dress | 换成日落渐变雪纺长款正式裙 | Dresses / Formal | steps=50, cfg=5.0, full-body shot recommended |
+| 558 | Change the outfit to a dusty cedar knit midi dress with belt | 将服装换成暗雪松色腰带针织中长连衣裙 | Dresses / Casual | steps=40, cfg=4.0 |
+| 559 | Replace with a flame red flamenco-style ruffled dress | 换成火焰红弗拉门戈风格荷叶边连衣裙 | Dresses / Cultural | steps=50, cfg=5.0, full-body shot recommended |
+| 560 | Change to a slate gray pinstripe sleeveless blazer dress | 换成板岩灰细条纹无袖西装裙 | Dresses / Casual | steps=45, cfg=4.5 |
+| 561 | Replace the outfit with a pale gold dupion silk evening gown | 将服装换成淡金色生丝晚礼服 | Dresses / Formal | steps=50, cfg=5.0, full-body shot recommended |
+| 562 | Change to an ink blue Song dynasty-style ruqun hanfu | 换成藏蓝色宋制褙子汉服 | Dresses / Cultural | steps=50, cfg=5.0, full-body shot recommended |
+| 563 | Replace with a rust-colored suede fringe western dress | 换成铁锈色麂皮流苏西部风连衣裙 | Dresses / Casual | steps=45, cfg=4.5 |
+| 564 | Change the outfit to a buttercream yellow lace cocktail dress | 将服装换成奶油黄蕾丝鸡尾酒裙 | Dresses / Formal | steps=45, cfg=4.5 |
+| 565 | Replace with a multicolor West African kente cloth dress | 换成多色西非肯特布连衣裙 | Dresses / Cultural | steps=50, cfg=5.0 |
+| 566 | Change to a sage green off-shoulder smocked maxi dress | 换成鼠尾草绿一字肩褶饰长裙 | Dresses / Casual | steps=45, cfg=4.5, full-body shot recommended |
+| 567 | Replace the outfit with a metallic bronze lamé column evening dress | 将服装换成金属铜色金属丝直身晚礼服 | Dresses / Formal | steps=50, cfg=5.0, full-body shot recommended |
+| 568 | Change to a cerulean blue silk wrap midi dress with flutter sleeves | 换成天蓝色丝绸飘袖裹身中长连衣裙 | Dresses / Casual | steps=45, cfg=4.5 |
+| 569 | Replace with a black embroidered tulle formal overlay gown | 换成黑色刺绣薄纱覆层正式礼服 | Dresses / Formal | steps=50, cfg=5.0, full-body shot recommended |
+| 570 | Change the outfit to a cranberry red crushed satin cocktail dress | 将服装换成蔓越莓红碎缎鸡尾酒裙 | Dresses / Formal | steps=45, cfg=4.5 |
+| 571 | Replace with a natural linen pinafore dress over white tee | 换成天然亚麻背带裙配白色T恤 | Dresses / Casual | steps=45, cfg=4.5 |
+| 572 | Change to a Thai silk sapphire blue wrap skirt outfit | 换成泰丝宝石蓝裹裙套装 | Dresses / Cultural | steps=50, cfg=5.0 |
+| 573 | Replace the outfit with a white satin mermaid wedding gown with lace train | 将服装换成白色缎面蕾丝拖尾鱼尾婚纱 | Dresses / Wedding | steps=50, cfg=5.0, full-body shot recommended |
+| 574 | Change to a soft lavender crepe de chine midi dress with cape back | 换成柔薰衣草色双绉披肩后背中长连衣裙 | Dresses / Formal | steps=45, cfg=4.5 |
+| 575 | Replace with an emerald green sequined bodycon mini dress | 换成祖母绿亮片紧身迷你连衣裙 | Dresses / Formal | steps=45, cfg=4.5 |
+| 576 | Change the outfit to a peach pink tiered organza ball gown | 将服装换成桃粉色层叠欧根纱舞会礼服 | Dresses / Formal | steps=50, cfg=5.0, full-body shot recommended |
+| 577 | Replace with a Mediterranean blue linen midi dress with rope belt | 换成地中海蓝亚麻绳腰带中长连衣裙 | Dresses / Casual | steps=45, cfg=4.5 |
+| 578 | Change to a crimson red velvet halter cocktail dress | 换成深红色丝绒挂脖鸡尾酒裙 | Dresses / Formal | steps=45, cfg=4.5 |
+| 579 | Replace the outfit with a black mesh paneled bodycon midi dress | 将服装换成黑色网纱拼接紧身中长连衣裙 | Dresses / Formal | steps=45, cfg=4.5 |
+| 580 | Change to a traditional green Indonesian kebaya with batik skirt | 换成绿色印尼可巴雅配蜡染裙 | Dresses / Cultural | steps=50, cfg=5.0, full-body shot recommended |
+| 581 | Replace with a snow white ball gown with crystal-beaded bodice | 换成雪白色水晶珠饰紧身上衣舞会礼服 | Dresses / Wedding | steps=50, cfg=5.0, full-body shot recommended |
+| 582 | Change the outfit to a poppy red cotton midi dress with ruched sleeves | 将服装换成罂粟红棉质褶皱袖中长连衣裙 | Dresses / Casual | steps=45, cfg=4.5 |
+| 583 | Replace with a gold and ivory Indian wedding lehenga with intricate zardozi work | 换成金色象牙白扎尔多兹刺绣印度婚礼裙 | Dresses / Cultural | steps=50, cfg=5.0, full-body shot recommended |
+| 584 | Change to a cloud white organza mini dress with balloon sleeves | 换成云白色欧根纱气球袖迷你连衣裙 | Dresses / Casual | steps=45, cfg=4.5 |
+| 585 | Replace the outfit with a steel blue one-shoulder jersey draped maxi dress | 将服装换成钢蓝色单肩针织垂褶长裙 | Dresses / Formal | steps=50, cfg=5.0, full-body shot recommended |
+| 586 | Change to a mocha brown faux-wrap shirt dress with patch pockets | 换成摩卡棕假裹身贴袋衬衫裙 | Dresses / Casual | steps=45, cfg=4.5 |
+| 587 | Replace with a hot pink crepe fit-and-flare cocktail dress | 换成亮粉色绉纱收腰伞裙鸡尾酒裙 | Dresses / Formal | steps=45, cfg=4.5 |
+| 588 | Change the outfit to an ecru crochet lace sleeveless maxi dress | 将服装换成原白色钩针蕾丝无袖长裙 | Dresses / Casual | steps=45, cfg=4.5, full-body shot recommended |
+| 589 | Replace with a navy blue and gold African agbada robe dress | 换成深蓝金色非洲阿格巴达长袍裙 | Dresses / Cultural | steps=50, cfg=5.0, full-body shot recommended |
+| 590 | Change to a garnet red off-shoulder ball gown with tulle overlay | 换成石榴红一字肩薄纱覆层舞会礼服 | Dresses / Formal | steps=50, cfg=5.0, full-body shot recommended |
+| 591 | Replace the outfit with a soft gray merino knit turtleneck midi dress | 将服装换成柔灰色美利奴高领针织中长连衣裙 | Dresses / Casual | steps=40, cfg=4.0 |
+| 592 | Change to a traditional black and red Spanish mantilla-style dress | 换成传统黑红色西班牙曼蒂拉风格连衣裙 | Dresses / Cultural | steps=50, cfg=5.0 |
+| 593 | Replace with a mint green tulle midi prom dress with embroidered flowers | 换成薄荷绿刺绣花卉薄纱中长舞会裙 | Dresses / Formal | steps=50, cfg=5.0 |
+| 594 | Change the outfit to a daffodil yellow satin camisole slip dress | 将服装换成水仙黄缎面吊带裙 | Dresses / Casual | steps=45, cfg=4.5 |
+| 595 | Replace with a dark plum baroque-print velvet midi dress | 换成深紫红色巴洛克印花丝绒中长连衣裙 | Dresses / Casual | steps=45, cfg=4.5 |
+| 596 | Change to a pearl white Qing-dynasty style Manchu court dress | 换成珍珠白清代满族宫廷服饰 | Dresses / Cultural | steps=50, cfg=5.0, full-body shot recommended |
+| 597 | Replace the outfit with a flamingo pink chiffon ruffled midi dress | 将服装换成火烈鸟粉雪纺荷叶边中长连衣裙 | Dresses / Casual | steps=45, cfg=4.5 |
+| 598 | Change to a deep ocean blue velvet off-shoulder formal gown | 换成深海蓝丝绒一字肩正装礼服 | Dresses / Formal | steps=50, cfg=5.0, full-body shot recommended |
+| 599 | Replace with a vintage polka-dot tea-length dress in navy and white | 换成复古海军蓝白色波点茶歇长度连衣裙 | Dresses / Casual | steps=45, cfg=4.5 |
+| 600 | Change the outfit to a Byzantine-inspired gold and maroon brocade gown | 将服装换成拜占庭风格金栗色织锦礼服 | Dresses / Cultural | steps=50, cfg=5.0, full-body shot recommended |
+
+## Section 4: Outerwear (Entries 601-810)
+
+| # | English Prompt | 中文提示词 | Category | Config Notes |
+|---|---------------|-----------|----------|--------------|
+| 601 | Add a black leather motorcycle jacket | 添加黑色皮革摩托车夹克 | Outerwear / Jacket | steps=45, cfg=4.5 |
+| 602 | Change the jacket to a classic blue denim jacket with brass buttons | 将夹克换成经典蓝色铜扣牛仔夹克 | Outerwear / Jacket | steps=45, cfg=4.5 |
+| 603 | Replace the outerwear with a dark green bomber jacket with orange lining | 将外套换成深绿色橙色内衬飞行员夹克 | Outerwear / Jacket | steps=45, cfg=4.5 |
+| 604 | Add a burgundy and cream varsity jacket with leather sleeves | 添加酒红色奶油色皮袖校队夹克 | Outerwear / Jacket | steps=45, cfg=4.5 |
+| 605 | Change to a black quilted puffer jacket with stand collar | 换成黑色绗缝立领羽绒服 | Outerwear / Jacket | steps=45, cfg=4.5 |
+| 606 | Replace with a khaki safari jacket with multiple pockets and belt | 换成卡其色多口袋系带猎装夹克 | Outerwear / Jacket | steps=45, cfg=4.5 |
+| 607 | Add a cropped olive green military-style jacket with epaulettes | 添加橄榄绿短款肩章军装风夹克 | Outerwear / Jacket | steps=45, cfg=4.5 |
+| 608 | Change the outerwear to a navy blue quilted Barbour-style jacket | 将外套换成深蓝色绗缝巴伯风夹克 | Outerwear / Jacket | steps=45, cfg=4.5 |
+| 609 | Replace with a tan suede motorcycle jacket with silver zips | 换成棕褐色银色拉链麂皮摩托车夹克 | Outerwear / Jacket | steps=45, cfg=4.5 |
+| 610 | Add a white cropped puffer jacket | 添加白色短款羽绒服 | Outerwear / Jacket | steps=45, cfg=4.5 |
+| 611 | Change to a vintage brown leather aviator jacket with shearling collar | 换成复古棕色剪羊毛领飞行员皮夹克 | Outerwear / Jacket | steps=50, cfg=5.0 |
+| 612 | Replace the jacket with a red and black plaid flannel-lined trucker jacket | 将夹克换成红黑格纹法兰绒内衬卡车司机夹克 | Outerwear / Jacket | steps=45, cfg=4.5 |
+| 613 | Add a dusty rose oversized puffer jacket | 添加玫瑰灰超大版型羽绒服 | Outerwear / Jacket | steps=45, cfg=4.5 |
+| 614 | Change the outerwear to a camel-colored classic trench coat with belt | 将外套换成驼色经典系带风衣 | Outerwear / Coat | steps=45, cfg=4.5 |
+| 615 | Replace with a charcoal gray wool overcoat with notched lapels | 换成碳灰色缺口翻领羊毛大衣 | Outerwear / Coat | steps=45, cfg=4.5 |
+| 616 | Add a navy blue double-breasted peacoat | 添加深蓝色双排扣海军大衣 | Outerwear / Coat | steps=45, cfg=4.5 |
+| 617 | Change to a camel toggle-front duffle coat with hood | 换成驼色牛角扣连帽粗呢大衣 | Outerwear / Coat | steps=45, cfg=4.5 |
+| 618 | Replace the outerwear with a red wool cape coat with arm slits | 将外套换成红色羊毛斗篷大衣 | Outerwear / Coat | steps=50, cfg=5.0 |
+| 619 | Add a cream faux-fur teddy coat | 添加奶油色仿皮草泰迪大衣 | Outerwear / Coat | steps=45, cfg=4.5 |
+| 620 | Change to a black long-line cocoon coat with dropped shoulders | 换成黑色落肩茧形大衣 | Outerwear / Coat | steps=45, cfg=4.5 |
+| 621 | Replace with an ivory wool wrap coat with shawl collar | 换成象牙白羊毛翻领裹身大衣 | Outerwear / Coat | steps=45, cfg=4.5 |
+| 622 | Add a heather gray double-faced wool coat | 添加浅灰色双面羊毛大衣 | Outerwear / Coat | steps=45, cfg=4.5 |
+| 623 | Change the outerwear to a forest green waxed cotton hunting coat | 将外套换成森林绿蜡布猎装大衣 | Outerwear / Coat | steps=45, cfg=4.5 |
+| 624 | Replace with a black single-breasted blazer with gold buttons | 换成黑色金扣单排扣西装外套 | Outerwear / Blazer | steps=40, cfg=4.0 |
+| 625 | Add a navy blue double-breasted blazer with brass buttons | 添加深蓝色铜扣双排扣西装外套 | Outerwear / Blazer | steps=40, cfg=4.0 |
+| 626 | Change to a cream oversized boyfriend blazer | 换成奶油色宽松男友风西装外套 | Outerwear / Blazer | steps=40, cfg=4.0 |
+| 627 | Replace the outerwear with a cropped blush pink tweed blazer | 将外套换成腮红粉短款粗花呢西装外套 | Outerwear / Blazer | steps=45, cfg=4.5 |
+| 628 | Add a deep burgundy velvet smoking blazer | 添加深酒红色丝绒吸烟夹克 | Outerwear / Blazer | steps=45, cfg=4.5 |
+| 629 | Change to a tan linen unstructured blazer | 换成棕褐色无结构亚麻西装外套 | Outerwear / Blazer | steps=40, cfg=4.0 |
+| 630 | Replace with a black and white herringbone tweed blazer | 换成黑白人字纹花呢西装外套 | Outerwear / Blazer | steps=45, cfg=4.5 |
+| 631 | Add a sage green cropped blazer with puff sleeves | 添加鼠尾草绿泡泡袖短款西装外套 | Outerwear / Blazer | steps=45, cfg=4.5 |
+| 632 | Change the outerwear to a black puffer vest | 将外套换成黑色羽绒背心 | Outerwear / Vest | steps=40, cfg=4.0 |
+| 633 | Replace with a navy quilted sweater vest | 换成深蓝色绗缝毛衣背心 | Outerwear / Vest | steps=40, cfg=4.0 |
+| 634 | Add a charcoal gray pinstripe suit vest | 添加碳灰色细条纹西装背心 | Outerwear / Vest | steps=40, cfg=4.0 |
+| 635 | Change to a vintage denim vest with frayed edges | 换成复古毛边牛仔背心 | Outerwear / Vest | steps=40, cfg=4.0 |
+| 636 | Replace the outerwear with an olive green down-filled puffer vest | 将外套换成橄榄绿羽绒填充背心 | Outerwear / Vest | steps=40, cfg=4.0 |
+| 637 | Add a forest green hooded parka with faux-fur trim | 添加森林绿仿皮草边连帽派克大衣 | Outerwear / Parka | steps=45, cfg=4.5 |
+| 638 | Change to a navy blue waterproof anorak with half-zip | 换成深蓝色防水半拉链冲锋衣 | Outerwear / Anorak | steps=45, cfg=4.5 |
+| 639 | Replace with a red lightweight nylon windbreaker | 换成红色轻薄尼龙风衣 | Outerwear / Windbreaker | steps=40, cfg=4.0 |
+| 640 | Add a clear transparent raincoat with white trim | 添加透明白色镶边雨衣 | Outerwear / Raincoat | steps=45, cfg=4.5 |
+| 641 | Change the outerwear to a dark green hooded wool cloak | 将外套换成深绿色连帽羊毛斗篷 | Outerwear / Cloak | steps=50, cfg=5.0, full-body shot recommended |
+| 642 | Replace with a gray and white woven blanket poncho with fringe | 换成灰白色编织流苏毯式披肩 | Outerwear / Poncho | steps=45, cfg=4.5 |
+| 643 | Add a chocolate brown leather biker jacket with asymmetric zip | 添加巧克力棕不对称拉链皮革骑行夹克 | Outerwear / Jacket | steps=45, cfg=4.5 |
+| 644 | Change to a pale pink cropped puffer jacket with elastic hem | 换成浅粉色弹性下摆短款羽绒服 | Outerwear / Jacket | steps=45, cfg=4.5 |
+| 645 | Replace the outerwear with a stone gray long wool overcoat | 将外套换成石灰色长款羊毛大衣 | Outerwear / Coat | steps=45, cfg=4.5 |
+| 646 | Add a bright yellow PVC rain jacket with hood | 添加亮黄色PVC连帽雨衣 | Outerwear / Raincoat | steps=45, cfg=4.5 |
+| 647 | Change to a cognac brown shearling-lined suede jacket | 换成干邑棕羊羔毛衬里麂皮夹克 | Outerwear / Jacket | steps=50, cfg=5.0 |
+| 648 | Replace with a khaki cotton field jacket with four pockets | 换成卡其色四口袋棉质野战夹克 | Outerwear / Jacket | steps=45, cfg=4.5 |
+| 649 | Add a navy blue corduroy blazer with elbow patches | 添加深蓝色肘部贴皮灯芯绒西装外套 | Outerwear / Blazer | steps=45, cfg=4.5 |
+| 650 | Change the outerwear to a leopard print faux-fur coat | 将外套换成豹纹仿皮草大衣 | Outerwear / Coat | steps=50, cfg=5.0 |
+| 651 | Replace with a rust orange quilted barn jacket with corduroy collar | 换成铁锈橙色灯芯绒领绗缝工装夹克 | Outerwear / Jacket | steps=45, cfg=4.5 |
+| 652 | Add a beige linen double-breasted blazer | 添加米色亚麻双排扣西装外套 | Outerwear / Blazer | steps=40, cfg=4.0 |
+| 653 | Change to a black waterproof hooded technical shell jacket | 换成黑色防水连帽技术冲锋衣 | Outerwear / Windbreaker | steps=45, cfg=4.5 |
+| 654 | Replace the outerwear with a taupe wool herringbone topcoat | 将外套换成灰褐色人字纹羊毛面料大衣 | Outerwear / Coat | steps=45, cfg=4.5 |
+| 655 | Add a silver metallic puffer jacket | 添加银色金属光泽羽绒服 | Outerwear / Jacket | steps=45, cfg=4.5 |
+| 656 | Change to a burgundy wool crombie-style overcoat | 换成酒红色克伦比风格羊毛大衣 | Outerwear / Coat | steps=45, cfg=4.5 |
+| 657 | Replace with a light-wash cropped denim jacket with raw hem | 换成浅色水洗毛边短款牛仔夹克 | Outerwear / Jacket | steps=40, cfg=4.0 |
+| 658 | Add a dark olive canvas chore coat with blanket lining | 添加深橄榄色毯子内衬帆布工装外套 | Outerwear / Coat | steps=45, cfg=4.5 |
+| 659 | Change the outerwear to a forest green waxed bomber jacket | 将外套换成森林绿蜡面飞行员夹克 | Outerwear / Jacket | steps=45, cfg=4.5 |
+| 660 | Replace with a cream bouclé Chanel-style cropped jacket | 换成奶油色花式线圈香奈儿风短款外套 | Outerwear / Jacket | steps=50, cfg=5.0 |
+| 661 | Add a black velvet blazer with satin lapels | 添加黑色缎面翻领丝绒西装外套 | Outerwear / Blazer | steps=45, cfg=4.5 |
+| 662 | Change to a mustard yellow wool peacoat | 换成芥末黄羊毛海军大衣 | Outerwear / Coat | steps=45, cfg=4.5 |
+| 663 | Replace the outerwear with a gray plaid wool overcoat | 将外套换成灰色格纹羊毛大衣 | Outerwear / Coat | steps=45, cfg=4.5 |
+| 664 | Add a red down-filled long puffer coat | 添加红色羽绒长款羽绒大衣 | Outerwear / Coat | steps=45, cfg=4.5, full-body shot recommended |
+| 665 | Change to a distressed brown leather bomber jacket | 换成做旧棕色皮革飞行员夹克 | Outerwear / Jacket | steps=45, cfg=4.5 |
+| 666 | Replace with a pastel lavender oversized blazer | 换成粉彩薰衣草色宽松西装外套 | Outerwear / Blazer | steps=40, cfg=4.0 |
+| 667 | Add a camel hair belted wrap coat | 添加驼绒系带裹身大衣 | Outerwear / Coat | steps=45, cfg=4.5 |
+| 668 | Change the outerwear to a black long wool cape with arm holes | 将外套换成黑色长款打洞羊毛斗篷 | Outerwear / Cape | steps=50, cfg=5.0, full-body shot recommended |
+| 669 | Replace with a navy blue cotton twill harrington jacket | 换成深蓝色棉斜纹哈灵顿夹克 | Outerwear / Jacket | steps=40, cfg=4.0 |
+| 670 | Add a blush pink faux-fur collar cropped jacket | 添加腮红粉仿皮草领短款外套 | Outerwear / Jacket | steps=45, cfg=4.5 |
+| 671 | Change to a slate blue quilted shirt jacket (shacket) | 换成板岩蓝绗缝衬衫夹克 | Outerwear / Jacket | steps=40, cfg=4.0 |
+| 672 | Replace the outerwear with a tan cotton gabardine trench coat | 将外套换成棕褐色轧别丁风衣 | Outerwear / Coat | steps=45, cfg=4.5 |
+| 673 | Add a black cropped moto jacket with silver studs | 添加黑色银色铆钉短款摩托夹克 | Outerwear / Jacket | steps=45, cfg=4.5 |
+| 674 | Change to a dark cherry red peacoat with black velvet collar | 换成深樱桃红黑色丝绒领海军大衣 | Outerwear / Coat | steps=45, cfg=4.5 |
+| 675 | Replace with a cream shearling long coat | 换成奶油色羊羔毛长款大衣 | Outerwear / Coat | steps=50, cfg=5.0, full-body shot recommended |
+| 676 | Add a olive drab military M-65 field jacket | 添加橄榄色军用M-65野战夹克 | Outerwear / Jacket | steps=45, cfg=4.5 |
+| 677 | Change the outerwear to a deep teal velvet blazer with gold buttons | 将外套换成深青色金扣丝绒西装外套 | Outerwear / Blazer | steps=45, cfg=4.5 |
+| 678 | Replace with a stone washed denim trucker jacket with fleece collar | 换成石洗抓绒领牛仔卡车司机夹克 | Outerwear / Jacket | steps=45, cfg=4.5 |
+| 679 | Add a charcoal heather wool car coat | 添加碳灰杂色羊毛短款大衣 | Outerwear / Coat | steps=45, cfg=4.5 |
+| 680 | Change to a bright coral lightweight puffer jacket | 换成亮珊瑚色轻薄羽绒服 | Outerwear / Jacket | steps=45, cfg=4.5 |
+| 681 | Replace the outerwear with a houndstooth check wool blazer | 将外套换成千鸟格羊毛西装外套 | Outerwear / Blazer | steps=45, cfg=4.5 |
+| 682 | Add a midnight blue satin bomber jacket with embroidered back | 添加午夜蓝刺绣后背缎面飞行员夹克 | Outerwear / Jacket | steps=50, cfg=5.0 |
+| 683 | Change to a caramel brown suede blazer | 换成焦糖棕麂皮西装外套 | Outerwear / Blazer | steps=45, cfg=4.5 |
+| 684 | Replace with a gray melange fleece zip-up jacket | 换成灰色杂色抓绒拉链夹克 | Outerwear / Jacket | steps=40, cfg=4.0 |
+| 685 | Add a black long belted leather trench coat | 添加黑色长款系带皮革风衣 | Outerwear / Coat | steps=50, cfg=5.0, full-body shot recommended |
+| 686 | Change the outerwear to a ivory cashmere wrap coat with wide collar | 将外套换成象牙白宽领羊绒裹身大衣 | Outerwear / Coat | steps=45, cfg=4.5 |
+| 687 | Replace with a vintage wash pale blue denim jacket | 换成复古水洗浅蓝色牛仔夹克 | Outerwear / Jacket | steps=40, cfg=4.0 |
+| 688 | Add a dark navy cotton pea coat with anchor buttons | 添加深海军蓝棉质锚扣海军短大衣 | Outerwear / Coat | steps=45, cfg=4.5 |
+| 689 | Change to a heather gray wool toggle coat | 换成浅灰色羊毛牛角扣大衣 | Outerwear / Coat | steps=45, cfg=4.5 |
+| 690 | Replace the outerwear with a lilac quilted cropped puffer jacket | 将外套换成丁香紫绗缝短款羽绒服 | Outerwear / Jacket | steps=45, cfg=4.5 |
+| 691 | Add a brown herringbone Harris tweed blazer | 添加棕色哈里斯人字纹花呢西装外套 | Outerwear / Blazer | steps=45, cfg=4.5 |
+| 692 | Change to a sage green lightweight cotton anorak with drawstring hood | 换成鼠尾草绿轻薄棉质抽绳连帽冲锋衣 | Outerwear / Anorak | steps=45, cfg=4.5 |
+| 693 | Replace with a terracotta orange suede trucker jacket | 换成赤陶橙麂皮卡车司机夹克 | Outerwear / Jacket | steps=45, cfg=4.5 |
+| 694 | Add a pearl gray double-breasted knee-length wool coat | 添加珍珠灰色双排扣及膝羊毛大衣 | Outerwear / Coat | steps=45, cfg=4.5 |
+| 695 | Change the outerwear to a black oversized cocoon puffer coat | 将外套换成黑色超大茧形羽绒大衣 | Outerwear / Coat | steps=45, cfg=4.5 |
+| 696 | Replace with a coral pink cropped tweed jacket with fringe trim | 换成珊瑚粉流苏边短款粗花呢夹克 | Outerwear / Jacket | steps=45, cfg=4.5 |
+| 697 | Add a dark green waxed cotton Barbour-style field jacket | 添加深绿色蜡面棉质巴伯风野外夹克 | Outerwear / Jacket | steps=45, cfg=4.5 |
+| 698 | Change to a cobalt blue satin varsity bomber jacket | 换成钴蓝色缎面校队棒球夹克 | Outerwear / Jacket | steps=45, cfg=4.5 |
+| 699 | Replace the outerwear with a tan cotton safari vest with zip pockets | 将外套换成棕褐色拉链口袋棉质猎装背心 | Outerwear / Vest | steps=40, cfg=4.0 |
+| 700 | Add a wine red wool blanket poncho with fringe | 添加酒红色羊毛流苏毯式披肩 | Outerwear / Poncho | steps=45, cfg=4.5 |
+| 701 | Change to a military khaki multi-pocket parka with fur-trimmed hood | 换成军绿色多口袋毛边连帽派克大衣 | Outerwear / Parka | steps=50, cfg=5.0 |
+| 702 | Replace with a pearl white cropped leather jacket | 换成珍珠白短款皮革夹克 | Outerwear / Jacket | steps=45, cfg=4.5 |
+| 703 | Add a dusty sage quilted lightweight jacket with snap buttons | 添加暗鼠尾草色按扣轻薄绗缝夹克 | Outerwear / Jacket | steps=40, cfg=4.0 |
+| 704 | Change the outerwear to a charcoal pinstripe wool blazer | 将外套换成碳灰色细条纹羊毛西装外套 | Outerwear / Blazer | steps=40, cfg=4.0 |
+| 705 | Replace with a butter yellow short trench coat with belt | 换成奶油黄短款系带风衣 | Outerwear / Coat | steps=45, cfg=4.5 |
+| 706 | Add a dark emerald green velvet opera cape | 添加深祖母绿丝绒歌剧披风 | Outerwear / Cape | steps=50, cfg=5.0 |
+| 707 | Change to a maroon fleece-lined zip-up hoodie jacket | 换成栗色抓绒内衬拉链连帽夹克 | Outerwear / Jacket | steps=40, cfg=4.0 |
+| 708 | Replace the outerwear with a stone-colored cotton ripstop bomber jacket | 将外套换成石头色抗撕裂棉质飞行员夹克 | Outerwear / Jacket | steps=45, cfg=4.5 |
+| 709 | Add a bright red wool pea coat | 添加亮红色羊毛海军短大衣 | Outerwear / Coat | steps=45, cfg=4.5 |
+| 710 | Change to a black neoprene moto-style jacket with silver hardware | 换成黑色银色五金氯丁橡胶摩托夹克 | Outerwear / Jacket | steps=45, cfg=4.5 |
+| 711 | Replace with a dove gray cashmere belted robe coat | 换成鸽灰色羊绒系带浴袍式大衣 | Outerwear / Coat | steps=45, cfg=4.5 |
+| 712 | Add a burnt orange suede western-style fringed jacket | 添加焦橙色麂皮西部风流苏夹克 | Outerwear / Jacket | steps=50, cfg=5.0 |
+| 713 | Change the outerwear to a navy wool single-breasted chesterfield coat | 将外套换成深蓝色单排扣切斯特菲尔德大衣 | Outerwear / Coat | steps=45, cfg=4.5 |
+| 714 | Replace with a striped navy and white nautical blazer | 换成深蓝白色条纹航海风西装外套 | Outerwear / Blazer | steps=40, cfg=4.0 |
+| 715 | Add a cream cable-knit sweater coat with toggle closures | 添加奶油色麻花编织牛角扣毛衣大衣 | Outerwear / Coat | steps=45, cfg=4.5 |
+| 716 | Change to a black fitted zip-front leather racer jacket | 换成黑色修身前拉链皮革赛车夹克 | Outerwear / Jacket | steps=45, cfg=4.5 |
+| 717 | Replace the outerwear with a powder blue oversized blazer with rolled cuffs | 将外套换成粉蓝色卷袖宽松西装外套 | Outerwear / Blazer | steps=40, cfg=4.0 |
+| 718 | Add a rust-colored boiled wool coat with wooden buttons | 添加铁锈色木扣缩绒羊毛大衣 | Outerwear / Coat | steps=45, cfg=4.5 |
+| 719 | Change to a pale yellow lightweight linen blazer | 换成淡黄色轻薄亚麻西装外套 | Outerwear / Blazer | steps=40, cfg=4.0 |
+| 720 | Replace with a deep plum quilted vest with stand collar | 换成深紫红色立领绗缝背心 | Outerwear / Vest | steps=40, cfg=4.0 |
+| 721 | Add a black technical waterproof raincoat with hood | 添加黑色技术防水连帽雨衣 | Outerwear / Raincoat | steps=45, cfg=4.5 |
+| 722 | Change the outerwear to a sand-colored cotton drill safari jacket | 将外套换成砂色棉质猎装夹克 | Outerwear / Jacket | steps=45, cfg=4.5 |
+| 723 | Replace with a teal green quilted barn jacket | 换成青绿色绗缝谷仓夹克 | Outerwear / Jacket | steps=40, cfg=4.0 |
+| 724 | Add a dark chocolate brown leather blazer | 添加深巧克力棕皮革西装外套 | Outerwear / Blazer | steps=45, cfg=4.5 |
+| 725 | Change to a magenta cropped puffer jacket with fur-lined hood | 换成品红色毛绒内衬连帽短款羽绒服 | Outerwear / Jacket | steps=45, cfg=4.5 |
+| 726 | Replace the outerwear with an oatmeal bouclé oversized coat | 将外套换成燕麦色花式线圈宽松大衣 | Outerwear / Coat | steps=45, cfg=4.5 |
+| 727 | Add a forest green corduroy blazer | 添加森林绿灯芯绒西装外套 | Outerwear / Blazer | steps=40, cfg=4.0 |
+| 728 | Change to a black longline wool-blend coat with belt | 换成黑色长款系带羊毛混纺大衣 | Outerwear / Coat | steps=45, cfg=4.5, full-body shot recommended |
+| 729 | Replace with a chambray blue lightweight cotton jacket | 换成灰蓝色轻薄棉质夹克 | Outerwear / Jacket | steps=40, cfg=4.0 |
+| 730 | Add a cherry red patent leather rain jacket | 添加樱桃红漆皮雨衣 | Outerwear / Raincoat | steps=45, cfg=4.5 |
+| 731 | Change the outerwear to an emerald green silk-lined smoking jacket | 将外套换成祖母绿丝绸内衬吸烟夹克 | Outerwear / Jacket | steps=50, cfg=5.0 |
+| 732 | Replace with a light gray melange wool car coat | 换成浅灰杂色羊毛短款大衣 | Outerwear / Coat | steps=45, cfg=4.5 |
+| 733 | Add a dark indigo raw-edge denim jacket | 添加深靛蓝毛边牛仔夹克 | Outerwear / Jacket | steps=40, cfg=4.0 |
+| 734 | Change to a coral pink nylon zip-front windbreaker | 换成珊瑚粉尼龙前拉链风衣 | Outerwear / Windbreaker | steps=40, cfg=4.0 |
+| 735 | Replace the outerwear with a mushroom brown faux-suede moto jacket | 将外套换成蘑菇棕仿麂皮摩托夹克 | Outerwear / Jacket | steps=45, cfg=4.5 |
+| 736 | Add a heather blue wool peacoat with horn buttons | 添加杂蓝色角扣羊毛海军短大衣 | Outerwear / Coat | steps=45, cfg=4.5 |
+| 737 | Change to a black cropped leather bomber with rib-knit trim | 换成黑色罗纹边短款皮革飞行员夹克 | Outerwear / Jacket | steps=45, cfg=4.5 |
+| 738 | Replace with a sunshine yellow quilted vest | 换成亮黄色绗缝背心 | Outerwear / Vest | steps=40, cfg=4.0 |
+| 739 | Add a moss green waxed cotton hooded anorak | 添加苔绿色蜡面棉质连帽冲锋衣 | Outerwear / Anorak | steps=45, cfg=4.5 |
+| 740 | Change the outerwear to a pale peach satin bomber jacket | 将外套换成浅桃色缎面飞行员夹克 | Outerwear / Jacket | steps=45, cfg=4.5 |
+| 741 | Replace with a warm sand-colored fleece sherpa jacket | 换成暖砂色羊羔绒夹克 | Outerwear / Jacket | steps=40, cfg=4.0 |
+| 742 | Add a dark burgundy leather biker jacket with belt | 添加深酒红色系带皮革骑行夹克 | Outerwear / Jacket | steps=45, cfg=4.5 |
+| 743 | Change to a dove gray oversized tech parka | 换成鸽灰色宽松科技派克大衣 | Outerwear / Parka | steps=45, cfg=4.5 |
+| 744 | Replace the outerwear with a camel wool collarless coat | 将外套换成驼色无领羊毛大衣 | Outerwear / Coat | steps=45, cfg=4.5 |
+| 745 | Add a coral red tweed cropped blazer with gold buttons | 添加珊瑚红金扣短款花呢西装外套 | Outerwear / Blazer | steps=45, cfg=4.5 |
+| 746 | Change to a black and white color-block nylon windbreaker | 换成黑白拼色尼龙风衣 | Outerwear / Windbreaker | steps=40, cfg=4.0 |
+| 747 | Replace with a tan brown leather aviator jacket with fur collar | 换成棕褐色毛领皮革飞行员夹克 | Outerwear / Jacket | steps=50, cfg=5.0 |
+| 748 | Add a indigo blue knit cardigan coat with belt | 添加靛蓝色系带针织开衫大衣 | Outerwear / Coat | steps=45, cfg=4.5 |
+| 749 | Change the outerwear to a concrete gray minimalist overcoat | 将外套换成水泥灰极简大衣 | Outerwear / Coat | steps=45, cfg=4.5 |
+| 750 | Replace with a electric blue cropped puffer jacket | 换成电光蓝短款羽绒服 | Outerwear / Jacket | steps=45, cfg=4.5 |
+| 751 | Add a dark navy cable-knit sweater blazer | 添加深蓝色麻花编织毛衣西装外套 | Outerwear / Blazer | steps=40, cfg=4.0 |
+| 752 | Change to a wine red wool cape with arm openings and gold clasp | 换成酒红色金扣出口羊毛斗篷 | Outerwear / Cape | steps=50, cfg=5.0 |
+| 753 | Replace the outerwear with a olive green oversized military parka with patches | 将外套换成橄榄绿贴章宽松军事派克大衣 | Outerwear / Parka | steps=50, cfg=5.0 |
+| 754 | Add a dusky rose velvet cropped blazer | 添加暗玫瑰色丝绒短款西装外套 | Outerwear / Blazer | steps=45, cfg=4.5 |
+| 755 | Change to a classic black wool-cashmere blend overcoat | 换成经典黑色羊毛羊绒混纺大衣 | Outerwear / Coat | steps=45, cfg=4.5 |
+| 756 | Replace with a turquoise blue lightweight quilted jacket | 换成绿松石蓝轻薄绗缝夹克 | Outerwear / Jacket | steps=40, cfg=4.0 |
+| 757 | Add a plaid gray and red buffalo check fleece shirt jacket | 添加灰红大格纹抓绒衬衫夹克 | Outerwear / Jacket | steps=40, cfg=4.0 |
+| 758 | Change the outerwear to a cream teddy bear fleece zip-up coat | 将外套换成奶油色泰迪熊绒拉链大衣 | Outerwear / Coat | steps=45, cfg=4.5 |
+| 759 | Replace with a gunmetal gray wool double-breasted blazer | 换成炮铜灰双排扣羊毛西装外套 | Outerwear / Blazer | steps=40, cfg=4.0 |
+| 760 | Add a lavender satin quilted jacket with snap buttons | 添加薰衣草色按扣缎面绗缝夹克 | Outerwear / Jacket | steps=40, cfg=4.0 |
+| 761 | Change to a burnt sienna suede chore coat | 换成赭色麂皮工装外套 | Outerwear / Coat | steps=45, cfg=4.5 |
+| 762 | Replace the outerwear with a black oversized denim jacket with sherpa lining | 将外套换成黑色羊羔毛内衬宽松牛仔夹克 | Outerwear / Jacket | steps=45, cfg=4.5 |
+| 763 | Add a firebrick red wool duffle coat with wooden toggles | 添加砖红色木质牛角扣羊毛粗呢大衣 | Outerwear / Coat | steps=45, cfg=4.5 |
+| 764 | Change to a slate blue cotton twill blazer with patch pockets | 换成板岩蓝贴袋棉斜纹西装外套 | Outerwear / Blazer | steps=40, cfg=4.0 |
+| 765 | Replace with a bright green neon puffer vest | 换成荧光绿羽绒背心 | Outerwear / Vest | steps=40, cfg=4.0 |
+| 766 | Add a taupe linen long duster coat | 添加灰褐色亚麻长款防尘大衣 | Outerwear / Coat | steps=45, cfg=4.5, full-body shot recommended |
+| 767 | Change the outerwear to a cherry red patent leather cropped jacket | 将外套换成樱桃红漆皮短款夹克 | Outerwear / Jacket | steps=45, cfg=4.5 |
+| 768 | Replace with a charcoal flannel unstructured blazer | 换成碳灰色法兰绒无结构西装外套 | Outerwear / Blazer | steps=40, cfg=4.0 |
+| 769 | Add a arctic white down-filled expedition parka | 添加北极白羽绒探险派克大衣 | Outerwear / Parka | steps=50, cfg=5.0 |
+| 770 | Change to a cobalt blue structured single-breasted blazer | 换成钴蓝色挺括单排扣西装外套 | Outerwear / Blazer | steps=40, cfg=4.0 |
+| 771 | Replace the outerwear with a brown leather barn coat with plaid lining | 将外套换成格纹内衬棕色皮革谷仓外套 | Outerwear / Coat | steps=45, cfg=4.5 |
+| 772 | Add a steel gray wool-blend funnel-neck coat | 添加钢灰色漏斗领羊毛混纺大衣 | Outerwear / Coat | steps=45, cfg=4.5 |
+| 773 | Change to a periwinkle blue cropped puffer jacket with down fill | 换成长春花蓝羽绒短款羽绒服 | Outerwear / Jacket | steps=45, cfg=4.5 |
+| 774 | Replace with a dark green velvet smoking jacket with quilted lapels | 换成深绿色绗缝翻领丝绒吸烟夹克 | Outerwear / Jacket | steps=50, cfg=5.0 |
+| 775 | Add a bright orange technical waterproof shell jacket | 添加亮橙色技术防水壳夹克 | Outerwear / Windbreaker | steps=45, cfg=4.5 |
+| 776 | Change the outerwear to a sand linen safari blazer with belt | 将外套换成砂色系带亚麻猎装西装外套 | Outerwear / Blazer | steps=45, cfg=4.5 |
+| 777 | Replace with a black leather long trench coat with belt | 换成黑色系带皮革长款风衣 | Outerwear / Coat | steps=50, cfg=5.0, full-body shot recommended |
+| 778 | Add a soft pink wool-blend princess-seam coat | 添加柔粉色公主线羊毛混纺大衣 | Outerwear / Coat | steps=45, cfg=4.5 |
+| 779 | Change to a dark brown corduroy chore coat with blanket stitch | 换成深棕色毯式缝线灯芯绒工装外套 | Outerwear / Coat | steps=45, cfg=4.5 |
+| 780 | Replace the outerwear with a teal green softshell jacket | 将外套换成青绿色软壳夹克 | Outerwear / Jacket | steps=40, cfg=4.0 |
+| 781 | Add a apricot orange quilted diamond-pattern jacket | 添加杏色菱形绗缝夹克 | Outerwear / Jacket | steps=40, cfg=4.0 |
+| 782 | Change to a midnight navy cashmere overcoat | 换成午夜蓝羊绒大衣 | Outerwear / Coat | steps=45, cfg=4.5 |
+| 783 | Replace with a mauve faux-leather cropped moto jacket | 换成淡紫色仿皮短款摩托夹克 | Outerwear / Jacket | steps=45, cfg=4.5 |
+| 784 | Add a khaki green nylon coach jacket with snap front | 添加卡其绿按扣尼龙教练夹克 | Outerwear / Jacket | steps=40, cfg=4.0 |
+| 785 | Change the outerwear to a dark gray wool double-breasted overcoat | 将外套换成深灰色双排扣羊毛大衣 | Outerwear / Coat | steps=45, cfg=4.5 |
+| 786 | Replace with a cream bouclé cardigan-style jacket | 换成奶油色花式线圈开衫式夹克 | Outerwear / Jacket | steps=40, cfg=4.0 |
+| 787 | Add a black nylon lightweight reversible bomber jacket | 添加黑色轻薄可逆尼龙飞行员夹克 | Outerwear / Jacket | steps=40, cfg=4.0 |
+| 788 | Change to a cinnamon brown Sherpa-lined corduroy trucker jacket | 换成肉桂棕羊羔毛内衬灯芯绒夹克 | Outerwear / Jacket | steps=45, cfg=4.5 |
+| 789 | Replace the outerwear with a gray marled wool-blend overcoat with peak lapels | 将外套换成灰色杂色尖角翻领羊毛混纺大衣 | Outerwear / Coat | steps=45, cfg=4.5 |
+| 790 | Add a copper brown leather racer jacket | 添加铜棕色皮革赛车夹克 | Outerwear / Jacket | steps=45, cfg=4.5 |
+| 791 | Change to a ecru cotton jersey blazer | 换成原白色棉针织西装外套 | Outerwear / Blazer | steps=40, cfg=4.0 |
+| 792 | Replace with a deep ocean blue puffer coat with detachable hood | 换成深海蓝可拆卸连帽羽绒大衣 | Outerwear / Coat | steps=45, cfg=4.5 |
+| 793 | Add a gold brocade evening bolero jacket | 添加金色织锦晚宴小披肩 | Outerwear / Jacket | steps=50, cfg=5.0 |
+| 794 | Change the outerwear to a dark olive green hooded rain parka | 将外套换成深橄榄绿连帽防雨派克大衣 | Outerwear / Parka | steps=45, cfg=4.5 |
+| 795 | Replace with a candy pink faux-fur cropped bomber | 换成糖果粉仿皮草短款飞行员夹克 | Outerwear / Jacket | steps=45, cfg=4.5 |
+| 796 | Add a charcoal melton wool crombie overcoat | 添加碳灰色密尔顿羊毛大衣 | Outerwear / Coat | steps=45, cfg=4.5 |
+| 797 | Change to a white linen unlined summer blazer | 换成白色无衬里夏季亚麻西装外套 | Outerwear / Blazer | steps=40, cfg=4.0 |
+| 798 | Replace the outerwear with a bottle green waxed cotton jacket | 将外套换成墨绿色蜡面棉质夹克 | Outerwear / Jacket | steps=45, cfg=4.5 |
+| 799 | Add a pale gray waterproof trench coat | 添加浅灰色防水风衣 | Outerwear / Coat | steps=45, cfg=4.5 |
+| 800 | Change to a sienna brown distressed leather flight jacket | 换成赭棕色做旧皮革飞行夹克 | Outerwear / Jacket | steps=50, cfg=5.0 |
+| 801 | Replace with a spice orange wool pea coat | 换成香料橙羊毛海军短大衣 | Outerwear / Coat | steps=45, cfg=4.5 |
+| 802 | Add a ivory silk organza lightweight opera coat | 添加象牙白丝绸欧根纱轻薄歌剧大衣 | Outerwear / Coat | steps=50, cfg=5.0 |
+| 803 | Change the outerwear to a mocha suede sherpa-lined trucker vest | 将外套换成摩卡色羊羔毛内衬麂皮卡车司机背心 | Outerwear / Vest | steps=45, cfg=4.5 |
+| 804 | Replace with a metallic bronze puffer jacket | 换成金属铜色羽绒服 | Outerwear / Jacket | steps=45, cfg=4.5 |
+| 805 | Add a toffee brown faux-shearling coat | 添加太妃棕仿羊羔毛大衣 | Outerwear / Coat | steps=45, cfg=4.5 |
+| 806 | Change to a charcoal herringbone overcoat with velvet collar | 换成碳灰色人字纹丝绒领大衣 | Outerwear / Coat | steps=45, cfg=4.5 |
+| 807 | Replace the outerwear with a winter white cashmere cape | 将外套换成冬白羊绒披风 | Outerwear / Cape | steps=50, cfg=5.0 |
+| 808 | Add a army green utility jacket with drawstring waist | 添加军绿色抽绳腰工装夹克 | Outerwear / Jacket | steps=40, cfg=4.0 |
+| 809 | Change to a dark plum wool cocoon coat with raglan sleeves | 换成深紫红色插肩袖茧形羊毛大衣 | Outerwear / Coat | steps=45, cfg=4.5 |
+| 810 | Replace with a pearl gray technical down vest with chest zip | 换成珍珠灰胸部拉链科技羽绒背心 | Outerwear / Vest | steps=40, cfg=4.0 |
+
+## Section 5: Suits & Formal (Entries 811-920)
+
+| # | English Prompt | 中文提示词 | Category | Config Notes |
+|---|---------------|-----------|----------|--------------|
+| 811 | Change the outfit to a navy blue single-breasted two-piece business suit | 将服装换成深蓝色单排扣两件套商务西装 | Suits / Business | steps=45, cfg=4.5, full-body shot recommended |
+| 812 | Replace with a charcoal gray double-breasted wool suit | 换成碳灰色双排扣羊毛西装 | Suits / Business | steps=45, cfg=4.5, full-body shot recommended |
+| 813 | Change to a classic black three-piece suit with matching vest | 换成经典黑色三件套西装配马甲 | Suits / Business | steps=50, cfg=5.0, full-body shot recommended |
+| 814 | Replace the outfit with a black peak-lapel tuxedo with satin trim | 将服装换成黑色缎面边尖角翻领燕尾礼服 | Suits / Tuxedo | steps=50, cfg=5.0, full-body shot recommended |
+| 815 | Change to a midnight blue shawl-collar tuxedo | 换成午夜蓝青果领燕尾礼服 | Suits / Tuxedo | steps=50, cfg=5.0, full-body shot recommended |
+| 816 | Replace with a gray morning suit with striped trousers and tails | 换成灰色条纹裤燕尾晨礼服 | Suits / Morning Suit | steps=50, cfg=5.0, full-body shot recommended |
+| 817 | Change the outfit to a cream linen summer suit with notch lapels | 将服装换成奶油色缺口翻领亚麻夏季西装 | Suits / Linen | steps=45, cfg=4.5, full-body shot recommended |
+| 818 | Replace with a blue and white seersucker suit | 换成蓝白泡泡纱西装 | Suits / Seersucker | steps=45, cfg=4.5, full-body shot recommended |
+| 819 | Change to a dark navy pinstripe suit with flat-front trousers | 换成深蓝色细条纹平前裤西装 | Suits / Pinstripe | steps=45, cfg=4.5, full-body shot recommended |
+| 820 | Replace the outfit with a brown Harris tweed three-piece suit | 将服装换成棕色哈里斯花呢三件套西装 | Suits / Tweed | steps=50, cfg=5.0, full-body shot recommended |
+| 821 | Change to a deep burgundy velvet dinner suit | 换成深酒红色丝绒晚宴西装 | Suits / Velvet | steps=50, cfg=5.0, full-body shot recommended |
+| 822 | Replace with a white single-breasted dinner jacket with black trousers | 换成白色单排扣晚宴夹克配黑裤 | Suits / Dinner Jacket | steps=50, cfg=5.0, full-body shot recommended |
+| 823 | Change the outfit to a dark olive Mao suit (Zhongshan suit) with stand collar | 将服装换成深橄榄色立领中山装 | Suits / Zhongshan | steps=50, cfg=5.0, full-body shot recommended |
+| 824 | Replace with a slate gray Italian-cut slim-fit business suit | 换成板岩灰意大利剪裁修身商务西装 | Suits / Business | steps=45, cfg=4.5, full-body shot recommended |
+| 825 | Change to a tan cotton unstructured summer suit | 换成棕褐色棉质无结构夏季西装 | Suits / Business | steps=45, cfg=4.5, full-body shot recommended |
+| 826 | Replace the outfit with a black tuxedo with peak lapels and bow tie | 将服装换成黑色尖角翻领配蝴蝶结燕尾礼服 | Suits / Tuxedo | steps=50, cfg=5.0, full-body shot recommended |
+| 827 | Change to a powder blue slim-fit business suit | 换成粉蓝色修身商务西装 | Suits / Business | steps=45, cfg=4.5, full-body shot recommended |
+| 828 | Replace with a forest green velvet blazer suit | 换成森林绿丝绒西装套装 | Suits / Velvet | steps=50, cfg=5.0, full-body shot recommended |
+| 829 | Change the outfit to a windowpane check gray suit | 将服装换成灰色窗格纹西装 | Suits / Business | steps=45, cfg=4.5, full-body shot recommended |
+| 830 | Replace with a black double-breasted pinstripe suit | 换成黑色双排扣细条纹西装 | Suits / Pinstripe | steps=45, cfg=4.5, full-body shot recommended |
+| 831 | Change to a khaki linen two-piece suit with patch pockets | 换成卡其色亚麻贴袋两件套西装 | Suits / Linen | steps=45, cfg=4.5, full-body shot recommended |
+| 832 | Replace the outfit with a camel brown herringbone wool suit | 将服装换成驼棕色人字纹羊毛西装 | Suits / Business | steps=45, cfg=4.5, full-body shot recommended |
+| 833 | Change to a midnight black velvet Mao suit | 换成午夜黑丝绒中山装 | Suits / Zhongshan | steps=50, cfg=5.0, full-body shot recommended |
+| 834 | Replace with a light gray Glen plaid two-piece suit | 换成浅灰色格伦格纹两件套西装 | Suits / Business | steps=45, cfg=4.5, full-body shot recommended |
+| 835 | Change the outfit to a navy blue peak-lapel double-breasted suit | 将服装换成深蓝色尖角翻领双排扣西装 | Suits / Business | steps=45, cfg=4.5, full-body shot recommended |
+| 836 | Replace with a beige tropical-weight wool suit | 换成米色热带薄羊毛西装 | Suits / Business | steps=45, cfg=4.5, full-body shot recommended |
+| 837 | Change to a burgundy three-piece tweed suit with watch chain | 换成酒红色三件套花呢西装配怀表链 | Suits / Tweed | steps=50, cfg=5.0, full-body shot recommended |
+| 838 | Replace the outfit with a pastel pink linen suit with wide lapels | 将服装换成粉彩粉宽翻领亚麻西装 | Suits / Linen | steps=45, cfg=4.5, full-body shot recommended |
+| 839 | Change to a dark charcoal chalk-stripe suit | 换成深碳灰色粉笔条纹西装 | Suits / Pinstripe | steps=45, cfg=4.5, full-body shot recommended |
+| 840 | Replace with a white tuxedo with shawl lapel and black satin cummerbund | 换成白色青果领配黑色缎面腰封燕尾礼服 | Suits / Tuxedo | steps=50, cfg=5.0, full-body shot recommended |
+| 841 | Change the outfit to a olive green Italian wool suit with notch lapels | 将服装换成橄榄绿缺口翻领意大利羊毛西装 | Suits / Business | steps=45, cfg=4.5, full-body shot recommended |
+| 842 | Replace with a steel blue sharkskin suit | 换成钢蓝色鲨鱼皮纹西装 | Suits / Business | steps=45, cfg=4.5, full-body shot recommended |
+| 843 | Change to a classic black notch-lapel single-breasted suit | 换成经典黑色缺口翻领单排扣西装 | Suits / Business | steps=45, cfg=4.5, full-body shot recommended |
+| 844 | Replace the outfit with a rust brown corduroy suit | 将服装换成铁锈棕灯芯绒西装 | Suits / Business | steps=45, cfg=4.5, full-body shot recommended |
+| 845 | Change to a stone beige cotton gabardine suit | 换成石灰色棉质轧别丁西装 | Suits / Business | steps=45, cfg=4.5, full-body shot recommended |
+| 846 | Replace with a dove gray three-piece morning suit | 换成鸽灰色三件套晨礼服 | Suits / Morning Suit | steps=50, cfg=5.0, full-body shot recommended |
+| 847 | Change the outfit to a deep teal single-breasted wool suit | 将服装换成深青色单排扣羊毛西装 | Suits / Business | steps=45, cfg=4.5, full-body shot recommended |
+| 848 | Replace with a navy blue double-breasted blazer with gold buttons and gray trousers | 换成深蓝色金扣双排扣西装上衣配灰裤 | Suits / Business | steps=45, cfg=4.5, full-body shot recommended |
+| 849 | Change to a black velvet peak-lapel slim tuxedo | 换成黑色丝绒尖角翻领修身燕尾礼服 | Suits / Tuxedo | steps=50, cfg=5.0, full-body shot recommended |
+| 850 | Replace the outfit with a pearl white seersucker suit with notch lapels | 将服装换成珍珠白缺口翻领泡泡纱西装 | Suits / Seersucker | steps=45, cfg=4.5, full-body shot recommended |
+| 851 | Change to a plum purple velvet two-piece suit | 换成李子紫丝绒两件套西装 | Suits / Velvet | steps=50, cfg=5.0, full-body shot recommended |
+| 852 | Replace with a sand-colored linen unlined summer blazer and shorts suit | 换成砂色亚麻无衬里夏季西装短裤套装 | Suits / Linen | steps=45, cfg=4.5, full-body shot recommended |
+| 853 | Change the outfit to a dark navy Zhongshan suit with four patch pockets | 将服装换成深蓝色四贴袋中山装 | Suits / Zhongshan | steps=50, cfg=5.0, full-body shot recommended |
+| 854 | Replace with a emerald green satin dinner jacket with black trousers | 换成祖母绿缎面晚宴夹克配黑裤 | Suits / Dinner Jacket | steps=50, cfg=5.0, full-body shot recommended |
+| 855 | Change to a brown plaid tweed Norfolk jacket with matching trousers | 换成棕色格纹花呢诺福克夹克配同色裤 | Suits / Tweed | steps=50, cfg=5.0, full-body shot recommended |
+| 856 | Replace the outfit with a medium gray flannel suit with flat-front trousers | 将服装换成中灰色法兰绒平前裤西装 | Suits / Business | steps=45, cfg=4.5, full-body shot recommended |
+| 857 | Change to a cobalt blue slim-fit two-button suit | 换成钴蓝色修身两扣西装 | Suits / Business | steps=45, cfg=4.5, full-body shot recommended |
+| 858 | Replace with a classic black three-button single-breasted suit | 换成经典黑色三扣单排扣西装 | Suits / Business | steps=45, cfg=4.5, full-body shot recommended |
+| 859 | Change the outfit to a dark brown houndstooth check suit | 将服装换成深棕色千鸟格西装 | Suits / Business | steps=45, cfg=4.5, full-body shot recommended |
+| 860 | Replace with a lavender linen blazer suit with white trousers | 换成薰衣草色亚麻西装配白裤 | Suits / Linen | steps=45, cfg=4.5, full-body shot recommended |
+| 861 | Change to a women's tailored black pantsuit with single-breasted blazer | 换成女式黑色单排扣修身裤装 | Suits / Women's | steps=45, cfg=4.5, full-body shot recommended |
+| 862 | Replace the outfit with a women's ivory double-breasted skirt suit | 将服装换成女式象牙白双排扣裙装套装 | Suits / Women's | steps=45, cfg=4.5, full-body shot recommended |
+| 863 | Change to a women's dusty rose power suit with wide-leg trousers | 换成女式玫瑰灰阔腿裤职业套装 | Suits / Women's | steps=45, cfg=4.5, full-body shot recommended |
+| 864 | Replace with a women's red blazer and pencil skirt suit | 换成女式红色西装配铅笔裙套装 | Suits / Women's | steps=45, cfg=4.5, full-body shot recommended |
+| 865 | Change the outfit to a women's camel wool-blend trouser suit | 将服装换成女式驼色羊毛混纺长裤套装 | Suits / Women's | steps=45, cfg=4.5, full-body shot recommended |
+| 866 | Replace with a women's navy blue pinstripe three-piece suit | 换成女式深蓝色细条纹三件套西装 | Suits / Women's | steps=50, cfg=5.0, full-body shot recommended |
+| 867 | Change to a women's emerald green velvet blazer suit | 换成女式祖母绿丝绒西装套装 | Suits / Women's | steps=50, cfg=5.0, full-body shot recommended |
+| 868 | Replace the outfit with a women's white tuxedo with satin lapels | 将服装换成女式白色缎面翻领燕尾礼服 | Suits / Women's | steps=50, cfg=5.0, full-body shot recommended |
+| 869 | Change to a women's pale pink linen cropped blazer suit | 换成女式浅粉色亚麻短款西装套装 | Suits / Women's | steps=45, cfg=4.5, full-body shot recommended |
+| 870 | Replace with a women's black and white color-block tailored suit | 换成女式黑白拼色定制西装 | Suits / Women's | steps=45, cfg=4.5, full-body shot recommended |
+| 871 | Change the outfit to a dark gray birdseye wool business suit | 将服装换成深灰色鸟眼纹羊毛商务西装 | Suits / Business | steps=45, cfg=4.5, full-body shot recommended |
+| 872 | Replace with a taupe brown silk-blend shawl-collar dinner suit | 换成灰褐色丝绸混纺青果领晚宴西装 | Suits / Dinner Jacket | steps=50, cfg=5.0, full-body shot recommended |
+| 873 | Change to a navy windowpane plaid three-piece suit | 换成深蓝色窗格纹三件套西装 | Suits / Business | steps=50, cfg=5.0, full-body shot recommended |
+| 874 | Replace the outfit with a cream double-breasted peaked-lapel suit | 将服装换成奶油色尖角翻领双排扣西装 | Suits / Business | steps=45, cfg=4.5, full-body shot recommended |
+| 875 | Change to a charcoal micro-check wool suit | 换成碳灰色微格纹羊毛西装 | Suits / Business | steps=45, cfg=4.5, full-body shot recommended |
+| 876 | Replace with a light blue summer cotton blazer suit | 换成浅蓝色夏季棉质西装套装 | Suits / Business | steps=45, cfg=4.5, full-body shot recommended |
+| 877 | Change the outfit to a black mohair tuxedo with grosgrain trim | 将服装换成黑色马海毛罗缎边燕尾礼服 | Suits / Tuxedo | steps=50, cfg=5.0, full-body shot recommended |
+| 878 | Replace with a sage green linen safari suit with belt | 换成鼠尾草绿系带亚麻猎装套装 | Suits / Linen | steps=45, cfg=4.5, full-body shot recommended |
+| 879 | Change to a dark brown donegal tweed suit | 换成深棕色多尼格尔花呢西装 | Suits / Tweed | steps=50, cfg=5.0, full-body shot recommended |
+| 880 | Replace the outfit with a burgundy jacquard dinner jacket with black pants | 将服装换成酒红色提花晚宴夹克配黑裤 | Suits / Dinner Jacket | steps=50, cfg=5.0, full-body shot recommended |
+| 881 | Change to an Oxford gray flannel suit with pleated trousers | 换成牛津灰法兰绒褶裥裤西装 | Suits / Business | steps=45, cfg=4.5, full-body shot recommended |
+| 882 | Replace with a bright royal blue two-button suit | 换成明亮宝蓝色两扣西装 | Suits / Business | steps=45, cfg=4.5, full-body shot recommended |
+| 883 | Change the outfit to a dove gray Zhongshan suit with covered buttons | 将服装换成鸽灰色暗扣中山装 | Suits / Zhongshan | steps=50, cfg=5.0, full-body shot recommended |
+| 884 | Replace with a dark navy mohair blend dinner suit | 换成深蓝色马海毛混纺晚宴西装 | Suits / Dinner Jacket | steps=50, cfg=5.0, full-body shot recommended |
+| 885 | Change to a stone gray summer-weight tropical wool suit | 换成石灰色夏季热带薄羊毛西装 | Suits / Business | steps=45, cfg=4.5, full-body shot recommended |
+| 886 | Replace the outfit with a midnight blue velvet three-piece suit | 将服装换成午夜蓝丝绒三件套西装 | Suits / Velvet | steps=50, cfg=5.0, full-body shot recommended |
+| 887 | Change to a tan gabardine double-breasted suit | 换成棕褐色轧别丁双排扣西装 | Suits / Business | steps=45, cfg=4.5, full-body shot recommended |
+| 888 | Replace with a glen plaid navy and brown sport coat with gray trousers | 换成深蓝棕格伦格纹运动外套配灰裤 | Suits / Business | steps=45, cfg=4.5, full-body shot recommended |
+| 889 | Change the outfit to a black peak-lapel double-breasted tuxedo with white shirt | 将服装换成黑色尖角翻领双排扣白衬衫燕尾礼服 | Suits / Tuxedo | steps=50, cfg=5.0, full-body shot recommended |
+| 890 | Replace with a light gray summer linen suit with blue pocket square | 换成浅灰色亚麻夏装配蓝色口袋巾 | Suits / Linen | steps=45, cfg=4.5, full-body shot recommended |
+| 891 | Change to a women's charcoal gray wide-leg trouser suit | 换成女式碳灰色阔腿裤西装 | Suits / Women's | steps=45, cfg=4.5, full-body shot recommended |
+| 892 | Replace the outfit with a women's coral cropped blazer with matching shorts | 将服装换成女式珊瑚色短款西装配同色短裤 | Suits / Women's | steps=45, cfg=4.5, full-body shot recommended |
+| 893 | Change to a forest green wool flannel suit with patch pockets | 换成森林绿贴袋羊毛法兰绒西装 | Suits / Business | steps=45, cfg=4.5, full-body shot recommended |
+| 894 | Replace with a dark chocolate brown wool crepe suit | 换成深巧克力棕羊毛绉纱西装 | Suits / Business | steps=45, cfg=4.5, full-body shot recommended |
+| 895 | Change the outfit to a ice blue satin-trimmed tuxedo | 将服装换成冰蓝色缎面边燕尾礼服 | Suits / Tuxedo | steps=50, cfg=5.0, full-body shot recommended |
+| 896 | Replace with a heather oatmeal tweed jacket and dark brown corduroy trousers | 换成杂色燕麦花呢夹克配深棕灯芯绒裤 | Suits / Tweed | steps=50, cfg=5.0, full-body shot recommended |
+| 897 | Change to a bright navy hopsack blazer with tan chinos | 换成亮蓝色篮纹西装配棕褐卡其裤 | Suits / Business | steps=45, cfg=4.5, full-body shot recommended |
+| 898 | Replace the outfit with a black silk brocade Zhongshan suit | 将服装换成黑色丝绸织锦中山装 | Suits / Zhongshan | steps=50, cfg=5.0, full-body shot recommended |
+| 899 | Change to a maroon pinstripe three-piece suit with watch chain | 换成栗色细条纹三件套怀表链西装 | Suits / Pinstripe | steps=50, cfg=5.0, full-body shot recommended |
+| 900 | Replace with a sand linen Norfolk jacket suit | 换成砂色亚麻诺福克西装套装 | Suits / Linen | steps=45, cfg=4.5, full-body shot recommended |
+| 901 | Change the outfit to a women's lilac double-breasted oversized blazer suit | 将服装换成女式丁香紫宽松双排扣西装套装 | Suits / Women's | steps=45, cfg=4.5, full-body shot recommended |
+| 902 | Replace with a chalk white linen blazer suit with no tie | 换成粉笔白亚麻免系领带西装套装 | Suits / Linen | steps=45, cfg=4.5, full-body shot recommended |
+| 903 | Change to a dark burgundy wool houndstooth suit | 换成深酒红色千鸟格羊毛西装 | Suits / Business | steps=45, cfg=4.5, full-body shot recommended |
+| 904 | Replace the outfit with a pearl gray morning suit with ascot tie | 将服装换成珍珠灰色领巾晨礼服 | Suits / Morning Suit | steps=50, cfg=5.0, full-body shot recommended |
+| 905 | Change to a bottle green corduroy suit with elbow patches | 换成墨绿色肘部贴皮灯芯绒西装 | Suits / Business | steps=45, cfg=4.5, full-body shot recommended |
+| 906 | Replace with a classic navy blue blazer with white flannel trousers | 换成经典深蓝色西装配白色法兰绒裤 | Suits / Business | steps=45, cfg=4.5, full-body shot recommended |
+| 907 | Change the outfit to a copper brown three-piece tweed suit with vest | 将服装换成铜棕色三件套花呢西装配马甲 | Suits / Tweed | steps=50, cfg=5.0, full-body shot recommended |
+| 908 | Replace with a women's black satin peak-lapel tuxedo | 换成女式黑色缎面尖角翻领燕尾礼服 | Suits / Women's | steps=50, cfg=5.0, full-body shot recommended |
+| 909 | Change to a dark olive green unconstructed suit | 换成深橄榄绿无结构西装 | Suits / Business | steps=45, cfg=4.5, full-body shot recommended |
+| 910 | Replace the outfit with a terracotta linen suit with camp-collar shirt | 将服装换成赤陶色亚麻西装配古巴领衬衫 | Suits / Linen | steps=45, cfg=4.5, full-body shot recommended |
+| 911 | Change to a navy blue suit with red power tie | 换成深蓝色西装配红色权力领带 | Suits / Business | steps=45, cfg=4.5, full-body shot recommended |
+| 912 | Replace with a women's forest green pantsuit with wide-leg trousers | 换成女式森林绿阔腿裤套装 | Suits / Women's | steps=45, cfg=4.5, full-body shot recommended |
+| 913 | Change the outfit to a silver gray silk shantung suit | 将服装换成银灰色生丝西装 | Suits / Business | steps=50, cfg=5.0, full-body shot recommended |
+| 914 | Replace with a deep indigo blue wool serge suit | 换成深靛蓝羊毛哔叽西装 | Suits / Business | steps=45, cfg=4.5, full-body shot recommended |
+| 915 | Change to a white dinner jacket with black peak lapels | 换成白色黑尖角翻领晚宴夹克 | Suits / Dinner Jacket | steps=50, cfg=5.0, full-body shot recommended |
+| 916 | Replace the outfit with a mocha brown Italian cotton suit | 将服装换成摩卡棕意大利棉西装 | Suits / Business | steps=45, cfg=4.5, full-body shot recommended |
+| 917 | Change to a double-breasted navy blazer with gold anchor buttons and cream pants | 换成金色锚扣双排扣深蓝西装配奶油裤 | Suits / Business | steps=45, cfg=4.5, full-body shot recommended |
+| 918 | Replace with a women's cobalt blue power suit with pointed-toe pumps | 换成女式钴蓝色尖头高跟鞋职业套装 | Suits / Women's | steps=45, cfg=4.5, full-body shot recommended |
+| 919 | Change the outfit to a prince-of-wales check gray three-piece suit | 将服装换成威尔士亲王格灰色三件套西装 | Suits / Business | steps=50, cfg=5.0, full-body shot recommended |
+| 920 | Replace with a cream silk shantung Nehru-collar suit | 换成奶油色生丝尼赫鲁领西装 | Suits / Business | steps=50, cfg=5.0, full-body shot recommended |
+
+## Section 6: Traditional & Cultural Clothing (Entries 921-1120)
+
+| # | English Prompt | 中文提示词 | Category | Config Notes |
+|---|---------------|-----------|----------|--------------|
+| 921 | Change the outfit to a red Wei/Jin dynasty wide-sleeve hanfu with flowing skirt | 将服装换成红色魏晋制大袖流仙裙汉服 | Traditional / Chinese | steps=50, cfg=5.0, full-body shot recommended |
+| 922 | Replace with a Song dynasty beige cross-collar ruqun hanfu | 换成宋制米色交领襦裙汉服 | Traditional / Chinese | steps=50, cfg=5.0, full-body shot recommended |
+| 923 | Change to a Tang dynasty crimson red round-collar robe hanfu | 换成唐制深红色圆领袍汉服 | Traditional / Chinese | steps=50, cfg=5.0, full-body shot recommended |
+| 924 | Replace the outfit with a Ming dynasty dark blue flying-fish dalianmao hanfu | 将服装换成明制暗蓝飞鱼服大宽帽汉服 | Traditional / Chinese | steps=50, cfg=5.0, full-body shot recommended |
+| 925 | Change to a pale green Song dynasty embroidered bijia vest hanfu | 换成浅绿色宋制刺绣比甲汉服 | Traditional / Chinese | steps=50, cfg=5.0, full-body shot recommended |
+| 926 | Replace with a white and blue Han dynasty shenyi curved-hem hanfu | 换成白蓝汉制曲裾深衣汉服 | Traditional / Chinese | steps=50, cfg=5.0, full-body shot recommended |
+| 927 | Change the outfit to a dark red Tang dynasty chest-high ruqun hanfu | 将服装换成暗红色唐制齐胸襦裙汉服 | Traditional / Chinese | steps=50, cfg=5.0, full-body shot recommended |
+| 928 | Replace with a lilac purple Ming dynasty stand-collar aoqun hanfu | 换成丁香紫明制立领袄裙汉服 | Traditional / Chinese | steps=50, cfg=5.0, full-body shot recommended |
+| 929 | Change to a red silk tangzhuang jacket with gold frog closures | 换成红色丝绸金盘扣唐装 | Traditional / Chinese | steps=50, cfg=5.0 |
+| 930 | Replace the outfit with a black silk tangzhuang jacket with dragon embroidery | 将服装换成黑色龙纹刺绣丝绸唐装 | Traditional / Chinese | steps=50, cfg=5.0 |
+| 931 | Change to a navy blue embroidered cheongsam with peony pattern | 换成深蓝色牡丹刺绣旗袍 | Traditional / Chinese | steps=50, cfg=5.0 |
+| 932 | Replace with a rose pink silk qipao with butterfly buttons | 换成玫瑰粉丝绸蝴蝶扣旗袍 | Traditional / Chinese | steps=50, cfg=5.0 |
+| 933 | Change the outfit to a white qipao with ink-wash landscape painting print | 将服装换成白色水墨山水画印花旗袍 | Traditional / Chinese | steps=50, cfg=5.0 |
+| 934 | Replace with a deep emerald green velvet qipao with gold trim | 换成深祖母绿丝绒金边旗袍 | Traditional / Chinese | steps=50, cfg=5.0 |
+| 935 | Change to a Miao silver-accented embroidered blue ethnic jacket and skirt | 换成苗族银饰点缀蓝色刺绣民族上衣裙装 | Traditional / Chinese | steps=50, cfg=5.0, full-body shot recommended |
+| 936 | Replace the outfit with a colorful Miao batik-decorated festival costume | 将服装换成彩色苗族蜡染节日服饰 | Traditional / Chinese | steps=50, cfg=5.0, full-body shot recommended |
+| 937 | Change to a dark gray Zhongshan suit with five front buttons | 换成深灰色五扣中山装 | Traditional / Chinese | steps=50, cfg=5.0, full-body shot recommended |
+| 938 | Replace with a burgundy brocade tangzhuang jacket with Mandarin collar | 换成酒红色织锦立领唐装 | Traditional / Chinese | steps=50, cfg=5.0 |
+| 939 | Change the outfit to a formal black silk kimono with crane and pine motifs | 将服装换成正式黑色仙鹤松纹丝绸和服 | Traditional / Japanese | steps=50, cfg=5.0, full-body shot recommended |
+| 940 | Replace with a bright red furisode kimono with golden fan pattern | 换成鲜红色金扇图案振袖和服 | Traditional / Japanese | steps=50, cfg=5.0, full-body shot recommended |
+| 941 | Change to a navy blue cotton summer yukata with white wave pattern | 换成深蓝色白色波浪纹棉质浴衣 | Traditional / Japanese | steps=50, cfg=5.0, full-body shot recommended |
+| 942 | Replace the outfit with a pastel pink yukata with cherry blossom design | 将服装换成粉色樱花图案浴衣 | Traditional / Japanese | steps=50, cfg=5.0, full-body shot recommended |
+| 943 | Change to a dark indigo hakama pants with white keikogi top | 换成深靛蓝色袴配白色稽古着 | Traditional / Japanese | steps=50, cfg=5.0, full-body shot recommended |
+| 944 | Replace with a striped brown haori jacket over navy kimono | 换成棕色条纹羽织配深蓝和服 | Traditional / Japanese | steps=50, cfg=5.0, full-body shot recommended |
+| 945 | Change the outfit to a deep purple furisode with silver maple leaf motifs | 将服装换成深紫色银枫叶图案振袖和服 | Traditional / Japanese | steps=50, cfg=5.0, full-body shot recommended |
+| 946 | Replace with a black montsuki formal kimono with family crest | 换成黑色家纹纹付正式和服 | Traditional / Japanese | steps=50, cfg=5.0, full-body shot recommended |
+| 947 | Change to a sage green houmongi visiting kimono with floral pattern | 换成鼠尾草绿碎花访问着和服 | Traditional / Japanese | steps=50, cfg=5.0, full-body shot recommended |
+| 948 | Replace the outfit with an orange and gold obi belt over white kimono | 将服装换成白色和服配橙金色腰带 | Traditional / Japanese | steps=50, cfg=5.0, full-body shot recommended |
+| 949 | Change to a traditional Korean hanbok with pink jeogori and blue chima | 换成粉色短上衣蓝色裙装传统韩服 | Traditional / Korean | steps=50, cfg=5.0, full-body shot recommended |
+| 950 | Replace with a white and pastel rainbow-striped saekdong hanbok | 换成白色彩虹色条纹色动韩服 | Traditional / Korean | steps=50, cfg=5.0, full-body shot recommended |
+| 951 | Change the outfit to a royal blue male dopo traditional Korean scholar robe | 将服装换成宝蓝色男士道袍传统韩服学者袍 | Traditional / Korean | steps=50, cfg=5.0, full-body shot recommended |
+| 952 | Replace with a yellow jeogori with green chima wedding hanbok | 换成黄色短上衣绿色裙装婚礼韩服 | Traditional / Korean | steps=50, cfg=5.0, full-body shot recommended |
+| 953 | Change to a deep red and gold brocade Korean queen ceremonial hanbok | 换成深红金色织锦韩国王后仪式韩服 | Traditional / Korean | steps=50, cfg=5.0, full-body shot recommended |
+| 954 | Replace the outfit with a modern hanbok in navy jeogori with white chima | 将服装换成现代版深蓝短上衣白色裙装韩服 | Traditional / Korean | steps=50, cfg=5.0, full-body shot recommended |
+| 955 | Change to a deep red silk Indian saree with gold zari border and pallu | 换成深红色金丝边丝绸印度纱丽 | Traditional / Indian | steps=50, cfg=5.0, full-body shot recommended |
+| 956 | Replace with a royal blue and gold Banarasi silk saree | 换成宝蓝金色巴纳拉斯丝绸纱丽 | Traditional / Indian | steps=50, cfg=5.0, full-body shot recommended |
+| 957 | Change the outfit to a emerald green salwar kameez with gold dupatta | 将服装换成祖母绿金色披巾套装 | Traditional / Indian | steps=50, cfg=5.0, full-body shot recommended |
+| 958 | Replace with a magenta and gold heavy bridal lehenga choli | 换成品红金色重工新娘裙套装 | Traditional / Indian | steps=50, cfg=5.0, full-body shot recommended |
+| 959 | Change to a white cotton kurta with gold embroidery and churidar pants | 换成白色金绣棉质库尔塔配窄管裤 | Traditional / Indian | steps=50, cfg=5.0, full-body shot recommended |
+| 960 | Replace the outfit with a cream and gold silk dhoti with matching kurta | 将服装换成奶油金色丝绸陀提配同色库尔塔 | Traditional / Indian | steps=50, cfg=5.0, full-body shot recommended |
+| 961 | Change to a ivory and red sherwani with gold threadwork | 换成象牙红色金线夏瓦尼 | Traditional / Indian | steps=50, cfg=5.0, full-body shot recommended |
+| 962 | Replace with a teal blue Anarkali dress with silver embroidery | 换成青蓝色银色刺绣阿纳卡利连衣裙 | Traditional / Indian | steps=50, cfg=5.0, full-body shot recommended |
+| 963 | Change the outfit to a saffron yellow silk Kanjeevaram saree | 将服装换成藏红黄色丝绸甘吉布勒姆纱丽 | Traditional / Indian | steps=50, cfg=5.0, full-body shot recommended |
+| 964 | Replace with a midnight blue heavy-embroidered lehenga with mirror work | 换成午夜蓝镜面绣工重工裙套装 | Traditional / Indian | steps=50, cfg=5.0, full-body shot recommended |
+| 965 | Change to a pastel pink chiffon saree with silver sequin border | 换成粉色银色亮片边雪纺纱丽 | Traditional / Indian | steps=50, cfg=5.0, full-body shot recommended |
+| 966 | Replace the outfit with a white cotton thobe with gold trim | 将服装换成白色金边棉质长袍 | Traditional / Middle Eastern | steps=50, cfg=5.0, full-body shot recommended |
+| 967 | Change to a black embroidered abaya with gold geometric patterns | 换成黑色金色几何图案刺绣阿拉伯长袍 | Traditional / Middle Eastern | steps=50, cfg=5.0, full-body shot recommended |
+| 968 | Replace with a royal blue Moroccan kaftan with gold braid trim | 换成宝蓝色金辫边摩洛哥长袍 | Traditional / Middle Eastern | steps=50, cfg=5.0, full-body shot recommended |
+| 969 | Change the outfit to a cream jalabiya with embroidered collar and cuffs | 将服装换成奶油色绣领袖口贾拉比亚长袍 | Traditional / Middle Eastern | steps=50, cfg=5.0, full-body shot recommended |
+| 970 | Replace with a burgundy thobe with white bisht cloak | 换成酒红色长袍配白色毕什特披风 | Traditional / Middle Eastern | steps=50, cfg=5.0, full-body shot recommended |
+| 971 | Change to a emerald green silk kaftan with silver beading | 换成祖母绿银珠丝绸长袍 | Traditional / Middle Eastern | steps=50, cfg=5.0, full-body shot recommended |
+| 972 | Replace the outfit with a white and gold embroidered Saudi bisht | 将服装换成白色金色刺绣沙特毕什特 | Traditional / Middle Eastern | steps=50, cfg=5.0, full-body shot recommended |
+| 973 | Change to a teal green Turkish caftan with floral motifs | 换成青绿色花卉图案土耳其长袍 | Traditional / Middle Eastern | steps=50, cfg=5.0, full-body shot recommended |
+| 974 | Replace with a colorful wax-print West African dashiki tunic | 换成彩色蜡染印花西非达什基长上衣 | Traditional / African | steps=50, cfg=5.0 |
+| 975 | Change the outfit to a royal blue and gold Nigerian agbada robe | 将服装换成宝蓝金色尼日利亚阿格巴达长袍 | Traditional / African | steps=50, cfg=5.0, full-body shot recommended |
+| 976 | Replace with a multicolor Ghanaian kente cloth draped toga-style | 换成多色加纳肯特布披肩式 | Traditional / African | steps=50, cfg=5.0, full-body shot recommended |
+| 977 | Change to a bright orange and green ankara print fitted dress | 换成亮橙绿色安卡拉印花修身连衣裙 | Traditional / African | steps=50, cfg=5.0 |
+| 978 | Replace the outfit with a white and red Maasai-inspired beaded wrap | 将服装换成白色红色马赛风格串珠围裹 | Traditional / African | steps=50, cfg=5.0, full-body shot recommended |
+| 979 | Change to a earth-toned Ethiopian habesha kemis with gold embroidery | 换成土色金绣埃塞俄比亚传统服饰 | Traditional / African | steps=50, cfg=5.0, full-body shot recommended |
+| 980 | Replace with a blue and yellow Senegalese boubou with matching head wrap | 换成蓝黄色塞内加尔布布同色头巾 | Traditional / African | steps=50, cfg=5.0, full-body shot recommended |
+| 981 | Change the outfit to a green Nigerian isi agu lion-head print top | 将服装换成绿色尼日利亚狮头图案上衣 | Traditional / African | steps=50, cfg=5.0 |
+| 982 | Replace with a purple and gold South African Zulu-inspired beaded outfit | 换成紫金色南非祖鲁族风格串珠服饰 | Traditional / African | steps=50, cfg=5.0 |
+| 983 | Change to a Victorian-era black velvet dress with high lace collar and bustle | 换成维多利亚时代黑色丝绒高蕾丝领裙 | Traditional / European Historical | steps=50, cfg=5.0, full-body shot recommended |
+| 984 | Replace the outfit with a white Victorian blouse with leg-of-mutton sleeves | 将服装换成白色维多利亚式羊腿袖衬衫 | Traditional / European Historical | steps=50, cfg=5.0 |
+| 985 | Change to a Renaissance crimson velvet doublet with gold brocade | 换成文艺复兴深红色丝绒金织锦上衣 | Traditional / European Historical | steps=50, cfg=5.0 |
+| 986 | Replace with a medieval-style brown leather tunic with lace-up front | 换成中世纪风格棕色绑带前皮革束腰外衣 | Traditional / European Historical | steps=50, cfg=5.0. |
+| 987 | Change the outfit to a Regency-era white muslin empire-waist dress | 将服装换成摄政时代白色薄纱高腰连衣裙 | Traditional / European Historical | steps=50, cfg=5.0 |
+| 988 | Replace with a Tudor green velvet gown with gold embroidered partlet | 换成都铎绿色丝绒金绣胸衣礼服 | Traditional / European Historical | steps=50, cfg=5.0, full-body shot recommended |
+| 989 | Change to a 1920s black beaded flapper dress with fringe | 换成1920年代黑色珠饰流苏摇摆裙 | Traditional / European Historical | steps=50, cfg=5.0 |
+| 990 | Replace the outfit with a 18th century French rococo pastel blue silk gown | 将服装换成18世纪法国洛可可粉蓝丝绸礼服 | Traditional / European Historical | steps=50, cfg=5.0, full-body shot recommended |
+| 991 | Change to a brown and green Indonesian batik sarong with kebaya top | 换成棕绿色印尼蜡染纱笼配可巴雅上衣 | Traditional / Southeast Asian | steps=50, cfg=5.0, full-body shot recommended |
+| 992 | Replace with a white lace kebaya with green batik sarong | 换成白色蕾丝可巴雅配绿色蜡染纱笼 | Traditional / Southeast Asian | steps=50, cfg=5.0, full-body shot recommended |
+| 993 | Change the outfit to a red and gold Vietnamese ao dai with flowing pants | 将服装换成红金色越南奥黛配长裤 | Traditional / Southeast Asian | steps=50, cfg=5.0, full-body shot recommended |
+| 994 | Replace with a white silk Vietnamese ao dai with lotus embroidery | 换成白色丝绸莲花刺绣越南奥黛 | Traditional / Southeast Asian | steps=50, cfg=5.0, full-body shot recommended |
+| 995 | Change to a golden Khmer sampot with traditional silk top | 换成金色高棉三朴搭配传统丝绸上衣 | Traditional / Southeast Asian | steps=50, cfg=5.0, full-body shot recommended |
+| 996 | Replace the outfit with a green and gold Thai silk pha sin skirt with matching top | 将服装换成绿金色泰丝帕辛裙配同色上衣 | Traditional / Southeast Asian | steps=50, cfg=5.0, full-body shot recommended |
+| 997 | Change to a teal blue Filipina terno dress with butterfly sleeves | 换成青蓝色菲律宾蝴蝶袖正式裙 | Traditional / Southeast Asian | steps=50, cfg=5.0, full-body shot recommended |
+| 998 | Replace with a purple and gold Myanmar longyi with matching htamein | 换成紫金色缅甸笼基配同色装束 | Traditional / Southeast Asian | steps=50, cfg=5.0, full-body shot recommended |
+| 999 | Change the outfit to a blue and silver Laotian sinh skirt with white top | 将服装换成蓝银色老挝筒裙配白色上衣 | Traditional / Southeast Asian | steps=50, cfg=5.0, full-body shot recommended |
+| 1000 | Replace with a bright red traditional Mongolian deel with gold sash | 换成鲜红色金腰带传统蒙古袍 | Traditional / Central Asian | steps=50, cfg=5.0, full-body shot recommended |
+| 1001 | Change to a blue and white ikat silk Uzbek chapan robe | 换成蓝白色经编丝绸乌兹别克长袍 | Traditional / Central Asian | steps=50, cfg=5.0, full-body shot recommended |
+| 1002 | Replace the outfit with a deep red Tibetan chuba robe with rainbow apron | 将服装换成深红色藏族楚巴配彩虹围裙 | Traditional / Chinese Ethnic | steps=50, cfg=5.0, full-body shot recommended |
+| 1003 | Change to a white and blue Dai ethnic sarong dress with silver ornaments | 换成蓝白色傣族筒裙配银饰 | Traditional / Chinese Ethnic | steps=50, cfg=5.0, full-body shot recommended |
+| 1004 | Replace with a Qing dynasty Manchu formal court robe in yellow silk | 换成清代黄色丝绸满族正式朝服 | Traditional / Chinese | steps=50, cfg=5.0, full-body shot recommended |
+| 1005 | Change the outfit to a pale jade green Song dynasty scholarly robe hanfu | 将服装换成淡翠绿色宋代文人袍汉服 | Traditional / Chinese | steps=50, cfg=5.0, full-body shot recommended |
+| 1006 | Replace with a crimson red Scottish highland dress with tartan plaid and sporran | 换成深红色苏格兰高地格纹裙配皮袋 | Traditional / European | steps=50, cfg=5.0, full-body shot recommended |
+| 1007 | Change to a black Spanish matador jacket with gold embroidery | 换成黑色金绣西班牙斗牛士夹克 | Traditional / European | steps=50, cfg=5.0 |
+| 1008 | Replace the outfit with a white and blue Bavarian dirndl with lace blouse | 将服装换成蓝白色巴伐利亚蕾丝衬裙 | Traditional / European | steps=50, cfg=5.0, full-body shot recommended |
+| 1009 | Change to a blue Greek evzone fustanella pleated skirt uniform | 换成蓝色希腊卫兵百褶裙制服 | Traditional / European | steps=50, cfg=5.0, full-body shot recommended |
+| 1010 | Replace with a red and white Norwegian bunad with silver brooches | 换成红白色挪威民族服饰配银胸针 | Traditional / European | steps=50, cfg=5.0, full-body shot recommended |
+| 1011 | Change the outfit to a black leather German Lederhosen with white shirt | 将服装换成黑色皮短裤配白色衬衫德国传统服饰 | Traditional / European | steps=50, cfg=5.0, full-body shot recommended |
+| 1012 | Replace with a Polish Krakow female folk costume with floral vest | 换成波兰克拉科夫花卉背心女性民族服装 | Traditional / European | steps=50, cfg=5.0, full-body shot recommended |
+| 1013 | Change to a Russian sarafan dress in red with gold trim | 换成红色金边俄罗斯萨拉凡连衣裙 | Traditional / European | steps=50, cfg=5.0, full-body shot recommended |
+| 1014 | Replace the outfit with a deep purple Tang-dynasty cross-collar hanfu with cloud motifs | 将服装换成深紫色唐代交领云纹汉服 | Traditional / Chinese | steps=50, cfg=5.0, full-body shot recommended |
+| 1015 | Change to a turquoise blue Mughal-inspired sherwani with gold zardozi embroidery | 换成绿松石蓝莫卧儿风格金绣夏瓦尼 | Traditional / Indian | steps=50, cfg=5.0, full-body shot recommended |
+| 1016 | Replace with an orange and red Rajasthani leheriya tie-dye saree | 换成橙红色拉贾斯坦扎染纱丽 | Traditional / Indian | steps=50, cfg=5.0, full-body shot recommended |
+| 1017 | Change the outfit to a deep navy Japanese happi festival coat with festival motifs | 将服装换成深蓝色祭典图案日本法披 | Traditional / Japanese | steps=50, cfg=5.0 |
+| 1018 | Replace with a white Japanese jinbei summer wear with indigo pattern | 换成白色蓝色图案日本甚平 | Traditional / Japanese | steps=50, cfg=5.0 |
+| 1019 | Change to a maroon Pakistani Shalwar Kameez with mirror work dupatta | 换成栗色镜面绣工披巾巴基斯坦套装 | Traditional / South Asian | steps=50, cfg=5.0, full-body shot recommended |
+| 1020 | Replace the outfit with a deep green Cambodian sampot hol with gold thread | 将服装换成深绿色金线柬埔寨霍尔三朴 | Traditional / Southeast Asian | steps=50, cfg=5.0, full-body shot recommended |
+| 1021 | Change to a white and gold Ethiopian netela shawl over white dress | 换成白金色埃塞俄比亚纱巾配白裙 | Traditional / African | steps=50, cfg=5.0, full-body shot recommended |
+| 1022 | Replace with a bright blue Tuareg indigo veil and robe | 换成亮蓝色图阿雷格靛蓝面纱长袍 | Traditional / African | steps=50, cfg=5.0, full-body shot recommended |
+| 1023 | Change the outfit to a traditional Scottish kilt in Royal Stewart tartan | 将服装换成皇家斯图亚特格纹苏格兰裙 | Traditional / European | steps=50, cfg=5.0, full-body shot recommended |
+| 1024 | Replace with a Ming dynasty official court robe with mandarin square patch | 换成明代补子官服 | Traditional / Chinese | steps=50, cfg=5.0, full-body shot recommended |
+| 1025 | Change to a cream and gold Indian lengha with heavy embroidery and dupatta | 换成奶油金色重工刺绣印度裙配披巾 | Traditional / Indian | steps=50, cfg=5.0, full-body shot recommended |
+| 1026 | Replace the outfit with a sky blue Japanese iromuji single-color formal kimono | 将服装换成天蓝色日本色无地单色正式和服 | Traditional / Japanese | steps=50, cfg=5.0, full-body shot recommended |
+| 1027 | Change to a black and gold African Yoruba aso-oke fabric outfit | 换成黑金色非洲约鲁巴阿索奥凯布料服饰 | Traditional / African | steps=50, cfg=5.0, full-body shot recommended |
+| 1028 | Replace with a Han Chinese bride's red phoenix crown xiapei wedding outfit | 换成汉族新娘红色凤冠霞帔喜服 | Traditional / Chinese | steps=50, cfg=5.0, full-body shot recommended |
+| 1029 | Change the outfit to an emerald green and gold Pakistani bridal gharara | 将服装换成祖母绿金色巴基斯坦新娘裤裙 | Traditional / South Asian | steps=50, cfg=5.0, full-body shot recommended |
+| 1030 | Replace with a white Korean male hanbok with black hat (gat) | 换成白色韩国男士韩服配黑色笠帽 | Traditional / Korean | steps=50, cfg=5.0, full-body shot recommended |
+| 1031 | Change to a Zhuang ethnic festival outfit with embroidered vest and silver headwear | 换成壮族节日服饰刺绣背心银饰头饰 | Traditional / Chinese Ethnic | steps=50, cfg=5.0, full-body shot recommended |
+| 1032 | Replace the outfit with a bright red Tang dynasty hufu riding outfit | 将服装换成鲜红色唐代胡服骑装 | Traditional / Chinese | steps=50, cfg=5.0, full-body shot recommended |
+| 1033 | Change to a teal and gold Omani kumma cap with matching dishdasha | 换成青金色阿曼圆帽配同色长袍 | Traditional / Middle Eastern | steps=50, cfg=5.0, full-body shot recommended |
+| 1034 | Replace with a deep maroon Rajput-style achkan coat with churidar | 换成深栗色拉杰普特风格窄管裤配长外套 | Traditional / Indian | steps=50, cfg=5.0, full-body shot recommended |
+| 1035 | Change the outfit to a multicolor Guatemalan huipil with geometric patterns | 将服装换成多色几何花纹危地马拉传统衬衫 | Traditional / Latin American | steps=50, cfg=5.0 |
+| 1036 | Replace with a white Mexican Oaxacan embroidered dress with floral yoke | 换成白色墨西哥瓦哈卡花饰刺绣连衣裙 | Traditional / Latin American | steps=50, cfg=5.0 |
+| 1037 | Change to a blue and white Greek island-style linen dress | 换成蓝白色希腊岛屿风亚麻连衣裙 | Traditional / European | steps=45, cfg=4.5 |
+| 1038 | Replace the outfit with a Peruvian poncho with Andean colorful geometric patterns | 将服装换成彩色几何纹秘鲁安第斯披风 | Traditional / Latin American | steps=50, cfg=5.0 |
+| 1039 | Change to a dark red Bhutanese gho robe with white cuffs | 换成深红色白色袖口不丹帼服 | Traditional / South Asian | steps=50, cfg=5.0, full-body shot recommended |
+| 1040 | Replace with a Song dynasty lilac duijin symmetrical-front hanfu | 换成宋代丁香紫对襟汉服 | Traditional / Chinese | steps=50, cfg=5.0, full-body shot recommended |
+| 1041 | Change the outfit to a gold and red Persian-style tunic with jeweled belt | 将服装换成金红色宝石腰带波斯风格长袍 | Traditional / Middle Eastern | steps=50, cfg=5.0 |
+| 1042 | Replace with a white and blue delft-pattern Dutch folk dress with bonnet | 换成蓝白代尔夫特图案荷兰民族服配帽 | Traditional / European | steps=50, cfg=5.0, full-body shot recommended |
+| 1043 | Change to a deep pink Kashmiri pheran tunic with elaborate aari embroidery | 换成深粉色克什米尔精美针绣费兰长袍 | Traditional / Indian | steps=50, cfg=5.0 |
+| 1044 | Replace the outfit with a cream and blue Yi ethnic embroidered jacket and skirt | 将服装换成奶油蓝色彝族刺绣上衣裙装 | Traditional / Chinese Ethnic | steps=50, cfg=5.0, full-body shot recommended |
+| 1045 | Change to a Japanese kamishimo formal samurai outfit in dark blue | 换成深蓝色日本�的正式武士装 | Traditional / Japanese | steps=50, cfg=5.0, full-body shot recommended |
+| 1046 | Replace with a black and silver Nigerian gele headwrap with matching iro and buba | 换成黑银色尼日利亚头巾配同色套装 | Traditional / African | steps=50, cfg=5.0, full-body shot recommended |
+| 1047 | Change the outfit to a vermillion red Indian bridal saree with heavy gold zari and temple border | 将服装换成朱红色重金丝寺庙边印度新娘纱丽 | Traditional / Indian | steps=50, cfg=5.0, full-body shot recommended |
+| 1048 | Replace with a coral pink Tang dynasty half-arm top with white ruqun hanfu | 换成珊瑚粉唐制半臂配白色襦裙汉服 | Traditional / Chinese | steps=50, cfg=5.0, full-body shot recommended |
+| 1049 | Change to a forest green Scottish kilt with matching tartan tie and sporran | 换成森林绿苏格兰裙配同色格纹领带和皮袋 | Traditional / European | steps=50, cfg=5.0, full-body shot recommended |
+| 1050 | Replace the outfit with a deep purple West African boubou robe with gold applique | 将服装换成深紫色金贴花西非布布长袍 | Traditional / African | steps=50, cfg=5.0, full-body shot recommended |
+| 1051 | Change to a jade green qipao with silver crane embroidery and Mandarin collar | 换成翡翠绿银色仙鹤刺绣立领旗袍 | Traditional / Chinese | steps=50, cfg=5.0 |
+| 1052 | Replace with a midnight blue Japanese tsukesage kimono with wisteria pattern | 换成午夜蓝紫藤图案日本付下和服 | Traditional / Japanese | steps=50, cfg=5.0, full-body shot recommended |
+| 1053 | Change the outfit to a white Uighur atlas silk dress with embroidered doppa cap | 换成白色维吾尔艾德莱斯丝绸裙配绣花帽 | Traditional / Chinese Ethnic | steps=50, cfg=5.0, full-body shot recommended |
+| 1054 | Replace with a golden yellow Tang dynasty court lady's wide-sleeve ruqun | 换成金黄色唐代宫廷大袖襦裙 | Traditional / Chinese | steps=50, cfg=5.0, full-body shot recommended |
+| 1055 | Change to a moss green Irish Aran sweater with cable-knit patterns | 换成苔绿色爱尔兰阿兰麻花编织毛衣 | Traditional / European | steps=45, cfg=4.5 |
+| 1056 | Replace the outfit with a deep red Vietnamese wedding ao dai with dragon-phoenix motifs | 将服装换成深红色龙凤图案越南婚礼奥黛 | Traditional / Southeast Asian | steps=50, cfg=5.0, full-body shot recommended |
+| 1057 | Change to a blue and white Hmong embroidered pleated skirt with silver ornaments | 换成蓝白色苗族刺绣百褶裙配银饰 | Traditional / Chinese Ethnic | steps=50, cfg=5.0, full-body shot recommended |
+| 1058 | Replace with a leopard-pattern Tanzanian kanga wrap in orange and brown | 换成橘棕色豹纹坦桑尼亚康加围裹 | Traditional / African | steps=50, cfg=5.0 |
+| 1059 | Change the outfit to a pale yellow ancient Chinese lady's curved-hem shenyi | 将服装换成淡黄色中国古代曲裾深衣 | Traditional / Chinese | steps=50, cfg=5.0, full-body shot recommended |
+| 1060 | Replace with a Finnish national dress with red bodice and striped skirt | 换成红色紧身胸衣条纹裙芬兰民族服 | Traditional / European | steps=50, cfg=5.0, full-body shot recommended |
+| 1061 | Change to a traditional Hawaiian muumuu in tropical floral print | 换成热带碎花夏威夷宽松连衣裙 | Traditional / Pacific | steps=50, cfg=5.0, full-body shot recommended |
+| 1062 | Replace the outfit with a Maori piupiu flax skirt with taniko border | 将服装换成毛利亚麻裙配编织边 | Traditional / Pacific | steps=50, cfg=5.0, full-body shot recommended |
+| 1063 | Change to a crimson and gold Moroccan bride's caftan with elaborate beading | 换成深红金色摩洛哥新娘精美珠饰长袍 | Traditional / Middle Eastern | steps=50, cfg=5.0, full-body shot recommended |
+| 1064 | Replace with a white and maroon Ming dynasty scholar's broad-robe dachao | 换成白栗色明代文人大氅 | Traditional / Chinese | steps=50, cfg=5.0, full-body shot recommended |
+| 1065 | Change the outfit to a deep wine red Japanese uchikake wedding kimono with cranes | 将服装换成深酒红色仙鹤图案日本打挂婚礼和服 | Traditional / Japanese | steps=50, cfg=5.0, full-body shot recommended |
+| 1066 | Replace with a sky blue Rajasthani bandhani (tie-dye) saree | 换成天蓝色拉贾斯坦扎染纱丽 | Traditional / Indian | steps=50, cfg=5.0, full-body shot recommended |
+| 1067 | Change to a black Korean dopo scholar robe with jade pendant | 换成黑色韩国道袍配玉佩 | Traditional / Korean | steps=50, cfg=5.0, full-body shot recommended |
+| 1068 | Replace the outfit with a Tibetan dark blue woolen chuba with rainbow-striped pangden apron | 将服装换成深蓝色藏族毛呢楚巴配彩虹条纹邦典围裙 | Traditional / Chinese Ethnic | steps=50, cfg=5.0, full-body shot recommended |
+| 1069 | Change to a yellow Philippine barong tagalog with delicate embroidery | 换成黄色菲律宾精细刺绣巴隆他加禄衬衫 | Traditional / Southeast Asian | steps=50, cfg=5.0 |
+| 1070 | Replace with a gray and burgundy Armenian taraz folk costume with embroidered vest | 将服装换成灰酒红色亚美尼亚刺绣背心民族服 | Traditional / European | steps=50, cfg=5.0, full-body shot recommended |
+| 1071 | Change the outfit to a deep teal Ming dynasty horseback riding outfit with cloud collar | 将服装换成深青色明代云肩骑马装 | Traditional / Chinese | steps=50, cfg=5.0, full-body shot recommended |
+| 1072 | Replace with a pure white Japanese shiromuku bridal kimono | 换成纯白色日本白无垢新娘和服 | Traditional / Japanese | steps=50, cfg=5.0, full-body shot recommended |
+| 1073 | Change to a hot pink and gold Indian Gujarati chaniya choli with mirror work | 换成亮粉金色古吉拉特镜面绣工套装 | Traditional / Indian | steps=50, cfg=5.0, full-body shot recommended |
+| 1074 | Replace the outfit with a steel blue Korean gwanbok court official robe | 将服装换成钢蓝色韩国官服 | Traditional / Korean | steps=50, cfg=5.0, full-body shot recommended |
+| 1075 | Change to an ivory and gold Nigerian agbada with embroidered neckline | 换成象牙金色尼日利亚刺绣领口阿格巴达长袍 | Traditional / African | steps=50, cfg=5.0, full-body shot recommended |
+| 1076 | Replace with a pale peach Song dynasty ru-style jacket over white mamian skirt hanfu | 换成浅桃红色宋制褙子配白色马面裙汉服 | Traditional / Chinese | steps=50, cfg=5.0, full-body shot recommended |
+| 1077 | Change the outfit to a deep forest green Bavarian trachten suit with horn buttons | 将服装换成深绿色角扣巴伐利亚传统套装 | Traditional / European | steps=50, cfg=5.0, full-body shot recommended |
+| 1078 | Replace with a bright saffron Hindu priest dhoti-kurta | 换成明亮藏红色印度教祭司陀提库尔塔 | Traditional / Indian | steps=50, cfg=5.0, full-body shot recommended |
+| 1079 | Change to a Ming dynasty blue and white porcelain-patterned mamianqun horse-face skirt | 换成明代蓝白青花瓷纹马面裙 | Traditional / Chinese | steps=50, cfg=5.0, full-body shot recommended |
+| 1080 | Replace the outfit with a red and black Spanish flamenco dress with polka dots and ruffled train | 将服装换成红黑波点荷叶边拖尾弗拉门戈裙 | Traditional / European | steps=50, cfg=5.0, full-body shot recommended |
+| 1081 | Change to a deep violet Indian Lucknowi chikankari embroidered kurta | 换成深紫色印度勒克瑙白线刺绣库尔塔 | Traditional / Indian | steps=50, cfg=5.0 |
+| 1082 | Replace with a chartreuse green Thai silk formal sinh skirt with gold border | 换成黄绿色金边泰丝正式筒裙 | Traditional / Southeast Asian | steps=50, cfg=5.0, full-body shot recommended |
+| 1083 | Change the outfit to a Song dynasty peach-blossom pink round-collar robe | 将服装换成宋制桃花粉色圆领袍 | Traditional / Chinese | steps=50, cfg=5.0, full-body shot recommended |
+| 1084 | Replace with a white and blue Berber Amazigh dress with geometric silver jewelry | 换成蓝白色柏柏尔几何银饰连衣裙 | Traditional / African | steps=50, cfg=5.0, full-body shot recommended |
+| 1085 | Change to an ornate gold Balinese temple dance costume | 换成华丽金色巴厘岛寺庙舞蹈服饰 | Traditional / Southeast Asian | steps=50, cfg=5.0, full-body shot recommended |
+| 1086 | Replace the outfit with a deep red Ottoman-style embroidered entari robe | 将服装换成深红色奥斯曼风格刺绣长袍 | Traditional / Middle Eastern | steps=50, cfg=5.0, full-body shot recommended |
+| 1087 | Change to a Ukrainian vyshyvanka white blouse with red and black cross-stitch | 换成乌克兰红黑十字绣白色维什万卡衬衫 | Traditional / European | steps=50, cfg=5.0 |
+| 1088 | Replace with a bright coral Pink Ming dynasty stand-collar jacket with horse-face skirt | 换成亮珊瑚粉明制立领上衣配马面裙 | Traditional / Chinese | steps=50, cfg=5.0, full-body shot recommended |
+| 1089 | Change the outfit to a gold lace Nigerian aso ebi party outfit | 将服装换成金色蕾丝尼日利亚聚会套装 | Traditional / African | steps=50, cfg=5.0 |
+| 1090 | Replace with a deep navy Indian sherwani with gold buttons and matching churidar | 换成深蓝色金扣印度夏瓦尼配窄管裤 | Traditional / Indian | steps=50, cfg=5.0, full-body shot recommended |
+| 1091 | Change to a black Japanese jinbaori samurai surcoat with gold crest | 换成黑色金纹日本阵羽织武士外套 | Traditional / Japanese | steps=50, cfg=5.0 |
+| 1092 | Replace the outfit with a multicolor Bhutanese kira wrap dress | 将服装换成多色不丹基拉裹裙 | Traditional / South Asian | steps=50, cfg=5.0, full-body shot recommended |
+| 1093 | Change to a powder blue Korean child's saekdong hanbok with rainbow sleeves | 换成粉蓝色彩虹袖韩国儿童韩服 | Traditional / Korean | steps=50, cfg=5.0, full-body shot recommended |
+| 1094 | Replace with a deep green Tang dynasty round-collar robe with rank badge | 换成深绿色唐代圆领品级补子袍 | Traditional / Chinese | steps=50, cfg=5.0, full-body shot recommended |
+| 1095 | Change the outfit to a pale gold Songket woven sarong with kebaya | 将服装换成淡金色宋客编织纱笼配可巴雅 | Traditional / Southeast Asian | steps=50, cfg=5.0, full-body shot recommended |
+| 1096 | Replace with a deep magenta Indian Patola double-ikat silk saree | 换成深品红色印度巴托拉双经编丝绸纱丽 | Traditional / Indian | steps=50, cfg=5.0, full-body shot recommended |
+| 1097 | Change to a brown and green Kazakh traditional shapan robe with fox-fur trim | 换成棕绿色狐皮边哈萨克传统长袍 | Traditional / Central Asian | steps=50, cfg=5.0, full-body shot recommended |
+| 1098 | Replace the outfit with a white and gold Arab Emirati wedding dress with henna | 将服装换成白金色阿联酋婚礼服饰 | Traditional / Middle Eastern | steps=50, cfg=5.0, full-body shot recommended |
+| 1099 | Change to a bright turquoise Mongolian deel with silver button sash | 换成亮绿松石色银扣腰带蒙古袍 | Traditional / Central Asian | steps=50, cfg=5.0, full-body shot recommended |
+| 1100 | Replace with a Song dynasty ice-blue scholar's broad-sleeve zhiduo robe | 换成宋代冰蓝色大袖直裰文人袍 | Traditional / Chinese | steps=50, cfg=5.0, full-body shot recommended |
+| 1101 | Change the outfit to a deep red and gold Cambodian Sampot Phamuong silk skirt | 将服装换成深红金色柬埔寨帕穆宋丝绸裙 | Traditional / Southeast Asian | steps=50, cfg=5.0, full-body shot recommended |
+| 1102 | Replace with a white and red Romanian ie blouse with black skirt | 换成白红色罗马尼亚传统衬衫配黑裙 | Traditional / European | steps=50, cfg=5.0, full-body shot recommended |
+| 1103 | Change to an olive green Japanese michiyuki travel coat over kimono | 换成橄榄绿日本道行外套搭配和服 | Traditional / Japanese | steps=50, cfg=5.0, full-body shot recommended |
+| 1104 | Replace the outfit with a deep scarlet Chinese opera male warrior costume | 将服装换成深猩红色中国京剧武生戏服 | Traditional / Chinese | steps=50, cfg=5.0, full-body shot recommended |
+| 1105 | Change to a white embroidered Palestinian thobe with red cross-stitch | 换成白色红色十字绣巴勒斯坦尼长袍 | Traditional / Middle Eastern | steps=50, cfg=5.0, full-body shot recommended |
+| 1106 | Replace with a deep coral Indonesian Toraja ceremonial outfit | 换成深珊瑚色印尼托拉加族仪式服饰 | Traditional / Southeast Asian | steps=50, cfg=5.0, full-body shot recommended |
+| 1107 | Change the outfit to a purple and gold Indian Mysore silk saree | 将服装换成紫金色印度迈索尔丝绸纱丽 | Traditional / Indian | steps=50, cfg=5.0, full-body shot recommended |
+| 1108 | Replace with a pale lavender Ming dynasty feiyu (flying fish) embroidered robe | 换成淡薰衣草色明代飞鱼服刺绣袍 | Traditional / Chinese | steps=50, cfg=5.0, full-body shot recommended |
+| 1109 | Change to a red and green Christmas-themed Norwegian sweater with snowflake pattern | 换成红绿圣诞主题雪花图案挪威毛衣 | Traditional / European | steps=45, cfg=4.5 |
+| 1110 | Replace the outfit with a deep blue Japanese komon everyday kimono with small patterns | 将服装换成深蓝色小纹图案日本小纹日常和服 | Traditional / Japanese | steps=50, cfg=5.0, full-body shot recommended |
+| 1111 | Change to a gold and green Ethiopian coffee ceremony dress | 换成金绿色埃塞俄比亚咖啡仪式服饰 | Traditional / African | steps=50, cfg=5.0, full-body shot recommended |
+| 1112 | Replace with a deep teal Dong ethnic pleated skirt with silver headdress | 换成深青色侗族百褶裙配银头饰 | Traditional / Chinese Ethnic | steps=50, cfg=5.0, full-body shot recommended |
+| 1113 | Change the outfit to a cream and brown Javanese batik sarong with blangkon headpiece | 将服装换成奶油棕色爪哇蜡染纱笼配头饰 | Traditional / Southeast Asian | steps=50, cfg=5.0, full-body shot recommended |
+| 1114 | Replace with a vermillion red Korean wonsam queen ceremonial robe | 换成朱红色韩国圆衫王后仪式袍 | Traditional / Korean | steps=50, cfg=5.0, full-body shot recommended |
+| 1115 | Change to a white and blue Suzhou embroidered Song-style hanfu | 换成蓝白苏州刺绣宋式汉服 | Traditional / Chinese | steps=50, cfg=5.0, full-body shot recommended |
+| 1116 | Replace the outfit with a blue Tuareg tagelmust turban and indigo robe | 将服装换成蓝色图阿雷格头巾配靛蓝长袍 | Traditional / African | steps=50, cfg=5.0, full-body shot recommended |
+| 1117 | Change to a gold-thread woven Thai Pha Yok Dok ceremonial fabric outfit | 换成金线编织泰式仪式面料套装 | Traditional / Southeast Asian | steps=50, cfg=5.0, full-body shot recommended |
+| 1118 | Replace with a red and gold Chinese New Year festive qipao | 换成红金色中国新年喜庆旗袍 | Traditional / Chinese | steps=50, cfg=5.0 |
+| 1119 | Change the outfit to a deep burgundy Hungarian folk dress with embroidered apron | 将服装换成深酒红色匈牙利刺绣围裙民族裙 | Traditional / European | steps=50, cfg=5.0, full-body shot recommended |
+| 1120 | Replace with a white and indigo Japanese shibori tie-dye yukata | 换成白色靛蓝日本绞染浴衣 | Traditional / Japanese | steps=50, cfg=5.0, full-body shot recommended |
+
+## Section 7: Sportswear & Activewear (Entries 1121-1230)
+
+| # | English Prompt | 中文提示词 | Category | Config Notes |
+|---|---------------|-----------|----------|--------------|
+| 1121 | Change the outfit to black running shorts with reflective stripe | 将服装换成黑色反光条纹跑步短裤 | Sportswear / Running | steps=40, cfg=4.0 |
+| 1122 | Replace with a neon green moisture-wicking running tank top | 换成荧光绿吸湿排汗跑步背心 | Sportswear / Running | steps=40, cfg=4.0 |
+| 1123 | Change to full-length black compression running tights | 换成全长黑色压缩跑步紧身裤 | Sportswear / Running | steps=40, cfg=4.0, full-body shot recommended |
+| 1124 | Replace the outfit with a coral pink running sports bra and matching shorts | 将服装换成珊瑚粉运动文胸配同色短裤 | Sportswear / Running | steps=40, cfg=4.0 |
+| 1125 | Change to a white breathable running singlet with mesh panels | 换成白色透气网格跑步背心 | Sportswear / Running | steps=40, cfg=4.0 |
+| 1126 | Replace with navy blue half-zip running pullover | 换成深蓝色半拉链跑步套头衫 | Sportswear / Running | steps=40, cfg=4.0 |
+| 1127 | Change the outfit to black high-waisted yoga pants with mesh inserts | 将服装换成黑色高腰网纱拼接瑜伽裤 | Sportswear / Yoga | steps=40, cfg=4.0, full-body shot recommended |
+| 1128 | Replace with a dusty pink strappy yoga sports bra | 换成暗粉色交叉系带瑜伽运动文胸 | Sportswear / Yoga | steps=40, cfg=4.0 |
+| 1129 | Change to a sage green seamless yoga tank top | 换成鼠尾草绿无缝瑜伽背心 | Sportswear / Yoga | steps=40, cfg=4.0 |
+| 1130 | Replace the outfit with a plum purple flared yoga pants with high waist | 将服装换成李子紫高腰喇叭瑜伽裤 | Sportswear / Yoga | steps=40, cfg=4.0, full-body shot recommended |
+| 1131 | Change to a teal green yoga leggings with side pocket | 换成青绿色侧袋瑜伽紧身裤 | Sportswear / Yoga | steps=40, cfg=4.0, full-body shot recommended |
+| 1132 | Replace with a white cropped yoga tank with built-in bra | 换成白色内置文胸短款瑜伽背心 | Sportswear / Yoga | steps=40, cfg=4.0 |
+| 1133 | Change the outfit to a black muscle tee with side cutouts for gym | 将服装换成侧面开口黑色背心健身T恤 | Sportswear / Gym | steps=40, cfg=4.0 |
+| 1134 | Replace with a gray compression shirt with short sleeves | 换成灰色短袖压缩衣 | Sportswear / Gym | steps=40, cfg=4.0 |
+| 1135 | Change to navy blue athletic training shorts with zipper pockets | 换成深蓝色拉链袋运动训练短裤 | Sportswear / Gym | steps=40, cfg=4.0 |
+| 1136 | Replace the outfit with a red racerback sports tank top | 将服装换成红色工字背运动背心 | Sportswear / Gym | steps=40, cfg=4.0 |
+| 1137 | Change to a black and neon yellow gym stringer vest | 换成黑色荧光黄健身细肩带背心 | Sportswear / Gym | steps=40, cfg=4.0 |
+| 1138 | Replace with a charcoal gray long-sleeve compression top | 换成碳灰色长袖压缩上衣 | Sportswear / Gym | steps=40, cfg=4.0 |
+| 1139 | Change the outfit to a red string bikini with gold hardware | 将服装换成红色金色五金细带比基尼 | Sportswear / Swim | steps=40, cfg=4.0, full-body shot recommended |
+| 1140 | Replace with a black one-piece swimsuit with side cutouts | 换成黑色侧镂空连体泳衣 | Sportswear / Swim | steps=40, cfg=4.0, full-body shot recommended |
+| 1141 | Change to navy blue swim trunks with white side stripe | 换成深蓝色白色侧条纹泳裤 | Sportswear / Swim | steps=40, cfg=4.0 |
+| 1142 | Replace the outfit with a tropical print rash guard and board shorts | 将服装换成热带印花防晒衣配冲浪短裤 | Sportswear / Swim | steps=45, cfg=4.5, full-body shot recommended |
+| 1143 | Change to a coral high-waisted bikini with ruffle top | 换成珊瑚色高腰荷叶边比基尼 | Sportswear / Swim | steps=40, cfg=4.0, full-body shot recommended |
+| 1144 | Replace with a white halter one-piece swimsuit with plunge neckline | 换成白色挂脖深V连体泳衣 | Sportswear / Swim | steps=40, cfg=4.0, full-body shot recommended |
+| 1145 | Change the outfit to a teal blue long-sleeve cycling jersey with back pockets | 将服装换成青蓝色后袋长袖骑行服 | Sportswear / Cycling | steps=40, cfg=4.0 |
+| 1146 | Replace with black padded cycling bib shorts | 换成黑色加垫骑行背带短裤 | Sportswear / Cycling | steps=40, cfg=4.0 |
+| 1147 | Change to a red and white short-sleeve cycling jersey | 换成红白短袖骑行服 | Sportswear / Cycling | steps=40, cfg=4.0 |
+| 1148 | Replace the outfit with a white pleated tennis skirt with built-in shorts | 将服装换成白色内置短裤百褶网球裙 | Sportswear / Tennis | steps=40, cfg=4.0 |
+| 1149 | Change to a navy blue tennis polo shirt with moisture-wicking fabric | 换成深蓝色吸湿排汗网球Polo衫 | Sportswear / Tennis | steps=40, cfg=4.0 |
+| 1150 | Replace with a white sleeveless tennis dress with pleated skirt | 换成白色无袖百褶网球裙 | Sportswear / Tennis | steps=40, cfg=4.0 |
+| 1151 | Change the outfit to a red and white striped basketball jersey with number 23 | 将服装换成红白条纹23号篮球球衣 | Sportswear / Basketball | steps=40, cfg=4.5 |
+| 1152 | Replace with black basketball shorts with side mesh panels | 换成黑色侧网格篮球短裤 | Sportswear / Basketball | steps=40, cfg=4.0 |
+| 1153 | Change to a royal blue basketball jersey with gold trim | 换成宝蓝色金边篮球球衣 | Sportswear / Basketball | steps=40, cfg=4.5 |
+| 1154 | Replace the outfit with a black leotard with long sleeves for dance | 将服装换成黑色长袖舞蹈紧身衣 | Sportswear / Dance | steps=40, cfg=4.0 |
+| 1155 | Change to a white classical ballet tutu with fitted bodice | 换成白色经典芭蕾舞短裙配紧身上衣 | Sportswear / Dance | steps=50, cfg=5.0, full-body shot recommended |
+| 1156 | Replace with a pink ballet leotard with wrap skirt | 换成粉色裹身短裙芭蕾紧身衣 | Sportswear / Dance | steps=40, cfg=4.0 |
+| 1157 | Change the outfit to a green and gold soccer/football jersey | 将服装换成绿金色足球球衣 | Sportswear / Soccer | steps=40, cfg=4.5 |
+| 1158 | Replace with a black ski jacket with neon accents and goggle pocket | 换成黑色荧光点缀雪镜口袋滑雪服 | Sportswear / Ski | steps=45, cfg=4.5 |
+| 1159 | Change to a navy and red warm-up tracksuit with zip jacket | 换成深蓝红色拉链夹克训练套装 | Sportswear / Training | steps=40, cfg=4.0, full-body shot recommended |
+| 1160 | Replace the outfit with a white fencing uniform with protective plastron | 将服装换成白色击剑服配防护衬衣 | Sportswear / Fencing | steps=45, cfg=4.5, full-body shot recommended |
+| 1161 | Change to an orange and black motocross racing suit | 换成橙黑色越野摩托赛车服 | Sportswear / Motorsport | steps=45, cfg=4.5, full-body shot recommended |
+| 1162 | Replace with a black compression base layer for skiing | 换成黑色滑雪压缩打底层 | Sportswear / Ski | steps=40, cfg=4.0 |
+| 1163 | Change the outfit to a blue and white surfboard shorts with tropical print | 将服装换成蓝白色热带印花冲浪短裤 | Sportswear / Surf | steps=40, cfg=4.0 |
+| 1164 | Replace with a maroon and gray American football jersey with padded shoulders | 换成栗色灰色加垫肩美式橄榄球球衣 | Sportswear / Football | steps=45, cfg=4.5 |
+| 1165 | Change to a black figure skating dress with rhinestone detail | 换成黑色水钻花样滑冰裙 | Sportswear / Skating | steps=45, cfg=4.5 |
+| 1166 | Replace the outfit with a white cricket cable-knit sweater vest | 将服装换成白色麻花编织板球毛衣背心 | Sportswear / Cricket | steps=40, cfg=4.0 |
+| 1167 | Change to olive green hiking cargo pants with zip-off legs | 换成橄榄绿可拆卸腿部登山工装裤 | Sportswear / Hiking | steps=40, cfg=4.0, full-body shot recommended |
+| 1168 | Replace with a bright red ski bib overall with insulation | 换成亮红色保暖滑雪背带裤 | Sportswear / Ski | steps=45, cfg=4.5, full-body shot recommended |
+| 1169 | Change the outfit to a lightweight gray running windbreaker jacket | 将服装换成轻薄灰色跑步防风夹克 | Sportswear / Running | steps=40, cfg=4.0 |
+| 1170 | Replace with a floral print sports bra and matching high-waisted leggings | 换成碎花运动文胸配同色高腰紧身裤 | Sportswear / Yoga | steps=40, cfg=4.5, full-body shot recommended |
+| 1171 | Change to a retro-style red and white striped rugby polo | 换成复古红白条纹橄榄球Polo衫 | Sportswear / Rugby | steps=40, cfg=4.0 |
+| 1172 | Replace the outfit with a neon pink sports bra with racerback design | 将服装换成荧光粉工字背运动文胸 | Sportswear / Gym | steps=40, cfg=4.0 |
+| 1173 | Change to a navy blue swim cap and goggles with matching one-piece suit | 换成深蓝色泳帽泳镜配同色连体泳衣 | Sportswear / Swim | steps=40, cfg=4.0 |
+| 1174 | Replace with black martial arts gi with white belt | 换成白色腰带黑色武术道服 | Sportswear / Martial Arts | steps=40, cfg=4.0, full-body shot recommended |
+| 1175 | Change the outfit to a white and green polo outfit for horse riding | 将服装换成白绿色马球Polo衫 | Sportswear / Equestrian | steps=40, cfg=4.0 |
+| 1176 | Replace with tan jodhpur riding breeches with leather knee patches | 换成棕褐色皮膝马术骑行裤 | Sportswear / Equestrian | steps=40, cfg=4.0 |
+| 1177 | Change to a blue and white volleyball jersey with number 7 | 换成蓝白色7号排球球衣 | Sportswear / Volleyball | steps=40, cfg=4.5 |
+| 1178 | Replace the outfit with a black wetsuit for diving | 将服装换成黑色潜水湿衣 | Sportswear / Diving | steps=40, cfg=4.0, full-body shot recommended |
+| 1179 | Change to a white taekwondo dobok with black belt | 换成黑色腰带白色跆拳道道服 | Sportswear / Martial Arts | steps=40, cfg=4.0, full-body shot recommended |
+| 1180 | Replace with a green and gold Australian-style cricket uniform | 换成绿金色澳大利亚风板球制服 | Sportswear / Cricket | steps=40, cfg=4.5 |
+| 1181 | Change the outfit to a lavender seamless workout set with crop top and leggings | 将服装换成薰衣草色无缝训练套装短上衣紧身裤 | Sportswear / Gym | steps=40, cfg=4.0, full-body shot recommended |
+| 1182 | Replace with a bright orange life vest over white t-shirt | 换成白色T恤外亮橙色救生衣 | Sportswear / Water Sports | steps=40, cfg=4.0 |
+| 1183 | Change to a black and red boxing shorts with matching robe | 换成黑红色配同色长袍拳击短裤 | Sportswear / Boxing | steps=40, cfg=4.5 |
+| 1184 | Replace the outfit with striped blue and white rowing onesie | 将服装换成蓝白条纹赛艇连体衣 | Sportswear / Rowing | steps=40, cfg=4.0 |
+| 1185 | Change to a white judo gi with blue belt | 换成蓝色腰带白色柔道道服 | Sportswear / Martial Arts | steps=40, cfg=4.0, full-body shot recommended |
+| 1186 | Replace with a pink and black rock climbing tank top and harness | 换成粉黑色攀岩背心配安全带 | Sportswear / Climbing | steps=45, cfg=4.5 |
+| 1187 | Change the outfit to a thermal base layer set in black merino wool | 将服装换成黑色美利奴羊毛保暖打底套装 | Sportswear / Ski | steps=40, cfg=4.0, full-body shot recommended |
+| 1188 | Replace with a teal and white badminton polo shirt | 换成青白色羽毛球Polo衫 | Sportswear / Badminton | steps=40, cfg=4.0 |
+| 1189 | Change to a red and black table tennis jersey | 换成红黑色乒乓球球衣 | Sportswear / Table Tennis | steps=40, cfg=4.0 |
+| 1190 | Replace the outfit with a full black ice hockey jersey with silver accents | 将服装换成全黑银色点缀冰球球衣 | Sportswear / Hockey | steps=40, cfg=4.5 |
+| 1191 | Change to a sky blue lacrosse jersey with white shorts | 换成天蓝色长曲棍球球衣配白色短裤 | Sportswear / Lacrosse | steps=40, cfg=4.5, full-body shot recommended |
+| 1192 | Replace with a deep purple and gold gymnastics leotard with sequins | 换成深紫金色亮片体操紧身衣 | Sportswear / Gymnastics | steps=45, cfg=4.5 |
+| 1193 | Change the outfit to a white and navy blue sailing polo with anchor logo | 将服装换成白色深蓝锚标帆船Polo衫 | Sportswear / Sailing | steps=40, cfg=4.0 |
+| 1194 | Replace with an all-black triathlon skinsuit | 换成全黑铁人三项连体服 | Sportswear / Triathlon | steps=40, cfg=4.0, full-body shot recommended |
+| 1195 | Change to a bright yellow and black goalkeeper jersey with padded elbows | 换成亮黄黑色护肘守门员球衣 | Sportswear / Soccer | steps=40, cfg=4.5 |
+| 1196 | Replace the outfit with a turquoise speed skating bodysuit | 将服装换成绿松石色速滑连体衣 | Sportswear / Skating | steps=40, cfg=4.0, full-body shot recommended |
+| 1197 | Change to a green and white baseball jersey with pinstripes | 换成绿白色细条纹棒球球衣 | Sportswear / Baseball | steps=40, cfg=4.5 |
+| 1198 | Replace with a black and red wrestling singlet | 换成黑红色摔跤紧身衣 | Sportswear / Wrestling | steps=40, cfg=4.0 |
+| 1199 | Change the outfit to a lime green high-visibility cycling vest | 将服装换成荧光绿高能见度骑行背心 | Sportswear / Cycling | steps=40, cfg=4.0 |
+| 1200 | Replace with a black and white checkered motorsport racing suit | 换成黑白格纹赛车服 | Sportswear / Motorsport | steps=45, cfg=4.5, full-body shot recommended |
+| 1201 | Change to a white golf polo shirt with navy blue trim | 换成白色深蓝边高尔夫Polo衫 | Sportswear / Golf | steps=40, cfg=4.0 |
+| 1202 | Replace the outfit with a pink and lavender color-block yoga set | 将服装换成粉色薰衣草色拼色瑜伽套装 | Sportswear / Yoga | steps=40, cfg=4.5, full-body shot recommended |
+| 1203 | Change to a gray hooded running jacket with thumbholes | 换成灰色指洞连帽跑步夹克 | Sportswear / Running | steps=40, cfg=4.0 |
+| 1204 | Replace with a red and black competitive swimming swimsuit | 换成红黑色竞速游泳泳衣 | Sportswear / Swim | steps=40, cfg=4.0 |
+| 1205 | Change the outfit to a blue and orange snowboard jacket with powder skirt | 将服装换成蓝橙色防雪裙单板滑雪服 | Sportswear / Snowboard | steps=45, cfg=4.5 |
+| 1206 | Replace with a mint green cross-back sports bra with high-waisted biker shorts | 换成薄荷绿交叉背运动文胸配高腰骑行短裤 | Sportswear / Gym | steps=40, cfg=4.0 |
+| 1207 | Change to a deep red and gold cheerleading uniform with pleated skirt | 换成深红金色百褶裙啦啦队制服 | Sportswear / Cheerleading | steps=40, cfg=4.5 |
+| 1208 | Replace the outfit with a navy blue and white beach volleyball bikini | 将服装换成深蓝白色沙滩排球比基尼 | Sportswear / Volleyball | steps=40, cfg=4.0 |
+| 1209 | Change to a black thermal fleece-lined running tights | 换成黑色抓绒内衬保暖跑步紧身裤 | Sportswear / Running | steps=40, cfg=4.0, full-body shot recommended |
+| 1210 | Replace with a white fencing jacket with protective padding | 换成白色防护加垫击剑上衣 | Sportswear / Fencing | steps=45, cfg=4.5 |
+| 1211 | Change the outfit to a dark red and cream rowing tank top | 将服装换成暗红奶油色赛艇背心 | Sportswear / Rowing | steps=40, cfg=4.0 |
+| 1212 | Replace with a camouflage print hunting jacket and pants | 换成迷彩印花狩猎夹克配长裤 | Sportswear / Hunting | steps=40, cfg=4.5, full-body shot recommended |
+| 1213 | Change to a bright pink and black aerobics leotard with leg warmers | 换成亮粉黑色有氧运动紧身衣配腿套 | Sportswear / Aerobics | steps=45, cfg=4.5, full-body shot recommended |
+| 1214 | Replace the outfit with a navy blue and yellow water polo cap and swim brief | 将服装换成深蓝黄色水球帽配泳裤 | Sportswear / Water Polo | steps=40, cfg=4.0 |
+| 1215 | Change to a gray and orange trail running vest with hydration pockets | 换成灰橙色水袋口袋越野跑背心 | Sportswear / Running | steps=40, cfg=4.0 |
+| 1216 | Replace with a green and white field hockey jersey and skort | 将服装换成绿白色曲棍球球衣配裙裤 | Sportswear / Hockey | steps=40, cfg=4.5 |
+| 1217 | Change the outfit to a blue compression swim jammer | 将服装换成蓝色压缩竞速泳裤 | Sportswear / Swim | steps=40, cfg=4.0 |
+| 1218 | Replace with a lavender tie-dye seamless workout set | 换成薰衣草扎染无缝训练套装 | Sportswear / Gym | steps=40, cfg=4.5, full-body shot recommended |
+| 1219 | Change to a black and white referee striped shirt | 换成黑白条纹裁判衫 | Sportswear / Officials | steps=40, cfg=4.0 |
+| 1220 | Replace the outfit with a red and blue Spider-Man themed rash guard | 将服装换成红蓝蜘蛛侠主题防晒衣 | Sportswear / Swim | steps=45, cfg=4.5 |
+| 1221 | Change to a white and gold rhythmic gymnastics leotard with crystals | 换成白金色水晶艺术体操紧身衣 | Sportswear / Gymnastics | steps=45, cfg=4.5 |
+| 1222 | Replace with a dark green golf quarter-zip pullover | 换成深绿色高尔夫四分之一拉链套头衫 | Sportswear / Golf | steps=40, cfg=4.0 |
+| 1223 | Change the outfit to a red and white boxing robe with name on back | 将服装换成红白色后背印名拳击长袍 | Sportswear / Boxing | steps=40, cfg=4.5 |
+| 1224 | Replace with a blue and yellow Australian swimming suit | 换成澳大利亚蓝黄色泳衣 | Sportswear / Swim | steps=40, cfg=4.0 |
+| 1225 | Change to a tan and brown equestrian show jacket | 换成棕褐色马术比赛夹克 | Sportswear / Equestrian | steps=40, cfg=4.0 |
+| 1226 | Replace the outfit with a black and fluorescent green mountain biking jersey | 将服装换成黑色荧光绿山地骑行服 | Sportswear / Cycling | steps=40, cfg=4.0 |
+| 1227 | Change to a white and navy blue sailing windbreaker | 换成白色深蓝帆船防风夹克 | Sportswear / Sailing | steps=40, cfg=4.0 |
+| 1228 | Replace with a purple and silver ice skating dress with mesh sleeves | 换成紫银色网纱袖花样滑冰裙 | Sportswear / Skating | steps=45, cfg=4.5 |
+| 1229 | Change the outfit to an olive drab military-style PT uniform shorts and tee | 将服装换成橄榄色军事风体能训练短裤T恤 | Sportswear / Training | steps=40, cfg=4.0 |
+| 1230 | Replace with a bright coral and turquoise surf rash guard and board shorts | 换成亮珊瑚色绿松石色冲浪防晒衣配冲浪短裤 | Sportswear / Surf | steps=40, cfg=4.5, full-body shot recommended |
+
+## Section 8: Accessories Worn on Body (Entries 1231-1380)
+
+| # | English Prompt | 中文提示词 | Category | Config Notes |
+|---|---------------|-----------|----------|--------------|
+| 1231 | Add a red silk scarf tied around the neck | 添加红色丝绸围脖丝巾 | Accessories / Scarf | steps=40, cfg=4.0 |
+| 1232 | Add a cream cashmere wool scarf draped over shoulders | 添加奶油色羊绒围巾披在肩上 | Accessories / Scarf | steps=40, cfg=4.0 |
+| 1233 | Add an infinity loop scarf in heather gray knit | 添加浅灰色针织环形围巾 | Accessories / Scarf | steps=40, cfg=4.0 |
+| 1234 | Add a red paisley print bandana tied around the neck | 添加红色佩斯利印花围颈方巾 | Accessories / Scarf | steps=40, cfg=4.0 |
+| 1235 | Add a floral hermes-style silk square scarf | 添加碎花爱马仕风格丝绸方巾 | Accessories / Scarf | steps=45, cfg=4.5 |
+| 1236 | Add a tartan plaid wool blanket scarf in red and green | 添加红绿格纹羊毛毯式围巾 | Accessories / Scarf | steps=40, cfg=4.0 |
+| 1237 | Add a navy blue and white polka-dot silk pocket square | 添加深蓝白波点丝绸口袋巾 | Accessories / Scarf | steps=40, cfg=4.0 |
+| 1238 | Add a leopard print chiffon lightweight scarf | 添加豹纹雪纺轻薄围巾 | Accessories / Scarf | steps=40, cfg=4.5 |
+| 1239 | Add a burgundy silk necktie with gold diagonal stripes | 添加酒红色金色斜纹丝绸领带 | Accessories / Tie | steps=40, cfg=4.0 |
+| 1240 | Add a navy blue knit tie with square bottom | 添加深蓝色平底针织领带 | Accessories / Tie | steps=40, cfg=4.0 |
+| 1241 | Add a black satin bow tie | 添加黑色缎面蝴蝶结领结 | Accessories / Tie | steps=40, cfg=4.0 |
+| 1242 | Add a burgundy velvet bow tie | 添加酒红色丝绒蝴蝶结领结 | Accessories / Tie | steps=40, cfg=4.0 |
+| 1243 | Add a silver and turquoise bolo tie | 添加银绿松石色波洛领带 | Accessories / Tie | steps=45, cfg=4.5 |
+| 1244 | Add a regimental striped tie in navy and gold | 添加深蓝金色学院条纹领带 | Accessories / Tie | steps=40, cfg=4.0 |
+| 1245 | Add a deep red silk ascot tie | 添加深红色丝绸领巾 | Accessories / Tie | steps=40, cfg=4.0 |
+| 1246 | Add a brown leather belt with silver buckle | 添加棕色银扣皮革腰带 | Accessories / Belt | steps=40, cfg=4.0 |
+| 1247 | Add a black leather belt with gold rectangular buckle | 添加黑色金色矩形扣皮革腰带 | Accessories / Belt | steps=40, cfg=4.0 |
+| 1248 | Add a gold chain belt worn at the waist | 添加金色链条腰带 | Accessories / Belt | steps=40, cfg=4.5 |
+| 1249 | Add a braided woven fabric belt in tan and brown | 添加棕褐色编织面料腰带 | Accessories / Belt | steps=40, cfg=4.0 |
+| 1250 | Add a western-style brown leather belt with silver concho buckle | 添加西部风格银色圆牌扣棕色皮革腰带 | Accessories / Belt | steps=40, cfg=4.5 |
+| 1251 | Add a wide black suede waist belt with double-ring closure | 添加宽幅黑色麂皮双环扣腰带 | Accessories / Belt | steps=40, cfg=4.0 |
+| 1252 | Add a pair of black leather gloves | 添加黑色皮革手套 | Accessories / Gloves | steps=40, cfg=4.0 |
+| 1253 | Add white lace elbow-length gloves | 添加白色蕾丝肘长手套 | Accessories / Gloves | steps=45, cfg=4.5 |
+| 1254 | Add black fingerless leather driving gloves | 添加黑色无指皮革驾驶手套 | Accessories / Gloves | steps=40, cfg=4.0 |
+| 1255 | Add cream cable-knit wool mittens | 添加奶油色麻花编织羊毛连指手套 | Accessories / Gloves | steps=40, cfg=4.0 |
+| 1256 | Add brown suede touchscreen-compatible gloves | 添加棕色触屏麂皮手套 | Accessories / Gloves | steps=40, cfg=4.0 |
+| 1257 | Add a tan felt fedora hat with brown grosgrain ribbon | 添加棕褐色罗缎丝带毛毡费多拉帽 | Accessories / Hat | steps=40, cfg=4.0 |
+| 1258 | Add a charcoal gray ribbed knit beanie | 添加碳灰色罗纹针织毛线帽 | Accessories / Hat | steps=40, cfg=4.0 |
+| 1259 | Add a black wool beret worn tilted to one side | 添加黑色歪戴羊毛贝雷帽 | Accessories / Hat | steps=40, cfg=4.0 |
+| 1260 | Add a navy blue curved-brim baseball cap | 添加深蓝色弯檐棒球帽 | Accessories / Hat | steps=40, cfg=4.0 |
+| 1261 | Add a beige cotton bucket hat | 添加米色棉质渔夫帽 | Accessories / Hat | steps=40, cfg=4.0 |
+| 1262 | Add a wide-brim natural straw sun hat with black ribbon | 添加天然草编黑丝带宽檐太阳帽 | Accessories / Hat | steps=40, cfg=4.5 |
+| 1263 | Add a brown leather cowboy hat with braided band | 添加棕色编织带皮革牛仔帽 | Accessories / Hat | steps=45, cfg=4.5 |
+| 1264 | Add a black silk top hat | 添加黑色丝绸大礼帽 | Accessories / Hat | steps=45, cfg=4.5 |
+| 1265 | Add a tweed newsboy cap in brown herringbone | 添加棕色人字纹花呢报童帽 | Accessories / Hat | steps=40, cfg=4.0 |
+| 1266 | Add a red knit pom-pom beanie | 添加红色绒球针织毛线帽 | Accessories / Hat | steps=40, cfg=4.0 |
+| 1267 | Add a white Panama hat with black band | 添加白色黑带巴拿马帽 | Accessories / Hat | steps=40, cfg=4.0 |
+| 1268 | Add a olive green military-style beret | 添加橄榄绿军事风贝雷帽 | Accessories / Hat | steps=40, cfg=4.0 |
+| 1269 | Add a cream wide-brim floppy felt hat | 添加奶油色宽檐软毡帽 | Accessories / Hat | steps=40, cfg=4.0 |
+| 1270 | Add classic black aviator sunglasses with gold frame | 添加经典黑色金框飞行员太阳镜 | Accessories / Sunglasses | steps=40, cfg=4.0 |
+| 1271 | Add tortoiseshell round-frame sunglasses | 添加玳瑁色圆框太阳镜 | Accessories / Sunglasses | steps=40, cfg=4.0 |
+| 1272 | Add oversized black cat-eye sunglasses | 添加超大黑色猫眼太阳镜 | Accessories / Sunglasses | steps=40, cfg=4.0 |
+| 1273 | Add mirrored blue lens sport sunglasses | 添加蓝色镜面运动太阳镜 | Accessories / Sunglasses | steps=40, cfg=4.0 |
+| 1274 | Add clear frame square retro sunglasses | 添加透明框方形复古太阳镜 | Accessories / Sunglasses | steps=40, cfg=4.0 |
+| 1275 | Add a white rectangular modern sunglasses | 添加白色长方形现代太阳镜 | Accessories / Sunglasses | steps=40, cfg=4.0 |
+| 1276 | Add a delicate gold chain necklace with small pendant | 添加精致金色链条小吊坠项链 | Accessories / Jewelry | steps=40, cfg=4.0 |
+| 1277 | Add a pearl choker necklace | 添加珍珠短项圈 | Accessories / Jewelry | steps=40, cfg=4.0 |
+| 1278 | Add a layered silver chain necklace set | 添加层叠银色链条项链组合 | Accessories / Jewelry | steps=40, cfg=4.5 |
+| 1279 | Add a gold statement collar necklace with gemstones | 添加金色宝石领口项链 | Accessories / Jewelry | steps=45, cfg=4.5 |
+| 1280 | Add a thin black velvet choker | 添加细黑色丝绒短项圈 | Accessories / Jewelry | steps=40, cfg=4.0 |
+| 1281 | Add a wide silver cuff bracelet | 添加宽银色袖口手镯 | Accessories / Jewelry | steps=40, cfg=4.0 |
+| 1282 | Add a stack of thin gold bangle bracelets | 添加一组细金色手镯 | Accessories / Jewelry | steps=40, cfg=4.5 |
+| 1283 | Add a leather wrap bracelet in brown | 添加棕色皮革缠绕手链 | Accessories / Jewelry | steps=40, cfg=4.0 |
+| 1284 | Add diamond stud earrings | 添加钻石耳钉 | Accessories / Jewelry | steps=40, cfg=4.0 |
+| 1285 | Add large gold hoop earrings | 添加大金色环形耳环 | Accessories / Jewelry | steps=40, cfg=4.0 |
+| 1286 | Add dangling crystal chandelier earrings | 添加悬垂水晶吊灯耳环 | Accessories / Jewelry | steps=45, cfg=4.5 |
+| 1287 | Add small pearl drop earrings | 添加小珍珠垂坠耳环 | Accessories / Jewelry | steps=40, cfg=4.0 |
+| 1288 | Add tassel fringe earrings in emerald green | 添加祖母绿流苏耳环 | Accessories / Jewelry | steps=40, cfg=4.5 |
+| 1289 | Add a gold signet ring on the pinkie finger | 添加小指金色印章戒指 | Accessories / Jewelry | steps=40, cfg=4.0 |
+| 1290 | Add a silver solitaire diamond engagement ring | 添加银色单钻订婚戒指 | Accessories / Jewelry | steps=40, cfg=4.0 |
+| 1291 | Add stacked mixed-metal rings on multiple fingers | 添加多指混金属叠戴戒指 | Accessories / Jewelry | steps=40, cfg=4.5 |
+| 1292 | Add a vintage cameo brooch on the lapel | 添加翻领上的复古浮雕胸针 | Accessories / Jewelry | steps=40, cfg=4.0 |
+| 1293 | Add a crystal flower brooch on the chest | 添加胸口水晶花朵胸针 | Accessories / Jewelry | steps=40, cfg=4.5 |
+| 1294 | Add a delicate gold anklet with tiny charms | 添加精致金色小吊坠脚链 | Accessories / Jewelry | steps=40, cfg=4.0, full-body shot or ankle visible |
+| 1295 | Add a multi-strand pearl necklace | 添加多股珍珠项链 | Accessories / Jewelry | steps=40, cfg=4.5 |
+| 1296 | Add a bohemian turquoise and silver pendant necklace | 添加波西米亚绿松石银色吊坠项链 | Accessories / Jewelry | steps=40, cfg=4.5 |
+| 1297 | Add a ruby red gemstone cocktail ring | 添加红宝石鸡尾酒戒指 | Accessories / Jewelry | steps=40, cfg=4.5 |
+| 1298 | Add a rose gold watch with mesh band | 添加玫瑰金网带手表 | Accessories / Watch | steps=40, cfg=4.0 |
+| 1299 | Add a classic silver chronograph watch with leather strap | 添加经典银色皮带计时手表 | Accessories / Watch | steps=40, cfg=4.0 |
+| 1300 | Add a gold dress watch with black face | 添加金色黑表盘正装手表 | Accessories / Watch | steps=40, cfg=4.0 |
+| 1301 | Add a sporty black digital watch with rubber strap | 添加黑色运动橡胶带数字手表 | Accessories / Watch | steps=40, cfg=4.0 |
+| 1302 | Add a vintage tan leather strap pilot watch | 添加复古棕褐色皮带飞行员手表 | Accessories / Watch | steps=40, cfg=4.0 |
+| 1303 | Add a stainless steel dive watch with blue bezel | 添加不锈钢蓝色表圈潜水手表 | Accessories / Watch | steps=40, cfg=4.0 |
+| 1304 | Add wire-frame round glasses with clear lenses | 添加金属线框圆形透明镜片眼镜 | Accessories / Glasses | steps=40, cfg=4.0 |
+| 1305 | Add thick black rectangular frame glasses | 添加厚黑色方框眼镜 | Accessories / Glasses | steps=40, cfg=4.0 |
+| 1306 | Add tortoiseshell acetate horn-rimmed glasses | 添加玳瑁色醋酸纤维角质框眼镜 | Accessories / Glasses | steps=40, cfg=4.0 |
+| 1307 | Add a black crossbody leather bag | 添加黑色皮革斜挎包 | Accessories / Bag | steps=40, cfg=4.0 |
+| 1308 | Add a tan leather structured handbag | 添加棕褐色结构化皮革手提包 | Accessories / Bag | steps=40, cfg=4.0 |
+| 1309 | Add a quilted black chain-strap shoulder bag | 添加绗缝黑色链条肩带包 | Accessories / Bag | steps=40, cfg=4.5 |
+| 1310 | Add a woven straw tote bag | 添加编织草编托特包 | Accessories / Bag | steps=40, cfg=4.0 |
+| 1311 | Add a burgundy leather backpack | 添加酒红色皮革双肩包 | Accessories / Bag | steps=40, cfg=4.0 |
+| 1312 | Add a metallic gold clutch bag | 添加金属金色手拿包 | Accessories / Bag | steps=40, cfg=4.5 |
+| 1313 | Add a canvas and leather messenger bag in olive | 添加橄榄色帆布皮革邮差包 | Accessories / Bag | steps=40, cfg=4.0 |
+| 1314 | Add a nude pink envelope clutch | 添加裸粉色信封手拿包 | Accessories / Bag | steps=40, cfg=4.0 |
+| 1315 | Add a clear PVC transparent tote bag | 添加透明PVC托特包 | Accessories / Bag | steps=40, cfg=4.0 |
+| 1316 | Add a blue floral print silk hair scarf tied as headband | 添加蓝色碎花丝绸发带围巾 | Accessories / Hair | steps=40, cfg=4.0 |
+| 1317 | Add a black velvet hair ribbon bow | 添加黑色丝绒蝴蝶结发带 | Accessories / Hair | steps=40, cfg=4.0 |
+| 1318 | Add a pearl-studded metal hair claw clip | 添加珍珠镶嵌金属发夹 | Accessories / Hair | steps=40, cfg=4.0 |
+| 1319 | Add a tortoiseshell acetate hair barrette | 添加玳瑁色醋酸纤维发夹 | Accessories / Hair | steps=40, cfg=4.0 |
+| 1320 | Add a gold metal headband with leaf motifs | 添加金色叶形金属发箍 | Accessories / Hair | steps=40, cfg=4.5 |
+| 1321 | Add a red silk scrunchie in the hair | 添加红色丝绸发圈 | Accessories / Hair | steps=40, cfg=4.0 |
+| 1322 | Add a white lace headband | 添加白色蕾丝发带 | Accessories / Hair | steps=40, cfg=4.0 |
+| 1323 | Add a pair of black over-ear headphones | 添加黑色头戴式耳机 | Accessories / Tech | steps=40, cfg=4.0 |
+| 1324 | Add white wireless earbuds | 添加白色无线耳塞 | Accessories / Tech | steps=40, cfg=4.0 |
+| 1325 | Add a turquoise enamel bangle bracelet set | 添加绿松石色搪瓷手镯套装 | Accessories / Jewelry | steps=40, cfg=4.5 |
+| 1326 | Add a flower crown wreath of fresh daisies and baby's breath | 添加雏菊和满天星鲜花花冠 | Accessories / Hair | steps=45, cfg=4.5 |
+| 1327 | Add a black leather waist cincher corset belt | 添加黑色皮革收腰束腰带 | Accessories / Belt | steps=40, cfg=4.0 |
+| 1328 | Add a structured black leather briefcase | 添加结构化黑色皮革公文包 | Accessories / Bag | steps=40, cfg=4.0 |
+| 1329 | Add a pendant watch necklace in gold | 添加金色怀表吊坠项链 | Accessories / Jewelry | steps=40, cfg=4.5 |
+| 1330 | Add a cream silk ascot cravat | 添加奶油色丝绸领巾 | Accessories / Tie | steps=40, cfg=4.0 |
+| 1331 | Add a paisley print silk handkerchief in breast pocket | 添加胸袋佩斯利印花丝绸口袋巾 | Accessories / Scarf | steps=40, cfg=4.0 |
+| 1332 | Add oval pink-tinted John Lennon style sunglasses | 添加椭圆粉色约翰列侬式太阳镜 | Accessories / Sunglasses | steps=40, cfg=4.0 |
+| 1333 | Add a visor cap in white terry cloth | 添加白色毛巾布遮阳帽 | Accessories / Hat | steps=40, cfg=4.0 |
+| 1334 | Add fingerless black mesh gloves | 添加黑色网纱无指手套 | Accessories / Gloves | steps=40, cfg=4.0 |
+| 1335 | Add a wide leather hip belt with ornate silver buckle | 添加宽皮革银扣腰带 | Accessories / Belt | steps=40, cfg=4.5 |
+| 1336 | Add a sapphire blue gemstone pendant necklace on gold chain | 添加蓝宝石金链吊坠项链 | Accessories / Jewelry | steps=40, cfg=4.5 |
+| 1337 | Add a gold laurel wreath hair accessory | 添加金色月桂花环发饰 | Accessories / Hair | steps=40, cfg=4.5 |
+| 1338 | Add a gray wool flat cap | 添加灰色羊毛平顶帽 | Accessories / Hat | steps=40, cfg=4.0 |
+| 1339 | Add a cherry red patent leather belt | 添加樱桃红漆皮腰带 | Accessories / Belt | steps=40, cfg=4.0 |
+| 1340 | Add a steampunk-style bronze gear brooch | 添加蒸汽朋克风青铜齿轮胸针 | Accessories / Jewelry | steps=45, cfg=4.5 |
+| 1341 | Add an art deco emerald and diamond necklace | 添加装饰艺术风格祖母绿钻石项链 | Accessories / Jewelry | steps=50, cfg=5.0 |
+| 1342 | Add a woven rope friendship bracelet set | 添加编织绳友谊手链套装 | Accessories / Jewelry | steps=40, cfg=4.0 |
+| 1343 | Add a rhinestone-studded evening clutch in silver | 添加银色水钻晚宴手拿包 | Accessories / Bag | steps=40, cfg=4.5 |
+| 1344 | Add oversized shield sunglasses with gradient lens | 添加超大渐变镜片盾形太阳镜 | Accessories / Sunglasses | steps=40, cfg=4.0 |
+| 1345 | Add a gold chain body harness over the outfit | 添加服装外金色链条身体装饰 | Accessories / Jewelry | steps=45, cfg=4.5 |
+| 1346 | Add a straw boater hat with navy ribbon | 添加深蓝丝带草编船帽 | Accessories / Hat | steps=40, cfg=4.0 |
+| 1347 | Add a jade green gemstone ring | 添加翡翠绿宝石戒指 | Accessories / Jewelry | steps=40, cfg=4.0 |
+| 1348 | Add a herringbone gray wool baker boy cap | 添加灰色人字纹羊毛面包帽 | Accessories / Hat | steps=40, cfg=4.0 |
+| 1349 | Add a chunky amber beaded necklace | 添加粗琥珀色串珠项链 | Accessories / Jewelry | steps=40, cfg=4.5 |
+| 1350 | Add a miniature black leather saddle crossbody bag | 添加迷你黑色皮革马鞍斜挎包 | Accessories / Bag | steps=40, cfg=4.0 |
+| 1351 | Add a crystal tiara headpiece for formal occasion | 添加正式场合水晶皇冠头饰 | Accessories / Hair | steps=45, cfg=4.5 |
+| 1352 | Add an emerald green silk pocket square in breast pocket | 添加胸袋祖母绿丝绸口袋巾 | Accessories / Scarf | steps=40, cfg=4.0 |
+| 1353 | Add a silver Cuban link chain necklace | 添加银色古巴链条项链 | Accessories / Jewelry | steps=40, cfg=4.0 |
+| 1354 | Add a coral beaded statement necklace | 添加珊瑚色串珠宣言项链 | Accessories / Jewelry | steps=40, cfg=4.5 |
+| 1355 | Add a leopard-print silk headscarf | 添加豹纹丝绸头巾 | Accessories / Hair | steps=40, cfg=4.5 |
+| 1356 | Add a brown leather messenger bag with brass hardware | 添加棕色铜五金皮革邮差包 | Accessories / Bag | steps=40, cfg=4.0 |
+| 1357 | Add a gold link waist chain belt | 添加金色链节腰链 | Accessories / Belt | steps=40, cfg=4.5 |
+| 1358 | Add a men's black silk cummerbund | 添加男士黑色丝绸腰封 | Accessories / Formal | steps=40, cfg=4.0 |
+| 1359 | Add a pair of red suede opera-length gloves | 添加红色麂皮歌剧长手套 | Accessories / Gloves | steps=45, cfg=4.5 |
+| 1360 | Add yellow-tinted aviator sunglasses | 添加黄色镜片飞行员太阳镜 | Accessories / Sunglasses | steps=40, cfg=4.0 |
+| 1361 | Add a black mesh fascinator hat with feathers | 添加黑色网纱羽毛头饰帽 | Accessories / Hat | steps=45, cfg=4.5 |
+| 1362 | Add a wood-bead mala meditation necklace | 添加木珠冥想串珠项链 | Accessories / Jewelry | steps=40, cfg=4.0 |
+| 1363 | Add a silver art nouveau hair comb with gemstones | 添加银色新艺术风格宝石发梳 | Accessories / Hair | steps=45, cfg=4.5 |
+| 1364 | Add a white cotton sun visor | 添加白色棉质遮阳帽 | Accessories / Hat | steps=40, cfg=4.0 |
+| 1365 | Add a braided leather headband | 添加编织皮革发带 | Accessories / Hair | steps=40, cfg=4.0 |
+| 1366 | Add a quilted navy blue fanny pack/belt bag | 添加绗缝深蓝色腰包 | Accessories / Bag | steps=40, cfg=4.0 |
+| 1367 | Add a small gold nose ring | 添加小金色鼻环 | Accessories / Jewelry | steps=40, cfg=4.0 |
+| 1368 | Add a silver chain with cross pendant | 添加银色十字架吊坠链条 | Accessories / Jewelry | steps=40, cfg=4.0 |
+| 1369 | Add an emerald green velvet bow tie | 添加祖母绿丝绒蝴蝶结领结 | Accessories / Tie | steps=40, cfg=4.0 |
+| 1370 | Add a fur-lined trapper hat in brown | 添加棕色毛皮衬里雷锋帽 | Accessories / Hat | steps=40, cfg=4.0 |
+| 1371 | Add a stack of colorful enamel bangles | 添加一组彩色搪瓷手镯 | Accessories / Jewelry | steps=40, cfg=4.5 |
+| 1372 | Add a black lace face mask as fashion accessory | 添加黑色蕾丝时尚口罩 | Accessories / Specialty | steps=40, cfg=4.0 |
+| 1373 | Add a vintage gold pocket watch on chain | 添加复古金色链条怀表 | Accessories / Watch | steps=40, cfg=4.5 |
+| 1374 | Add a white gardenia flower hair clip | 添加白色栀子花发夹 | Accessories / Hair | steps=40, cfg=4.0 |
+| 1375 | Add a pair of mother-of-pearl cufflinks | 添加一对贝母袖扣 | Accessories / Jewelry | steps=40, cfg=4.0 |
+| 1376 | Add a colorful beaded African necklace | 添加彩色非洲串珠项链 | Accessories / Jewelry | steps=40, cfg=4.5 |
+| 1377 | Add a knitted infinity scarf in mustard yellow | 添加芥末黄针织环形围巾 | Accessories / Scarf | steps=40, cfg=4.0 |
+| 1378 | Add a woven raffia clutch bag in natural tan | 添加天然棕褐色拉菲草编手拿包 | Accessories / Bag | steps=40, cfg=4.0 |
+| 1379 | Add a silk floral print headband in pastel tones | 添加粉彩色调碎花丝绸发带 | Accessories / Hair | steps=40, cfg=4.0 |
+| 1380 | Add a silver filigree statement ring | 添加银色花丝宣言戒指 | Accessories / Jewelry | steps=40, cfg=4.5 |
+
+
+# Part 2: Background & Scenes / 背景与场景
+
+
+> **Total examples: 1500+**
+> Copy-paste ready. Each row is a self-contained background/scene replacement prompt.
+
+---
+
+## 1. Natural Landscapes
+
+| # | English Prompt | 中文提示词 | Category | Config Notes |
+|---|---|---|---|---|
+| 1 | Place the subject against a backdrop of snow-capped Alpine peaks under clear blue sky | 将主体放置在晴朗蓝天下的阿尔卑斯雪山背景中 | Natural Landscapes / Mountains | Use high resolution, maintain subject lighting consistency |
+| 2 | Set the background to misty Chinese mountain peaks with pine trees emerging from clouds | 将背景设为云雾缭绕的中国山峰，松树从云层中探出 | Natural Landscapes / Mountains | Soft diffused lighting recommended |
+| 3 | Replace the background with red rock desert formations under a scorching sun | 将背景替换为烈日下的红色岩石沙漠地貌 | Natural Landscapes / Mountains | Warm color temperature |
+| 4 | Place the subject before an active volcanic peak with smoke rising from the crater | 将主体放在一座冒烟的活火山前 | Natural Landscapes / Mountains | Dramatic lighting, amber tones |
+| 5 | Set the scene on rolling green hills dotted with wildflowers under a spring sky | 将场景设在布满野花的绿色起伏山丘上，春日天空 | Natural Landscapes / Mountains | Bright, saturated greens |
+| 6 | Replace the background with the towering snow-covered Himalayan mountain range | 将背景替换为巍峨的喜马拉雅雪山山脉 | Natural Landscapes / Mountains | Cool blue tones, high contrast |
+| 7 | Place the subject against the dramatic jagged peaks of the Italian Dolomites at golden hour | 将主体置于金色时刻的意大利多洛米蒂锯齿状山峰前 | Natural Landscapes / Mountains | Golden hour warm lighting |
+| 8 | Set the background to the vast layered canyons of the Grand Canyon at sunset | 将背景设置为日落时分的大峡谷层叠峡谷 | Natural Landscapes / Mountains | Orange and red gradient sky |
+| 9 | Replace the background with the towering sandstone pillars of Zhangjiajie shrouded in mist | 将背景替换为云雾缭绕的张家界砂岩石柱 | Natural Landscapes / Mountains | Misty atmosphere, muted greens |
+| 10 | Place the subject on a mountain ridge overlooking a valley filled with morning fog | 将主体放在俯瞰晨雾弥漫山谷的山脊上 | Natural Landscapes / Mountains | Soft morning light |
+| 11 | Set the scene at the base of a massive granite cliff face with a rock climbing wall | 将场景设在巨大花岗岩悬崖底部 | Natural Landscapes / Mountains | Dramatic scale contrast |
+| 12 | Replace the background with the volcanic landscape of Iceland with black lava fields | 将背景替换为冰岛黑色熔岩地带的火山景观 | Natural Landscapes / Mountains | Dark, moody tones |
+| 13 | Place the subject against terraced rice paddies cascading down a mountainside | 将主体置于沿山坡层层叠叠的梯田前 | Natural Landscapes / Mountains | Lush green, geometric patterns |
+| 14 | Set the background to the Scottish Highlands with heather-covered moorland | 将背景设置为石楠花覆盖的苏格兰高地荒原 | Natural Landscapes / Mountains | Purple and green palette |
+| 15 | Replace the background with a dormant snow-covered volcano reflected in a still lake | 将背景替换为倒映在静湖中的休眠雪火山 | Natural Landscapes / Mountains | Mirror reflection, symmetry |
+| 16 | Place the subject on a narrow mountain trail with sheer cliff drops on both sides | 将主体放在两侧悬崖的狭窄山道上 | Natural Landscapes / Mountains | Vertigo-inducing depth |
+| 17 | Set the scene amid the colorful layered rock formations of Danxia landform | 将场景设在丹霞地貌的彩色岩层中 | Natural Landscapes / Mountains | Rainbow-colored rock strata |
+| 18 | Replace the background with Mount Fuji viewed across a field of lavender | 将背景替换为薰衣草田对面的富士山景色 | Natural Landscapes / Mountains | Purple foreground, blue mountain |
+| 19 | Place the subject against karst limestone mountains rising from flat green plains | 将主体置于从绿色平原拔地而起的喀斯特石灰岩山峰前 | Natural Landscapes / Mountains | Dramatic vertical formations |
+| 20 | Set the background to a mountain meadow with snow-capped peaks in the distance | 将背景设为远处雪山的高山草甸 | Natural Landscapes / Mountains | Depth of field, wildflowers |
+| 21 | Replace the background with the Patagonian mountain range under dramatic storm clouds | 将背景替换为暴风云下的巴塔哥尼亚山脉 | Natural Landscapes / Mountains | Dramatic contrast, moody sky |
+| 22 | Place the subject before an eroded sandstone arch formation in the desert | 将主体放在沙漠中被侵蚀的砂岩拱门前 | Natural Landscapes / Mountains | Warm amber tones |
+| 23 | Set the scene on a plateau overlooking an endless mountain chain at dawn | 将场景设在黎明时分俯瞰无尽山脉的高原上 | Natural Landscapes / Mountains | Soft pink dawn light |
+| 24 | Replace the background with columnar basalt cliff formations by the sea | 将背景替换为海边的柱状玄武岩悬崖 | Natural Landscapes / Mountains | Geometric natural patterns |
+| 25 | Place the subject against the Andes mountain range with condors soaring overhead | 将主体置于安第斯山脉前，秃鹰在空中翱翔 | Natural Landscapes / Mountains | Epic scale, wildlife accent |
+| 26 | Set the background to a tropical white sand beach with crystal clear turquoise water | 将背景设无为热带白沙滩和清澈碧绿的海水 | Natural Landscapes / Beaches | Bright, tropical color palette |
+| 27 | Replace the background with a black volcanic sand beach with crashing waves | 将背景替换为海浪拍打的黑色火山沙滩 | Natural Landscapes / Beaches | High contrast, dramatic |
+| 28 | Place the subject on a rocky coastline with tide pools and sea spray | 将主体放在有潮汐池和浪花的岩石海岸线上 | Natural Landscapes / Beaches | Dynamic water movement |
+| 29 | Set the scene in a secluded cove with limestone cliffs and emerald water | 将场景设在石灰岩悬崖和翡翠色海水的隐蔽小海湾中 | Natural Landscapes / Beaches | Intimate, sheltered feeling |
+| 30 | Replace the background with a coral reef shoreline with shallow turquoise lagoon | 将背景替换为浅碧绿泻湖的珊瑚礁海岸 | Natural Landscapes / Beaches | Vibrant aqua tones |
+| 31 | Place the subject on a Mediterranean beach with white pebbles and azure sea | 将主体放在地中海白色鹅卵石海滩和蔚蓝大海旁 | Natural Landscapes / Beaches | Clean, bright Mediterranean light |
+| 32 | Set the background to a Caribbean beach with palm trees swaying in the breeze | 将背景设为棕榈树在微风中摇曳的加勒比海滩 | Natural Landscapes / Beaches | Warm, relaxed tropical feel |
+| 33 | Replace the background with a Bali beach at sunset with traditional boats on shore | 将背景替换为日落时巴厘岛海滩上的传统船只 | Natural Landscapes / Beaches | Golden sunset, cultural elements |
+| 34 | Place the subject on a Maldives overwater bungalow deck above crystal lagoon | 将主体放在马尔代夫水上别墅甲板上，俯瞰水晶泻湖 | Natural Landscapes / Beaches | Luxury resort atmosphere |
+| 35 | Set the scene on a Hawaiian beach with volcanic rock formations and big waves | 将场景设在有火山岩和大浪的夏威夷海滩上 | Natural Landscapes / Beaches | Powerful ocean, tropical green |
+| 36 | Replace the background with a deserted island beach with a single palm tree | 将背景替换为只有一棵棕榈树的荒岛海滩 | Natural Landscapes / Beaches | Minimalist, castaway feel |
+| 37 | Place the subject on a beach boardwalk with sand dunes and sea grass | 将主体放在沙丘和海草边的海滩木栈道上 | Natural Landscapes / Beaches | Coastal, windswept look |
+| 38 | Set the background to a sunset beach with silhouetted palm trees and orange sky | 将背景设为日落海滩，棕榈树剪影和橙色天空 | Natural Landscapes / Beaches | Silhouette effect, warm sky |
+| 39 | Replace the background with a Norwegian fjord beach with steep mountain walls | 将背景替换为陡峭山壁的挪威峡湾海滩 | Natural Landscapes / Beaches | Cool Nordic tones, dramatic |
+| 40 | Place the subject on a beach with bioluminescent waves glowing blue at night | 将主体放在夜间发出蓝光的生物荧光海浪海滩上 | Natural Landscapes / Beaches | Night scene, blue glow effect |
+| 41 | Set the scene on a rugged Cornish cliff-top beach with crashing Atlantic waves | 将场景设在海浪拍打的康沃尔悬崖海滩上 | Natural Landscapes / Beaches | Dramatic coastline, overcast |
+| 42 | Replace the background with a dense tropical rainforest with shafts of light filtering through the canopy | 将背景替换为阳光透过树冠的茂密热带雨林 | Natural Landscapes / Forests | Dappled lighting, rich greens |
+| 43 | Place the subject in an autumn maple forest ablaze with red and orange foliage | 将主体放在红橙秋叶的枫树林中 | Natural Landscapes / Forests | Warm autumn palette |
+| 44 | Set the background to a serene bamboo grove with tall green stalks | 将背景设为高大翠绿竹竿的宁静竹林 | Natural Landscapes / Forests | Vertical lines, green tones |
+| 45 | Replace the background with a cherry blossom forest in full pink bloom | 将背景替换为盛开的粉红色樱花林 | Natural Landscapes / Forests | Pink and white petals |
+| 46 | Place the subject in a white birch forest with golden autumn leaves | 将主体放在金色秋叶的白桦林中 | Natural Landscapes / Forests | White bark, golden leaves |
+| 47 | Set the scene among towering ancient redwood trees in a cathedral-like grove | 将场景设在如大教堂般的参天红杉古树林中 | Natural Landscapes / Forests | Massive scale, filtered light |
+| 48 | Replace the background with an enchanted forest with glowing mushrooms and fireflies | 将背景替换为发光蘑菇和萤火虫的魔法森林 | Natural Landscapes / Forests | Fantasy elements, bioluminescence |
+| 49 | Place the subject in a foggy pine forest with mysterious atmosphere | 将主体放在雾气弥漫的神秘松树林中 | Natural Landscapes / Forests | Low visibility, moody |
+| 50 | Set the background to a mangrove forest with tangled aerial roots over water | 将背景设为盘根错节的红树林水上根系 | Natural Landscapes / Forests | Complex root patterns, water |
+| 51 | Replace the background with a fantastical oversized mushroom forest | 将背景替换为巨大蘑菇的奇幻森林 | Natural Landscapes / Forests | Fantasy scale, vibrant colors |
+| 52 | Place the subject in a sunlit forest clearing with wildflowers | 将主体放在阳光普照、野花盛开的林间空地 | Natural Landscapes / Forests | Bright clearing, contrast with dark forest |
+| 53 | Set the scene in a moss-covered ancient forest with gnarled tree roots | 将场景设在苔藓覆盖、树根盘曲的古老森林中 | Natural Landscapes / Forests | Deep green, ancient atmosphere |
+| 54 | Replace the background with a snowy winter forest with frost-covered branches | 将背景替换为枝头结霜的冬日雪林 | Natural Landscapes / Forests | White and blue cold palette |
+| 55 | Place the subject in a eucalyptus forest with peeling bark and dappled sunlight | 将主体放在树皮剥落、阳光斑驳的桉树林中 | Natural Landscapes / Forests | Australian bush atmosphere |
+| 56 | Set the background to a dark mysterious forest path with overhanging branches | 将背景设为枝叶低垂的幽暗神秘森林小径 | Natural Landscapes / Forests | Dark, tunnel-like |
+| 57 | Replace the background with a forest of aspen trees with shimmering golden leaves | 将背景替换为金叶闪烁的白杨林 | Natural Landscapes / Forests | Shimmering golden effect |
+| 58 | Place the subject beside a majestic tall waterfall cascading into a misty pool | 将主体放在飞流直下、水雾弥漫的壮丽瀑布旁 | Natural Landscapes / Water | Mist effect, vertical composition |
+| 59 | Set the background to a calm mirror-like mountain lake reflecting the sky | 将背景设为如镜面般倒映天空的宁静高山湖 | Natural Landscapes / Water | Perfect reflection, symmetry |
+| 60 | Replace the background with a rushing whitewater river through a rocky gorge | 将背景替换为穿越岩石峡谷的湍急白水河流 | Natural Landscapes / Water | Dynamic motion blur on water |
+| 61 | Place the subject beside crashing ocean waves hitting a cliff face | 将主体放在海浪撞击悬崖的海边 | Natural Landscapes / Water | Powerful, spray effect |
+| 62 | Set the scene on a frozen lake with cracks in the thick blue ice | 将场景设在裂纹密布的蓝色冰冻湖面上 | Natural Landscapes / Water | Blue-white ice texture |
+| 63 | Replace the background with a natural hot spring surrounded by snow and steam | 将背景替换为白雪环绕、蒸汽升腾的天然温泉 | Natural Landscapes / Water | Steam, warm-cool contrast |
+| 64 | Place the subject against an underwater coral reef scene with tropical fish | 将主体置于热带鱼群的水下珊瑚礁场景前 | Natural Landscapes / Water | Underwater blue-green tones |
+| 65 | Set the background to a misty pond with reeds and water lilies at dawn | 将背景设为黎明时分芦苇和睡莲的雾气池塘 | Natural Landscapes / Water | Soft diffused morning light |
+| 66 | Replace the background with a tranquil lotus pond with pink blooming flowers | 将背景替换为粉色荷花盛开的宁静荷塘 | Natural Landscapes / Water | Pink and green, peaceful |
+| 67 | Place the subject beside rice paddies reflecting the sunset sky like mirrors | 将主体放在如镜面般映射夕阳的水稻田旁 | Natural Landscapes / Water | Reflection, golden hour |
+| 68 | Set the scene by a gentle babbling brook through a wildflower meadow | 将场景设在穿过野花草地的潺潺小溪旁 | Natural Landscapes / Water | Peaceful, pastoral |
+| 69 | Replace the background with a deep blue cenote with sunlight piercing the water | 将背景替换为阳光穿透水面的深蓝天坑 | Natural Landscapes / Water | Light rays in water |
+| 70 | Place the subject at the edge of a dramatic coastal blowhole with spray erupting | 将主体放在海水喷泉喷发的壮观海岸潮吹洞边缘 | Natural Landscapes / Water | Dynamic water action |
+| 71 | Set the background to a slow-moving river through a swamp with cypress trees | 将背景设为柏树沼泽中缓缓流淌的河流 | Natural Landscapes / Water | Dark water, hanging moss |
+| 72 | Replace the background with the endless golden sand dunes of the Sahara Desert | 将背景替换为撒哈拉沙漠无尽的金色沙丘 | Natural Landscapes / Desert | Warm golden tones, ripple patterns |
+| 73 | Place the subject in the rocky terrain of the Gobi Desert under harsh sunlight | 将主体放在强烈阳光下的戈壁沙漠岩石地带 | Natural Landscapes / Desert | Harsh lighting, barren landscape |
+| 74 | Set the scene in the colorful painted desert with striped rock formations | 将场景设在彩色条纹岩石的彩绘沙漠中 | Natural Landscapes / Desert | Multicolored geological strata |
+| 75 | Replace the background with a desert oasis with palm trees and a clear spring | 将背景替换为棕榈树和清泉的沙漠绿洲 | Natural Landscapes / Desert | Contrast of lush and arid |
+| 76 | Place the subject on the perfectly flat white salt flats stretching to the horizon | 将主体放在延伸至地平线的纯白盐碱平原上 | Natural Landscapes / Desert | Minimalist, mirror effect when wet |
+| 77 | Set the background to a cactus-filled desert landscape under a hot sun | 将背景设为烈日下布满仙人掌的沙漠景观 | Natural Landscapes / Desert | Southwest feel, saguaro cacti |
+| 78 | Replace the background with wind-sculpted sand dunes with sharp ridgelines at sunset | 将背景替换为日落时刻边缘锐利的风蚀沙丘 | Natural Landscapes / Desert | Sharp shadow lines, warm light |
+| 79 | Place the subject in a desert canyon with narrow slot formations and light beams | 将主体放在光束照射的狭窄沙漠峡谷中 | Natural Landscapes / Desert | Light shafts, Antelope Canyon feel |
+| 80 | Set the scene in a desert with Joshua trees under a dramatic cloudy sky | 将场景设在约书亚树沙漠中，天空布满戏剧性的云 | Natural Landscapes / Desert | Iconic desert plants |
+| 81 | Replace the background with a massive blue-white glacier with deep crevasses | 将背景替换为有深裂缝的巨大蓝白冰川 | Natural Landscapes / Ice/Snow | Blue ice tones, massive scale |
+| 82 | Place the subject on an Arctic tundra with low scrub and endless flat horizon | 将主体放在低矮灌木和无尽地平线的北极苔原上 | Natural Landscapes / Ice/Snow | Flat, vast, cold palette |
+| 83 | Set the background to the inside of a glowing blue ice cave | 将背景设为发出蓝色光芒的冰洞内部 | Natural Landscapes / Ice/Snow | Translucent blue ice |
+| 84 | Replace the background with a frozen waterfall with massive icicle formations | 将背景替换为有巨大冰柱的冰冻瀑布 | Natural Landscapes / Ice/Snow | Frozen motion, white-blue |
+| 85 | Place the subject against an Arctic landscape with icebergs floating in dark water | 将主体置于浮冰漂浮在深色海水中的北极景观前 | Natural Landscapes / Ice/Snow | Cool blue, floating ice |
+| 86 | Set the scene on the Antarctic ice shelf with penguins in the background | 将场景设在南极冰架上，背景有企鹅 | Natural Landscapes / Ice/Snow | White expanse, wildlife accent |
+| 87 | Replace the background with a snow-covered pine forest after a fresh snowfall | 将背景替换为新雪过后的雪覆盖松林 | Natural Landscapes / Ice/Snow | Pure white, heavy snow on branches |
+| 88 | Place the subject against a dramatic sunset sky with layers of orange, pink, and purple clouds | 将主体置于橙色、粉色和紫色云层的壮丽日落天空前 | Natural Landscapes / Sky | Vibrant warm gradient |
+| 89 | Set the background to a sunrise over the ocean with golden light on the water | 将背景设为金色阳光洒在海面上的海上日出 | Natural Landscapes / Sky | Golden hour, warm tones |
+| 90 | Replace the background with the aurora borealis dancing across a dark Arctic sky | 将背景替换为北极暗空中舞动的北极光 | Natural Landscapes / Sky | Green and purple aurora |
+| 91 | Place the subject under a clear starry night sky with the Milky Way visible | 将主体放在银河系清晰可见的璀璨星空下 | Natural Landscapes / Sky | Dark sky, bright stars |
+| 92 | Set the scene under a meteor shower streaking across the night sky | 将场景设在流星雨划过夜空之下 | Natural Landscapes / Sky | Streaking lights, dark sky |
+| 93 | Replace the background with a double rainbow arching over a green valley after rain | 将背景替换为雨后绿色山谷上的双彩虹 | Natural Landscapes / Sky | Full spectrum colors |
+| 94 | Place the subject against a sky filled with dramatic cumulus thunderclouds | 将主体置于充满壮观积雨云的天空前 | Natural Landscapes / Sky | Towering cloud formations |
+| 95 | Set the background to a night sky lit up by multiple lightning bolts | 将背景设为多道闪电照亮的夜空 | Natural Landscapes / Sky | High contrast, electric blue |
+| 96 | Replace the background with the Milky Way galaxy stretching across a desert sky | 将背景替换为沙漠上空延伸的银河系 | Natural Landscapes / Sky | Astrophotography style |
+| 97 | Place the subject under a sky of fast-moving dramatic storm clouds in time-lapse style | 将主体放在快速移动的戏剧性暴风云下（延时摄影风格） | Natural Landscapes / Sky | Dynamic cloud movement |
+| 98 | Set the scene under a cotton candy sky with soft pink and peach clouds at dusk | 将场景设在黄昏粉色和桃色云彩的棉花糖天空下 | Natural Landscapes / Sky | Soft pastel tones |
+| 99 | Replace background with sun rays breaking through dark storm clouds (god rays) | 将背景替换为阳光穿透乌云的丁达尔光线效果 | Natural Landscapes / Sky | Volumetric light rays |
+| 100 | Place the subject against a fiery red sky at dusk with silhouetted trees on the horizon | 将主体置于黄昏火红天空前，地平线上树木成剪影 | Natural Landscapes / Sky | Silhouette foreground |
+| 101 | Set the background to rolling fog banks covering a coastal landscape at dawn | 将背景设为黎明时浓雾覆盖的海岸景观 | Natural Landscapes / Sky | Low fog, ethereal |
+| 102 | Replace the background with a vast lavender field in Provence with purple rows to the horizon | 将背景替换为普罗旺斯延伸至地平线的紫色薰衣草花田 | Natural Landscapes / Fields | Purple rows, perspective lines |
+| 103 | Place the subject in a sunflower field with thousands of bright yellow blooms | 将主体放在上千朵向日葵盛开的金色花田中 | Natural Landscapes / Fields | Bright yellow, cheerful |
+| 104 | Set the scene in a tulip field with rows of multicolored flowers in the Netherlands | 将场景设在荷兰多彩郁金香花田中 | Natural Landscapes / Fields | Colorful stripes pattern |
+| 105 | Replace the background with golden wheat fields swaying in the wind under blue sky | 将背景替换为蓝天下随风摇曳的金色麦田 | Natural Landscapes / Fields | Golden, pastoral |
+| 106 | Place the subject in a poppy field with bright red flowers covering the hillside | 将主体放在鲜红罂粟花覆盖山坡的花田中 | Natural Landscapes / Fields | Vibrant red against green |
+| 107 | Set the background to a freshly plowed farmland with rich dark soil rows | 将背景设为深色沃土整齐排列的新翻农田 | Natural Landscapes / Fields | Earth tones, geometric rows |
+| 108 | Replace the background with a misty Scottish loch surrounded by heather-covered hills | 将背景替换为石楠花山丘环绕的苏格兰雾湖 | Natural Landscapes / Water | Moody, purple-green palette |
+| 109 | Place the subject beside a tropical waterfall cascading into a turquoise swimming hole | 将主体放在热带瀑布旁，瀑布流入碧绿的天然泳池 | Natural Landscapes / Water | Lush tropical, vibrant blue-green |
+| 110 | Set the scene by a Norwegian fjord with steep cliffs and deep blue water | 将场景设在陡峭悬崖和深蓝海水的挪威峡湾旁 | Natural Landscapes / Water | Dramatic depth, cool tones |
+| 111 | Replace the background with terraced emerald green tea plantations on rolling hills | 将背景替换为连绵起伏的翡翠绿梯田茶园 | Natural Landscapes / Fields | Uniform green, curved lines |
+| 112 | Place the subject against a backdrop of jagged mountain peaks reflected in a crystal-clear alpine lake | 将主体置于清澈高山湖倒映锯齿山峰的背景前 | Natural Landscapes / Mountains | Mirror reflection composition |
+| 113 | Set the background to a winding river through autumn-colored forest seen from above | 将背景设为从高处俯瞰穿越秋色森林的蜿蜒河流 | Natural Landscapes / Water | Aerial perspective, autumn colors |
+| 114 | Replace the background with a bioluminescent bay glowing electric blue at night | 将背景替换为夜间发出电蓝色光芒的荧光海湾 | Natural Landscapes / Water | Night, magical blue glow |
+| 115 | Place the subject on a cliff edge overlooking a dramatic coastline with sea stacks | 将主体放在俯瞰海蚀柱壮观海岸线的悬崖边缘 | Natural Landscapes / Beaches | Height, coastal erosion features |
+| 116 | Set the scene in a valley of geysers with steam vents and colorful mineral deposits | 将场景设在间歇泉喷气口和彩色矿物沉积的山谷中 | Natural Landscapes / Geological | Geothermal, unusual colors |
+| 117 | Replace the background with a pristine glacial lake with milky turquoise water | 将背景替换为乳白碧绿色水的原始冰川湖 | Natural Landscapes / Water | Unique turquoise color |
+| 118 | Place the subject in a giant sequoia grove looking up at the massive tree trunks | 将主体放在仰望巨大树干的巨杉树林中 | Natural Landscapes / Forests | Extreme vertical scale |
+| 119 | Set the background to a coastal mangrove forest with roots submerged in clear water | 将背景设为根部浸入清水中的海岸红树林 | Natural Landscapes / Forests | Above-below water line |
+| 120 | Replace the background with gently rolling sand dunes under a star-filled desert sky | 将背景替换为繁星沙漠天空下的起伏沙丘 | Natural Landscapes / Desert | Night desert, star trails |
+| 121 | Place the subject on the shore of a volcanic crater lake with deep blue water | 将主体放在深蓝色火山口湖的岸边 | Natural Landscapes / Water | Circular lake, volcanic rim |
+| 122 | Set the scene in a field of canola flowers stretching yellow to the horizon | 将场景设在延伸至地平线的金黄油菜花田中 | Natural Landscapes / Fields | Bright yellow expanse |
+| 123 | Replace the background with a dramatic coastal landscape with sea arches and caves | 将背景替换为有海蚀拱门和洞穴的壮观海岸景观 | Natural Landscapes / Beaches | Erosion features, dramatic |
+| 124 | Place the subject against a backdrop of a pristine mountain stream with smooth rocks | 将主体置于光滑岩石的清澈山涧背景前 | Natural Landscapes / Water | Clear water, natural stones |
+| 125 | Set the background to a dense foggy forest with barely visible tree silhouettes | 将背景设为浓雾中几乎看不到树影的密林 | Natural Landscapes / Forests | Very low visibility, atmospheric |
+| 126 | Replace the background with a tropical island aerial view with white beach ring and turquoise water | 将背景替换为白色沙滩环和碧绿海水的热带岛屿俯瞰图 | Natural Landscapes / Beaches | Aerial/bird's eye view |
+| 127 | Place the subject in an old-growth forest with massive fern understory | 将主体放在蕨类植物茂密的原始老龄林中 | Natural Landscapes / Forests | Prehistoric feel, layered green |
+| 128 | Set the scene by a placid river reflecting the colors of autumn trees on its banks | 将场景设在平静河流旁，河面倒映两岸秋树的颜色 | Natural Landscapes / Water | Reflection, warm palette |
+| 129 | Replace the background with a high desert plateau with mesa formations at dawn | 将背景替换为黎明时分有方山地貌的高地沙漠 | Natural Landscapes / Desert | Purple dawn, flat-top mesas |
+| 130 | Place the subject against the white cliffs of Dover with chalk faces meeting the sea | 将主体置于白垩崖面与大海相接的多佛白崖前 | Natural Landscapes / Beaches | White cliffs, blue sea contrast |
+| 131 | Set the background to a cave interior with stalactites and underground pool | 将背景设为有钟乳石和地下水潭的洞穴内部 | Natural Landscapes / Geological | Dark with selective lighting |
+| 132 | Replace the background with an emerald green river winding through a limestone gorge | 将背景替换为翡翠绿色河流蜿蜒穿过石灰岩峡谷 | Natural Landscapes / Water | Green water, vertical walls |
+| 133 | Place the subject on top of a sand dune overlooking a vast desert at golden hour | 将主体放在金色时刻俯瞰广袤沙漠的沙丘顶上 | Natural Landscapes / Desert | Sweeping view, warm light |
+| 134 | Set the scene in a moss-covered temperate rainforest with soft green light filtering through | 将场景设在柔和绿光透过的苔藓覆盖温带雨林中 | Natural Landscapes / Forests | Soft green palette, humid |
+| 135 | Replace the background with a dramatic volcanic landscape with lava flows and smoke | 将背景替换为有熔岩流和烟雾的壮观火山景观 | Natural Landscapes / Geological | Red-orange glow, dark landscape |
+| 136 | Place the subject beside a series of cascading hot spring terraces with mineral-colored water | 将主体放在矿物质色彩水的层层叠叠温泉阶梯旁 | Natural Landscapes / Water | Pamukkale style, turquoise-white |
+| 137 | Set the background to a windswept coastal heath with purple heather and ocean views | 将背景设为紫色石楠花和海景的风吹海岸荒地 | Natural Landscapes / Fields | Wind-bent vegetation, coastal |
+| 138 | Replace the background with a tranquil Japanese garden with raked gravel and shaped trees | 将背景替换为耙纹碎石和修剪树木的宁静日式庭园 | Natural Landscapes / Gardens | Zen, minimalist composition |
+| 139 | Place the subject in a wild meadow full of colorful wildflowers and butterflies | 将主体放在五彩缤纷野花和蝴蝶的原生草甸中 | Natural Landscapes / Fields | Diverse colors, natural |
+| 140 | Set the scene at the base of a massive iceberg with underwater portion visible | 将场景设在可见水下部分的巨大冰山底部 | Natural Landscapes / Ice/Snow | Split above-below waterline |
+| 141 | Replace the background with a pristine mountain valley with a braided river system | 将背景替换为编织状河流系统的原始山谷 | Natural Landscapes / Water | Branching river pattern |
+| 142 | Place the subject in a grove of ancient olive trees with gnarled trunks | 将主体放在树干盘曲的古老橄榄树林中 | Natural Landscapes / Forests | Mediterranean, ancient feeling |
+| 143 | Set the background to a high-altitude grassland with yaks grazing in the distance | 将背景设为远处骆牦牛吃草的高原牧场 | Natural Landscapes / Fields | Tibetan plateau atmosphere |
+| 144 | Replace the background with a crystal-clear cenote surrounded by jungle vegetation | 将背景替换为丛林植被环绕的清澈天坑 | Natural Landscapes / Water | Light shafts through water |
+| 145 | Place the subject against a mountain range at blue hour with last light on peaks | 将主体置于蓝色时刻最后光芒照在山顶的山脉前 | Natural Landscapes / Mountains | Blue hour lighting |
+| 146 | Set the scene in a flooded forest with trees growing out of still reflective water | 将场景设在树木从静水中生长的水淹森林中 | Natural Landscapes / Forests | Reflections, unique ecosystem |
+| 147 | Replace the background with a volcanic black sand beach with steaming hot springs | 将背景替换为有蒸汽温泉的火山黑沙滩 | Natural Landscapes / Beaches | Steam, black sand, contrast |
+| 148 | Place the subject on a rocky Arctic shoreline with ice floes in dark water | 将主体放在黑色海水中漂浮冰块的北极岩石海岸 | Natural Landscapes / Ice/Snow | Cold, dark, icy |
+| 149 | Set the background to a flowering alpine meadow at high elevation with snow patches | 将背景设为高海拔有残雪的盛开高山草甸 | Natural Landscapes / Fields | Flowers and snow together |
+| 150 | Replace the background with a mysterious dark lake in a volcanic caldera | 将背景替换为火山口中神秘的暗色湖泊 | Natural Landscapes / Water | Dark, enclosed, volcanic |
+| 151 | Place the subject in a cloud forest with epiphytes and orchids growing on trees | 将主体放在附生植物和兰花生长的云雾林中 | Natural Landscapes / Forests | Misty, biodiversity |
+| 152 | Set the scene beside a wide braided river delta from aerial perspective | 将场景设在空中俯瞰的宽阔编织河三角洲旁 | Natural Landscapes / Water | Aerial, branching patterns |
+| 153 | Replace the background with a field of blooming rapeseed under dramatic clouds | 将背景替换为戏剧性云层下的油菜花田 | Natural Landscapes / Fields | Yellow-dark sky contrast |
+| 154 | Place the subject against a tropical beach with overhanging coconut palms | 将主体置于椰子树倾斜的热带海滩前 | Natural Landscapes / Beaches | Classic tropical, leaning palms |
+| 155 | Set the background to a deep gorge with a river far below and layered rock walls | 将背景设为河流远在下方的深邃峡谷和层叠岩壁 | Natural Landscapes / Mountains | Depth, geological layers |
+| 156 | Replace the background with a pristine coral atoll from above with ring of white sand | 将背景替换为俯瞰有白沙环的原始珊瑚环礁 | Natural Landscapes / Beaches | Aerial view, circular form |
+| 157 | Place the subject in a pine forest after fresh snowfall with snow-laden branches | 将主体放在新雪过后松枝积雪的松林中 | Natural Landscapes / Ice/Snow | White, heavy snow on green |
+| 158 | Set the scene at the edge of a peat bog with cotton grass and dark water pools | 将场景设在棉花草和暗水池的泥炭沼泽边缘 | Natural Landscapes / Fields | Wetland, unusual vegetation |
+| 159 | Replace the background with a dramatic lightning storm over open grassland at night | 将背景替换为夜间开阔草原上的壮观闪电暴风雨 | Natural Landscapes / Sky | Multiple lightning bolts |
+| 160 | Place the subject by a hidden grotto with turquoise water and vine-covered entrance | 将主体放在藤蔓覆盖入口的碧绿水隐蔽洞穴旁 | Natural Landscapes / Water | Secret, lush entrance |
+| 161 | Set the background to a barren lunar-like volcanic landscape with craters | 将背景设为如月球般荒凉的火山坑地貌 | Natural Landscapes / Geological | Otherworldly, gray-brown |
+| 162 | Replace the background with a dense jungle river with overhanging tropical vegetation | 将背景替换为热带植被悬垂的茂密丛林河流 | Natural Landscapes / Water | Dense canopy, filtered light |
+| 163 | Place the subject on a windswept dune overlooking an endless desert plain | 将主体放在俯瞰无尽沙漠平原的风吹沙丘上 | Natural Landscapes / Desert | Wind erosion, vast emptiness |
+| 164 | Set the scene in a valley of giant ferns reminiscent of prehistoric times | 将场景设在让人联想到史前时代的巨蕨山谷中 | Natural Landscapes / Forests | Prehistoric feel, oversized plants |
+| 165 | Replace the background with a coastal sunset with dramatic cloud formations and orange sea | 将背景替换为壮观云层和橙色大海的海岸日落 | Natural Landscapes / Sky | Reflected sunset on water |
+| 166 | Place the subject against a backdrop of weathered hoodoo rock formations in a desert canyon | 将主体置于沙漠峡谷中风化石蘑菇岩层的背景前 | Natural Landscapes / Desert | Unusual erosion shapes |
+| 167 | Set the background to autumn vineyards with rows of golden and red grapevines | 将背景设为金色和红色葡萄藤排列的秋季葡萄园 | Natural Landscapes / Fields | Ordered rows, warm colors |
+| 168 | Replace the background with a sparkling mountain creek flowing over colorful pebbles | 将背景替换为流过彩色鹅卵石的闪闪发光的山间小溪 | Natural Landscapes / Water | Clear water, visible stones |
+| 169 | Place the subject in a forest of twisted ancient bristlecone pine trees | 将主体放在扭曲的古老刺果松林中 | Natural Landscapes / Forests | Gnarled, ancient, weathered |
+| 170 | Set the scene on a coral sand beach with pink-tinted sand and turquoise waters | 将场景设在粉红色沙子和碧绿海水的珊瑚沙滩上 | Natural Landscapes / Beaches | Unique pink sand color |
+| 171 | Replace the background with a vast savanna grassland with acacia trees at sunset | 将背景替换为日落时分有金合欢树的广阔稀树草原 | Natural Landscapes / Fields | African savanna, silhouette trees |
+| 172 | Place the subject beside a waterfall in a tropical rainforest with rainbow in the mist | 将主体放在热带雨林瀑布旁，水雾中有彩虹 | Natural Landscapes / Water | Rainbow in spray |
+| 173 | Set the background to an otherworldly landscape of petrified wood and stone forest | 将背景设为石化木和石林的超现实景观 | Natural Landscapes / Geological | Ancient, fossilized |
+| 174 | Replace the background with a marsh wetland with tall reeds and egrets in the background | 将背景替换为高芦苇和白鹭的沼泽湿地 | Natural Landscapes / Water | Wetland ecosystem |
+| 175 | Place the subject on a glacier with blue ice formations and meltwater streams | 将主体放在蓝色冰层和融水溪流的冰川上 | Natural Landscapes / Ice/Snow | Blue ice, flowing water |
+| 176 | Set the scene on a rocky promontory overlooking a dramatic sea stack coastline | 将场景设在俯瞰壮观海蚀柱海岸线的岩石海角上 | Natural Landscapes / Beaches | Elevated viewpoint |
+| 177 | Replace the background with a serene Japanese maple garden beside a koi pond | 将背景替换为锦鲤池旁的宁静日本枫树花园 | Natural Landscapes / Gardens | Red maples, koi, peaceful |
+| 178 | Place the subject in a cloud-piercing mountain pass with swirling mist below | 将主体放在云雾弥漫的山口中，下方薄雾缭绕 | Natural Landscapes / Mountains | Above the clouds |
+| 179 | Set the background to a dry cracked earth desert floor under blazing sun | 将背景设为烈日下干裂的沙漠地面 | Natural Landscapes / Desert | Cracked mud pattern, harsh light |
+| 180 | Replace the background with a sea of clouds viewed from a mountain summit at sunrise | 将背景替换为日出时从山顶看到的云海 | Natural Landscapes / Sky | Above clouds, golden sunrise |
+| 181 | Place the subject in a mossy gorge with a narrow stream and fern walls | 将主体放在苔藓峡谷中，狭窄溪流和蕨类墙壁 | Natural Landscapes / Water | Enclosed, very green |
+| 182 | Set the scene beside a frozen river with snow-covered banks and bare winter trees | 将场景设在积雪河岸和光秃秃冬树的冰冻河流旁 | Natural Landscapes / Ice/Snow | Winter desolation, stark |
+| 183 | Replace the background with a rainbow eucalyptus forest with colorful bark patterns | 将背景替换为有彩色树皮的彩虹桉树林 | Natural Landscapes / Forests | Unusual colorful bark |
+| 184 | Place the subject against a sky full of floating Chinese sky lanterns at night | 将主体置于夜空中飘满中国天灯的背景前 | Natural Landscapes / Sky | Warm glowing lanterns |
+| 185 | Set the background to a turquoise glacial river cutting through a gray gravel plain | 将背景设为切穿灰色砾石平原的碧绿冰川河 | Natural Landscapes / Water | Turquoise against gray |
+| 186 | Replace the background with a field of cosmos flowers in pink and white under blue sky | 将背景替换为蓝天下粉白色波斯菊花田 | Natural Landscapes / Fields | Delicate, airy flowers |
+| 187 | Place the subject in a slot canyon with smooth curved sandstone walls and light beam | 将主体放在光滑弯曲砂岩壁和光束的缝隙峡谷中 | Natural Landscapes / Geological | Narrow, light shaft |
+| 188 | Set the scene on a tropical beach with gentle waves lapping at the shore at dusk | 将场景设在黄昏时分海浪轻拍岸边的热带海滩上 | Natural Landscapes / Beaches | Calm, twilight colors |
+| 189 | Replace the background with a mountain lake surrounded by autumn larch trees in gold | 将背景替换为金色秋季落叶松环绕的高山湖 | Natural Landscapes / Water | Gold larches, blue lake |
+| 190 | Place the subject in a bamboo forest path with sunlight streaming through tall bamboo | 将主体放在阳光穿透高竹的竹林小径上 | Natural Landscapes / Forests | Light and shadow stripes |
+| 191 | Set the background to a panoramic view of layered blue mountain ridges at dawn | 将背景设为黎明时分层叠蓝色山脊的全景 | Natural Landscapes / Mountains | Atmospheric perspective, blue |
+| 192 | Replace the background with a tide pool filled with colorful sea anemones and starfish | 将背景替换为有彩色海葵和海星的潮汐池 | Natural Landscapes / Beaches | Close-up natural detail |
+| 193 | Place the subject on a windswept highland moor under dramatic skies | 将主体放在壮观天空下的风吹高地荒原上 | Natural Landscapes / Fields | Wild, untamed landscape |
+| 194 | Set the scene in a cave with crystal formations sparkling in the light | 将场景设在光线下闪闪发光的水晶洞穴中 | Natural Landscapes / Geological | Sparkling crystals, dark cave |
+| 195 | Replace the background with a peaceful countryside with a stone bridge over a stream | 将背景替换为小溪上石桥的宁静乡村 | Natural Landscapes / Water | Pastoral, man-meets-nature |
+| 196 | Place the subject against towering sea cliffs with crashing Atlantic waves below | 将主体置于大西洋巨浪拍打的高耸海崖前 | Natural Landscapes / Beaches | Moher cliffs style, dramatic |
+| 197 | Set the background to a flowering desert after rare rainfall with blossoming cacti | 将背景设为罕见降雨后仙人掌开花的沙漠花海 | Natural Landscapes / Desert | Desert bloom, surprising color |
+| 198 | Replace the background with a mountain stream flowing through a field of lupines | 将背景替换为穿过鲁冰花田的山间溪流 | Natural Landscapes / Water | Purple flowers, clear water |
+| 199 | Place the subject on the rim of an active volcanic crater with glowing lava below | 将主体放在下方熔岩发光的活火山口边缘 | Natural Landscapes / Geological | Red glow, dangerous energy |
+| 200 | Set the scene on a remote archipelago beach with scattered volcanic islets | 将场景设在散布火山小岛的偏远群岛海滩上 | Natural Landscapes / Beaches | Multiple islands, isolated |
+| 201 | Replace the background with a dense cloud forest canopy viewed from a suspended bridge | 将背景替换为从悬索桥上看到的茂密云雾林冠层 | Natural Landscapes / Forests | Suspension bridge perspective |
+| 202 | Place the subject beside Niagara Falls with massive water volume crashing down | 将主体放在巨大水量倾泻而下的尼亚加拉大瀑布旁 | Natural Landscapes / Water | Massive scale, mist spray |
+| 203 | Set the background to a wisteria tunnel with cascading purple flower clusters | 将背景设为紫藤花垂挂的紫色花隧道 | Natural Landscapes / Gardens | Purple cascade, tunnel shape |
+| 204 | Replace the background with a savanna sunset with silhouetted baobab trees | 将背景替换为猴面包树剪影的稀树草原日落 | Natural Landscapes / Fields | Iconic African silhouettes |
+| 205 | Place the subject on a volcanic plateau with steam vents and barren rock | 将主体放在蒸汽喷口和荒芜岩石的火山高原上 | Natural Landscapes / Geological | Geothermal, desolate |
+| 206 | Set the scene in a valley of cherry trees in full bloom along a river bank | 将场景设在河岸边樱花盛开的山谷中 | Natural Landscapes / Gardens | Pink tunnel over water |
+| 207 | Replace the background with a pristine alpine meadow dotted with edelweiss flowers | 将背景替换为点缀雪绒花的原始高山草甸 | Natural Landscapes / Fields | High altitude, delicate flowers |
+| 208 | Place the subject against a backdrop of the Northern Lights over a frozen Scandinavian lake | 将主体置于斯堪的纳维亚冰冻湖上北极光的背景前 | Natural Landscapes / Sky | Aurora reflection on ice |
+| 209 | Set the background to a coral reef underwater scene teeming with colorful fish | 将背景设为五彩斑斓鱼群的水下珊瑚礁场景 | Natural Landscapes / Water | Underwater, vibrant marine life |
+| 210 | Replace the background with a field of bluebells carpeting a woodland floor in spring | 将背景替换为春日蓝铃花铺满林地的花海 | Natural Landscapes / Forests | Blue carpet, dappled light |
+| 211 | Place the subject at the edge of the ocean during low tide with exposed rock formations | 将主体放在退潮露出岩石的海边 | Natural Landscapes / Beaches | Tidal pools, wet rock |
+| 212 | Set the scene in a prehistoric-looking valley with thermal springs and strange rock formations | 将场景设在有温泉和奇异岩石的史前般山谷中 | Natural Landscapes / Geological | Yellowstone-like, primordial |
+
+---
+
+## 2. Urban Environments
+
+| # | English Prompt | 中文提示词 | Category | Config Notes |
+|---|---|---|---|---|
+| 213 | Place the subject in the neon-lit chaos of New York Times Square at night | 将主体放在夜晚霓虹灯闪烁的纽约时代广场 | Urban / Street Scenes | Bright neon, busy atmosphere |
+| 214 | Set the background to the bustling Shibuya crossing in Tokyo with crowds of people | 将背景设为东京涩谷十字路口，人潮涌动 | Urban / Street Scenes | Dense crowd, crosswalk lines |
+| 215 | Replace the background with the tree-lined Champs-Élysées in Paris on a sunny day | 将背景替换为阳光明媚的巴黎香榭丽舍大街 | Urban / Street Scenes | French elegance, wide avenue |
+| 216 | Place the subject on Shanghai Nanjing Road with illuminated shop signs at night | 将主体放在夜晚霓虹灯招牌闪亮的上海南京路上 | Urban / Street Scenes | Chinese neon, commercial energy |
+| 217 | Set the scene on London Oxford Street during the busy holiday shopping season | 将场景设在繁忙假日购物季的伦敦牛津街 | Urban / Street Scenes | Holiday decorations, crowds |
+| 218 | Replace the background with Hong Kong neon-lit streets with dense signage and rain reflections | 将背景替换为香港霓虹灯街道，密集招牌和雨中倒影 | Urban / Street Scenes | Neon reflections on wet streets |
+| 219 | Place the subject on a Venice canal with gondolas and colorful medieval buildings | 将主体放在威尼斯运河旁，有贡多拉和彩色中世纪建筑 | Urban / Street Scenes | Water reflections, Italian colors |
+| 220 | Set the background to an Amsterdam canal with bicycles, bridges, and narrow Dutch houses | 将背景设为有自行车、桥梁和狭窄荷兰房屋的阿姆斯特丹运河 | Urban / Street Scenes | Canal reflections, Dutch architecture |
+| 221 | Replace the background with a charming Rome cobblestone street with outdoor cafes | 将背景替换为有露天咖啡馆的罗马迷人鹅卵石街道 | Urban / Street Scenes | Warm Italian tones, cobblestone |
+| 222 | Place the subject in a bustling Mumbai street market with colorful stalls and fabrics | 将主体放在色彩缤纷摊位和布料的孟买繁忙街头市场中 | Urban / Street Scenes | Vibrant chaos, Indian colors |
+| 223 | Set the scene on a rainy Seoul street at night with Korean signage reflecting in puddles | 将场景设在夜雨中韩文招牌倒映水洼的首尔街道 | Urban / Street Scenes | Rain reflections, Korean text |
+| 224 | Replace the background with a narrow Havana street with colorful vintage cars and colonial buildings | 将背景替换为哈瓦那窄街，彩色老爷车和殖民建筑 | Urban / Street Scenes | Retro cars, peeling paint |
+| 225 | Place the subject on a Barcelona boulevard with Gaudí-style modernist architecture | 将主体放在有高迪风格现代主义建筑的巴塞罗那大道上 | Urban / Street Scenes | Organic Art Nouveau curves |
+| 226 | Set the background to a busy Bangkok street with tuk-tuks and street food vendors | 将背景设为有嘟嘟车和街头小吃摊的曼谷繁忙街道 | Urban / Street Scenes | Southeast Asian street life |
+| 227 | Replace the background with a Marrakech souk with colorful lanterns and spices | 将背景替换为五彩灯笼和香料的马拉喀什集市 | Urban / Street Scenes | Warm tones, exotic textures |
+| 228 | Place the subject on a rainy London street with red double-decker buses and black cabs | 将主体放在有红色双层巴士和黑色出租车的雨中伦敦街道 | Urban / Street Scenes | Wet pavement, red accents |
+| 229 | Set the scene on a cobblestone street in Prague with Gothic and Baroque architecture | 将场景设在布拉格哥特和巴洛克建筑的鹅卵石街道上 | Urban / Street Scenes | European historical charm |
+| 230 | Replace the background with a San Francisco street with steep hills and cable cars | 将背景替换为旧金山陡峭山坡和缆车的街道 | Urban / Street Scenes | Steep perspective, cable car |
+| 231 | Place the subject in a narrow Tokyo alley with izakaya lanterns and steam from food stalls | 将主体放在东京狭窄小巷中，居酒屋灯笼和食摊蒸汽 | Urban / Street Scenes | Intimate, warm lantern glow |
+| 232 | Set the background to a Berlin street with graffiti-covered walls and urban art | 将背景设为涂鸦墙和城市艺术的柏林街道 | Urban / Street Scenes | Street art, industrial feel |
+| 233 | Replace the background with Istanbul's Grand Bazaar interior with ornate lamps and carpets | 将背景替换为伊斯坦布尔大巴扎内部，华丽灯饰和地毯 | Urban / Street Scenes | Rich textures, warm lighting |
+| 234 | Place the subject on a quiet Kyoto street with wooden machiya townhouses | 将主体放在有木制町家建筑的安静京都街道上 | Urban / Street Scenes | Traditional Japanese, wooden |
+| 235 | Set the scene in a bustling night market in Taipei with steaming food stalls | 将场景设在热气腾腾的台北夜市中 | Urban / Street Scenes | Night market energy, steam |
+| 236 | Replace the background with a modern glass skyscraper reflecting clouds and city | 将背景替换为反射云和城市的现代玻璃摩天大楼 | Urban / Buildings | Reflective glass, clean lines |
+| 237 | Place the subject in front of a Gothic cathedral with flying buttresses and rose window | 将主体放在有飞扶壁和玫瑰窗的哥特式大教堂前 | Urban / Buildings | Vertical stone detail, stained glass |
+| 238 | Set the background to an Art Deco building facade with geometric bronze details | 将背景设为有几何青铜装饰的装饰艺术风格建筑立面 | Urban / Buildings | Geometric patterns, metallic |
+| 239 | Replace the background with a Bauhaus-style building with clean geometric forms and white walls | 将背景替换为干净几何形态和白墙的包豪斯建筑 | Urban / Buildings | Minimalist, functional design |
+| 240 | Place the subject before an ancient Buddhist temple with ornate golden roof details | 将主体放在华丽金色屋顶的古老佛寺前 | Urban / Buildings | Gold detail, ornate carvings |
+| 241 | Set the scene in front of a traditional Chinese pagoda with curved eaves and red columns | 将场景设在飞檐翘角红柱的传统中国宝塔前 | Urban / Buildings | Red and gold, curved rooflines |
+| 242 | Replace the background with a grand Ottoman mosque with minarets and domed roof | 将背景替换为有宣礼塔和圆顶的宏伟奥斯曼清真寺 | Urban / Buildings | Domes, minarets, Islamic geometry |
+| 243 | Place the subject in front of a grand European palace with formal gardens and fountains | 将主体放在有正式花园和喷泉的宏伟欧洲宫殿前 | Urban / Buildings | Symmetry, grandeur |
+| 244 | Set the background to a medieval stone castle with towers and a drawbridge | 将背景设为有塔楼和吊桥的中世纪石头城堡 | Urban / Buildings | Stone texture, fortification |
+| 245 | Replace the background with a rustic log cabin in the woods with smoke from the chimney | 将背景替换为树林中烟囱冒烟的质朴原木小屋 | Urban / Buildings | Rustic, cozy, natural |
+| 246 | Place the subject at a treehouse built in a massive ancient tree | 将主体放在建在巨大古树上的树屋旁 | Urban / Buildings | Whimsical, natural integration |
+| 247 | Set the scene at a classic white lighthouse on a rocky cliff above the sea | 将场景设在海边岩石悬崖上的经典白色灯塔旁 | Urban / Buildings | Coastal, beacon light |
+| 248 | Replace the background with traditional Dutch windmills beside a canal with tulip fields | 将背景替换为运河旁有郁金香花田的荷兰传统风车 | Urban / Buildings | Dutch landscape icon |
+| 249 | Place the subject in front of a futuristic building with parametric facade design | 将主体放在有参数化立面设计的未来主义建筑前 | Urban / Buildings | Algorithmic curves, modern |
+| 250 | Set the background to a traditional Japanese shrine gate (torii) with stone lanterns | 将背景设为有石灯笼的日本传统神社鸟居 | Urban / Buildings | Red torii, spiritual |
+| 251 | Replace the background with a row of colorful colonial buildings on a tropical street | 将背景替换为热带街道上一排彩色殖民建筑 | Urban / Buildings | Caribbean or Southeast Asian |
+| 252 | Place the subject in front of a brutalist concrete building with bold geometric forms | 将主体放在有大胆几何形态的粗野主义混凝土建筑前 | Urban / Buildings | Raw concrete, massive form |
+| 253 | Set the scene beside a traditional Korean hanok with curved tiled roof and wooden beams | 将场景设在曲线瓦顶和木梁的传统韩屋旁 | Urban / Buildings | Korean traditional architecture |
+| 254 | Replace the background with a glass pyramid entrance of a modern museum | 将背景替换为现代博物馆的玻璃金字塔入口 | Urban / Buildings | Louvre-style, geometric glass |
+| 255 | Place the subject against the Manhattan skyline at twilight with glowing building lights | 将主体置于暮色中灯火辉煌的曼哈顿天际线前 | Urban / City Views | Blue hour, city lights |
+| 256 | Set the background to the Dubai skyline with the Burj Khalifa dominating the scene | 将背景设为哈利法塔矗立的迪拜天际线 | Urban / City Views | Extreme height, modern luxury |
+| 257 | Replace the background with the Shanghai Pudong skyline reflected in the Huangpu River | 将背景替换为黄浦江倒映的上海浦东天际线 | Urban / City Views | River reflection, modern towers |
+| 258 | Place the subject with Hong Kong Victoria Harbour skyline in the background at dusk | 将主体放在黄昏时分的香港维多利亚港天际线前 | Urban / City Views | Harbor, dense skyscrapers |
+| 259 | Set the scene overlooking the Singapore skyline with Marina Bay Sands at night | 将场景设在夜晚俯瞰新加坡金沙酒店的天际线 | Urban / City Views | Futuristic, laser show |
+| 260 | Replace the background with a rooftop terrace overlooking a city skyline at sunset | 将背景替换为日落时俯瞰城市天际线的屋顶露台 | Urban / City Views | Elevated perspective, cocktail |
+| 261 | Place the subject in a city at night with bokeh lights from traffic and buildings | 将主体放在夜晚城市中，交通和建筑灯光形成散景 | Urban / City Views | Bokeh effect, warm lights |
+| 262 | Set the background to rain-soaked city streets with neon reflections on wet pavement | 将背景设为霓虹灯倒映在湿润路面上的雨中城市街道 | Urban / City Views | Reflective wet surfaces |
+| 263 | Replace the background with a cherry blossom-lined urban street in spring | 将背景替换为春天樱花盛开的城市街道 | Urban / City Views | Pink blossoms, urban contrast |
+| 264 | Place the subject in an autumn city park with fallen leaves and park benches | 将主体放在落叶和公园长椅的秋日城市公园中 | Urban / City Views | Warm autumn, urban green |
+| 265 | Set the scene on an illuminated city bridge at sunset with river reflections | 将场景设在日落时灯光映射河面的城市大桥上 | Urban / City Views | Bridge structure, water |
+| 266 | Replace the background with a bird's-eye view of a dense city grid from a tall building | 将背景替换为从高楼俯瞰密集城市网格的鸟瞰图 | Urban / City Views | Aerial perspective, geometric |
+| 267 | Place the subject on a city street at golden hour with long shadows and warm light | 将主体放在金色时刻长影和暖光的城市街道上 | Urban / City Views | Long shadows, golden tones |
+| 268 | Set the background to a city canal with boats and waterfront restaurants at night | 将背景设为夜晚有船只和河畔餐厅的城市运河 | Urban / City Views | Water reflections, dining |
+| 269 | Replace the background with a futuristic city skyline with unique architectural landmarks | 将背景替换为有独特建筑地标的未来主义城市天际线 | Urban / City Views | Innovative architecture |
+| 270 | Place the subject on a city rooftop with water towers and AC units, gritty urban texture | 将主体放在有水塔和空调外机的城市屋顶，粗犷城市质感 | Urban / City Views | Industrial rooftop, raw |
+| 271 | Set the scene on a picturesque suburban street with manicured lawns and white picket fences | 将场景设在修剪整齐的草坪和白色栅栏的郊区街道上 | Urban / Neighborhoods | American suburbia, clean |
+| 272 | Replace the background with a quaint European countryside village with stone cottages | 将背景替换为有石头小屋的迷人欧洲乡村 | Urban / Neighborhoods | Rural charm, stone walls |
+| 273 | Place the subject in a Mediterranean fishing village with colorful boats in the harbor | 将主体放在港口有彩色渔船的地中海渔村中 | Urban / Neighborhoods | Colorful boats, harbor |
+| 274 | Set the background to an Alpine mountain town with wooden chalets and flower boxes | 将背景设为有木屋和花盆的阿尔卑斯山小镇 | Urban / Neighborhoods | Swiss chalet style, flowers |
+| 275 | Replace the background with a desert oasis town with mud-brick buildings and palm trees | 将背景替换为有泥砖建筑和棕榈树的沙漠绿洲小镇 | Urban / Neighborhoods | Adobe, arid but green |
+| 276 | Place the subject at a tropical beach resort with thatched roof bungalows | 将主体放在茅草屋顶度假小屋的热带海滩度假村 | Urban / Neighborhoods | Luxury tropical, thatched roofs |
+| 277 | Set the scene at a snowy ski resort village with chalets and ski lifts in background | 将场景设在有木屋和缆车的雪中滑雪度假村 | Urban / Neighborhoods | Snow-covered, winter sports |
+| 278 | Replace the background with an ancient water town in Jiangnan with bridges and canals | 将背景替换为有桥梁和运河的江南水乡古镇 | Urban / Neighborhoods | Chinese water town, whitewashed |
+| 279 | Place the subject in a narrow old European alley with ivy-covered walls and lanterns | 将主体放在常春藤覆盖墙壁和灯笼的欧洲老巷中 | Urban / Neighborhoods | Romantic, narrow, historic |
+| 280 | Set the background to the white and blue buildings of Santorini cascading down the cliff | 将背景设为圣托里尼白蓝建筑沿悬崖层叠 | Urban / Neighborhoods | Iconic white-blue, Aegean Sea |
+| 281 | Replace the background with a traditional Moroccan riad courtyard with mosaic tiles and fountain | 将背景替换为有马赛克瓷砖和喷泉的传统摩洛哥庭院 | Urban / Neighborhoods | Geometric tiles, courtyard |
+| 282 | Place the subject in a vibrant Latin American hilltop neighborhood with colorful painted houses | 将主体放在色彩缤纷的拉丁美洲山坡社区中 | Urban / Neighborhoods | Colorful stacked houses |
+| 283 | Set the scene in a historic Parisian neighborhood with Haussmann buildings and cafes | 将场景设在有奥斯曼建筑和咖啡馆的巴黎历史街区 | Urban / Neighborhoods | French balconies, wrought iron |
+| 284 | Replace the background with a traditional Balinese village with temple gates and tropical gardens | 将背景替换为有庙门和热带花园的传统巴厘岛村庄 | Urban / Neighborhoods | Hindu gates, tropical lush |
+| 285 | Place the subject on a wooden pier in a lakeside resort town surrounded by mountains | 将主体放在群山环绕的湖畔度假小镇木栈桥上 | Urban / Neighborhoods | Lake town, mountainous |
+| 286 | Set the background to a historic New England town with red brick buildings and fall foliage | 将背景设为有红砖建筑和秋叶的新英格兰历史小镇 | Urban / Neighborhoods | Red brick, autumn |
+| 287 | Replace the background with a bustling Chinatown gateway arch with red lanterns and shops | 将背景替换为有红灯笼和商铺的繁华唐人街牌坊 | Urban / Street Scenes | Chinese diaspora culture |
+| 288 | Place the subject in a quiet Scandinavian harbor town with wooden houses in red and yellow | 将主体放在红黄色木屋的安静北欧港口小镇 | Urban / Neighborhoods | Nordic, wooden buildings |
+| 289 | Set the scene on a palm-lined boulevard in Los Angeles with art deco buildings | 将场景设在洛杉矶有棕榈树和装饰艺术建筑的大道上 | Urban / Street Scenes | LA aesthetic, palm trees |
+| 290 | Replace the background with the colorful houses of Burano island reflecting in the canal | 将背景替换为布拉诺岛彩色房屋倒映在运河中 | Urban / Neighborhoods | Bright primary colors |
+| 291 | Place the subject on a busy intersection in downtown Chicago with elevated train tracks | 将主体放在有高架火车轨道的芝加哥市中心繁忙十字路口 | Urban / Street Scenes | Elevated L train, skyscrapers |
+| 292 | Set the background to a traditional Japanese town street during a festival with paper lanterns | 将背景设为纸灯笼装饰的日本传统小镇节日街道 | Urban / Street Scenes | Festival decorations, warm |
+| 293 | Replace the background with a modern transit station with sleek curved architecture | 将背景替换为有流线型弧形建筑的现代交通枢纽 | Urban / Buildings | Futuristic transit design |
+| 294 | Place the subject in front of a row of Victorian-era painted lady houses in San Francisco | 将主体放在旧金山维多利亚时代彩色女士屋前 | Urban / Buildings | Pastel Victorian row houses |
+| 295 | Set the scene on a busy pedestrian shopping arcade with glass roof and boutiques | 将场景设在有玻璃屋顶和精品店的繁忙步行购物廊 | Urban / Street Scenes | Covered arcade, glass roof |
+| 296 | Replace the background with a modern university campus with contemporary architecture | 将背景替换为有当代建筑的现代大学校园 | Urban / Buildings | Academic, clean modern |
+| 297 | Place the subject on a wooden boardwalk along a busy beach promenade | 将主体放在繁忙海滩步行道的木栈道上 | Urban / Street Scenes | Coastal urban, boardwalk |
+| 298 | Set the background to an old industrial district converted to hip lofts and galleries | 将背景设为改造成时髦阁楼和画廊的老工业区 | Urban / Neighborhoods | Adaptive reuse, trendy |
+| 299 | Replace the background with a traditional Chinese hutong alley with gray brick walls and red doors | 将背景替换为灰砖墙和红门的传统中国胡同小巷 | Urban / Street Scenes | Beijing hutong, historical |
+| 300 | Place the subject in front of a grand opera house with ornate Beaux-Arts facade | 将主体放在有华丽巴洛克立面的大歌剧院前 | Urban / Buildings | Ornate classical facade |
+| 301 | Set the scene in a futuristic eco-city district with vertical gardens on buildings | 将场景设在有建筑垂直花园的未来生态城区 | Urban / Buildings | Green architecture, futuristic |
+| 302 | Replace the background with a riverfront promenade with cafes and a historic bridge | 将背景替换为有咖啡馆和历史古桥的河滨步行道 | Urban / Street Scenes | Waterfront dining, bridge |
+| 303 | Place the subject on a cobblestone square in a medieval European town with a fountain | 将主体放在有喷泉的中世纪欧洲小镇鹅卵石广场上 | Urban / Neighborhoods | Historic square, fountain center |
+| 304 | Set the background to an ultra-modern glass and steel corporate tower lobby | 将背景设为超现代玻璃和钢铁的企业大厦大堂 | Urban / Buildings | Corporate modern, soaring atrium |
+| 305 | Replace the background with a colorful Miami Art Deco district with pastel buildings and palm trees | 将背景替换为有粉彩建筑和棕榈树的迈阿密艺术装饰区 | Urban / Neighborhoods | Pastel Art Deco, tropical |
+| 306 | Place the subject beside a grand European train station with iron and glass canopy | 将主体放在有铁质玻璃穹顶的宏伟欧洲火车站旁 | Urban / Buildings | Victorian engineering, grand |
+| 307 | Set the scene on a narrow winding street in a Greek island village with whitewashed steps | 将场景设在希腊岛屿村庄白色台阶的狭窄蜿蜒小路上 | Urban / Neighborhoods | White steps, blue sky contrast |
+| 308 | Replace the background with an aerial view of Paris with Haussmann buildings and wide boulevards | 将背景替换为奥斯曼建筑和宽阔大道的巴黎鸟瞰图 | Urban / City Views | Aerial Paris, uniform rooftops |
+| 309 | Place the subject in front of a traditional Indian stepwell with geometric descending stairs | 将主体放在有几何下行阶梯的传统印度阶梯井前 | Urban / Buildings | Geometric depth, ancient |
+| 310 | Set the background to a busy outdoor flower market with buckets of colorful blooms | 将背景设为一桶桶五彩花朵的繁忙户外花市 | Urban / Street Scenes | Colorful, fragrant atmosphere |
+| 311 | Replace the background with a neon-lit gaming district in Akihabara Tokyo | 将背景替换为东京秋叶原霓虹灯闪耀的电玩区 | Urban / Street Scenes | Anime signage, bright neon |
+| 312 | Place the subject on an old stone bridge spanning a river in a picturesque town | 将主体放在横跨河流的古老石桥上，风景如画 | Urban / Neighborhoods | Stone bridge, riverside town |
+| 313 | Set the scene at a modern airport terminal with soaring curved glass ceiling | 将场景设在弧形玻璃天花板的现代机场航站楼 | Urban / Buildings | Massive interior space, travel |
+| 314 | Replace the background with a street in old Delhi with spice markets and rickshaws | 将背景替换为有香料市场和人力车的旧德里街道 | Urban / Street Scenes | Dense, aromatic, chaotic |
+| 315 | Place the subject against a backdrop of a city highway overpass with light trails at night | 将主体置于夜晚城市高架公路光轨的背景前 | Urban / City Views | Long exposure light trails |
+| 316 | Set the background to a vibrant graffiti-covered underpass in an urban setting | 将背景设为城市环境中色彩鲜艳的涂鸦地下通道 | Urban / Street Scenes | Street art, urban grit |
+| 317 | Replace the background with a floating market in Bangkok with boats full of fruits and flowers | 将背景替换为满载水果和鲜花的曼谷水上市场 | Urban / Street Scenes | Thai floating market, vibrant |
+| 318 | Place the subject at a busy food street in Singapore with hawker centre stalls | 将主体放在新加坡小贩中心摊位的繁忙美食街 | Urban / Street Scenes | Hawker food, steam, signs |
+| 319 | Set the scene in the courtyard of a traditional Siheyuan Beijing house | 将场景设在传统北京四合院的院落中 | Urban / Neighborhoods | Chinese courtyard home |
+| 320 | Replace the background with a modern waterfront development with glass towers and marina | 将背景替换为有玻璃大厦和码头的现代滨水开发区 | Urban / City Views | Marina, yachts, modern urban |
+| 321 | Place the subject on a European city square with a historic clock tower and market stalls | 将主体放在有历史钟楼和市场摊位的欧洲城市广场上 | Urban / Street Scenes | Clock tower, market |
+| 322 | Set the background to a quiet residential lane in old Shanghai with plane trees | 将背景设为有梧桐树的老上海安静住宅弄堂 | Urban / Neighborhoods | Shanghai lane houses, nostalgia |
+| 323 | Replace the background with a modern Asian shopping mall interior with multiple levels | 将背景替换为多层的现代亚洲购物中心内部 | Urban / Buildings | Multi-level, escalators |
+| 324 | Place the subject in front of a colorful Portuguese azulejo-tiled building facade | 将主体放在彩色葡萄牙瓷砖装饰的建筑立面前 | Urban / Buildings | Blue-white ceramic tiles |
+| 325 | Set the scene at a city farmers market with fresh produce stalls under canopies | 将场景设在帐篷下新鲜农产品摊位的城市农贸市场 | Urban / Street Scenes | Fresh produce, umbrellas |
+| 326 | Replace the background with a panoramic city view from behind floor-to-ceiling windows | 将背景替换为落地窗后的全景城市景观 | Urban / City Views | Interior-exterior framing |
+| 327 | Place the subject on a vibrant Latin Quarter street in Paris with bookshops and bistros | 将主体放在有书店和小酒馆的巴黎拉丁区活力街道上 | Urban / Street Scenes | Bohemian, literary feel |
+| 328 | Set the background to a traditional Tibetan town with prayer flags and white stupas | 将背景设为有经幡和白色佛塔的传统藏族小镇 | Urban / Neighborhoods | Prayer flags, spiritual |
+| 329 | Replace the background with an illuminated downtown district during blue hour | 将背景替换为蓝色时刻灯光亮起的市中心区域 | Urban / City Views | Blue hour, first lights |
+| 330 | Place the subject in a modern smart city district with LED-panel facades and clean streets | 将主体放在LED面板外墙和整洁街道的现代智慧城区 | Urban / City Views | Tech-forward, clean |
+| 331 | Set the scene on a tree-canopied residential street with brownstone row houses | 将场景设在树荫覆盖的褐石联排别墅住宅街上 | Urban / Neighborhoods | Brooklyn feel, leafy |
+| 332 | Replace the background with a Hong Kong ding-ding tram on a busy commercial street | 将背景替换为香港繁忙商业街道上的叮叮电车 | Urban / Street Scenes | Double-decker tram, signage |
+| 333 | Place the subject in front of a modernist museum building with sweeping curves | 将主体放在有流畅曲线的现代主义博物馆建筑前 | Urban / Buildings | Zaha Hadid style, flowing |
+| 334 | Set the background to a city park with a boating lake and autumn trees | 将背景设为有游船湖和秋树的城市公园 | Urban / City Views | Urban oasis, autumn |
+| 335 | Replace the background with an elevated city highway interchange at night with streaming headlights | 将背景替换为夜晚车灯流动的城市高架立交桥 | Urban / City Views | Light streams, engineering |
+| 336 | Place the subject beside a traditional Middle Eastern wind tower building | 将主体放在传统中东风塔建筑旁 | Urban / Buildings | Desert architecture, ventilation |
+| 337 | Set the scene on the observation deck of a tall building with 360-degree city panorama | 将场景设在可360度全景俯瞰城市的高楼观景台上 | Urban / City Views | Panoramic, glass barriers |
+| 338 | Replace the background with a quaint English village with thatched roof cottages and pub | 将背景替换为有茅草屋顶小屋和酒吧的迷人英国乡村 | Urban / Neighborhoods | Thatched roofs, pub sign |
+| 339 | Place the subject on a street lined with mature ginkgo trees with golden leaves | 将主体放在金色银杏叶的成熟银杏树大道上 | Urban / Street Scenes | Golden ginkgo, tree-lined |
+| 340 | Set the background to a bustling weekend street fair with food trucks and live music stage | 将背景设为有餐车和现场音乐舞台的热闹周末街头集市 | Urban / Street Scenes | Festival atmosphere |
+| 341 | Replace the background with a traditional Ottoman-era Turkish street with wooden houses | 将背景替换为有木屋的传统奥斯曼时期土耳其街道 | Urban / Neighborhoods | Ottoman wooden houses |
+| 342 | Place the subject in the middle of a grand European roundabout with a monument | 将主体放在有纪念碑的宏伟欧洲环形广场中 | Urban / City Views | Radial streets, monument |
+| 343 | Set the scene under a futuristic covered walkway with LED lighting and moving sidewalks | 将场景设在有LED照明和自动人行道的未来主义封闭走廊下 | Urban / Buildings | Futuristic infrastructure |
+| 344 | Replace the background with Lisbon's narrow streets with vintage yellow tram and tile facades | 将背景替换为里斯本窄街黄色老电车和瓷砖立面 | Urban / Street Scenes | Yellow tram, hilly streets |
+| 345 | Place the subject at a busy metro station entrance with Art Nouveau ironwork | 将主体放在有新艺术铁艺的繁忙地铁站入口 | Urban / Buildings | Paris Metro style, ornate |
+| 346 | Set the background to a snowy city street at night with holiday lights in the trees | 将背景设为树上挂满节日灯饰的夜晚雪中城市街道 | Urban / City Views | Holiday, warm lights in cold |
+| 347 | Replace the background with a traditional Kerala backwater town with houseboats and palms | 将背景替换为有船屋和棕榈树的喀拉拉邦水乡小镇 | Urban / Neighborhoods | Indian backwaters, tropical |
+| 348 | Place the subject in a modern business district plaza with water features and sculpture | 将主体放在有水景和雕塑的现代商务区广场 | Urban / City Views | Corporate plaza, public art |
+| 349 | Set the scene on an old wharf with fishing boats and weathered wooden buildings | 将场景设在有渔船和风化木屋的老码头上 | Urban / Neighborhoods | Maritime, weathered wood |
+| 350 | Replace the background with a dense vertical urban landscape of Hong Kong apartment towers | 将背景替换为香港密集垂直公寓大厦的城市景观 | Urban / City Views | Extreme density, repetitive |
+| 351 | Place the subject on a grand staircase leading up to a neoclassical government building | 将主体放在通向新古典主义政府大楼的宏伟台阶上 | Urban / Buildings | Columns, grand steps |
+| 352 | Set the background to a panoramic view of a city's industrial port with container ships and cranes | 将背景设为有集装箱船和起重机的城市工业港口全景 | Urban / City Views | Industrial scale, logistics |
+| 353 | Replace the background with a historic covered bridge over a rushing stream in autumn | 将背景替换为秋天急流上的历史有盖桥 | Urban / Neighborhoods | Covered bridge, fall colors |
+| 354 | Place the subject in a contemporary art district with murals and gallery storefronts | 将主体放在有壁画和画廊店面的当代艺术区 | Urban / Neighborhoods | Art district, creative vibe |
+| 355 | Set the scene on an overpass with a view of multiple railway tracks converging | 将场景设在俯瞰多条铁路交汇的天桥上 | Urban / City Views | Railway convergence, industrial |
+| 356 | Replace the background with a city in dense fog with only tops of buildings visible | 将背景替换为浓雾中只露出建筑顶部的城市 | Urban / City Views | Fog, partial visibility |
+| 357 | Place the subject in front of a classic red British telephone box on a London street | 将主体放在伦敦街头经典红色电话亭前 | Urban / Street Scenes | Iconic British, red accent |
+| 358 | Set the background to a modern cable-stayed bridge spanning a wide river | 将背景设为横跨宽阔河流的现代斜拉桥 | Urban / Buildings | Engineering, bridge cables |
+| 359 | Replace the background with a night city panorama with millions of twinkling lights | 将背景替换为万家灯火闪烁的城市夜景全景 | Urban / City Views | Dense lights, scale |
+| 360 | Place the subject in the courtyard of a Spanish colonial mission church | 将主体放在西班牙殖民传教教堂的庭院中 | Urban / Buildings | Adobe, bell tower, courtyard |
+| 361 | Set the scene at a modern outdoor amphitheater with city skyline in the background | 将场景设在以城市天际线为背景的现代露天圆形剧场 | Urban / City Views | Performance venue, city |
+| 362 | Replace the background with a narrow Italian hill town street with hanging laundry | 将背景替换为晾晒衣物的意大利山城窄街 | Urban / Neighborhoods | Authentic Italian life |
+| 363 | Place the subject at a traditional Japanese ryokan entrance with noren curtain and stone path | 将主体放在有暖帘和石板路的传统日式旅馆入口 | Urban / Buildings | Japanese hospitality, entrance |
+| 364 | Set the background to a green city boulevard with bike lanes and modern tram | 将背景设为有自行车道和现代电车的绿色城市大道 | Urban / Street Scenes | Sustainable urban design |
+| 365 | Replace the background with a quiet snowy alley in a Scandinavian city with warm window light | 将背景替换为温暖窗户灯光的北欧城市安静雪巷 | Urban / Neighborhoods | Hygge atmosphere, cozy cold |
+| 366 | Place the subject on a historic stone bridge with turrets over a European river | 将主体放在有塔楼的欧洲古老石桥上 | Urban / City Views | Medieval bridge, stone turrets |
+| 367 | Set the scene in the heart of a vibrant street art neighborhood with every wall painted | 将场景设在每面墙都有彩绘的活力街头艺术社区中 | Urban / Street Scenes | Full wall murals, color riot |
+| 368 | Replace the background with a charming canal-side scene in Suzhou with whitewashed buildings | 将背景替换为苏州白墙黛瓦的迷人运河边场景 | Urban / Neighborhoods | Jiangnan style, water town |
+| 369 | Place the subject in front of a massive Gothic revival city hall with clock tower | 将主体放在有钟楼的哥特复兴风格宏伟市政厅前 | Urban / Buildings | Gothic revival, civic pride |
+| 370 | Set the background to a residential hilltop neighborhood overlooking a coastal city | 将背景设为俯瞰海滨城市的山顶住宅区 | Urban / Neighborhoods | Elevated residential, coastal |
+| 371 | Replace the background with an underground shopping concourse with vaulted ceilings | 将背景替换为有拱形天花板的地下购物中心 | Urban / Buildings | Underground, arched ceiling |
+| 372 | Place the subject on a city waterfront boardwalk with restaurants and yachts | 将主体放在有餐厅和游艇的城市滨水木栈道上 | Urban / City Views | Waterfront leisure, marina |
+
+---
+
+## 3. Interior Spaces
+
+| # | English Prompt | 中文提示词 | Category | Config Notes |
+|---|---|---|---|---|
+| 373 | Place the subject in a modern minimalist living room with white walls and sleek furniture | 将主体放在白墙和流线型家具的现代极简客厅中 | Interior / Living Room | Clean lines, neutral palette |
+| 374 | Set the background to a cozy English cottage living room with fireplace and floral sofa | 将背景设为有壁炉和花卉沙发的温馨英式乡村客厅 | Interior / Living Room | Warm, cluttered coziness |
+| 375 | Replace the background with a Scandinavian-style living room with light wood and hygge decor | 将背景替换为浅色木材和北欧风格装饰的斯堪的纳维亚客厅 | Interior / Living Room | Light wood, sheepskin, candles |
+| 376 | Place the subject in a mid-century modern living room with Eames chair and sunburst clock | 将主体放在有伊姆斯椅和太阳形时钟的中世纪现代客厅中 | Interior / Living Room | Retro 50s-60s style, teak |
+| 377 | Set the scene in an industrial loft living room with exposed brick and steel beams | 将场景设在有裸露砖墙和钢梁的工业阁楼客厅中 | Interior / Living Room | Raw materials, open space |
+| 378 | Replace the background with a traditional Chinese living room with rosewood furniture and scroll paintings | 将背景替换为有红木家具和卷轴画的中式传统客厅 | Interior / Living Room | Chinese classical, dark wood |
+| 379 | Place the subject in a Japanese tatami room with sliding shoji screens and low table | 将主体放在有推拉障子和矮桌的日式榻榻米房间中 | Interior / Living Room | Clean, floor-level living |
+| 380 | Set the background to an opulent Victorian parlor with velvet furniture and heavy drapes | 将背景设为有天鹅绒家具和厚重窗帘的华丽维多利亚客厅 | Interior / Living Room | Rich fabrics, ornate detail |
+| 381 | Replace the background with an Art Deco living room with geometric patterns and gold accents | 将背景替换为有几何图案和金色点缀的装饰艺术风格客厅 | Interior / Living Room | Geometric, gold and black |
+| 382 | Place the subject in a bohemian living room with macrame hangings and colorful textiles | 将主体放在有手工绳结挂饰和彩色纺织品的波西米亚客厅中 | Interior / Living Room | Eclectic, layered patterns |
+| 383 | Set the scene in a modern penthouse living room with panoramic city views through glass walls | 将场景设在有落地玻璃全景城市景观的现代顶层客厅中 | Interior / Living Room | Luxury, panoramic view |
+| 384 | Replace the background with a rustic farmhouse living room with wooden beams and stone fireplace | 将背景替换为有木梁和石壁炉的质朴农舍客厅 | Interior / Living Room | Rustic warmth, natural materials |
+| 385 | Place the subject in a Provençal-style living room with lavender tones and wrought iron accents | 将主体放在有薰衣草色调和铁艺装饰的普罗旺斯风格客厅 | Interior / Living Room | French country, lavender |
+| 386 | Set the background to a coastal-themed living room with white and blue decor and seashells | 将背景设为有白蓝色装饰和贝壳的海滨主题客厅 | Interior / Living Room | Coastal, nautical elements |
+| 387 | Replace the background with a luxury hotel suite bedroom with king bed and city night views | 将背景替换为有大床和城市夜景的豪华酒店套房卧室 | Interior / Bedroom | Luxury hospitality, night view |
+| 388 | Place the subject in a cozy bedroom filled with warm fairy lights and soft pillows | 将主体放在挂满温暖仙女灯和柔软靠枕的温馨卧室中 | Interior / Bedroom | Warm glow, romantic |
+| 389 | Set the scene in a minimalist zen bedroom with platform bed and bonsai tree | 将场景设在有平台床和盆栽的极简禅意卧室中 | Interior / Bedroom | Clean, peaceful, minimal |
+| 390 | Replace the background with a princess-style canopy bedroom with tulle drapes and pink accents | 将背景替换为有薄纱帐幔和粉色点缀的公主风卧室 | Interior / Bedroom | Feminine, canopy bed |
+| 391 | Place the subject in a converted urban loft bedroom with exposed ductwork and brick | 将主体放在有裸露管道和砖墙的改造城市阁楼卧室 | Interior / Bedroom | Industrial converted, raw |
+| 392 | Set the background to a charming attic bedroom with sloped ceiling and dormer windows | 将背景设为有斜顶天花板和老虎窗的迷人阁楼卧室 | Interior / Bedroom | Sloped ceiling, cozy nook |
+| 393 | Replace the background with a traditional Korean hanok bedroom with paper screens and silk bedding | 将背景替换为有纸质屏风和丝绸被褥的传统韩屋卧室 | Interior / Bedroom | Korean ondol floor, traditional |
+| 394 | Place the subject in a tropical resort bedroom with open-air design and ocean view | 将主体放在有开放式设计和海景的热带度假卧室中 | Interior / Bedroom | Open air, tropical luxury |
+| 395 | Set the scene in a child's bedroom with colorful murals and toy-filled shelves | 将场景设在有彩色壁画和玩具架的儿童卧室中 | Interior / Bedroom | Playful, bright colors |
+| 396 | Replace the background with a grand master bedroom with four-poster bed and chandelier | 将背景替换为有四柱床和水晶吊灯的豪华主卧 | Interior / Bedroom | Classic luxury, formal |
+| 397 | Place the subject in a modern white kitchen with marble countertops and pendant lights | 将主体放在有大理石台面和吊灯的现代白色厨房中 | Interior / Kitchen | Clean, bright, marble |
+| 398 | Set the background to a rustic farmhouse kitchen with butcher block island and copper pots | 将背景设为有砧板岛台和铜锅的质朴农舍厨房 | Interior / Kitchen | Rustic, warm, copper |
+| 399 | Replace the background with a professional chef's kitchen with stainless steel equipment | 将背景替换为有不锈钢设备的专业厨师厨房 | Interior / Kitchen | Commercial grade, stainless |
+| 400 | Place the subject in an outdoor kitchen with grill and stone counters on a patio | 将主体放在有烧烤炉和石台的庭院户外厨房中 | Interior / Kitchen | Al fresco, stone, grill |
+| 401 | Set the scene in a traditional Japanese ramen shop kitchen with steam and noodles | 将场景设在蒸汽和面条的传统日式拉面店厨房中 | Interior / Kitchen | Steam, busy, authentic |
+| 402 | Replace the background with a French bistro kitchen with copper pans and tile backsplash | 将背景替换为有铜锅和瓷砖挡板的法式小酒馆厨房 | Interior / Kitchen | French charm, copper |
+| 403 | Place the subject in a warm bakery kitchen with fresh bread loaves and pastries | 将主体放在有新鲜面包和糕点的温暖烘焙坊厨房中 | Interior / Kitchen | Warm, golden baked goods |
+| 404 | Set the background to a Tuscan kitchen with terracotta tiles and olive oil bottles | 将背景设为有赤陶瓷砖和橄榄油瓶的托斯卡纳厨房 | Interior / Kitchen | Italian rustic, terracotta |
+| 405 | Replace the background with a colorful Mexican kitchen with painted tiles and hanging chili peppers | 将背景替换为有彩色瓷砖和悬挂辣椒的墨西哥厨房 | Interior / Kitchen | Vibrant Talavera tiles, red |
+| 406 | Place the subject in a modern open-plan office with glass partitions and standing desks | 将主体放在有玻璃隔断和站立式办公桌的现代开放式办公室 | Interior / Office | Open plan, collaborative |
+| 407 | Set the scene in a cozy home office with built-in bookshelves and leather desk chair | 将场景设在有嵌入式书架和皮革办公椅的温馨家庭办公室 | Interior / Office | Home comfort, personal |
+| 408 | Replace the background with a corner executive office with floor-to-ceiling windows and city view | 将背景替换为有落地窗和城市景观的角落高管办公室 | Interior / Office | Power office, panoramic |
+| 409 | Place the subject in a classic wood-paneled library study with leather armchairs | 将主体放在有皮革扶手椅的经典木镶板图书室中 | Interior / Office | Traditional, scholarly |
+| 410 | Set the background to a trendy co-working space with communal tables and exposed concrete | 将背景设为有共享桌和裸露混凝土的时尚联合办公空间 | Interior / Office | Startup culture, modern |
+| 411 | Replace the background with a garage startup workspace with whiteboards and scattered cables | 将背景替换为有白板和散落线缆的车库创业工作室 | Interior / Office | Scrappy, entrepreneurial |
+| 412 | Place the subject in a grand CEO office with mahogany desk and oil paintings on walls | 将主体放在有桃花心木书桌和油画的豪华CEO办公室 | Interior / Office | Corporate luxury, traditional |
+| 413 | Set the scene in a creative design studio with mood boards and color swatches | 将场景设在有情绪板和色彩样本的创意设计工作室 | Interior / Office | Creative, inspirational |
+| 414 | Replace the background with an architect's studio with blueprint-covered drafting tables and models | 将背景替换为有蓝图和模型的建筑师工作室 | Interior / Office | Drafting tables, scale models |
+| 415 | Place the subject in a cozy neighborhood coffee shop with exposed brick and chalkboard menu | 将主体放在有裸砖墙和黑板菜单的温馨社区咖啡馆 | Interior / Restaurant-Cafe | Cozy, indie coffee culture |
+| 416 | Set the background to an elegant fine dining restaurant with white tablecloths and candlelight | 将背景设为有白色桌布和烛光的优雅高级餐厅 | Interior / Restaurant-Cafe | Formal, dim elegant lighting |
+| 417 | Replace the background with a rooftop bar at sunset with panoramic views and cocktail glasses | 将背景替换为日落时全景视野和鸡尾酒杯的屋顶酒吧 | Interior / Restaurant-Cafe | Sunset views, upscale casual |
+| 418 | Place the subject in a wine cellar restaurant with stone arches and candlelit tables | 将主体放在有石拱和烛光桌的酒窖餐厅中 | Interior / Restaurant-Cafe | Underground, romantic, stone |
+| 419 | Set the scene in a bustling Japanese ramen shop with counter seating and steam | 将场景设在有吧台座位和蒸汽的热闹日式拉面店 | Interior / Restaurant-Cafe | Counter dining, steam, noren |
+| 420 | Replace the background with a traditional dim sum restaurant with bamboo steamers and round tables | 将背景替换为有竹蒸笼和圆桌的传统粤式茶餐厅 | Interior / Restaurant-Cafe | Bamboo steamers, Chinese |
+| 421 | Place the subject in an elegant British afternoon tea room with tiered stands and china cups | 将主体放在有多层架和瓷杯的英式优雅下午茶室 | Interior / Restaurant-Cafe | Delicate china, tiered stand |
+| 422 | Set the background to an intimate sushi bar with cypress wood counter and chef preparing fish | 将背景设为有柏木吧台和厨师准备鱼的私密寿司吧 | Interior / Restaurant-Cafe | Japanese minimalism, cypress |
+| 423 | Replace the background with a rustic Italian pizzeria with wood-fired brick oven | 将背景替换为有烧木砖炉的质朴意大利披萨店 | Interior / Restaurant-Cafe | Brick oven, Italian casual |
+| 424 | Place the subject beside a colorful food truck at a street market | 将主体放在街头市场的彩色流动餐车旁 | Interior / Restaurant-Cafe | Outdoor, vibrant, casual |
+| 425 | Set the scene in a Parisian sidewalk cafe with small round tables and wicker chairs | 将场景设在有小圆桌和藤椅的巴黎人行道咖啡馆 | Interior / Restaurant-Cafe | French terrace, people-watch |
+| 426 | Replace the background with a craft beer brewery taproom with industrial decor and tank views | 将背景替换为有工业装饰和酿酒罐的精酿啤酒厂酒吧 | Interior / Restaurant-Cafe | Industrial, brewing tanks |
+| 427 | Place the subject in a traditional Chinese teahouse with wooden furniture and tea ceremony setup | 将主体放在有木质家具和茶道布置的中式传统茶馆 | Interior / Restaurant-Cafe | Tea culture, traditional |
+| 428 | Set the background to a grand concert hall with tiered seating and ornate ceiling | 将背景设为有阶梯座位和华丽天花板的大音乐厅 | Interior / Other | Acoustic design, ornate |
+| 429 | Replace the background with a contemporary white art gallery with paintings on walls | 将背景替换为墙上挂着画作的当代白色艺术画廊 | Interior / Other | White cube, focused lighting |
+| 430 | Place the subject in a grand museum hall with marble floors and vaulted ceiling | 将主体放在有大理石地板和拱形天花板的宏伟博物馆大厅 | Interior / Other | Grand scale, classical |
+| 431 | Set the scene in a classic movie theater with red velvet seats and ornate ceiling | 将场景设在有红色天鹅绒座椅和华丽天花板的经典电影院 | Interior / Other | Red velvet, art deco |
+| 432 | Replace the background with a modern gym with exercise equipment and mirrors | 将背景替换为有健身器材和镜子的现代健身房 | Interior / Other | Fitness, mirrors, chrome |
+| 433 | Place the subject in a luxury spa with ambient lighting and water features | 将主体放在有氛围灯和水景的豪华水疗中心 | Interior / Other | Calm, water sounds, dim |
+| 434 | Set the background to a traditional Japanese onsen bath house with steam and wooden tub | 将背景设为有蒸汽和木浴桶的传统日式温泉浴场 | Interior / Other | Hot spring, steam, wood |
+| 435 | Replace the background with an indoor swimming pool with blue mosaic tiles and skylights | 将背景替换为有蓝色马赛克瓷砖和天窗的室内游泳池 | Interior / Other | Blue tiles, water reflection |
+| 436 | Place the subject in a Victorian-era greenhouse with lush tropical plants and iron structure | 将主体放在有茂盛热带植物和铁结构的维多利亚温室中 | Interior / Other | Glass and iron, tropical |
+| 437 | Set the scene in a woodworking workshop with tools and shavings on the workbench | 将场景设在有工具和木屑的木工作坊中 | Interior / Other | Craft, sawdust, tools |
+| 438 | Replace the background with a cluttered vintage garage with old cars and tools | 将背景替换为有老爷车和工具的杂乱复古车库 | Interior / Other | Nostalgia, mechanical |
+| 439 | Place the subject in a dusty old attic with antique furniture and sunlight through dormer | 将主体放在有古董家具和老虎窗阳光的尘封阁楼 | Interior / Other | Dusty, nostalgic, warm light |
+| 440 | Set the background to a dark mysterious basement with stone walls and flickering light | 将背景设为有石墙和闪烁灯光的幽暗神秘地下室 | Interior / Other | Dark, atmospheric, stone |
+| 441 | Replace the background with a sleek modern elevator with mirror walls and LED lighting | 将背景替换为有镜面墙和LED灯的时尚现代电梯 | Interior / Other | Reflective, confined space |
+| 442 | Place the subject in a grand ballroom with crystal chandeliers and marble floor | 将主体放在有水晶吊灯和大理石地板的豪华舞厅 | Interior / Other | Grand, sparkling chandeliers |
+| 443 | Set the scene in a recording studio with microphones and soundproofing panels | 将场景设在有麦克风和隔音板的录音棚中 | Interior / Other | Acoustic panels, professional |
+| 444 | Replace the background with a traditional Turkish hammam bath with domed ceiling and marble | 将背景替换为有圆顶和大理石的传统土耳其浴室 | Interior / Other | Steam, marble, star-light dome |
+| 445 | Place the subject in a children's playroom with ball pit and colorful climbing walls | 将主体放在有海洋球池和彩色攀爬墙的儿童游乐室 | Interior / Other | Bright primary colors, fun |
+| 446 | Set the background to a plant-filled conservatory with wicker furniture and garden views | 将背景设为有藤编家具和花园景色的植物满园冬季花园 | Interior / Other | Glass walls, lush plants |
+| 447 | Replace the background with an artist's painting studio with canvases and paint-splattered floor | 将背景替换为有画布和溅满油漆地板的画家工作室 | Interior / Other | Creative mess, paint |
+| 448 | Place the subject in a grand cathedral interior with stained glass windows and vaulted ceiling | 将主体放在有彩色玻璃窗和拱形天花板的宏伟大教堂内部 | Interior / Other | Colored light, soaring space |
+| 449 | Set the scene in a cozy reading nook by a bay window with cushions and bookshelves | 将场景设在有靠枕和书架的飘窗温馨阅读角 | Interior / Other | Intimate, natural light |
+| 450 | Replace the background with a modern dance studio with mirrors, barre, and wooden floor | 将背景替换为有镜子、把杆和木地板的现代舞蹈教室 | Interior / Other | Open floor, mirrors, light |
+| 451 | Place the subject in a traditional pub with dark wood bar, beer taps, and warm lighting | 将主体放在有深色木吧台、啤酒龙头和暖光的传统酒吧 | Interior / Restaurant-Cafe | Dark wood, pub atmosphere |
+| 452 | Set the background to a chic fashion boutique interior with clothing racks and mirrors | 将背景设为有衣架和镜子的时尚精品店内部 | Interior / Other | Fashion retail, curated |
+| 453 | Replace the background with a vintage record shop interior with vinyl albums on shelves | 将背景替换为有黑胶唱片的复古唱片店内部 | Interior / Other | Vinyl, nostalgia, music |
+| 454 | Place the subject in a traditional apothecary shop with wooden drawers and glass jars | 将主体放在有木抽屉和玻璃罐的传统药铺中 | Interior / Other | Antique, organized, herbal |
+| 455 | Set the scene in a modern yoga studio with natural light and bamboo flooring | 将场景设在有自然光和竹地板的现代瑜伽馆 | Interior / Other | Peaceful, natural materials |
+| 456 | Replace the background with a grand staircase in a mansion with marble steps and gold railing | 将背景替换为有大理石阶梯和金色扶手的豪宅大楼梯 | Interior / Other | Grand entrance, luxury |
+| 457 | Place the subject in a Moroccan-style room with arched doorways and zellige tilework | 将主体放在有拱形门和泽利格瓷砖的摩洛哥风格房间 | Interior / Living Room | Islamic geometry, colorful |
+| 458 | Set the background to a modern Japanese minimalist apartment with sliding panels | 将背景设为有推拉面板的现代日式极简公寓 | Interior / Living Room | Japanese modern, sliding doors |
+| 459 | Replace the background with a library with floor-to-ceiling bookshelves and rolling ladder | 将背景替换为有落地书架和滑动梯的图书馆 | Interior / Other | Wall of books, scholarly |
+| 460 | Place the subject in a sunlit plant nursery greenhouse with rows of potted plants | 将主体放在一排排盆栽植物的阳光植物苗圃温室中 | Interior / Other | Green, glass, sunlit |
+| 461 | Set the scene in an old pharmacy with wooden cabinets and antique medicine bottles | 将场景设在有木柜和古董药瓶的老药房中 | Interior / Other | Vintage, organized, amber |
+| 462 | Replace the background with a Japanese zen rock garden courtyard viewed from inside | 将背景替换为从室内看到的日式枯山水庭院 | Interior / Other | Raked gravel, framed view |
+| 463 | Place the subject in a school classroom with blackboard, wooden desks, and globe | 将主体放在有黑板、木桌和地球仪的学校教室 | Interior / Other | Educational, nostalgic |
+| 464 | Set the background to a bright airy loft space with large industrial windows | 将背景设为有大型工业窗户的明亮通透阁楼空间 | Interior / Living Room | Open, industrial windows |
+| 465 | Replace the background with a luxury dressing room with vanity mirror lights and racks of clothes | 将背景替换为有化妆镜灯和整排衣物的豪华更衣室 | Interior / Other | Glamorous, warm bulb lights |
+| 466 | Place the subject in a medieval castle great hall with stone walls, fireplace, and tapestries | 将主体放在有石墙、壁炉和织锦壁毯的中世纪城堡大厅 | Interior / Other | Medieval grandeur, stone |
+| 467 | Set the scene in a modern pet-friendly cafe with cats lounging on shelves | 将场景设在猫咪在架子上休憩的现代宠物主题咖啡馆 | Interior / Restaurant-Cafe | Cat cafe, playful |
+| 468 | Replace the background with a dim jazz club interior with small stage and blue spotlight | 将背景替换为有小舞台和蓝色聚光灯的昏暗爵士俱乐部 | Interior / Other | Moody, blue tint, intimate |
+| 469 | Place the subject in an opulent Baroque chapel with gold leaf ceiling and frescoes | 将主体放在有金箔天花板和壁画的华丽巴洛克教堂 | Interior / Other | Ornate, gold and painted |
+| 470 | Set the background to a clean modern hospital corridor with blue-white lighting | 将背景设为有蓝白灯光的整洁现代医院走廊 | Interior / Other | Clinical, blue-white sterile |
+| 471 | Replace the background with an underground wine cave with barrels and stone tunnel | 将背景替换为有酒桶和石头隧道的地下红酒窖 | Interior / Other | Dark, barrel rows, stone |
+| 472 | Place the subject in a retro 1950s American diner with chrome stools and jukebox | 将主体放在有镀铬高脚凳和点唱机的复古50年代美式餐厅 | Interior / Restaurant-Cafe | Chrome, neon, checkered |
+| 473 | Set the scene in a traditional Indian haveli courtyard with carved stone pillars and arches | 将场景设在有雕花石柱和拱门的传统印度宅邸庭院 | Interior / Other | Carved stone, jali screens |
+| 474 | Replace the background with a high-end jewelry store interior with glass cases and spotlights | 将背景替换为有玻璃展柜和聚光灯的高端珠宝店内部 | Interior / Other | Luxury retail, warm spots |
+| 475 | Place the subject in a cozy log cabin interior with a roaring fireplace and fur rugs | 将主体放在有旺盛壁炉和毛皮地毯的温馨原木小屋内 | Interior / Living Room | Cabin warmth, fire glow |
+| 476 | Set the background to a makerspace workshop with 3D printers and laser cutters | 将背景设为有3D打印机和激光切割机的创客空间 | Interior / Other | Tech workshop, tools |
+| 477 | Replace the background with a sunroom with panoramic garden views and wicker seating | 将背景替换为有全景花园和藤编座椅的阳光房 | Interior / Other | Bright, garden views |
+| 478 | Place the subject in a narrow bookshop aisle with towering stacks of used books | 将主体放在堆满旧书的狭窄书店过道中 | Interior / Other | Books everywhere, cozy |
+| 479 | Set the scene in a modern hotel lobby with dramatic chandelier and marble reception | 将场景设在有戏剧性吊灯和大理石接待台的现代酒店大堂 | Interior / Other | Grand entrance, upscale |
+| 480 | Replace the background with an indoor botanical garden with tropical plants under glass dome | 将背景替换为玻璃穹顶下热带植物的室内植物园 | Interior / Other | Tropical under glass, humid |
+| 481 | Place the subject in a mid-century modern dining room with tulip table and pendant lamp | 将主体放在有郁金香桌和吊灯的中世纪现代餐厅 | Interior / Living Room | Retro dining elegance |
+| 482 | Set the background to a French patisserie display with rows of colorful macarons and pastries | 将背景设为有整排多彩马卡龙和糕点的法式甜品店 | Interior / Restaurant-Cafe | Pastel sweets, display |
+| 483 | Replace the background with a meditation room with cushions, candles, and bamboo | 将背景替换为有坐垫、蜡烛和竹子的冥想室 | Interior / Other | Peaceful, dimly lit |
+| 484 | Place the subject in a Korean BBQ restaurant with table grills and metal chopsticks | 将主体放在有桌面烤炉和金属筷子的韩式烧烤店 | Interior / Restaurant-Cafe | Smoke, grill, Korean |
+| 485 | Set the scene in an indoor ice skating rink with colored lights on the ice | 将场景设在有彩色灯光的室内溜冰场 | Interior / Other | Ice reflection, cool tones |
+| 486 | Replace the background with a vintage barber shop with leather chairs and old mirrors | 将背景替换为有皮椅和旧镜子的复古理发店 | Interior / Other | Barber striped pole, retro |
+| 487 | Place the subject in a traditional sake brewery with wooden barrels and rice storage | 将主体放在有木桶和存米的传统清酒酿造所 | Interior / Other | Japanese brewing, wooden |
+| 488 | Set the background to an amphitheater-style lecture hall with rows of seats and projector screen | 将背景设为有阶梯座位和投影幕的阶梯教室 | Interior / Other | Academic, semi-circular |
+| 489 | Replace the background with a luxurious bathroom with freestanding tub and marble walls | 将背景替换为有独立浴缸和大理石墙的豪华浴室 | Interior / Other | Marble luxury, spa-like |
+| 490 | Place the subject in a traditional Chinese pharmacy with wooden drawers of dried herbs | 将主体放在有木抽屉干草药的传统中药铺 | Interior / Other | Chinese medicine, organized |
+| 491 | Set the scene in a sunlit art studio with easels and paint-covered palette | 将场景设在有画架和满是颜料的调色板的阳光画室 | Interior / Other | Creative, colorful mess |
+| 492 | Replace the background with a modern karaoke room with neon lights and microphones | 将背景替换为有霓虹灯和麦克风的现代KTV包房 | Interior / Other | Neon, party atmosphere |
+| 493 | Place the subject in an antique shop packed with vintage clocks, lamps, and furniture | 将主体放在堆满古董钟表、灯具和家具的古玩店 | Interior / Other | Cluttered treasures |
+| 494 | Set the background to a sleek modern bathroom with walk-in rain shower and black tiles | 将背景设为有步入式雨淋浴和黑色瓷砖的时尚现代浴室 | Interior / Other | Modern, matte black |
+| 495 | Replace the background with a cozy mountain lodge interior with antler chandelier and fur throws | 将背景替换为有鹿角吊灯和毛皮毯的温馨山间小屋内部 | Interior / Living Room | Lodge, alpine, cozy |
+| 496 | Place the subject in a street-food-style indoor food market with various cuisine stalls | 将主体放在有各种美食摊位的街头风格室内美食市场 | Interior / Restaurant-Cafe | Multi-cuisine, buzzy |
+| 497 | Set the scene in a planetarium dome with projected stars and galaxies | 将场景设在投影星空和银河的天文馆穹顶下 | Interior / Other | Dark dome, projected cosmos |
+| 498 | Replace the background with a floristry workshop with buckets of flowers and ribbon | 将背景替换为有一桶桶鲜花和丝带的花艺工坊 | Interior / Other | Floral bounty, craft |
+| 499 | Place the subject in a photography darkroom with red safe light and developing trays | 将主体放在有红色安全灯和显影盘的摄影暗房 | Interior / Other | Red light only, noir |
+| 500 | Set the background to a lavish Mughal-style interior with inlaid marble and archways | 将背景设为有镶嵌大理石和拱门的奢华莫卧儿风格内饰 | Interior / Other | Pietra dura, Islamic arches |
+| 501 | Replace the background with an eclectic vintage living room with mismatched furniture and art | 将背景替换为有不搭配家具和艺术品的折衷复古客厅 | Interior / Living Room | Eclectic, collected over time |
+| 502 | Place the subject in a modern open-concept kitchen-dining area with kitchen island breakfast bar | 将主体放在有中岛早餐吧的现代开放式厨餐一体空间 | Interior / Kitchen | Open plan, social cooking |
+| 503 | Set the scene in a grand Victorian-era greenhouse with ornate cast iron and tropical palms | 将场景设在有华丽铸铁和热带棕榈的宏伟维多利亚温室 | Interior / Other | Historic glass house |
+| 504 | Replace the background with a warm rustic winery tasting room with barrel ceiling and stone walls | 将背景替换为有木桶天花板和石墙的温馨质朴酒庄品酒室 | Interior / Restaurant-Cafe | Wine tasting, rustic |
+| 505 | Place the subject in a glamorous 1920s Art Deco bar with gold fixtures and velvet | 将主体放在有金色配件和天鹅绒的迷人1920年代装饰艺术酒吧 | Interior / Restaurant-Cafe | Gatsby era, gold and black |
+| 506 | Set the background to a clean white dental or medical office with modern equipment | 将背景设为有现代设备的整洁白色牙科或医疗办公室 | Interior / Other | Clinical, professional |
+| 507 | Replace the background with a music rehearsal room with instruments and amplifiers | 将背景替换为有乐器和放大器的音乐排练室 | Interior / Other | Rock band setup, amps |
+| 508 | Place the subject in a traditional sento public bath in Japan with tile murals of Mt. Fuji | 将主体放在有富士山瓷砖壁画的日本传统公共浴场 | Interior / Other | Japanese murals, heated water |
+| 509 | Set the scene in a mid-century modern sunken conversation pit living room | 将场景设在中世纪现代下沉式会话坑客厅 | Interior / Living Room | Retro sunken lounge, groovy |
+| 510 | Replace the background with a vintage French boudoir with ornate mirror and silk curtains | 将背景替换为有华丽镜子和丝绸窗帘的复古法式闺房 | Interior / Bedroom | Feminine, ornate |
+| 511 | Place the subject in a rustic barn interior converted for an event with string lights | 将主体放在有串灯的改造活动场地质朴谷仓内部 | Interior / Other | Barn wedding venue, rustic |
+| 512 | Set the background to a traditional Chinese scholar's study with calligraphy brushes and ink stone | 将背景设为有毛笔和砚台的传统中国文人书房 | Interior / Office | Scholar, four treasures |
+| 513 | Replace the background with a modern rooftop infinity pool overlooking a city | 将背景替换为俯瞰城市的现代屋顶无边泳池 | Interior / Other | Infinity edge, city view |
+| 514 | Place the subject in a European-style cellar restaurant with vaulted brick ceiling | 将主体放在有砖砌拱形天花板的欧式地窖餐厅 | Interior / Restaurant-Cafe | Underground, arched brick |
+| 515 | Set the scene in a lavish Indian wedding hall with floral decorations and drapes | 将场景设在有花卉装饰和帷幔的豪华印度婚礼大厅 | Interior / Other | Marigolds, rich fabrics |
+| 516 | Replace the background with a retro arcade game room with rows of cabinet machines and neon | 将背景替换为有成排街机和霓虹灯的复古电子游戏厅 | Interior / Other | Neon, CRT glow, retro |
+| 517 | Place the subject in a Scandinavian design showroom with iconic furniture pieces | 将主体放在有标志性家具的北欧设计展厅 | Interior / Living Room | Design classics, minimal |
+| 518 | Set the background to a Chinese hot pot restaurant with bubbling broths and fresh ingredients | 将背景设为有翻滚汤底和新鲜食材的中国火锅店 | Interior / Restaurant-Cafe | Steam, communal dining |
+| 519 | Replace the background with an indoor climbing wall with colorful holds and safety mats | 将背景替换为有彩色岩点和安全垫的室内攀岩墙 | Interior / Other | Vertical wall, bright holds |
+| 520 | Place the subject in a traditional Japanese tea room with tatami, tokonoma alcove, and flower arrangement | 将主体放在有榻榻米、壁龛和插花的传统日式茶室 | Interior / Other | Chashitsu, wabi-sabi |
+| 521 | Set the scene in a sleek modern conference room with glass table and video screens | 将场景设在有玻璃桌和视频屏幕的时尚现代会议室 | Interior / Office | Corporate, tech-equipped |
+| 522 | Replace the background with a charming French country dining room with rustic table and dried flowers | 将背景替换为有乡村桌和干花的迷人法式乡间餐厅 | Interior / Living Room | French provincial, dried lavender |
+| 523 | Place the subject in an ornate opera box seat overlooking the stage and audience | 将主体放在俯瞰舞台和观众的华丽歌剧包厢 | Interior / Other | Gilded box, curtain frame |
+| 524 | Set the background to a bright modern laundromat with rows of washing machines | 将背景设为有整排洗衣机的明亮现代自助洗衣店 | Interior / Other | Utilitarian, fluorescent |
+
+---
+
+## 4. Historical / Period Settings
+
+| # | English Prompt | 中文提示词 | Category | Config Notes |
+|---|---|---|---|---|
+| 525 | Place the subject before the Great Pyramids of Giza with camels and desert sand | 将主体放在有骆驼和沙漠的吉萨大金字塔前 | Historical / Ancient | Egyptian, monumental |
+| 526 | Set the background to the Roman Colosseum interior as it appeared in ancient times | 将背景设为古罗马时期的斗兽场内部 | Historical / Ancient | Reconstructed ancient Rome |
+| 527 | Replace the background with the ancient Greek Parthenon on the Acropolis hill | 将背景替换为雅典卫城上的古希腊帕特农神庙 | Historical / Ancient | White marble, columned |
+| 528 | Place the subject on the Great Wall of China winding over mountain ridges | 将主体放在蜿蜒越过山脊的万里长城上 | Historical / Ancient | Stone wall, mountainous |
+| 529 | Set the scene amid the ancient temple ruins of Angkor Wat with jungle overgrowth | 将场景设在丛林覆盖的吴哥窟古寺废墟中 | Historical / Ancient | Stone temple, jungle vines |
+| 530 | Replace the background with the mountaintop citadel of Machu Picchu at dawn | 将背景替换为黎明时分的马丘比丘山顶古城 | Historical / Ancient | Mountain ruins, mist |
+| 531 | Place the subject before the rock-carved facade of Petra's Treasury in Jordan | 将主体放在约旦佩特拉古城岩石雕刻的宝库前 | Historical / Ancient | Rose-red carved rock |
+| 532 | Set the background to the prehistoric stone circle of Stonehenge at sunset | 将背景设为日落时分的巨石阵史前石圈 | Historical / Ancient | Megalithic, golden light |
+| 533 | Replace the background with the Forbidden City's grand courtyard with red walls and golden roofs | 将背景替换为红墙黄瓦的紫禁城宏伟庭院 | Historical / Ancient | Imperial Chinese, red-gold |
+| 534 | Place the subject in the Hall of Mirrors at the Palace of Versailles | 将主体放在凡尔赛宫的镜厅中 | Historical / Ancient | Opulent, mirrors, chandeliers |
+| 535 | Set the scene in an ancient Egyptian temple interior with hieroglyphic-covered columns | 将场景设在有象形文字柱的古埃及神庙内部 | Historical / Ancient | Hieroglyphics, sandstone |
+| 536 | Replace the background with an ancient Roman forum with marble columns and arches | 将背景替换为有大理石柱和拱门的古罗马广场 | Historical / Ancient | Roman civic architecture |
+| 537 | Place the subject in a Mayan pyramid temple complex surrounded by jungle | 将主体放在丛林环绕的玛雅金字塔神庙群中 | Historical / Ancient | Stepped pyramid, jungle |
+| 538 | Set the background to the ancient Silk Road with a camel caravan crossing desert | 将背景设为骆驼商队穿越沙漠的古丝绸之路 | Historical / Ancient | Trade route, caravan |
+| 539 | Replace the background with an ancient Greek amphitheater overlooking the sea | 将背景替换为俯瞰大海的古希腊圆形露天剧场 | Historical / Ancient | Semicircular stone seats |
+| 540 | Place the subject in a Tang Dynasty palace courtyard with red pavilions and gardens | 将主体放在有红色亭台和花园的唐代宫廷庭院中 | Historical / Ancient | Tang Dynasty splendor |
+| 541 | Set the scene in a medieval castle interior with stone walls, iron candelabras, and tapestries | 将场景设在有石墙、铁烛台和织锦的中世纪城堡内部 | Historical / Medieval | Dark stone, candlelit |
+| 542 | Replace the background with a Gothic cathedral interior with soaring ribbed vaults and stained glass | 将背景替换为有高耸肋形拱顶和彩色玻璃的哥特教堂内部 | Historical / Medieval | Soaring, colored light |
+| 543 | Place the subject in a medieval village square with timber-framed houses and well | 将主体放在有木框架房屋和水井的中世纪村庄广场 | Historical / Medieval | Half-timbered, rustic |
+| 544 | Set the background to a medieval knight's tournament arena with colorful banners | 将背景设为有彩色旗帜的中世纪骑士比武场 | Historical / Medieval | Jousting, heraldic banners |
+| 545 | Replace the background with a bustling medieval marketplace with merchant stalls and crowds | 将背景替换为有商贩摊位和人群的热闹中世纪集市 | Historical / Medieval | Market day, wooden stalls |
+| 546 | Place the subject inside a medieval tavern with wooden beams and roaring fireplace | 将主体放在有木梁和熊熊壁炉的中世纪酒馆内 | Historical / Medieval | Dark, warm firelight |
+| 547 | Set the scene in a medieval monastery scriptorium with monks copying manuscripts | 将场景设在有僧侣抄写手稿的中世纪修道院缮写室 | Historical / Medieval | Candlelit, parchment |
+| 548 | Replace the background with a medieval castle courtyard with armory and training ground | 将背景替换为有军械库和训练场的中世纪城堡庭院 | Historical / Medieval | Military, stone courtyard |
+| 549 | Place the subject in a medieval port town with sailing ships and stone warehouses | 将主体放在有帆船和石头仓库的中世纪港口小镇 | Historical / Medieval | Maritime medieval |
+| 550 | Set the background to a medieval alchemist's laboratory with glass vials and rare books | 将背景设为有玻璃瓶和珍贵书籍的中世纪炼金术士实验室 | Historical / Medieval | Mysterious, cluttered |
+| 551 | Replace the background with a grand Florentine Renaissance palazzo with marble courtyard | 将背景替换为有大理石庭院的宏伟佛罗伦萨文艺复兴宫殿 | Historical / Renaissance | Marble, classical proportions |
+| 552 | Place the subject in a Renaissance artist's studio with half-finished paintings and plaster casts | 将主体放在有未完成画作和石膏像的文艺复兴画家工作室 | Historical / Renaissance | Paint, canvas, daylight |
+| 553 | Set the scene in a formal Italian Renaissance garden with geometric hedges and fountains | 将场景设在有几何绿篱和喷泉的正式意大利文艺复兴花园 | Historical / Renaissance | Symmetrical, formal |
+| 554 | Replace the background with a Renaissance banquet hall with long table and tapestries | 将背景替换为有长桌和织锦的文艺复兴宴会厅 | Historical / Renaissance | Feasting, opulent |
+| 555 | Place the subject in a Renaissance library with globes, maps, and leather-bound volumes | 将主体放在有地球仪、地图和皮面书卷的文艺复兴图书馆 | Historical / Renaissance | Scholarly, exploration era |
+| 556 | Set the background to a Venetian masked ball in a gilded Renaissance palace | 将背景设为金碧辉煌的文艺复兴宫殿中的威尼斯假面舞会 | Historical / Renaissance | Masks, gilt, candlelight |
+| 557 | Replace the background with an Industrial Revolution-era factory with steam-powered machinery | 将背景替换为工业革命时期蒸汽机械的工厂 | Historical / Industrial | Gears, steam, dark metal |
+| 558 | Place the subject in a Victorian steam train station with iron and glass roof | 将主体放在有铁质玻璃顶棚的维多利亚火车站 | Historical / Industrial | Steam, iron architecture |
+| 559 | Set the scene on a Victorian London street with gas lamps, horse carriages, and fog | 将场景设在有煤气灯、马车和雾的维多利亚时代伦敦街头 | Historical / Industrial | Foggy, gas-lit, Dickensian |
+| 560 | Replace the background with a 19th-century textile mill with spinning looms and workers | 将背景替换为有纺织织机和工人的19世纪纺织厂 | Historical / Industrial | Industrial labor, machines |
+| 561 | Place the subject in a Victorian-era parlor with gas lamps, doilies, and heavy curtains | 将主体放在有煤气灯、装饰垫和厚窗帘的维多利亚时代客厅 | Historical / Industrial | Ornate, cluttered, dark |
+| 562 | Set the background to a 19th-century apothecary shop with rows of medicine bottles | 将背景设为有整排药瓶的19世纪药铺 | Historical / Industrial | Glass bottles, wooden shelves |
+| 563 | Replace the background with a 1920s Art Deco ballroom with geometric patterns and gold ceiling | 将背景替换为有几何图案和金色天花板的1920年代装饰艺术舞厅 | Historical / 1920s-30s | Art Deco, gold, geometric |
+| 564 | Place the subject in a 1920s speakeasy hidden bar with dim lighting and jazz atmosphere | 将主体放在灯光昏暗爵士氛围的1920年代地下酒吧 | Historical / 1920s-30s | Prohibition era, secretive |
+| 565 | Set the scene in a 1920s jazz club with brass instruments and dancing couples | 将场景设在有铜管乐器和跳舞情侣的1920年代爵士俱乐部 | Historical / 1920s-30s | Jazz age, smoky |
+| 566 | Replace the background with a lavish Great Gatsby-style mansion party with champagne fountain | 将背景替换为有香槟喷泉的奢华了不起的盖茨比式豪宅派对 | Historical / 1920s-30s | Opulent, champagne, lights |
+| 567 | Place the subject on the deck of a 1920s luxury ocean liner with Art Deco railings | 将主体放在有装饰艺术风格栏杆的1920年代豪华邮轮甲板上 | Historical / 1920s-30s | Ocean liner, elegant |
+| 568 | Set the background to a 1930s Chicago street during the gangster era with vintage cars | 将背景设为有老爷车的1930年代芝加哥黑帮时期街道 | Historical / 1920s-30s | Noir, fedoras, classic cars |
+| 569 | Replace the background with a 1930s Hollywood movie set with large studio lights and cameras | 将背景替换为有大型摄影灯和摄影机的1930年代好莱坞影棚 | Historical / 1920s-30s | Golden age cinema, klieg lights |
+| 570 | Place the subject in a 1950s American diner with chrome counter, checkered floor, and jukebox | 将主体放在有镀铬柜台、格子地板和点唱机的1950年代美式餐厅 | Historical / 1950s-60s | Chrome, pastel, rock 'n' roll |
+| 571 | Set the scene at a 1950s drive-in movie theater with vintage cars under the stars | 将场景设在星空下老爷车排列的1950年代汽车影院 | Historical / 1950s-60s | Drive-in screen, tail fins |
+| 572 | Replace the background with a 1960s mid-century modern home interior with sunken living room | 将背景替换为有下沉式客厅的1960年代中世纪现代住宅内部 | Historical / 1950s-60s | Retro furniture, shag carpet |
+| 573 | Place the subject in a 1960s space-age themed lounge with pod chairs and chrome | 将主体放在有太空舱椅和镀铬的1960年代太空主题酒廊 | Historical / 1950s-60s | Space Age, mod design |
+| 574 | Set the background to a 1960s hippie commune with tie-dye and VW van | 将背景设为有扎染和大众面包车的1960年代嬉皮公社 | Historical / 1950s-60s | Peace signs, psychedelic |
+| 575 | Replace the background with a 1950s suburban kitchen with pastel appliances and linoleum | 将背景替换为有粉彩家电和油毡地板的1950年代郊区厨房 | Historical / 1950s-60s | Pastel pink/mint appliances |
+| 576 | Place the subject on a 1960s London Carnaby Street with mod fashion and pop art | 将主体放在有摩登时尚和波普艺术的1960年代伦敦卡纳比街 | Historical / 1950s-60s | Swinging London, mod |
+| 577 | Set the scene in a 1970s disco dance floor with mirrored ball and colorful lights | 将场景设在有镜面球和彩灯的1970年代迪斯科舞池 | Historical / 1970s-80s | Mirror ball, strobe |
+| 578 | Replace the background with a 1980s video arcade with rows of classic game cabinets | 将背景替换为有成排经典游戏机的1980年代电子游戏厅 | Historical / 1970s-80s | CRT screens, pixel art |
+| 579 | Place the subject on a 1980s neon-lit city street with boomboxes and break dancing | 将主体放在有收音机和霹雳舞的1980年代霓虹灯城市街头 | Historical / 1970s-80s | Neon, hip-hop, urban |
+| 580 | Set the background to a 1970s retro diner with orange and brown decor and lava lamps | 将背景设为有橙色和棕色装饰以及熔岩灯的1970年代复古餐厅 | Historical / 1970s-80s | Earth tones, groovy |
+| 581 | Replace the background with a 1980s roller skating rink with disco lights and wooden floor | 将背景替换为有迪斯科灯光和木地板的1980年代溜冰场 | Historical / 1970s-80s | Roller skates, disco |
+| 582 | Place the subject in a 1970s living room with wood paneling and shag carpet | 将主体放在有木镶板和长毛地毯的1970年代客厅 | Historical / 1970s-80s | Orange-brown, retro |
+| 583 | Set the scene in a 1985 Miami Vice-style neon pastel nightclub | 将场景设在1985年迈阿密风云风格的霓虹粉彩夜总会 | Historical / 1970s-80s | Pastel neon, Miami style |
+| 584 | Replace the background with a 1990s internet cafe with bulky CRT monitors and dial-up | 将背景替换为有笨重CRT显示器的1990年代网吧 | Historical / 1990s-2000s | Early internet, CRT glow |
+| 585 | Place the subject in a 1990s vinyl record shop with crates of records and band posters | 将主体放在有唱片箱和乐队海报的1990年代黑胶唱片店 | Historical / 1990s-2000s | Indie, vinyl culture |
+| 586 | Set the background to a 1990s grunge concert venue with stage and mosh pit | 将背景设为有舞台和跳水区的1990年代摇滚演唱会场地 | Historical / 1990s-2000s | Raw, distorted, dark |
+| 587 | Replace the background with a year 2000 Y2K-aesthetic lounge with metallic furniture and screens | 将背景替换为有金属家具和屏幕的千禧年Y2K美学酒廊 | Historical / 1990s-2000s | Silver chrome, futuristic |
+| 588 | Place the subject in a 1990s suburban bedroom with boy band posters and lava lamp | 将主体放在有男团海报和熔岩灯的1990年代郊区卧室 | Historical / 1990s-2000s | 90s teen culture |
+| 589 | Set the scene in a Song Dynasty Chinese garden with pavilions and lotus ponds | 将场景设在有亭台和莲池的宋代中国园林 | Historical / Ancient | Song Dynasty elegance |
+| 590 | Replace the background with an ancient Roman bath house with marble pools and columns | 将背景替换为有大理石浴池和柱子的古罗马浴场 | Historical / Ancient | Thermae, marble, steam |
+| 591 | Place the subject in a Viking longhouse with wooden benches and central fire pit | 将主体放在有木凳和中央火坑的维京长屋中 | Historical / Medieval | Norse, timber, smoky |
+| 592 | Set the background to a medieval Japanese castle interior with painted screens and samurai armor | 将背景设为有彩绘屏风和武士铠甲的日本中世纪城堡内部 | Historical / Medieval | Samurai era, gold screens |
+| 593 | Replace the background with a Qing Dynasty imperial court room with throne and silk drapes | 将背景替换为有龙椅和丝绸帷幔的清代皇宫大殿 | Historical / Ancient | Imperial yellow, ornate |
+| 594 | Place the subject in an ancient library of Alexandria with scroll-filled shelves | 将主体放在堆满卷轴的古代亚历山大图书馆 | Historical / Ancient | Papyrus scrolls, classical |
+| 595 | Set the scene in a 17th-century Dutch master painter's studio with natural window light | 将场景设在有自然窗光的17世纪荷兰大师画室 | Historical / Renaissance | Rembrandt lighting |
+| 596 | Replace the background with Napoleon-era French military camp with tents and cannons | 将背景替换为有帐篷和大炮的拿破仑时代法国军营 | Historical / Industrial | Military camp, early 1800s |
+| 597 | Place the subject in a Wild West saloon with swinging doors and poker tables | 将主体放在有摆动门和扑克桌的美国西部酒馆 | Historical / 1920s-30s | Western frontier, dusty |
+| 598 | Set the background to a 1940s wartime London street during the Blitz with searchlights | 将背景设为有探照灯的1940年代伦敦闪电战街头 | Historical / 1920s-30s | Wartime, blackout |
+| 599 | Replace the background with an ancient Indian court with elephant statues and silk canopies | 将背景替换为有象雕和丝绸帐篷的古代印度宫廷 | Historical / Ancient | Mughal grandeur |
+| 600 | Place the subject in a 1950s Havana nightclub with live band and tropical decor | 将主体放在有现场乐队和热带装饰的1950年代哈瓦那夜总会 | Historical / 1950s-60s | Cuban jazz, retro tropical |
+| 601 | Set the scene inside an Edo-period Japanese ukiyo-e print shop with woodblocks | 将场景设在有木版的江户时代日本浮世绘版画店 | Historical / Medieval | Ukiyo-e, woodblock prints |
+| 602 | Replace the background with a 1920s Shanghai Bund with Art Deco buildings and rickshaws | 将背景替换为有装饰艺术建筑和人力车的1920年代上海外滩 | Historical / 1920s-30s | Old Shanghai glamour |
+| 603 | Place the subject in a Ming Dynasty porcelain workshop with blue and white ceramics | 将主体放在有青花瓷器的明代制瓷作坊 | Historical / Ancient | Blue-white porcelain |
+| 604 | Set the background to a Roaring Twenties cabaret stage with feathers and sequins | 将背景设为有羽毛和亮片的咆哮二十年代歌舞表演舞台 | Historical / 1920s-30s | Showgirl, cabaret, glam |
+| 605 | Replace the background with an Ottoman Empire-era Turkish bazaar with spices and silks | 将背景替换为有香料和丝绸的奥斯曼帝国时代土耳其集市 | Historical / Medieval | Exotic goods, covered market |
+| 606 | Place the subject in a Civil War era Southern plantation veranda with white columns | 将主体放在有白色柱子的美国内战时代南方种植园门廊 | Historical / Industrial | Antebellum, columned porch |
+| 607 | Set the scene on a 1960s Apollo mission control room with consoles and screens | 将场景设在有控制台和屏幕的1960年代阿波罗任务控制室 | Historical / 1950s-60s | NASA, space race |
+| 608 | Replace the background with an ancient Persian palace courtyard with tiled arches and garden | 将背景替换为有瓷砖拱门和花园的古代波斯宫殿庭院 | Historical / Ancient | Persian tilework, gardens |
+| 609 | Place the subject in a Meiji-era Japanese train station with Western-style brick building | 将主体放在有西式砖建筑的明治时代日本火车站 | Historical / Industrial | East-West blend, brick |
+| 610 | Set the background to an ancient Aztec temple pyramid with colorful murals | 将背景设为有彩色壁画的古代阿兹特克金字塔神庙 | Historical / Ancient | Mesoamerican, painted stone |
+| 611 | Replace the background with a Georgian-era English manor house drawing room | 将背景替换为乔治亚时代英国庄园绘图室 | Historical / Industrial | Regency, Jane Austen era |
+| 612 | Place the subject in a medieval blacksmith's forge with anvil, bellows, and glowing iron | 将主体放在有铁砧、风箱和炽热铁的中世纪铁匠铺 | Historical / Medieval | Fire glow, sparks |
+| 613 | Set the scene in a Gold Rush era mining town with wooden buildings and horse-drawn carts | 将场景设在有木建筑和马车的淘金热时代矿业小镇 | Historical / Industrial | Western frontier, dusty |
+| 614 | Replace the background with a Byzantine church interior with golden mosaics and dome | 将背景替换为有金色马赛克和穹顶的拜占庭教堂内部 | Historical / Ancient | Gold tesserae, iconic saints |
+| 615 | Place the subject in a 1940s film noir detective office with venetian blinds and fan | 将主体放在有百叶窗和风扇的1940年代黑色电影侦探办公室 | Historical / 1920s-30s | Shadow stripes, noir |
+| 616 | Set the background to an Edwardian garden party with parasols and croquet on the lawn | 将背景设为有阳伞和草地槌球的爱德华时代花园派对 | Historical / Industrial | Genteel, white dresses |
+| 617 | Replace the background with a 1980s Wall Street trading floor with stock tickers and phones | 将背景替换为有股票行情机和电话的1980年代华尔街交易大厅 | Historical / 1970s-80s | Frantic, screens, suits |
+| 618 | Place the subject in an ancient Greek agora marketplace with philosophers and merchants | 将主体放在有哲学家和商人的古希腊集市广场 | Historical / Ancient | Classical Athens, marble |
+| 619 | Set the scene in a prohibition-era bootlegger's warehouse with wooden crates of liquor | 将场景设在有木制酒箱的禁酒时代私酒贩仓库 | Historical / 1920s-30s | Clandestine, wooden crates |
+| 620 | Replace the background with a 1970s suburban family room with wood paneling and tube TV | 将背景替换为有木镶板和显像管电视的1970年代郊区家庭活动室 | Historical / 1970s-80s | Brown tones, retro tech |
+| 621 | Place the subject in a prehistoric cave with wall paintings of animals and fire | 将主体放在有动物壁画和火堆的史前洞穴中 | Historical / Ancient | Cave art, firelight |
+| 622 | Set the background to an Art Nouveau Parisian metro station with organic ironwork | 将背景设为有有机铁艺的新艺术风格巴黎地铁站 | Historical / Industrial | Hector Guimard style |
+| 623 | Replace the background with a 1950s motel on Route 66 with neon sign and vintage cars | 将背景替换为有霓虹招牌和老爷车的66号公路1950年代汽车旅馆 | Historical / 1950s-60s | Americana, neon, road trip |
+| 624 | Place the subject in a Han Dynasty court with silk robes and bronze vessels | 将主体放在有丝绸长袍和青铜器的汉代宫廷 | Historical / Ancient | Han Dynasty, bronze |
+| 625 | Set the scene in a 1960s pop art studio with Warhol-style screen prints | 将场景设在有沃霍尔风格丝网印刷的1960年代波普艺术工作室 | Historical / 1950s-60s | Pop art, bright, graphic |
+| 626 | Replace the background with a medieval Japanese zen temple garden with raked sand | 将背景替换为有耙沙的日本中世纪禅寺庭园 | Historical / Medieval | Zen, minimalist, raked |
+| 627 | Place the subject in a Baroque theater with gilded boxes and painted ceiling | 将主体放在有镀金包厢和彩绘天花板的巴洛克剧院 | Historical / Renaissance | Ornate, theatrical |
+| 628 | Set the background to a 1930s Art Deco cinema lobby with terrazzo floor and marquee | 将背景设为有水磨石地板和大厅门廊的1930年代装饰艺术电影院大厅 | Historical / 1920s-30s | Deco cinema, glamorous |
+| 629 | Replace the background with an ancient Mesopotamian ziggurat temple complex | 将背景替换为古代美索不达米亚金字形神塔群 | Historical / Ancient | Stepped temple, ancient |
+| 630 | Place the subject in a Belle Époque Paris cafe with absinthe glasses and gas lamps | 将主体放在有苦艾酒杯和煤气灯的美好时代巴黎咖啡馆 | Historical / Industrial | Bohemian, fin de siècle |
+| 631 | Set the scene on a World War II-era aircraft carrier deck with propeller planes | 将场景设在有螺旋桨飞机的二战时代航空母舰甲板上 | Historical / 1920s-30s | Military, wartime |
+| 632 | Replace the background with a 1980s boombox-era skateboard park with graffiti | 将背景替换为有涂鸦的1980年代收音机时代滑板公园 | Historical / 1970s-80s | Extreme sports, graffiti |
+| 633 | Place the subject in an ancient Egyptian pharaoh's tomb with gold sarcophagus | 将主体放在有金色石棺的古埃及法老陵墓中 | Historical / Ancient | Gold, hieroglyphs, treasure |
+| 634 | Set the background to a colonial-era Dutch trading post in Southeast Asia | 将背景设为东南亚的殖民时代荷兰贸易站 | Historical / Industrial | Colonial architecture, tropical |
+| 635 | Replace the background with a 2000s early social media era college dorm room | 将背景替换为2000年代早期社交媒体时代的大学宿舍 | Historical / 1990s-2000s | Early 2000s tech, posters |
+| 636 | Place the subject in a French Revolution-era Paris street with barricades | 将主体放在有路障的法国大革命时期巴黎街头 | Historical / Industrial | Revolutionary, tricolor |
+| 637 | Set the scene in a traditional Polynesian village with thatched huts and ocean | 将场景设在有茅草屋和大海的传统波利尼西亚村庄 | Historical / Ancient | Pacific islands, traditional |
+| 638 | Replace the background with a 1910s suffragette rally scene with banners and hats | 将背景替换为有旗帜和帽子的1910年代妇女参政运动集会 | Historical / Industrial | Edwardian, protest |
+| 639 | Place the subject in an ancient Norse Viking ship at sea with shields on the rail | 将主体放在有盾牌挂在船沿的古代北欧维京船上 | Historical / Medieval | Viking longship, ocean |
+| 640 | Set the background to a Heian-period Japanese court with silk screens and candles | 将背景设为有丝绸屏风和蜡烛的平安时代日本宫廷 | Historical / Ancient | Junihitoe, elegant |
+| 641 | Replace the background with a 1970s New York punk rock club with raw stage and crowd | 将背景替换为有简陋舞台和人群的1970年代纽约朋克摇滚俱乐部 | Historical / 1970s-80s | CBGB feel, raw energy |
+| 642 | Place the subject in an ancient Incan city with stone terraces and mountain views | 将主体放在有石梯田和山景的古代印加城市 | Historical / Ancient | Andean stone architecture |
+| 643 | Set the scene in a medieval apothecary with dried herbs hanging and mortar and pestle | 将场景设在悬挂干草药和有研钵的中世纪药铺 | Historical / Medieval | Herbal, mysterious |
+| 644 | Replace the background with a 1950s rockabilly dance hall with live band on stage | 将背景替换为有现场乐队的1950年代摇滚乐舞厅 | Historical / 1950s-60s | Rock 'n' roll, swing dance |
+| 645 | Place the subject in an Edo-period Japanese pleasure quarter street with lanterns | 将主体放在有灯笼的江户时代日本花街 | Historical / Medieval | Yoshiwara, evening glow |
+| 646 | Set the background to a 1920s Berlin cabaret with expressionist stage design | 将背景设为有表现主义舞台设计的1920年代柏林歌舞厅 | Historical / 1920s-30s | Weimar, expressionist |
+| 647 | Replace the background with an American frontier log cabin with split rail fence | 将背景替换为有劈木栅栏的美国边疆原木小屋 | Historical / Industrial | Pioneer, frontier |
+| 648 | Place the subject at a 1990s rave warehouse party with laser lights and glow sticks | 将主体放在有激光灯和荧光棒的1990年代仓库锐舞派对 | Historical / 1990s-2000s | Rave, lasers, warehouse |
+| 649 | Set the scene on a medieval pilgrim's road with stone markers and distant cathedral | 将场景设在有石头路标和远处大教堂的中世纪朝圣之路 | Historical / Medieval | Camino, spiritual journey |
+| 650 | Replace the background with a Rococo French salon with pastel murals and gilded furniture | 将背景替换为有粉彩壁画和镀金家具的洛可可法式沙龙 | Historical / Renaissance | Pastel, ornate, lighthearted |
+| 651 | Place the subject in a 1920s Prohibition-era underground speakeasy with jazz quartet | 将主体放在有爵士四重奏的1920年代禁酒令地下酒吧 | Historical / 1920s-30s | Hidden entrance, jazz |
+| 652 | Set the background to a medieval jousting arena with royal spectator boxes draped in heraldry | 将背景设为有纹章装饰皇家观众席的中世纪马上比武场 | Historical / Medieval | Heraldic colors, armor |
+| 653 | Replace the background with a Reconstruction-era American Southern town square | 将背景替换为美国南方重建时代的城镇广场 | Historical / Industrial | Post-Civil War, brick |
+| 654 | Place the subject in an ancient Chinese Dunhuang cave temple with painted murals | 将主体放在有彩色壁画的敦煌古代石窟寺庙中 | Historical / Ancient | Buddhist cave art, vibrant |
+
+---
+
+## 5. Fantasy / Sci-Fi
+
+| # | English Prompt | 中文提示词 | Category | Config Notes |
+|---|---|---|---|---|
+| 655 | Place the subject in an enchanted forest with glowing trees and magical floating particles | 将主体放在有发光树木和魔法悬浮粒子的魔法森林中 | Fantasy / Enchanted | Bioluminescent, mystical |
+| 656 | Set the background to a dragon's lair inside a mountain with treasure hoard and fire | 将背景设为有宝藏和火焰的山中龙穴 | Fantasy / Creatures | Red-gold fire glow, cave |
+| 657 | Replace the background with a wizard's tower interior with floating books and crystal orbs | 将背景替换为有漂浮书籍和水晶球的巫师塔内部 | Fantasy / Magic | Mystical purple glow |
+| 658 | Place the subject in a fairy garden with miniature houses, mushrooms, and glowing wings | 将主体放在有迷你房屋、蘑菇和发光翅膀的仙女花园 | Fantasy / Enchanted | Miniature scale, sparkle |
+| 659 | Set the scene in an underwater palace with pearl columns and bioluminescent sea creatures | 将场景设在有珍珠柱和发光海洋生物的海底宫殿 | Fantasy / Underwater | Deep blue, luminescent |
+| 660 | Replace the background with a crystal cave filled with massive amethyst and quartz formations | 将背景替换为有巨大紫水晶和石英的水晶洞穴 | Fantasy / Geological | Purple crystal glow |
+| 661 | Place the subject in a floating cloud kingdom with castles built on clouds | 将主体放在有城堡建在云端的浮云王国 | Fantasy / Sky | White clouds, golden towers |
+| 662 | Set the background to a whimsical mushroom village with oversized colorful fungi as houses | 将背景设为以超大彩色蘑菇为房屋的奇幻蘑菇村 | Fantasy / Enchanted | Colorful, oversized plants |
+| 663 | Replace the background with the rolling green hills of a hobbit shire with round door homes | 将背景替换为有圆形门房屋的霍比特夏尔绿色山丘 | Fantasy / Tolkien | Green hills, round doors |
+| 664 | Place the subject in an elven forest city with treehouses connected by vine bridges | 将主体放在有藤桥连接树屋的精灵森林城市 | Fantasy / Tolkien | Organic architecture, green |
+| 665 | Set the scene in a dark dungeon with stone corridors, torches, and iron gates | 将场景设在有石走廊、火把和铁门的黑暗地牢 | Fantasy / Dark | Torch-lit, menacing |
+| 666 | Replace the background with a grand magical library with infinite floating bookshelves | 将背景替换为有无限漂浮书架的宏伟魔法图书馆 | Fantasy / Magic | Impossible architecture |
+| 667 | Place the subject on a floating island in the sky with waterfalls cascading into clouds | 将主体放在有瀑布倾泻入云的天空浮岛上 | Fantasy / Sky | Gravity-defying, waterfalls |
+| 668 | Set the background to a phoenix nest on a volcanic peak with flames and golden feathers | 将背景设为有火焰和金色羽毛的火山顶凤凰巢 | Fantasy / Creatures | Fire colors, mythical bird |
+| 669 | Replace the background with a unicorn meadow with rainbow mist and sparkling flowers | 将背景替换为有彩虹雾和闪闪发光花朵的独角兽草地 | Fantasy / Creatures | Pastel rainbow, sparkle |
+| 670 | Place the subject in a magical potion laboratory with bubbling cauldrons and colored smoke | 将主体放在有冒泡大锅和彩色烟雾的魔药实验室 | Fantasy / Magic | Colored smoke, bubbling |
+| 671 | Set the scene on a bridge between two floating islands with starry void below | 将场景设在两座浮岛之间的桥上，下方是星空虚空 | Fantasy / Sky | Vertigo, cosmic void |
+| 672 | Replace the background with an ancient elven ruins overgrown with magical glowing vines | 将背景替换为有魔法发光藤蔓覆盖的古代精灵遗迹 | Fantasy / Tolkien | Ruins, glowing plants |
+| 673 | Place the subject in a frozen ice palace with crystalline walls and aurora overhead | 将主体放在有水晶墙壁和头顶极光的冰冻冰宫 | Fantasy / Ice | Translucent ice, aurora |
+| 674 | Set the background to a magical forest clearing with a stone altar and runic circle | 将背景设为有石祭坛和符文圆圈的魔法森林空地 | Fantasy / Magic | Glowing runes, mystical |
+| 675 | Replace the background with a dark enchanted swamp with glowing eyes in the fog | 将背景替换为雾中有发光眼睛的黑暗魔法沼泽 | Fantasy / Dark | Ominous, green fog |
+| 676 | Place the subject before a massive fantasy castle perched on a cliff above clouds | 将主体放在悬崖上高于云层的巨大奇幻城堡前 | Fantasy / Architecture | Epic scale, cloud base |
+| 677 | Set the scene in a celestial temple floating in space among stars and nebulae | 将场景设在漂浮在星空和星云中的天界神殿 | Fantasy / Cosmic | Cosmic, marble in space |
+| 678 | Replace the background with a mystical mirror lake that reflects a different world | 将背景替换为映射出不同世界的神秘镜面湖 | Fantasy / Magic | Dual reality, reflection |
+| 679 | Place the subject in a garden of giant luminous flowers the size of trees | 将主体放在有树般大小发光巨花的花园中 | Fantasy / Enchanted | Oversized flora, glowing |
+| 680 | Set the background to a throne room carved from a single enormous gemstone | 将背景设为由一块巨大宝石雕刻而成的王座室 | Fantasy / Architecture | Gem interior, refracting |
+| 681 | Replace the background with a haunted dark forest with twisted dead trees and ghostly mist | 将背景替换为有扭曲枯树和幽灵雾气的闹鬼暗黑森林 | Fantasy / Dark | Horror, dark, twisted |
+| 682 | Place the subject on a giant turtle's back that carries an entire village | 将主体放在背上承载整个村庄的巨龟背上 | Fantasy / Creatures | Living landscape, mythical |
+| 683 | Set the scene in a merfolk underwater city with coral architecture and schools of fish | 将场景设在有珊瑚建筑和鱼群的美人鱼水下城市 | Fantasy / Underwater | Coral buildings, ocean blue |
+| 684 | Replace the background with a steampunk clockwork city with massive gears and brass towers | 将背景替换为有巨大齿轮和铜塔的蒸汽朋克钟表城市 | Steampunk | Brass, gears, steam |
+| 685 | Place the subject at a steampunk airship dock with moored dirigibles and brass cranes | 将主体放在有系泊飞艇和铜吊车的蒸汽朋克飞艇码头 | Steampunk | Airships, industrial sky |
+| 686 | Set the background to a steampunk inventor's brass laboratory with pipes and gauges | 将背景设为有管道和仪表的蒸汽朋克发明家铜实验室 | Steampunk | Brass, copper, steam |
+| 687 | Replace the background with a steam-powered factory with massive pistons and smoke stacks | 将背景替换为有巨大活塞和烟囱的蒸汽动力工厂 | Steampunk | Victorian industrial |
+| 688 | Place the subject in a post-apocalyptic city with buildings overgrown by vegetation | 将主体放在建筑被植被覆盖的末日后城市中 | Post-Apocalyptic | Nature reclaiming, ruins |
+| 689 | Set the scene in an abandoned post-apocalyptic city with rusted cars and broken windows | 将场景设在有锈车和碎窗的废弃末日后城市 | Post-Apocalyptic | Decay, rust, desolation |
+| 690 | Replace the background with a fortified survivor's bunker with supplies and dim light | 将背景替换为有物资和昏暗灯光的加固幸存者地堡 | Post-Apocalyptic | Underground, survival |
+| 691 | Place the subject in a post-apocalyptic desert wasteland with wrecked vehicles | 将主体放在有破损车辆的末日后沙漠荒原 | Post-Apocalyptic | Mad Max style, barren |
+| 692 | Set the background to a space station interior with observation windows looking at Earth | 将背景设为有观景窗俯瞰地球的空间站内部 | Sci-Fi / Space | Orbital view, zero gravity |
+| 693 | Replace the background with a Mars colony with domed habitats and red landscape | 将背景替换为有穹顶住所和红色地貌的火星殖民地 | Sci-Fi / Space | Red planet, domes |
+| 694 | Place the subject in a cyberpunk city with towering neon holographic advertisements | 将主体放在有巨大霓虹全息广告的赛博朋克城市 | Sci-Fi / Cyberpunk | Neon, rain, dark |
+| 695 | Set the scene in a dark cyberpunk alley with neon signs, rain, and steam vents | 将场景设在有霓虹灯、雨水和蒸汽口的黑暗赛博朋克小巷 | Sci-Fi / Cyberpunk | Blade Runner style, noir |
+| 696 | Replace the background with a holographic display room with floating 3D interface panels | 将背景替换为有漂浮3D界面面板的全息显示室 | Sci-Fi / Technology | Blue holographic glow |
+| 697 | Place the subject in a time machine laboratory with spinning vortex and control panels | 将主体放在有旋转漩涡和控制面板的时间机器实验室 | Sci-Fi / Technology | Energy vortex, retro-tech |
+| 698 | Set the background to the bridge of a massive spaceship with viewscreen showing stars | 将背景设为有视屏显示星空的巨型宇宙飞船舰桥 | Sci-Fi / Space | Bridge consoles, stars |
+| 699 | Replace the background with a dystopian wasteland under a red polluted sky | 将背景替换为红色污染天空下的反乌托邦荒原 | Sci-Fi / Dystopian | Red sky, desolation |
+| 700 | Place the subject in an underwater dome city with transparent walls and ocean views | 将主体放在有透明墙壁和海景的水下穹顶城市 | Sci-Fi / Underwater | Transparent dome, ocean |
+| 701 | Set the scene on a flying car highway with traffic lanes at different altitudes | 将场景设在不同高度交通车道的飞行汽车高速公路上 | Sci-Fi / Future City | Multi-level traffic |
+| 702 | Replace the background with a robot assembly factory with mechanical arms and sparks | 将背景替换为有机械臂和火花的机器人装配工厂 | Sci-Fi / Technology | Automated, sparks |
+| 703 | Place the subject on the surface of an alien planet with strange rock formations and two suns | 将主体放在有奇异岩石和双太阳的外星球表面 | Sci-Fi / Space | Alien landscape, dual suns |
+| 704 | Set the background to a swirling wormhole portal with energy rings and cosmic light | 将背景设为有能量环和宇宙光芒的旋转虫洞传送门 | Sci-Fi / Space | Energy portal, cosmic |
+| 705 | Replace the background with a digital Matrix-style world of falling green code | 将背景替换为绿色代码下落的数字矩阵风格世界 | Sci-Fi / Digital | Green code rain, dark |
+| 706 | Place the subject in a cryo-sleep chamber bay with rows of stasis pods | 将主体放在有成排休眠舱的冷冻睡眠室 | Sci-Fi / Space | Blue glow, pods, clinical |
+| 707 | Set the scene in a neon-soaked future Tokyo with holographic billboards and rain | 将场景设在有全息广告牌和雨水的霓虹浸染未来东京 | Sci-Fi / Cyberpunk | Japanese neon future |
+| 708 | Replace the background with a terraformed alien garden with bioluminescent alien plants | 将背景替换为有生物荧光外星植物的外星改造花园 | Sci-Fi / Space | Alien flora, glowing |
+| 709 | Place the subject in a virtual reality digital grid landscape with wireframe horizons | 将主体放在有线框地平线的虚拟现实数字网格景观中 | Sci-Fi / Digital | Tron-style, neon grid |
+| 710 | Set the background to a massive generation ship interior with artificial sky and farmland | 将背景设为有人造天空和农田的巨大世代飞船内部 | Sci-Fi / Space | Cylinder world, O'Neill |
+| 711 | Replace the background with a futuristic medical bay with diagnostic screens and robotic arms | 将背景替换为有诊断屏幕和机械臂的未来医疗舱 | Sci-Fi / Technology | Medical tech, sterile blue |
+| 712 | Place the subject in a cyberpunk market with illegal tech vendors and neon umbrella stalls | 将主体放在有非法科技贩子和霓虹伞摊的赛博朋克集市 | Sci-Fi / Cyberpunk | Underground market, neon |
+| 713 | Set the scene on a lunar base with Earth visible through the observation dome | 将场景设在可通过观测穹顶看到地球的月球基地 | Sci-Fi / Space | Lunar surface, Earth view |
+| 714 | Replace the background with a quantum computing laboratory with glowing processor cores | 将背景替换为有发光处理器核心的量子计算实验室 | Sci-Fi / Technology | Blue glow, high-tech |
+| 715 | Place the subject in a bio-mechanical alien corridor with organic-looking walls | 将主体放在有有机外观墙壁的生物机械外星走廊 | Sci-Fi / Alien | Giger-esque, organic-metal |
+| 716 | Set the background to a space elevator ascending from a futuristic city to orbit | 将背景设为从未来城市升至轨道的太空电梯 | Sci-Fi / Future City | Vertical, extreme height |
+| 717 | Replace the background with a sentient mechanical forest with metal trees and wire vines | 将背景替换为有金属树和电线藤蔓的有感知机械森林 | Sci-Fi / Technology | Mechanical nature, eerie |
+| 718 | Place the subject in a zero-gravity chamber with floating objects and light particles | 将主体放在有漂浮物体和光粒子的零重力室 | Sci-Fi / Space | Weightless, particles |
+| 719 | Set the scene inside a giant mecha cockpit with multiple control screens | 将场景设在有多个控制屏幕的巨型机甲驾驶舱内 | Sci-Fi / Technology | Anime mecha, screens |
+| 720 | Replace the background with a solarpunk eco-city with abundant greenery and solar panels | 将背景替换为有丰富绿化和太阳能板的太阳朋克生态城市 | Sci-Fi / Future City | Green tech, utopian |
+| 721 | Place the subject in a dark interdimensional void with floating geometric shapes | 将主体放在有漂浮几何形状的黑暗跨维度虚空中 | Fantasy / Cosmic | Abstract, geometric, dark |
+| 722 | Set the background to an enchanted winter wonderland with ice sculptures and snow fairy dust | 将背景设为有冰雕和雪精灵尘的魔法冬日仙境 | Fantasy / Ice | Sparkling ice, magical |
+| 723 | Replace the background with a magical marketplace selling potions, wands, and spell books | 将背景替换为出售药水、魔杖和咒语书的魔法集市 | Fantasy / Magic | Diagon Alley feel |
+| 724 | Place the subject in front of a massive fantasy world tree reaching into the sky | 将主体放在直入云天的巨大奇幻世界之树前 | Fantasy / Nature | Yggdrasil, massive tree |
+| 725 | Set the scene in a vampire's Gothic castle with red velvet and candelabras | 将场景设在有红色天鹅绒和枝形烛台的吸血鬼哥特城堡 | Fantasy / Dark | Gothic horror, red-black |
+| 726 | Replace the background with a futuristic neon-lit underground fighting arena | 将背景替换为有霓虹灯的未来地下格斗场 | Sci-Fi / Cyberpunk | Arena, neon, crowd |
+| 727 | Place the subject on a rainbow bridge connecting two floating islands | 将主体放在连接两座浮岛的彩虹桥上 | Fantasy / Sky | Bifrost-inspired, spectrum |
+| 728 | Set the background to a mystical desert with gigantic ancient ruins half-buried in sand | 将背景设为有半埋沙中的巨大古代遗迹的神秘沙漠 | Fantasy / Architecture | Ancient mystery, sand |
+| 729 | Replace the background with a fairy ring of mushrooms in moonlit forest with pixie dust | 将背景替换为月光森林中有精灵粉的蘑菇仙环 | Fantasy / Enchanted | Moonlit, fairy circle |
+| 730 | Place the subject in a magical greenhouse with plants that move and glow | 将主体放在有会移动和发光植物的魔法温室 | Fantasy / Magic | Living plants, greenhouse |
+| 731 | Set the scene on the back of a massive flying whale soaring through candy-colored clouds | 将场景设在穿越糖果色云彩的巨大飞鲸背上 | Fantasy / Creatures | Whimsical, surreal |
+| 732 | Replace the background with a dwarven underground forge city with lava rivers and anvils | 将背景替换为有熔岩河和铁砧的矮人地下锻造城市 | Fantasy / Tolkien | Molten metal, underground |
+| 733 | Place the subject in a crystal palace throne room with prismatic light refractions | 将主体放在有棱镜光折射的水晶宫殿王座室 | Fantasy / Architecture | Rainbow refractions, crystal |
+| 734 | Set the background to a witch's cottage in a spooky forest with bubbling cauldron outside | 将背景设为恐怖森林中有户外冒泡大锅的女巫小屋 | Fantasy / Dark | Fairy tale, spooky |
+| 735 | Replace the background with a samurai fantasy battlefield with cherry blossoms and katanas | 将背景替换为有樱花和武士刀的武士幻想战场 | Fantasy / Asian | Japanese fantasy, dynamic |
+| 736 | Place the subject in a wuxia-style cliff-edge martial arts training ground in the clouds | 将主体放在云中悬崖边的武侠风格练功场 | Fantasy / Asian | Chinese martial arts, mist |
+| 737 | Set the scene in a magical Chinese celestial palace above the clouds with jade pillars | 将场景设在有玉柱的云上中国仙宫 | Fantasy / Asian | Xianxia, celestial |
+| 738 | Replace the background with an enchanted ancient Chinese mountain with flying cranes | 将背景替换为有仙鹤飞翔的仙境古代中国山脉 | Fantasy / Asian | Chinese immortal mountain |
+| 739 | Place the subject in a solarpunk treehouse city with bridges and solar-powered tech | 将主体放在有桥梁和太阳能科技的太阳朋克树屋城市 | Sci-Fi / Future City | Organic-tech fusion |
+| 740 | Set the background to a ruined android factory with half-assembled humanoid robots | 将背景设为有半组装人形机器人的废弃机器人工厂 | Sci-Fi / Technology | Abandoned, eerie |
+| 741 | Replace the background with a massive sci-fi ringworld stretching across the sky | 将背景替换为横跨天际的巨型科幻环形世界 | Sci-Fi / Space | Halo-style ring, cosmic |
+| 742 | Place the subject in a biopunk laboratory with organic growth tanks and gene splicing equipment | 将主体放在有有机生长槽和基因剪接设备的生物朋克实验室 | Sci-Fi / Technology | Organic, green fluid |
+| 743 | Set the scene in a retro-futuristic 1960s-imagined space station with round windows | 将场景设在有圆形窗户的1960年代幻想复古未来空间站 | Sci-Fi / Space | Retro-futurism, round forms |
+| 744 | Replace the background with a magical aurora sky world with floating crystal islands | 将背景替换为有漂浮水晶岛的魔幻极光天空世界 | Fantasy / Sky | Aurora, crystal, cosmic |
+| 745 | Place the subject in a hidden underground lake cavern with glowing stalactites | 将主体放在有发光钟乳石的隐秘地下湖洞穴 | Fantasy / Geological | Cavern, glow, reflection |
+| 746 | Set the background to a magical candy land with gingerbread houses and lollipop trees | 将背景设为有姜饼屋和棒棒糖树的魔法糖果世界 | Fantasy / Enchanted | Sweet, colorful, childlike |
+| 747 | Replace the background with a dark cosmic void with floating ancient ruins and starlight | 将背景替换为有漂浮古代遗迹和星光的黑暗宇宙虚空 | Fantasy / Cosmic | Space ruins, ethereal |
+| 748 | Place the subject in a clockpunk city with giant astronomical clock towers | 将主体放在有巨大天文钟塔的机关朋克城市 | Steampunk | Prague clock, mechanical |
+| 749 | Set the scene on an alien planet with crystalline trees and twin moons in purple sky | 将场景设在有水晶树和紫色天空双月的外星球 | Sci-Fi / Space | Alien biome, purple sky |
+| 750 | Replace the background with a neon-drenched future Chinatown with holographic dragons | 将背景替换为有全息龙的霓虹浸染未来唐人街 | Sci-Fi / Cyberpunk | Asian-cyberpunk fusion |
+| 751 | Place the subject in a surreal Dalí-inspired dreamscape with melting clocks and distorted space | 将主体放在有融化时钟和扭曲空间的达利风超现实梦境 | Fantasy / Surreal | Surrealist art style |
+| 752 | Set the background to an M.C. Escher-style impossible architecture with endless staircases | 将背景设为有无尽阶梯的埃舍尔风格不可能建筑 | Fantasy / Surreal | Impossible geometry |
+| 753 | Replace the background with an ancient magical observatory with brass telescopes and star maps | 将背景替换为有铜望远镜和星图的古代魔法天文台 | Fantasy / Magic | Celestial, antique brass |
+| 754 | Place the subject in a cyberpunk night city with rain and massive video screens on buildings | 将主体放在有雨和巨大视频屏幕的赛博朋克夜城 | Sci-Fi / Cyberpunk | Dystopian urban, rain |
+| 755 | Set the scene in a floating steampunk greenhouse with propellers and brass frame | 将场景设在有螺旋桨和铜框架的漂浮蒸汽朋克温室 | Steampunk | Flying greenhouse, plants |
+| 756 | Replace the background with a magical autumn forest where the leaves are made of gold | 将背景替换为树叶由纯金制成的魔法秋天森林 | Fantasy / Enchanted | Literal gold leaves |
+| 757 | Place the subject in the ruins of a spaceship crashed on a jungle planet | 将主体放在坠毁在丛林星球上的飞船废墟中 | Sci-Fi / Space | Wreckage, overgrown |
+| 758 | Set the background to a Norse mythology realm of Asgard with rainbow bridge and golden halls | 将背景设为有彩虹桥和金色大厅的北欧神话阿斯加德 | Fantasy / Mythology | Norse, Bifrost, gold |
+| 759 | Replace the background with a floating city on anti-gravity platforms above a planet | 将背景替换为在反重力平台上的星球上方悬浮城市 | Sci-Fi / Future City | Floating platforms, sky |
+| 760 | Place the subject in a dream realm with floating islands and inverted waterfalls | 将主体放在有浮岛和倒流瀑布的梦境领域 | Fantasy / Surreal | Inverted physics |
+| 761 | Set the scene in a magical school hallway with moving portraits and floating candles | 将场景设在有移动肖像和漂浮蜡烛的魔法学校走廊 | Fantasy / Magic | Hogwarts-inspired |
+| 762 | Replace the background with a kaiju-scale creature in a destroyed cityscape | 将背景替换为有巨型怪兽的被摧毁城市景观 | Sci-Fi / Creatures | Massive scale, destruction |
+| 763 | Place the subject in a tranquil fantasy oasis with a tree of life and crystal-clear spring | 将主体放在有生命之树和清澈泉水的宁静奇幻绿洲 | Fantasy / Nature | Sacred, peaceful glow |
+| 764 | Set the background to an abandoned space colony with derelict equipment and dust | 将背景设为有废弃设备和灰尘的荒废太空殖民地 | Sci-Fi / Space | Abandoned, derelict |
+| 765 | Replace the background with a magical Northern Lights display with spirit animals in the aurora | 将背景替换为极光中有精灵动物的魔幻北极光 | Fantasy / Sky | Aurora spirits, mythical |
+| 766 | Place the subject in an interdimensional library with portals to other worlds as bookshelves | 将主体放在以通往其他世界的传送门为书架的跨维度图书馆 | Fantasy / Magic | Multiple portals, cosmic |
+| 767 | Set the scene at the edge of a flat world with waterfalls cascading into the void of space | 将场景设在平面世界边缘，瀑布倾泻入太空虚空 | Fantasy / Surreal | Discworld concept, edge |
+| 768 | Replace the background with a neon-lit futuristic ramen shop with robot chef | 将背景替换为有机器人厨师的霓虹灯未来拉面店 | Sci-Fi / Cyberpunk | Intimate cyberpunk, food |
+| 769 | Place the subject in a steampunk Victorian London with airships overhead and brass street lamps | 将主体放在有飞艇和铜街灯的蒸汽朋克维多利亚伦敦 | Steampunk | Victorian-tech fusion |
+| 770 | Set the background to a magical mirror dimension where everything is reflected and crystalline | 将背景设为一切都是反射和结晶的魔法镜面维度 | Fantasy / Surreal | Reflective, kaleidoscope |
+
+---
+
+## 6. Weather & Season
+
+| # | English Prompt | 中文提示词 | Category | Config Notes |
+|---|---|---|---|---|
+| 771 | Place the subject under cherry blossom trees in full spring bloom with petals falling | 将主体放在花瓣飘落的盛开春天樱花树下 | Season / Spring | Pink petals, soft light |
+| 772 | Set the background to a vibrant tulip field in spring with rows of red, yellow, and purple | 将背景设为春天红黄紫郁金香整齐排列的花田 | Season / Spring | Colorful rows, fresh |
+| 773 | Replace the background with a spring rainy day scene with puddles reflecting a gray sky | 将背景替换为水洼倒映灰色天空的春雨天场景 | Season / Spring | Wet, reflections, gray |
+| 774 | Place the subject in a fresh green spring landscape with new buds on trees | 将主体放在树枝抽新芽的翠绿春日景观中 | Season / Spring | Fresh green, new growth |
+| 775 | Set the scene on a dewy spring morning with water droplets on flowers and grass | 将场景设在花草上有水珠的春天清晨 | Season / Spring | Macro dew drops, fresh |
+| 776 | Replace the background with a spring meadow with lambs and daffodils | 将背景替换为有小羊和水仙花的春天草甸 | Season / Spring | Pastoral, new life |
+| 777 | Place the subject in a wisteria-draped garden archway in late spring | 将主体放在晚春紫藤垂挂的花园拱门下 | Season / Spring | Purple cascade, arch |
+| 778 | Set the background to a bright sunny summer beach with clear blue sky and hot sand | 将背景设为晴朗蓝天和滚烫沙子的明亮夏日海滩 | Season / Summer | Bright, high-key, warm |
+| 779 | Replace the background with a summer heat haze shimmering over a hot road | 将背景替换为炎热道路上闪烁的夏日热浪 | Season / Summer | Distorted heat haze, hot |
+| 780 | Place the subject under a dramatic summer thunderstorm with dark clouds and lightning | 将主体放在有乌云和闪电的夏日暴风雷雨下 | Season / Summer | Dark sky, lightning flash |
+| 781 | Set the scene in a tropical summer rain with large warm raindrops and lush greenery | 将场景设在有温暖大雨滴和茂盛绿植的热带夏雨中 | Season / Summer | Warm rain, tropical green |
+| 782 | Replace the background with a golden hour summer evening with long shadows on grass | 将背景替换为草地上长影的夏日金色时刻傍晚 | Season / Summer | Golden, long shadows |
+| 783 | Place the subject in a summer sunflower field under brilliant blue sky | 将主体放在灿烂蓝天下的夏日向日葵花田 | Season / Summer | Yellow, blue, vibrant |
+| 784 | Set the background to a summer lakeside scene with dock and clear calm water | 将背景设为有码头和清澈平静水面的夏日湖畔 | Season / Summer | Calm lake, hot afternoon |
+| 785 | Replace the background with an autumn forest with leaves in red, orange, and gold | 将背景替换为有红色、橙色和金色叶子的秋天森林 | Season / Autumn | Full autumn palette |
+| 786 | Place the subject in a golden autumn harvest wheat field ready for reaping | 将主体放在准备收割的金色秋天麦田中 | Season / Autumn | Golden harvest, ripe |
+| 787 | Set the scene on a foggy autumn morning with mist rising from a lake | 将场景设在雾气从湖面升起的秋日迷雾清晨 | Season / Autumn | Fog, soft, muted colors |
+| 788 | Replace the background with a pumpkin patch in late autumn with orange and green | 将背景替换为有橙色和绿色的晚秋南瓜田 | Season / Autumn | Pumpkins, harvest |
+| 789 | Place the subject on a path through a golden forest with fallen leaves covering the ground | 将主体放在落叶铺地的金色森林小径上 | Season / Autumn | Leaf-covered path, golden |
+| 790 | Set the background to autumn vineyard rows with warm copper and burgundy foliage | 将背景设为暖铜色和酒红色叶子的秋天葡萄园 | Season / Autumn | Wine country autumn tones |
+| 791 | Replace the background with maple trees in peak autumn color along a New England road | 将背景替换为新英格兰公路边枫叶红透的秋天 | Season / Autumn | Peak foliage, fiery |
+| 792 | Place the subject in a heavy winter snowfall with large fluffy snowflakes falling | 将主体放在大片蓬松雪花飘落的冬日大雪中 | Season / Winter | Heavy snow, white |
+| 793 | Set the scene on a frost-covered landscape with ice crystals on every surface | 将场景设在每个表面都有冰晶的霜冻景观 | Season / Winter | Frost patterns, cold |
+| 794 | Replace the background with long icicles hanging from a roof with winter sunlight | 将背景替换为冬日阳光下屋顶垂挂的长冰柱 | Season / Winter | Ice refraction, sun |
+| 795 | Place the subject inside looking out through a frosty window at a snowy landscape | 将主体放在从结霜窗户向外看雪景的室内 | Season / Winter | Window frost, warm inside |
+| 796 | Set the background to a winter wonderland with snow-covered evergreen trees and soft light | 将背景设为有白雪覆盖常青树和柔和光线的冬日仙境 | Season / Winter | Soft, white, magical |
+| 797 | Replace the background with a quaint Christmas village in snow with warm glowing windows | 将背景替换为有温暖窗户灯光的雪中圣诞小镇 | Season / Winter | Christmas card scene |
+| 798 | Place the subject on an outdoor ice skating rink surrounded by snow-covered trees | 将主体放在白雪覆盖树木环绕的户外溜冰场 | Season / Winter | Ice, winter sport |
+| 799 | Set the scene in a light drizzle rain with gray sky and wet streets | 将场景设在灰色天空和湿街道的小雨蒙蒙中 | Weather / Rain | Light rain, gray |
+| 800 | Replace the background with a torrential downpour with sheets of rain and dark sky | 将背景替换为有雨幕和暗天的倾盆大雨 | Weather / Rain | Heavy rain, dramatic |
+| 801 | Place the subject in a misty foggy landscape with barely visible surroundings | 将主体放在几乎看不到周围的雾气迷蒙景观中 | Weather / Rain | Dense fog, mystery |
+| 802 | Set the background to a thick morning fog slowly lifting over a rural landscape | 将背景设为乡村景观上缓缓散去的浓重晨雾 | Weather / Rain | Fog lifting, revelation |
+| 803 | Replace the background with a light snow flurry with a few snowflakes dancing in air | 将背景替换为几片雪花在空中飞舞的轻微飘雪 | Weather / Snow | Light, delicate flurries |
+| 804 | Place the subject in a violent blizzard with zero visibility and swirling white | 将主体放在能见度为零、白色旋风的暴风雪中 | Weather / Snow | Whiteout, extreme |
+| 805 | Set the scene on a gentle breezy day with wind moving grass and hair | 将场景设在微风吹动草地和头发的和煦天气 | Weather / Wind | Gentle movement, soft |
+| 806 | Replace the background with a strong windstorm bending trees and blowing debris | 将背景替换为大风吹弯树木和碎片的强烈风暴 | Weather / Wind | Dramatic wind force |
+| 807 | Place the subject in direct bright sunshine with strong sharp shadows | 将主体放在有强烈锐利阴影的明亮直射阳光下 | Weather / Sunny | High contrast, sharp |
+| 808 | Set the background to dappled sunlight filtering through tree leaves onto the ground | 将背景设为透过树叶在地面形成斑驳光影的阳光 | Weather / Sunny | Dappled, forest floor |
+| 809 | Replace the background with the golden warm light of the magic hour before sunset | 将背景替换为日落前魔幻时刻的温暖金色光线 | Weather / Sunny | Magic hour, warm glow |
+| 810 | Place the subject under a completely overcast gray sky with flat even lighting | 将主体放在完全阴天的灰色天空和平坦均匀光线下 | Weather / Cloudy | Flat light, no shadows |
+| 811 | Set the scene under partly cloudy skies with dramatic cloud formations and blue patches | 将场景设在有壮观云层和蓝色天空的多云天气下 | Weather / Cloudy | Dynamic sky, contrast |
+| 812 | Replace the background with dramatic dark thunderclouds building before a storm | 将背景替换为暴风雨前堆积的戏剧性黑暗雷云 | Weather / Cloudy | Ominous, dark, tension |
+| 813 | Place the subject during a lightning storm with multiple bolts striking the horizon | 将主体放在多道闪电击在地平线的雷暴中 | Weather / Storm | Multiple lightning, danger |
+| 814 | Set the background to a tornado funnel cloud descending from a green-tinged storm sky | 将背景设为从绿色调暴风天空下降的龙卷风漏斗云 | Weather / Storm | Green sky, tornado |
+| 815 | Replace the background with a hailstorm with ice pellets bouncing off surfaces | 将背景替换为冰雹弹跳的冰雹暴 | Weather / Storm | Ice, impact, dramatic |
+| 816 | Place the subject in a sandstorm in the desert with orange-brown dust clouds | 将主体放在有橙棕色沙尘云的沙漠沙暴中 | Weather / Storm | Orange dust, low visibility |
+| 817 | Set the scene after a fresh rain with sparkling wet surfaces and rainbow | 将场景设在雨后闪亮湿地面和彩虹的场景 | Weather / Rain | Post-rain, fresh, rainbow |
+| 818 | Replace the background with crepuscular rays breaking through clouds onto a landscape | 将背景替换为穿过云层照射大地的丁达尔光线 | Weather / Sunny | God rays, volumetric |
+| 819 | Place the subject in a dust devil spinning across a dry field | 将主体放在干旱田野上旋转的小型龙卷风旁 | Weather / Wind | Swirling dust, dry |
+| 820 | Set the background to a calm morning after snowfall with pristine untouched white snow | 将背景设为降雪后原始未被触碰的白雪宁静清晨 | Weather / Snow | Pristine, peaceful, white |
+| 821 | Replace the background with a double rainbow after a summer rainstorm over green hills | 将背景替换为夏日暴雨后绿山上的双彩虹 | Weather / Rain | Double rainbow, vivid |
+| 822 | Place the subject in freezing rain with ice coating on tree branches and fences | 将主体放在有冰层覆盖树枝和栅栏的冻雨中 | Weather / Snow | Ice-glazed, transparent |
+| 823 | Set the scene during a monsoon rain with tropical vegetation bending under heavy water | 将场景设在热带植被在大雨下弯曲的季风雨中 | Weather / Rain | Tropical monsoon, intense |
+| 824 | Replace the background with a fog-covered bridge at night with diffused street lamps | 将背景替换为有弥散路灯的夜间雾中桥梁 | Weather / Rain | Fog, night, diffused light |
+| 825 | Place the subject in early morning light with long blue shadows and warm highlights | 将主体放在有长蓝色阴影和暖高光的早晨光线中 | Weather / Sunny | Blue shadow, warm highlight |
+| 826 | Set the background to a fiery red sunset with cirrus clouds stretched across the sky | 将背景设为有卷云横跨天空的火红日落 | Weather / Sunny | Red sunset, wispy clouds |
+| 827 | Replace the background with a spring shower with sun still shining through thin rain | 将背景替换为阳光仍然透过薄雨的春天阵雨 | Weather / Rain | Sun-shower, bright rain |
+| 828 | Place the subject in deep winter twilight with purple-blue sky and first stars | 将主体放在有紫蓝色天空和初现星辰的深冬暮色中 | Season / Winter | Twilight purple-blue |
+| 829 | Set the scene during an ice storm with everything coated in clear ice | 将场景设在一切都覆盖透明冰层的冰暴中 | Weather / Snow | Glass-like ice coating |
+| 830 | Replace the background with wind-blown autumn leaves swirling in a city street | 将背景替换为秋叶在城市街道上随风旋转 | Season / Autumn | Dynamic leaf movement |
+| 831 | Place the subject in a warm summer afternoon with cicada season haze | 将主体放在有蝉鸣季节薄雾的温暖夏日午后 | Season / Summer | Hazy, warm, lazy |
+| 832 | Set the background to a frost flower pattern on a window pane in winter morning light | 将背景设为冬日晨光中窗玻璃上的霜花图案 | Season / Winter | Macro frost crystals |
+| 833 | Replace the background with a blossoming orchard in spring with white petals on grass | 将背景替换为白色花瓣洒落草地的春天盛开果园 | Season / Spring | White blossoms, orchard |
+| 834 | Place the subject in a summer wildfire smoke haze with orange-tinted sky | 将主体放在有橙色天空的夏日野火烟雾中 | Weather / Storm | Orange haze, smoky |
+| 835 | Set the scene during a coastal storm with massive waves crashing against a seawall | 将场景设在巨浪拍打海堤的海岸风暴中 | Weather / Storm | Huge waves, spray |
+| 836 | Replace the background with a gentle autumn rain in a park with colored leaves on wet path | 将背景替换为公园中彩色落叶在湿路上的秋天细雨 | Season / Autumn | Rainy autumn, wet leaves |
+| 837 | Place the subject in a winter forest during a gentle snowfall at dusk | 将主体放在黄昏轻柔降雪的冬天森林中 | Season / Winter | Quiet, snowy dusk |
+| 838 | Set the background to a spring cherry blossom rain with thousands of petals in the wind | 将背景设为千万花瓣随风飘舞的春天樱花雨 | Season / Spring | Petal blizzard, pink |
+| 839 | Replace the background with bright autumn foliage reflected in a still pond | 将背景替换为静静池塘倒映的明亮秋叶 | Season / Autumn | Mirror reflection, autumn |
+| 840 | Place the subject during blue hour in winter with deep blue sky and white landscape | 将主体放在冬天蓝色时刻的深蓝天空和白色景观中 | Season / Winter | Blue hour, winter blue |
+| 841 | Set the scene in a field of plum blossoms in early spring with soft pink and white | 将场景设在有柔和粉白色的早春梅花田 | Season / Spring | Plum blossom, delicate |
+| 842 | Replace the background with a tropical sunset storm with dark ocean and orange break in clouds | 将背景替换为暗海上云层裂缝透出橙光的热带日落暴风雨 | Weather / Storm | Contrast dark-orange |
+| 843 | Place the subject under a canopy of autumn ginkgo leaves in golden yellow | 将主体放在金黄色秋天银杏叶的树冠下 | Season / Autumn | Golden ginkgo, uniform |
+| 844 | Set the background to early spring thaw with melting snow and emerging green shoots | 将背景设为融雪和绿芽萌发的早春解冻 | Season / Spring | Transition, melt-green |
+| 845 | Replace the background with a summer night sky full of fireflies in a dark garden | 将背景替换为暗夜花园中萤火虫飞舞的夏夜天空 | Season / Summer | Bioluminescent, night |
+| 846 | Place the subject in a late autumn bare-branched forest with gray sky and fallen leaves | 将主体放在灰色天空和落叶的晚秋枯枝森林 | Season / Autumn | Bare branches, somber |
+| 847 | Set the scene during a spring thunderstorm with dramatic clouds and fresh green | 将场景设在有戏剧性云层和新绿的春天雷暴 | Season / Spring | Spring storm, contrast |
+| 848 | Replace the background with a midsummer midnight sun landscape in Scandinavia | 将背景替换为斯堪的纳维亚仲夏午夜太阳景观 | Season / Summer | Midnight sun, golden |
+| 849 | Place the subject in a winter morning sunrise with pink sky over frozen landscape | 将主体放在冰冻景观上粉色天空的冬日晨曦 | Season / Winter | Pink dawn, frozen white |
+| 850 | Set the background to a humid summer tropical greenhouse atmosphere with condensation | 将背景设为有冷凝水的潮湿夏日热带温室氛围 | Season / Summer | Humid, moisture, lush |
+
+---
+
+## 7. Specific Landmarks
+
+| # | English Prompt | 中文提示词 | Category | Config Notes |
+|---|---|---|---|---|
+| 851 | Place the subject at the Great Wall of China stretching over mountain ridges in autumn | 将主体放在秋天延伸过山脊的中国万里长城 | Landmarks / China | Autumn colors, stone wall |
+| 852 | Set the background to the Forbidden City's Gate of Supreme Harmony with red walls | 将背景设为红墙的紫禁城太和门 | Landmarks / China | Imperial red-gold, grand |
+| 853 | Replace the background with the Temple of Heaven's circular blue-roofed prayer hall | 将背景替换为天坛蓝色圆顶祈年殿 | Landmarks / China | Blue tiles, circular |
+| 854 | Place the subject beside West Lake in Hangzhou with the Broken Bridge and willows | 将主体放在杭州西湖断桥和柳树旁 | Landmarks / China | Classic Chinese landscape |
+| 855 | Set the scene amid the towering sandstone pillars of Zhangjiajie National Forest | 将场景设在张家界国家森林公园的高耸砂岩石柱中 | Landmarks / China | Avatar mountains, mist |
+| 856 | Replace the background with Huangshan (Yellow Mountain) sea of clouds and pine trees | 将背景替换为黄山云海和松树 | Landmarks / China | Iconic Chinese mountain |
+| 857 | Place the subject on a bamboo raft on the Li River with karst peaks in background | 将主体放在以喀斯特山峰为背景的漓江竹筏上 | Landmarks / China | Guilin karst, river |
+| 858 | Set the background to the Potala Palace on its mountain in Lhasa under blue sky | 将背景设为蓝天下拉萨山上的布达拉宫 | Landmarks / China | Tibetan palace, mountain |
+| 859 | Replace the background with the Shanghai Bund waterfront with historic colonial buildings | 将背景替换为有历史殖民建筑的上海外滩 | Landmarks / China | Bund skyline, river |
+| 860 | Place the subject with the Guilin karst mountain landscape along the river | 将主体放在沿河的桂林喀斯特山景中 | Landmarks / China | Karst peaks, river boat |
+| 861 | Set the scene at Jiuzhaigou Valley with turquoise lakes and colorful forests | 将场景设在九寨沟碧绿湖泊和彩色森林中 | Landmarks / China | Turquoise pools, nature |
+| 862 | Replace the background with a classical Suzhou garden with scholar rocks and moon gate | 将背景替换为有太湖石和月拱门的苏州古典园林 | Landmarks / China | Scholar garden, refined |
+| 863 | Place the subject at the Terracotta Army excavation site in Xi'an | 将主体放在西安兵马俑发掘现场 | Landmarks / China | Ranks of clay soldiers |
+| 864 | Set the background to the Zhangye Danxia rainbow-colored rock formations | 将背景设为张掖丹霞彩虹色岩石地貌 | Landmarks / China | Rainbow mountains, striped |
+| 865 | Replace the background with the Three Gorges of the Yangtze River with steep cliffs | 将背景替换为有陡峭悬崖的长江三峡 | Landmarks / China | River gorge, vertical |
+| 866 | Place the subject at the Hong Kong Victoria Peak overlooking the harbor and skyline | 将主体放在俯瞰海港和天际线的香港太平山顶 | Landmarks / China | City panorama, harbor |
+| 867 | Set the scene at the Leshan Giant Buddha carved into the cliff face | 将场景设在刻在岩壁上的乐山大佛 | Landmarks / China | Massive scale, stone |
+| 868 | Replace the background with Mount Fuji with cherry blossoms and Chureito Pagoda | 将背景替换为有樱花和忠灵塔的富士山 | Landmarks / Japan | Iconic Japan composition |
+| 869 | Place the subject walking through the Fushimi Inari thousand vermilion torii gates | 将主体放在穿过伏见稻荷千本�的朱红色鸟居中 | Landmarks / Japan | Red tunnel, repetition |
+| 870 | Set the background to the golden Kinkaku-ji pavilion reflected in its mirror pond | 将背景设为倒映在镜池中的金色金阁寺 | Landmarks / Japan | Gold reflection, zen |
+| 871 | Replace the background with the Arashiyama bamboo grove pathway in Kyoto | 将背景替换为京都岚山竹林小径 | Landmarks / Japan | Tall bamboo, green path |
+| 872 | Place the subject at Shibuya Crossing in Tokyo with crowd flow and neon signs | 将主体放在有人潮和霓虹灯的东京涩谷十字路口 | Landmarks / Japan | World's busiest crossing |
+| 873 | Set the scene at Osaka Castle surrounded by cherry blossom trees in spring | 将场景设在春天樱花树环绕的大阪城 | Landmarks / Japan | Castle, sakura, blue sky |
+| 874 | Replace the background with the floating Miyajima torii gate at high tide | 将背景替换为涨潮时漂浮在水中的宫岛鸟居 | Landmarks / Japan | Floating gate, reflection |
+| 875 | Place the subject at Gyeongbokgung Palace in Seoul with mountains behind | 将主体放在有山脉为背景的首尔景福宫 | Landmarks / Korea | Korean palace, mountains |
+| 876 | Set the background to the traditional Bukchon Hanok Village with Korean wooden houses | 将背景设为有韩式木屋的传统北村韩屋村 | Landmarks / Korea | Traditional Korean houses |
+| 877 | Replace the background with N Seoul Tower on Namsan Mountain at night with city lights | 将背景替换为夜晚有城市灯光的南山N首尔塔 | Landmarks / Korea | Tower, night city panorama |
+| 878 | Place the subject on Jeju Island with volcanic rock coastline and blue ocean | 将主体放在有火山岩海岸和蓝色海洋的济州岛 | Landmarks / Korea | Volcanic coast, tropical |
+| 879 | Set the scene at Angkor Wat temple at sunrise with reflection in moat | 将场景设在日出时倒映在护城河中的吴哥窟 | Landmarks / Southeast Asia | Sunrise silhouette, reflection |
+| 880 | Replace the background with Bali Tegallalang rice terraces with morning mist | 将背景替换为有晨雾的巴厘岛德格拉朗梯田 | Landmarks / Southeast Asia | Green terraces, palm trees |
+| 881 | Place the subject on a boat in Ha Long Bay with limestone karst islands | 将主体放在下龙湾石灰岩喀斯特岛屿中的船上 | Landmarks / Southeast Asia | Emerald water, karst |
+| 882 | Set the background to Bangkok's Grand Palace with ornate golden spires | 将背景设为有华丽金色尖塔的曼谷大皇宫 | Landmarks / Southeast Asia | Gold, ornate Thai detail |
+| 883 | Replace the background with the ancient Borobudur Buddhist temple in Java at dawn | 将背景替换为黎明时分爪哇婆罗浮屠佛教寺庙 | Landmarks / Southeast Asia | Stupas, volcanic backdrop |
+| 884 | Place the subject at the Petronas Twin Towers in Kuala Lumpur at night | 将主体放在夜晚吉隆坡双子塔前 | Landmarks / Southeast Asia | Twin towers, illuminated |
+| 885 | Set the scene at the Eiffel Tower from the Trocadéro gardens at golden hour | 将场景设在金色时刻从特罗卡德罗花园看向的埃菲尔铁塔 | Landmarks / Europe | Iconic Paris, golden light |
+| 886 | Replace the background with the Roman Colosseum at sunset with warm stone tones | 将背景替换为日落时暖色调石材的罗马斗兽场 | Landmarks / Europe | Ancient Rome, golden |
+| 887 | Place the subject on the white and blue cliff-side buildings of Santorini with Aegean Sea | 将主体放在有爱琴海的圣托里尼白蓝悬崖建筑上 | Landmarks / Europe | White-blue, sea view |
+| 888 | Set the background to Tower Bridge in London spanning the Thames at dusk | 将背景设为黄昏时跨越泰晤士河的伦敦塔桥 | Landmarks / Europe | Gothic towers, bridge |
+| 889 | Replace the background with Neuschwanstein Castle in Bavaria surrounded by autumn forest | 将背景替换为秋天森林环绕的巴伐利亚新天鹅堡 | Landmarks / Europe | Fairy tale castle, autumn |
+| 890 | Place the subject in front of Sagrada Familia in Barcelona with its ornate facade | 将主体放在巴塞罗那圣家堂华丽立面前 | Landmarks / Europe | Gaudi, organic Gothic |
+| 891 | Set the scene at Stonehenge on Salisbury Plain at sunrise with long shadows | 将场景设在日出时长影下索尔兹伯里平原的巨石阵 | Landmarks / Europe | Megalithic, sunrise |
+| 892 | Replace the background with the Acropolis and Parthenon atop the hill overlooking Athens | 将背景替换为俯瞰雅典的山顶卫城和帕特农神庙 | Landmarks / Europe | Classical Greece, marble |
+| 893 | Place the subject on the Amalfi Coast road with colorful clifftop villages | 将主体放在有彩色悬崖小镇的阿马尔菲海岸公路上 | Landmarks / Europe | Coastal road, pastel towns |
+| 894 | Set the background to the Swiss Alps with Matterhorn peak and alpine meadow | 将背景设为有马特洪峰和高山草甸的瑞士阿尔卑斯 | Landmarks / Europe | Iconic peak, green meadow |
+| 895 | Replace the background with Norwegian fjord landscape with steep cliffs and blue water | 将背景替换为陡峭悬崖和蓝色水域的挪威峡湾 | Landmarks / Europe | Deep fjord, dramatic |
+| 896 | Place the subject in the Austrian village of Hallstatt reflected in the lake | 将主体放在倒映在湖中的奥地利哈尔施塔特村 | Landmarks / Europe | Lake reflection, alpine |
+| 897 | Set the scene at the windmills of Kinderdijk in the Netherlands at sunset | 将场景设在日落时荷兰小孩堤防的风车 | Landmarks / Europe | Windmills, canal, sunset |
+| 898 | Replace the background with the Blue Mosque in Istanbul with its six minarets | 将背景替换为有六座宣礼塔的伊斯坦布尔蓝色清真寺 | Landmarks / Europe | Blue tiles, Islamic |
+| 899 | Place the subject at the Trevi Fountain in Rome with baroque sculptural detail | 将主体放在有巴洛克雕塑的罗马特莱维喷泉前 | Landmarks / Europe | Baroque, water sculpture |
+| 900 | Set the background to the Cinque Terre colorful coastal villages in Italy | 将背景设为意大利五渔村彩色海岸村庄 | Landmarks / Europe | Stacked colorful houses |
+| 901 | Replace the background with Mont Saint-Michel rising from the tidal flat at golden hour | 将背景替换为金色时刻从潮汐平原升起的圣米歇尔山 | Landmarks / Europe | Tidal island, Gothic |
+| 902 | Place the subject at the Charles Bridge in Prague with statues and castle in background | 将主体放在有雕像和城堡背景的布拉格查理大桥 | Landmarks / Europe | Gothic bridge, statues |
+| 903 | Set the scene at the Alhambra palace in Granada with Moorish architecture and gardens | 将场景设在有摩尔式建筑和花园的格拉纳达阿尔罕布拉宫 | Landmarks / Europe | Islamic geometric, gardens |
+| 904 | Replace the background with the Plitvice Lakes cascading turquoise waterfalls in Croatia | 将背景替换为克罗地亚普利特维采湖碧绿瀑布群 | Landmarks / Europe | Turquoise cascades, forest |
+| 905 | Place the subject at the Rialto Bridge over the Grand Canal in Venice | 将主体放在威尼斯大运河上的里亚托桥 | Landmarks / Europe | Arched bridge, gondolas |
+| 906 | Set the background to the Northern Lights over Lofoten Islands in Norway | 将背景设为挪威罗弗敦群岛上空的北极光 | Landmarks / Europe | Aurora, fishing village |
+| 907 | Replace the background with Big Ben and the Houses of Parliament in London at night | 将背景替换为夜晚伦敦大本钟和议会大厦 | Landmarks / Europe | Gothic, clock tower, night |
+| 908 | Place the subject before the Brandenburg Gate in Berlin at blue hour | 将主体放在蓝色时刻的柏林勃兰登堡门前 | Landmarks / Europe | Neoclassical, blue hour |
+| 909 | Set the scene on the Ponte Vecchio over the Arno River in Florence at sunset | 将场景设在日落时佛罗伦萨阿诺河上的老桥 | Landmarks / Europe | Medieval bridge, shops |
+| 910 | Replace the background with the Duomo cathedral dome in Florence against blue sky | 将背景替换为蓝天下佛罗伦萨大教堂圆顶 | Landmarks / Europe | Brunelleschi dome, terracotta |
+| 911 | Place the subject at the Statue of Liberty with Manhattan skyline behind | 将主体放在有曼哈顿天际线的自由女神像前 | Landmarks / Americas | Iconic statue, harbor |
+| 912 | Set the background to the Golden Gate Bridge in San Francisco in fog | 将背景设为旧金山雾中的金门大桥 | Landmarks / Americas | Red bridge, fog |
+| 913 | Replace the background with the Grand Canyon layered red rock walls at sunset | 将背景替换为日落时大峡谷层叠红色岩壁 | Landmarks / Americas | Deep canyon, warm light |
+| 914 | Place the subject at Niagara Falls with the massive horseshoe waterfall | 将主体放在巨大马蹄形瀑布的尼亚加拉大瀑布 | Landmarks / Americas | Massive water, mist |
+| 915 | Set the scene at Machu Picchu citadel with llamas and mountain backdrop | 将场景设在有羊驼和山脉的马丘比丘古城 | Landmarks / Americas | Incan ruins, altitude |
+| 916 | Replace the background with Christ the Redeemer statue overlooking Rio de Janeiro | 将背景替换为俯瞰里约热内卢的基督救世主像 | Landmarks / Americas | Arms outstretched, bay |
+| 917 | Place the subject at Chichén Itzá Kukulcán pyramid under dramatic sky | 将主体放在戏剧性天空下的奇琴伊察库库尔坎金字塔 | Landmarks / Americas | Mayan pyramid, stepped |
+| 918 | Set the background to the Moai statues on Easter Island at sunset | 将背景设为复活节岛日落时的摩艾石像 | Landmarks / Americas | Mysterious statues, ocean |
+| 919 | Replace the background with Yellowstone Old Faithful geyser erupting with steam | 将背景替换为蒸汽喷发的黄石公园老忠实间歇泉 | Landmarks / Americas | Geyser, steam, thermal |
+| 920 | Place the subject at Central Park in New York City with fall foliage and lake | 将主体放在有秋叶和湖泊的纽约中央公园 | Landmarks / Americas | Urban park, autumn |
+| 921 | Set the scene at the Brooklyn Bridge with Manhattan skyline at blue hour | 将场景设在蓝色时刻有曼哈顿天际线的布鲁克林大桥 | Landmarks / Americas | Suspension bridge, city |
+| 922 | Replace the background with the Washington Monument and reflecting pool at dawn | 将背景替换为黎明时华盛顿纪念碑和倒影池 | Landmarks / Americas | Monument, reflection |
+| 923 | Place the subject at the Hollywood Sign on the hills with LA sprawl below | 将主体放在有洛杉矶扩展在下方的好莱坞标志山上 | Landmarks / Americas | Iconic sign, city view |
+| 924 | Set the background to Antelope Canyon with light beams in the narrow slot | 将背景设为有光束射入的窄缝羚羊峡谷 | Landmarks / Americas | Smooth sandstone, light shaft |
+| 925 | Replace the background with the Iguazu Falls at the Argentina-Brazil border | 将背景替换为阿根廷和巴西边境的伊瓜苏大瀑布 | Landmarks / Americas | Massive falls, subtropical |
+| 926 | Place the subject at the ancient ruins of Teotihuacan with Avenue of the Dead | 将主体放在有死亡大道的特奥蒂瓦坎古代遗迹 | Landmarks / Americas | Aztec pyramids, vast |
+| 927 | Set the scene at the Christ statue in Rio with Sugarloaf Mountain and Guanabara Bay | 将场景设在有面包山和瓜纳巴拉湾的里约基督像 | Landmarks / Americas | Panoramic bay view |
+| 928 | Replace the background with the Pyramids of Giza with the Sphinx in the foreground | 将背景替换为有狮身人面像在前景的吉萨金字塔 | Landmarks / Middle East-Africa | Ancient Egypt, iconic |
+| 929 | Place the subject before the Burj Khalifa in Dubai reaching into the sky | 将主体放在直入云天的迪拜哈利法塔前 | Landmarks / Middle East-Africa | World's tallest, modern |
+| 930 | Set the background to the rock-carved city of Petra with the Treasury facade | 将背景设为有宝库立面的佩特拉岩石古城 | Landmarks / Middle East-Africa | Rose-red rock, carved |
+| 931 | Replace the background with the Blue Mosque interior in Istanbul with blue Iznik tiles | 将背景替换为有蓝色伊兹尼克瓷砖的伊斯坦布尔蓝色清真寺内部 | Landmarks / Middle East-Africa | Blue tiles, domed |
+| 932 | Place the subject at the Taj Mahal in Agra reflected in the long pool at sunrise | 将主体放在日出时倒映在长池中的阿格拉泰姬陵 | Landmarks / Middle East-Africa | White marble, reflection |
+| 933 | Set the scene at Victoria Falls with the massive curtain of water and mist | 将场景设在巨大水帘和水雾的维多利亚瀑布 | Landmarks / Middle East-Africa | Enormous waterfall, mist |
+| 934 | Replace the background with Table Mountain in Cape Town overlooking the city | 将背景替换为俯瞰城市的开普敦桌山 | Landmarks / Middle East-Africa | Flat-top mountain, coastal |
+| 935 | Place the subject in the Sahara Desert among towering sand dunes at sunset | 将主体放在日落时分撒哈拉沙漠高耸沙丘中 | Landmarks / Middle East-Africa | Golden dunes, vast |
+| 936 | Set the background to the Dead Sea shore with salt crystal formations | 将背景设为有盐晶体的死海海岸 | Landmarks / Middle East-Africa | Salt crystals, low altitude |
+| 937 | Replace the background with the Wailing Wall in Jerusalem with stone blocks | 将背景替换为有石块的耶路撒冷哭墙 | Landmarks / Middle East-Africa | Ancient stones, sacred |
+| 938 | Place the subject at the Dubai Marina with yachts and skyscrapers at night | 将主体放在夜晚有游艇和摩天大楼的迪拜码头 | Landmarks / Middle East-Africa | Luxury marina, nightscape |
+| 939 | Set the scene at the Hagia Sophia with its grand dome interior | 将场景设在有宏伟穹顶的圣索菲亚大教堂内部 | Landmarks / Middle East-Africa | Byzantine dome, mosaics |
+| 940 | Replace the background with the palm-shaped Palm Jumeirah island aerial view in Dubai | 将背景替换为迪拜棕榈形朱美拉棕榈岛鸟瞰图 | Landmarks / Middle East-Africa | Aerial, palm shape |
+| 941 | Place the subject at the Abu Simbel temple with massive carved pharaoh statues | 将主体放在有巨大法老雕像的阿布辛贝神庙 | Landmarks / Middle East-Africa | Colossal statues, ancient |
+| 942 | Set the background to Cappadocia hot air balloons over fairy chimney formations at sunrise | 将背景设为日出时卡帕多西亚仙女烟囱上空的热气球 | Landmarks / Middle East-Africa | Balloons, rock formations |
+| 943 | Replace the background with the ancient city of Ephesus ruins with Library of Celsus | 将背景替换为有塞尔苏斯图书馆的以弗所古城遗迹 | Landmarks / Middle East-Africa | Greek-Roman ruins |
+| 944 | Place the subject at the Suez Canal with massive container ships passing | 将主体放在巨大集装箱船通过的苏伊士运河 | Landmarks / Middle East-Africa | Scale, engineering |
+| 945 | Set the scene at the Todra Gorge in Morocco with narrow red canyon walls | 将场景设在摩洛哥托德拉峡谷狭窄红色峡谷壁 | Landmarks / Middle East-Africa | Narrow tall walls, red rock |
+| 946 | Replace the background with Serengeti National Park savanna with wildebeest migration | 将背景替换为有角马迁徙的塞伦盖蒂国家公园大草原 | Landmarks / Middle East-Africa | Wildlife migration, vast |
+| 947 | Place the subject at the Taj Mahal gardens with reflecting pools and cypress trees | 将主体放在有倒影池和柏树的泰姬陵花园 | Landmarks / Middle East-Africa | Mughal gardens, symmetry |
+| 948 | Set the background to Uluru (Ayers Rock) in the Australian outback at sunset | 将背景设为日落时澳大利亚内陆的乌鲁鲁巨石 | Landmarks / Oceania | Red rock monolith, desert |
+| 949 | Replace the background with the Sydney Opera House and Harbour Bridge at blue hour | 将背景替换为蓝色时刻的悉尼歌剧院和海港大桥 | Landmarks / Oceania | Iconic shells, bridge |
+| 950 | Place the subject on the Great Barrier Reef with vibrant coral and tropical fish | 将主体放在有斑斓珊瑚和热带鱼的大堡礁 | Landmarks / Oceania | Underwater, marine colors |
+| 951 | Set the scene at Milford Sound in New Zealand with dramatic fjord and waterfalls | 将场景设在有壮观峡湾和瀑布的新西兰米尔福德峡湾 | Landmarks / Oceania | Fjord, waterfalls, green |
+| 952 | Replace the background with the Twelve Apostles rock stacks on the Australian coast | 将背景替换为澳大利亚海岸的十二使徒岩石柱 | Landmarks / Oceania | Sea stacks, coastal |
+| 953 | Place the subject at the Hobbiton movie set in New Zealand with green hills | 将主体放在新西兰绿色山丘的霍比屯片场 | Landmarks / Oceania | Shire, green, round doors |
+| 954 | Set the background to Bora Bora overwater bungalows with Mount Otemanu | 将背景设为有奥特马努山的波拉波拉水上别墅 | Landmarks / Oceania | Tropical paradise, mountain |
+| 955 | Replace the background with Tianmen Mountain glass walkway skypath in Hunan | 将背景替换为湖南天门山玻璃栈道 | Landmarks / China | Vertigo glass path, cliff |
+| 956 | Place the subject at the Bund looking across to the Pudong skyscrapers at night | 将主体放在外滩夜晚对面浦东摩天大楼 | Landmarks / China | Night skyline, river |
+| 957 | Set the scene at Mogao Caves in Dunhuang with ancient Buddhist frescoes | 将场景设在敦煌莫高窟的古代佛教壁画 | Landmarks / China | Cave art, ancient |
+| 958 | Replace the background with Tiger Leaping Gorge in Yunnan with violent rapids | 将背景替换为云南虎跳峡的湍急激流 | Landmarks / China | Deep gorge, rapids |
+| 959 | Place the subject at the ancient town of Fenghuang with stilt houses over the river | 将主体放在河上吊脚楼的凤凰古城 | Landmarks / China | River town, wooden stilt |
+| 960 | Set the background to Jiuzhaigou's Five Flower Lake with crystal clear colorful water | 将背景设为清澈多彩的九寨沟五花海 | Landmarks / China | Colorful water, submerged trees |
+| 961 | Replace the background with the Giant Panda Research Base in Chengdu with bamboo | 将背景替换为有竹林的成都大熊猫繁育基地 | Landmarks / China | Pandas, bamboo |
+| 962 | Place the subject at the Nara deer park in Japan with friendly deer and temple | 将主体放在有友善鹿群和寺庙的日本奈良鹿公园 | Landmarks / Japan | Deer, temple, park |
+| 963 | Set the scene at Himeji Castle in spring with cherry blossoms around the white castle | 将场景设在春天樱花环绕的白色姬路城 | Landmarks / Japan | White castle, pink sakura |
+| 964 | Replace the background with Kenrokuen Garden in Kanazawa with Kotoji lantern | 将背景替换为有石灯笼的金泽兼六园 | Landmarks / Japan | Classic Japanese garden |
+| 965 | Place the subject at the bamboo forest train of the Sagano Scenic Railway in Kyoto | 将主体放在京都�的嵯峨野观光铁路竹林火车 | Landmarks / Japan | Bamboo, railway |
+| 966 | Set the background to the Itsukushima Shrine with floating torii gate and red buildings | 将背景设为有水上鸟居和红色建筑的严岛神社 | Landmarks / Japan | Water shrine, vermillion |
+| 967 | Replace the background with Edinburgh Castle perched on volcanic rock in Scotland | 将背景替换为坐落在苏格兰火山岩上的爱丁堡城堡 | Landmarks / Europe | Fortress, volcanic rock |
+| 968 | Place the subject at Versailles Palace Hall of Mirrors with chandeliers and gilded arches | 将主体放在有吊灯和镀金拱门的凡尔赛宫镜厅 | Landmarks / Europe | Opulent, mirrors, gold |
+| 969 | Set the scene at the Cliffs of Moher in Ireland with Atlantic waves crashing below | 将场景设在大西洋海浪拍打下的爱尔兰莫赫悬崖 | Landmarks / Europe | Dramatic cliffs, wild sea |
+| 970 | Replace the background with the Louvre Museum glass pyramid with courtyard at dusk | 将背景替换为黄昏时卢浮宫玻璃金字塔和庭院 | Landmarks / Europe | Glass pyramid, classic |
+| 971 | Place the subject at the Colosseum arena floor looking up at the tiers of arches | 将主体放在斗兽场竞技场仰望层叠拱门 | Landmarks / Europe | Interior arena, grand |
+| 972 | Set the background to the Canal Grande in Venice with gondolas and palaces | 将背景设为有贡多拉和宫殿的威尼斯大运河 | Landmarks / Europe | Venice, water, palaces |
+| 973 | Replace the background with the ancient Roman Forum ruins with columns and arches | 将背景替换为有柱子和拱门的古罗马广场废墟 | Landmarks / Europe | Roman ruins, sunlit |
+| 974 | Place the subject at Buckingham Palace with guards and ornate gates | 将主体放在有卫兵和华丽大门的白金汉宫 | Landmarks / Europe | Royal, ceremony |
+| 975 | Set the scene at Notre Dame Cathedral in Paris with its twin towers and rose window | 将场景设在有双塔和玫瑰窗的巴黎圣母院 | Landmarks / Europe | Gothic, iconic front |
+| 976 | Replace the background with the Positano cliffside village on the Amalfi Coast | 将背景替换为阿马尔菲海岸波西塔诺悬崖村庄 | Landmarks / Europe | Pastel stacked, coastal |
+| 977 | Place the subject at Lake Bled in Slovenia with the island church and castle cliff | 将主体放在有岛屿教堂和悬崖城堡的斯洛文尼亚布莱德湖 | Landmarks / Europe | Island church, alpine lake |
+| 978 | Set the background to the La Boqueria market in Barcelona with colorful food stalls | 将背景设为有五彩缤纷食品摊位的巴塞罗那波盖利亚市场 | Landmarks / Europe | Vibrant market, produce |
+| 979 | Replace the background with the Preikestolen (Pulpit Rock) cliff edge in Norway | 将背景替换为挪威布道石悬崖边缘 | Landmarks / Europe | Cliff edge, fjord below |
+| 980 | Place the subject on the Champs de Mars with the Eiffel Tower behind at night | 将主体放在夜晚有埃菲尔铁塔在背后的战神广场 | Landmarks / Europe | Lit tower, night Paris |
+| 981 | Set the scene at Meteora monasteries perched on tall rock pillars in Greece | 将场景设在希腊高岩柱上的迈泰奥拉修道院 | Landmarks / Europe | Dramatic height, monasteries |
+| 982 | Replace the background with the White Cliffs of Dover facing the English Channel | 将背景替换为面对英吉利海峡的多佛白色悬崖 | Landmarks / Europe | White chalk, blue sea |
+| 983 | Place the subject at the Piazza San Marco in Venice with the basilica and campanile | 将主体放在有大教堂和钟楼的威尼斯圣马可广场 | Landmarks / Europe | Grand square, Byzantine |
+| 984 | Set the background to Monument Valley with iconic red buttes and desert sky | 将背景设为有标志性红色孤峰和沙漠天空的纪念碑谷 | Landmarks / Americas | Western iconic, red buttes |
+| 985 | Replace the background with Crater Lake in Oregon with deep blue water and caldera | 将背景替换为有深蓝色水和火山口的俄勒冈火山口湖 | Landmarks / Americas | Deep blue, volcanic lake |
+| 986 | Place the subject at Chengde Mountain Resort with imperial gardens and temples | 将主体放在有皇家花园和寺庙的承德避暑山庄 | Landmarks / China | Imperial garden, summer |
+| 987 | Set the scene at the Longmen Grottoes with thousands of Buddhist carved statues | 将场景设在有数千尊佛雕的洛阳龙门石窟 | Landmarks / China | Carved cliff, Buddhist |
+| 988 | Replace the background with the Li River at dawn with mist rising between karst peaks | 将背景替换为黎明时分雾气升腾的漓江喀斯特峰 | Landmarks / China | Misty dawn, Chinese painting |
+| 989 | Place the subject at the Pearl of the Orient TV tower in Shanghai at night | 将主体放在夜晚上海东方明珠电视塔 | Landmarks / China | Futuristic tower, neon |
+| 990 | Set the background to the ancient Tulou round earth buildings in Fujian province | 将背景设为福建土楼圆形土质建筑 | Landmarks / China | Round, communal, unique |
+| 991 | Replace the background with Zhouzhuang water town with stone bridges and traditional boats | 将背景替换为有石桥和传统船只的周庄水乡 | Landmarks / China | Ancient water town |
+| 992 | Place the subject at the Sun Moon Lake in Taiwan with mountains and temple | 将主体放在有山和寺庙的台湾日月潭 | Landmarks / Southeast Asia | Lake, mountain, temple |
+| 993 | Set the scene at Banff National Park with turquoise Lake Louise and glacier | 将场景设在有碧绿路易斯湖和冰川的班夫国家公园 | Landmarks / Americas | Turquoise, glacier, Canadian |
+| 994 | Replace the background with Trolltunga rock formation jutting over a Norwegian lake | 将背景替换为挪威湖泊上方的巨人之舌岩石 | Landmarks / Europe | Extreme cliff, overhang |
+| 995 | Place the subject at the Forbidden City moat with corner tower reflected in water | 将主体放在紫禁城护城河角楼倒映在水中 | Landmarks / China | Corner tower, reflection |
+| 996 | Set the background to the ancient Silk Road at Kashgar old town bazaar | 将背景设为喀什老城巴扎的古丝绸之路 | Landmarks / China | Central Asian, market |
+| 997 | Replace the background with Jiuzhaigou waterfalls cascading over colorful travertine | 将背景替换为九寨沟在彩色钙华上倾泻的瀑布 | Landmarks / China | Colorful terraces, water |
+| 998 | Place the subject at the Avenue of Stars in Hong Kong with harbor view | 将主体放在有海港景色的香港星光大道 | Landmarks / China | Harbor promenade |
+| 999 | Set the scene at the Summer Palace Long Corridor in Beijing with painted beams | 将场景设在有彩绘横梁的北京颐和园长廊 | Landmarks / China | Painted corridor, lake |
+| 1000 | Replace the background with the ancient city walls of Xi'an at night with lanterns | 将背景替换为夜晚挂着灯笼的西安古城墙 | Landmarks / China | Ancient wall, illuminated |
+| 1001 | Place the subject at Mount Everest base camp with prayer flags and glacier | 将主体放在有经幡和冰川的珠穆朗玛峰大本营 | Landmarks / Middle East-Africa | Highest peak, prayer flags |
+| 1002 | Set the background to Jaipur Hawa Mahal (Palace of Winds) pink sandstone facade | 将背景设为斋浦尔粉红色砂岩的风之宫殿 | Landmarks / Middle East-Africa | Pink facade, 953 windows |
+| 1003 | Replace the background with Varanasi ghats on the Ganges River at sunrise with fires | 将背景替换为日出时恒河岸瓦拉纳西河坛 | Landmarks / Middle East-Africa | Sacred river, ceremonies |
+| 1004 | Place the subject at the Golden Temple in Amritsar reflected in sacred pool | 将主体放在倒映在圣池中的阿姆利则金庙 | Landmarks / Middle East-Africa | Gold, reflection, sacred |
+| 1005 | Set the scene at the Bagan temple plain in Myanmar with thousands of pagodas at dawn | 将场景设在黎明时有数千座佛塔的缅甸蒲甘寺庙平原 | Landmarks / Southeast Asia | Thousands of pagodas |
+| 1006 | Replace the background with the Marina Bay Sands infinity pool overlooking Singapore | 将背景替换为俯瞰新加坡的滨海湾金沙无边泳池 | Landmarks / Southeast Asia | Rooftop pool, city view |
+| 1007 | Place the subject at the ancient temples of Hampi in India among boulder-strewn landscape | 将主体放在巨石散布的印度汉比古寺庙群 | Landmarks / Middle East-Africa | Boulder landscape, ruins |
+| 1008 | Set the background to the Zhangjiajie Glass Bridge spanning across the canyon | 将背景设为横跨峡谷的张家界玻璃桥 | Landmarks / China | Glass bridge, vertigo |
+| 1009 | Replace the background with the Mogao Grottoes interior with Dunhuang flying apsaras murals | 将背景替换为敦煌飞天壁画的莫高窟内部 | Landmarks / China | Ancient murals, Buddhist |
+| 1010 | Place the subject at the Yellow Crane Tower overlooking the Yangtze River in Wuhan | 将主体放在俯瞰长江的武汉黄鹤楼 | Landmarks / China | Classic tower, river view |
+
+---
+
+## 8. Studio & Photography Backgrounds
+
+| # | English Prompt | 中文提示词 | Category | Config Notes |
+|---|---|---|---|---|
+| 1011 | Place the subject against a clean pure white seamless studio background | 将主体放在干净的纯白色无缝摄影棚背景前 | Studio / Solid Color | White infinity, even lighting |
+| 1012 | Set the background to a solid black studio backdrop with dramatic spotlight | 将背景设为有戏剧性聚光灯的纯黑摄影棚背景 | Studio / Solid Color | Black, single spotlight |
+| 1013 | Replace the background with a neutral medium gray seamless paper backdrop | 将背景替换为中性灰无缝纸背景 | Studio / Solid Color | 18% gray, neutral |
+| 1014 | Place the subject against a bold vibrant red studio background | 将主体放在鲜艳红色摄影棚背景前 | Studio / Solid Color | Vivid red, passion |
+| 1015 | Set the background to a deep royal blue seamless studio backdrop | 将背景设为深宝蓝色无缝摄影棚背景 | Studio / Solid Color | Deep blue, professional |
+| 1016 | Replace the background with a lush emerald green studio backdrop | 将背景替换为翠绿色摄影棚背景 | Studio / Solid Color | Rich green, vibrant |
+| 1017 | Place the subject against a bright sunshine yellow studio background | 将主体放在明亮阳光黄色摄影棚背景前 | Studio / Solid Color | Cheerful yellow, bright |
+| 1018 | Set the background to a soft millennial pink studio backdrop | 将背景设为柔和千禧粉色摄影棚背景 | Studio / Solid Color | Soft pink, trendy |
+| 1019 | Replace the background with a rich deep purple studio background | 将背景替换为浓郁深紫色摄影棚背景 | Studio / Solid Color | Purple, luxurious |
+| 1020 | Place the subject against a warm burnt orange studio backdrop | 将主体放在温暖焦橙色摄影棚背景前 | Studio / Solid Color | Warm orange, earthy |
+| 1021 | Set the background to a soft pastel lavender studio background | 将背景设为柔和粉紫色摄影棚背景 | Studio / Solid Color | Light lavender, gentle |
+| 1022 | Replace the background with a neon electric green studio backdrop | 将背景替换为霓虹电绿色摄影棚背景 | Studio / Solid Color | Neon green, high energy |
+| 1023 | Place the subject against a navy blue studio background with subtle texture | 将主体放在有微妙纹理的海军蓝摄影棚背景前 | Studio / Solid Color | Dark blue, subtle |
+| 1024 | Set the background to a coral pink studio backdrop with even lighting | 将背景设为均匀照明的珊瑚粉色摄影棚背景 | Studio / Solid Color | Coral, warm pink |
+| 1025 | Replace the background with a teal blue-green studio background | 将背景替换为蓝绿色摄影棚背景 | Studio / Solid Color | Teal, calming |
+| 1026 | Place the subject against a warm cream/ivory studio background | 将主体放在温暖奶油色/象牙色摄影棚背景前 | Studio / Solid Color | Off-white, warm, elegant |
+| 1027 | Set the background to a charcoal dark gray studio backdrop | 将背景设为炭灰色摄影棚背景 | Studio / Solid Color | Dark gray, understated |
+| 1028 | Replace the background with a sunset gradient transitioning from orange to deep purple | 将背景替换为从橙色过渡到深紫色的日落渐变色 | Studio / Gradient | Warm to cool transition |
+| 1029 | Place the subject against an ocean gradient from deep navy to light aqua | 将主体放在从深海军蓝到浅水绿色的海洋渐变色前 | Studio / Gradient | Blue spectrum, watery |
+| 1030 | Set the background to a forest gradient from dark green to light lime | 将背景设为从深绿到浅黄绿的森林渐变色 | Studio / Gradient | Green spectrum, natural |
+| 1031 | Replace the background with a pastel rainbow gradient blend of soft colors | 将背景替换为柔和色彩的粉彩彩虹渐变混合 | Studio / Gradient | Pastel spectrum, dreamy |
+| 1032 | Place the subject against a dramatic gradient from black to deep red | 将主体放在从黑色到深红色的戏剧性渐变前 | Studio / Gradient | Dark, dramatic, noir |
+| 1033 | Set the background to a cool gradient from blue to purple (twilight tones) | 将背景设为从蓝色到紫色的冷色调渐变（暮色调） | Studio / Gradient | Twilight, cool tones |
+| 1034 | Replace the background with a warm gradient from peach to gold | 将背景替换为从桃色到金色的暖色渐变 | Studio / Gradient | Warm, golden, peach |
+| 1035 | Place the subject against a pink to white gradient fading upward | 将主体放在粉色到白色向上渐变的背景前 | Studio / Gradient | Soft fade, feminine |
+| 1036 | Set the background to a gray to white vignette gradient | 将背景设为灰色到白色的暗角渐变 | Studio / Gradient | Classic vignette |
+| 1037 | Replace the background with a neon pink to electric blue gradient | 将背景替换为霓虹粉到电蓝色渐变 | Studio / Gradient | Synthwave, retro-future |
+| 1038 | Place the subject against a natural white marble texture background | 将主体放在天然白色大理石纹理背景前 | Studio / Textured | Marble veins, luxury |
+| 1039 | Set the background to a raw concrete wall texture with natural cracks | 将背景设为有自然裂纹的水泥墙纹理 | Studio / Textured | Industrial, raw |
+| 1040 | Replace the background with an exposed red brick wall texture | 将背景替换为裸露红砖墙纹理 | Studio / Textured | Brick pattern, urban |
+| 1041 | Place the subject against a warm natural wood grain panel background | 将主体放在温暖的天然木纹板背景前 | Studio / Textured | Wood grain, warm |
+| 1042 | Set the background to a soft draped fabric backdrop in neutral linen | 将背景设为中性亚麻色柔软垂挂布料背景 | Studio / Textured | Fabric folds, soft |
+| 1043 | Replace the background with a crumpled vintage paper texture backdrop | 将背景替换为皱褶复古纸张纹理背景 | Studio / Textured | Aged paper, antique |
+| 1044 | Place the subject against a brushed metallic silver background | 将主体放在拉丝金属银色背景前 | Studio / Textured | Metallic sheen, modern |
+| 1045 | Set the background to a soft circular bokeh light effect in warm tones | 将背景设为暖色调的柔和圆形散景光效 | Studio / Textured | Bokeh circles, dreamy |
+| 1046 | Replace the background with a glittering gold sparkle texture background | 将背景替换为闪闪发光的金色亮片纹理背景 | Studio / Textured | Gold glitter, festive |
+| 1047 | Place the subject against a dark green velvet fabric draped background | 将主体放在深绿色天鹅绒垂坠面料背景前 | Studio / Textured | Velvet, luxurious |
+| 1048 | Set the background to a rustic weathered wood plank wall | 将背景设为质朴风化木板墙 | Studio / Textured | Distressed wood, barn |
+| 1049 | Replace the background with a hexagonal tile pattern in white and gray | 将背景替换为白灰色六角形瓷砖图案 | Studio / Textured | Geometric, clean |
+| 1050 | Place the subject against a terrazzo floor pattern with colorful stone chips | 将主体放在有彩色石子的水磨石地面图案前 | Studio / Textured | Terrazzo, speckled |
+| 1051 | Set the background to a professional photography studio with white cyclorama wall | 将背景设为有白色无缝弧形墙的专业摄影棚 | Studio / Setup | Infinity cove, pro studio |
+| 1052 | Replace the background with a photography studio with umbrella lights and backdrop stand | 将背景替换为有伞灯和背景架的摄影棚 | Studio / Setup | Studio equipment visible |
+| 1053 | Place the subject on a green screen chromakey background in a studio | 将主体放在摄影棚的绿幕抠像背景前 | Studio / Setup | Green screen, post-ready |
+| 1054 | Set the background to a professional studio with ring light creating catch lights | 将背景设为有环形灯产生眼神光的专业摄影棚 | Studio / Setup | Ring light reflection |
+| 1055 | Replace the background with a studio setup with two softbox lights and gray backdrop | 将背景替换为有两个柔光箱和灰色背景的摄影棚 | Studio / Setup | Dual softbox, balanced |
+| 1056 | Place the subject against a studio backdrop with dramatic Rembrandt lighting | 将主体放在有戏剧性伦勃朗布光的摄影棚背景前 | Studio / Setup | Triangle light on cheek |
+| 1057 | Set the background to a studio with colored gel lighting creating blue and orange split | 将背景设为用彩色凝胶灯创造蓝橙分区的摄影棚 | Studio / Setup | Split color lighting |
+| 1058 | Replace the background with a fashion photography studio with large window light | 将背景替换为有大窗户自然光的时装摄影棚 | Studio / Setup | Natural window, fashion |
+| 1059 | Place the subject against a holographic iridescent reflective background | 将主体放在全息虹彩反光背景前 | Studio / Textured | Iridescent, rainbow shift |
+| 1060 | Set the background to a studio with butterfly lighting setup and white reflector | 将背景设为蝴蝶光布光和白色反光板的摄影棚 | Studio / Setup | Beauty lighting, even |
+| 1061 | Replace the background with a blue-hour sky gradient from deep blue to light | 将背景替换为从深蓝到浅蓝的蓝色时刻天空渐变 | Studio / Gradient | Blue hour, natural sky |
+| 1062 | Place the subject against a minimalist beige backdrop with single shadow line | 将主体放在有单一阴影线的极简米色背景前 | Studio / Solid Color | Minimalist, shadow line |
+| 1063 | Set the background to a dark moody studio with single overhead spot light | 将背景设为有单一顶部聚光灯的暗调摄影棚 | Studio / Setup | Dramatic, top-lit |
+| 1064 | Replace the background with a confetti-filled studio with colorful paper pieces midair | 将背景替换为有彩色纸片飘在空中的五彩纸屑摄影棚 | Studio / Textured | Celebration, movement |
+| 1065 | Place the subject against a rose gold metallic background | 将主体放在玫瑰金金属色背景前 | Studio / Solid Color | Rose gold, modern luxury |
+| 1066 | Set the background to a smoke-filled dark studio with colored back lighting | 将背景设为有彩色背光的烟雾弥漫暗黑摄影棚 | Studio / Setup | Smoke effects, dramatic |
+| 1067 | Replace the background with a colorful ink-in-water abstract pattern | 将背景替换为彩色墨水入水抽象图案 | Studio / Textured | Fluid, organic, colorful |
+| 1068 | Place the subject against a studio with projection mapping of geometric patterns | 将主体放在有几何图案投影映射的摄影棚前 | Studio / Setup | Projected patterns, modern |
+| 1069 | Set the background to a vintage sepia-toned textured paper backdrop | 将背景设为复古棕褐色调纹理纸背景 | Studio / Textured | Sepia, aged, nostalgic |
+| 1070 | Replace the background with a studio black backdrop with prism rainbow light leak | 将背景替换为有棱镜彩虹光晕的黑色摄影棚背景 | Studio / Setup | Prismatic light leak |
+| 1071 | Place the subject against a geometric Art Deco patterned gold background | 将主体放在几何装饰艺术风格金色图案背景前 | Studio / Textured | Art Deco patterns, gold |
+| 1072 | Set the background to a smooth clay-colored warm neutral studio backdrop | 将背景设为平滑黏土色暖中性摄影棚背景 | Studio / Solid Color | Earthy clay, warm |
+| 1073 | Replace the background with a water droplet-covered glass surface with blurred lights behind | 将背景替换为有模糊灯光的水滴覆盖玻璃表面 | Studio / Textured | Water drops, bokeh behind |
+| 1074 | Place the subject against a dark blue studio with star-like fairy lights scattered | 将主体放在有星点仙女灯散布的深蓝色摄影棚前 | Studio / Setup | Mini lights, starfield |
+| 1075 | Set the background to a copper patina textured surface with green oxidation | 将背景设为有绿色氧化的铜锈纹理表面 | Studio / Textured | Patina, aged metal |
+| 1076 | Replace the background with a studio setup showing the subject on a turntable platform | 将背景替换为主体在转盘平台上的摄影棚设置 | Studio / Setup | Product shot, rotating |
+| 1077 | Place the subject against a mint green studio background with soft fill light | 将主体放在有柔和补光的薄荷绿色摄影棚背景前 | Studio / Solid Color | Mint green, fresh |
+| 1078 | Set the background to a double exposure effect blending cityscape with nature | 将背景设为城市景观和自然混合的双重曝光效果 | Studio / Textured | Double exposure blend |
+| 1079 | Replace the background with a studio backdrop with projected shadow patterns from blinds | 将背景替换为有百叶窗阴影投射的摄影棚背景 | Studio / Setup | Venetian blind shadows |
+| 1080 | Place the subject against a textured stucco Mediterranean wall background in warm ochre | 将主体放在温暖赭色的地中海灰泥墙纹理背景前 | Studio / Textured | Warm stucco, Mediterranean |
+
+---
+
+## 9. Seasonal / Holiday
+
+| # | English Prompt | 中文提示词 | Category | Config Notes |
+|---|---|---|---|---|
+| 1081 | Place the subject beside a beautifully decorated Christmas tree with twinkling lights and ornaments | 将主体放在有闪烁灯和饰品的精美装饰圣诞树旁 | Holiday / Christmas | Warm tree lights, festive |
+| 1082 | Set the background to a snowy Christmas town with decorated shops and horse-drawn sleigh | 将背景设为有装饰商店和马拉雪橇的雪中圣诞小镇 | Holiday / Christmas | Christmas card, snow |
+| 1083 | Replace the background with a cozy fireplace with hung Christmas stockings and crackling fire | 将背景替换为有挂着圣诞袜和噼啪壁炉的温馨壁炉 | Holiday / Christmas | Warm fire glow, stockings |
+| 1084 | Place the subject among a pile of wrapped Christmas gifts with ribbons and bows | 将主体放在有丝带和蝴蝶结的包装圣诞礼物堆中 | Holiday / Christmas | Colorful wrapping, gifts |
+| 1085 | Set the scene in Santa's workshop with elves, toys, and wooden workbenches | 将场景设在有精灵、玩具和木工作台的圣诞老人工作坊 | Holiday / Christmas | Fantasy, workshop, toys |
+| 1086 | Replace the background with a European Christmas market with wooden stalls and mulled wine | 将背景替换为有木质摊位和热红酒的欧洲圣诞市场 | Holiday / Christmas | Market stalls, warm drinks |
+| 1087 | Place the subject on a Christmas Eve snowy street with lampposts wrapped in garland | 将主体放在有花环装饰的灯柱的圣诞夜雪街上 | Holiday / Christmas | Snow, garland, lamp glow |
+| 1088 | Set the background to a festive Christmas dinner table with candles and holly centerpiece | 将背景设为有蜡烛和冬青花的节日圣诞晚餐桌 | Holiday / Christmas | Dinner table, warm |
+| 1089 | Replace the background with a Christmas morning living room with tree, gifts, and morning light | 将背景替换为有圣诞树、礼物和晨光的圣诞清晨客厅 | Holiday / Christmas | Morning magic, gifts |
+| 1090 | Place the subject in a winter Christmas village with gingerbread-style houses and snow | 将主体放在有姜饼风格房屋和雪的冬季圣诞村 | Holiday / Christmas | Fairy tale village, snowy |
+| 1091 | Set the scene with red Chinese New Year lanterns hanging across a decorated street | 将场景设在有红色春节灯笼悬挂的装饰街道 | Holiday / Chinese New Year | Red lanterns, festive |
+| 1092 | Replace the background with a Chinese New Year dragon dance in a crowded street with fireworks | 将背景替换为有烟花的拥挤街头春节舞龙 | Holiday / Chinese New Year | Dragon, crowds, fireworks |
+| 1093 | Place the subject against a night sky filled with Chinese New Year fireworks explosions | 将主体放在满天春节烟花绽放的夜空前 | Holiday / Chinese New Year | Fireworks, colorful night |
+| 1094 | Set the background to a doorway decorated with Spring Festival couplets and red paper | 将背景设为有春联和红纸装饰的门口 | Holiday / Chinese New Year | Red paper, calligraphy |
+| 1095 | Replace the background with a Chinese New Year lion dance performance on the street | 将背景替换为街头春节舞狮表演 | Holiday / Chinese New Year | Lion costume, drums |
+| 1096 | Place the subject at a traditional Chinese New Year family reunion dinner table with dishes | 将主体放在有丰盛菜肴的传统春节年夜饭桌前 | Holiday / Chinese New Year | Round table, feast dishes |
+| 1097 | Set the scene with red envelopes and gold ingots scattered on a red cloth background | 将场景设在红布背景上散落的红包和金元宝 | Holiday / Chinese New Year | Red and gold, prosperity |
+| 1098 | Replace the background with a Chinese temple fair with lanterns, snacks, and traditional games | 将背景替换为有灯笼、小吃和传统游戏的中国庙会 | Holiday / Chinese New Year | Temple fair, festive |
+| 1099 | Place the subject in a Chinese New Year flower market with kumquat trees and orchids | 将主体放在有金桔树和兰花的春节花市 | Holiday / Chinese New Year | Flower market, fortune plants |
+| 1100 | Set the background to a Chinese New Year parade with colorful floats and performers | 将背景设为有彩车和表演者的春节游行 | Holiday / Chinese New Year | Parade, celebration, red |
+| 1101 | Replace the background with a spooky Halloween haunted house with cobwebs and orange light | 将背景替换为有蜘蛛网和橙色灯光的恐怖万圣节鬼屋 | Holiday / Halloween | Spooky, cobwebs, orange |
+| 1102 | Place the subject in a Halloween pumpkin patch with carved jack-o-lanterns glowing | 将主体放在有发光雕刻南瓜灯的万圣节南瓜田 | Holiday / Halloween | Glowing pumpkins, dusk |
+| 1103 | Set the scene in a dark spooky Halloween forest with fog, bats, and full moon | 将场景设在有雾、蝙蝠和满月的黑暗万圣节森林 | Holiday / Halloween | Full moon, fog, silhouettes |
+| 1104 | Replace the background with a Halloween graveyard with tombstones and ghostly mist | 将背景替换为有墓碑和幽灵雾气的万圣节墓地 | Holiday / Halloween | Tombstones, eerie mist |
+| 1105 | Place the subject in a Halloween witch's kitchen with cauldron, potions, and black cat | 将主体放在有大锅、药水和黑猫的万圣节女巫厨房 | Holiday / Halloween | Spooky kitchen, green glow |
+| 1106 | Set the background to a Halloween-decorated suburban neighborhood at trick-or-treat time | 将背景设为不给糖就捣蛋时间的万圣节装饰郊区 | Holiday / Halloween | Lit porches, costumes |
+| 1107 | Replace the background with a Victorian Gothic mansion at Halloween with lightning | 将背景替换为有闪电的维多利亚哥特式万圣节豪宅 | Holiday / Halloween | Gothic, lightning, dark |
+| 1108 | Place the subject in a romantic Valentine's Day rose garden with red blooms | 将主体放在有红色花朵的浪漫情人节玫瑰花园 | Holiday / Valentine's | Red roses, romantic |
+| 1109 | Set the scene at a romantic Valentine's candlelit dinner for two with roses and wine | 将场景设在有玫瑰和酒的浪漫情人节烛光双人晚餐 | Holiday / Valentine's | Candlelight, intimate |
+| 1110 | Replace the background with a Valentine's Day Paris scene with Eiffel Tower and hearts | 将背景替换为有埃菲尔铁塔和爱心的情人节巴黎场景 | Holiday / Valentine's | Paris love, hearts |
+| 1111 | Place the subject surrounded by heart-shaped balloons and confetti on Valentine's Day | 将主体放在情人节心形气球和彩纸环绕中 | Holiday / Valentine's | Heart balloons, festive |
+| 1112 | Set the background to a Valentine's Day bakery display with heart-shaped cookies and cakes | 将背景设为有心形饼干和蛋糕的情人节烘焙店展示 | Holiday / Valentine's | Sweet treats, pink-red |
+| 1113 | Replace the background with an Easter egg hunt garden with colorful eggs hidden in grass | 将背景替换为彩色鸡蛋藏在草中的复活节寻蛋花园 | Holiday / Easter | Pastel eggs, spring garden |
+| 1114 | Place the subject in an Easter spring scene with baby chicks and pastel decorations | 将主体放在有小鸡和粉彩装饰的复活节春天场景 | Holiday / Easter | Baby animals, pastel |
+| 1115 | Set the scene at a Thanksgiving harvest table with turkey, pumpkins, and autumn leaves | 将场景设在有火鸡、南瓜和秋叶的感恩节丰收餐桌 | Holiday / Thanksgiving | Harvest feast, warm |
+| 1116 | Replace the background with a Thanksgiving cornucopia with overflowing fruits and vegetables | 将背景替换为满溢水果和蔬菜的感恩节丰饶角 | Holiday / Thanksgiving | Abundance, autumn colors |
+| 1117 | Place the subject in a Diwali celebration with rows of clay oil lamps and rangoli patterns | 将主体放在有成排泥灯和彩饰图案的排灯节庆祝中 | Holiday / Diwali | Oil lamps, colorful rangoli |
+| 1118 | Set the background to a Diwali night scene with fireworks and illuminated buildings | 将背景设为有烟花和灯火辉煌建筑的排灯节夜景 | Holiday / Diwali | Festival of lights, fireworks |
+| 1119 | Replace the background with a Diwali-decorated home entrance with marigold garlands and diyas | 将背景替换为有万寿菊花环和油灯的排灯节装饰家门口 | Holiday / Diwali | Marigolds, oil lamps |
+| 1120 | Place the subject under a sky of Mid-Autumn Festival lanterns with full moon | 将主体放在有满月的中秋节天灯夜空下 | Holiday / Mid-Autumn | Full moon, lanterns |
+| 1121 | Set the scene at a Mid-Autumn Festival family gathering with mooncakes and tea | 将场景设在有月饼和茶的中秋节家庭团聚 | Holiday / Mid-Autumn | Mooncakes, family, moon |
+| 1122 | Replace the background with a traditional Mid-Autumn Festival garden with rabbit lanterns | 将背景替换为有兔子灯笼的传统中秋节花园 | Holiday / Mid-Autumn | Rabbit lanterns, moon |
+| 1123 | Place the subject at a Lantern Festival with hundreds of glowing red lanterns at night | 将主体放在有数百盏红灯笼的元宵节夜晚 | Holiday / Lantern Festival | Sea of red lanterns |
+| 1124 | Set the background to a river lantern festival with floating lights on dark water | 将背景设为漂浮灯火在暗水上的河灯节 | Holiday / Lantern Festival | Floating lanterns, water |
+| 1125 | Replace the background with an elaborate Lantern Festival display with animal-shaped lanterns | 将背景替换为有动物造型灯笼的精美元宵节灯展 | Holiday / Lantern Festival | Shaped lanterns, colorful |
+| 1126 | Place the subject in a Day of the Dead altar with marigolds, sugar skulls, and candles | 将主体放在有万寿菊、糖骷髅和蜡烛的亡灵节祭坛 | Holiday / Day of the Dead | Vibrant, marigold orange |
+| 1127 | Set the scene at a Day of the Dead parade with painted faces and flower crowns | 将场景设在有彩绘面孔和花冠的亡灵节游行 | Holiday / Day of the Dead | Face paint, celebration |
+| 1128 | Replace the background with a Brazilian Carnival scene with elaborate costumes and confetti | 将背景替换为有华丽服装和彩纸的巴西狂欢节场景 | Holiday / Carnival | Feathers, sequins, color |
+| 1129 | Place the subject at a Venice Carnival with masked figures and ornate costumes | 将主体放在有面具人物和华丽服装的威尼斯狂欢节 | Holiday / Carnival | Venetian masks, baroque |
+| 1130 | Set the background to a cherry blossom festival (hanami) picnic under pink trees | 将背景设为粉色樱花树下的花见野餐 | Holiday / Cherry Blossom | Picnic, pink petals |
+| 1131 | Replace the background with a Japanese cherry blossom festival along a river with lanterns | 将背景替换为有灯笼的日本河畔樱花节 | Holiday / Cherry Blossom | River, lanterns, sakura |
+| 1132 | Place the subject at a traditional Songkran water festival with splashing and joy | 将主体放在有泼水和欢乐的传统泼水节 | Holiday / Other | Water splashing, fun |
+| 1133 | Set the scene at Holi festival with colorful powder clouds in the air | 将场景设在有彩色粉末云的洒红节 | Holiday / Other | Color powder, celebration |
+| 1134 | Replace the background with a Mardi Gras celebration on Bourbon Street with beads and masks | 将背景替换为有珠子和面具的波旁街狂欢节庆祝 | Holiday / Carnival | Purple gold green, beads |
+| 1135 | Place the subject at an Oktoberfest beer tent celebration in Munich | 将主体放在慕尼黑啤酒节啤酒帐篷庆祝活动 | Holiday / Other | Beer steins, tent, festive |
+| 1136 | Set the background to a St. Patrick's Day Irish pub decorated with green shamrocks | 将背景设为有绿色三叶草装饰的圣帕特里克爱尔兰酒吧 | Holiday / Other | Green, shamrocks, pub |
+| 1137 | Replace the background with a Fourth of July fireworks display over a city skyline | 将背景替换为城市天际线上的美国独立日烟花表演 | Holiday / Other | Red white blue fireworks |
+| 1138 | Place the subject at a Ramadan iftar dinner table with dates and traditional dishes | 将主体放在有椰枣和传统菜肴的斋月开斋晚餐桌 | Holiday / Other | Dates, traditional food |
+| 1139 | Set the scene in a mosque during Ramadan with crescent moon and star decorations | 将场景设在有新月和星星装饰的斋月清真寺 | Holiday / Other | Crescent, star, blue |
+| 1140 | Replace the background with a Eid celebration feast with traditional sweets and decorations | 将背景替换为有传统甜点和装饰的开斋节庆祝宴会 | Holiday / Other | Festive, sweets, gold |
+| 1141 | Place the subject at a Harvest Moon festival scene with golden rice fields and full moon | 将主体放在有金色稻田和满月的秋收月夜场景 | Holiday / Mid-Autumn | Golden harvest, full moon |
+| 1142 | Set the background to a Nowruz (Persian New Year) Haft-sin table with seven items | 将背景设为有七件物品的纳乌鲁兹（波斯新年）七欣桌 | Holiday / Other | Spring equinox, Persian |
+| 1143 | Replace the background with a Dia de los Muertos cemetery at night with candles on graves | 将背景替换为有坟墓上蜡烛的亡灵节夜间墓地 | Holiday / Day of the Dead | Candlelit cemetery |
+| 1144 | Place the subject in a Tanabata (Star Festival) scene with colorful paper decorations | 将主体放在有彩色纸装饰的七夕（星节）场景 | Holiday / Other | Paper wishes, bamboo |
+| 1145 | Set the scene at a traditional Dragon Boat Festival racing event on a river | 将场景设在河上的传统端午节龙舟赛 | Holiday / Other | Dragon boats, racing |
+| 1146 | Replace the background with a Loy Krathong lantern and floating candle festival in Thailand | 将背景替换为泰国水灯节和天灯节 | Holiday / Other | Floating candles, sky lanterns |
+| 1147 | Place the subject at a Dia de Muertos ofrenda with photos, flowers, and sugar skulls | 将主体放在有照片、鲜花和糖骷髅的亡灵节祭坛 | Holiday / Day of the Dead | Memorial altar, marigolds |
+| 1148 | Set the background to a Hanukkah scene with lit menorah, dreidels, and blue decorations | 将背景设为有点燃烛台、陀螺和蓝色装饰的光明节场景 | Holiday / Other | Blue and silver, candles |
+| 1149 | Replace the background with a Kwanzaa celebration table with kinara and harvest items | 将背景替换为有金纳拉烛台和丰收物品的宽扎节庆桌 | Holiday / Other | Red black green, candles |
+| 1150 | Place the subject at a traditional Obon festival in Japan with bon dance and lanterns | 将主体放在有盆舞和灯笼的日本传统盂兰盆节 | Holiday / Other | Festival dance, lanterns |
+| 1151 | Set the scene at a Lohri bonfire celebration in Punjab with flames and music | 将场景设在旁遮普有火焰和音乐的洛里篝火庆祝 | Holiday / Other | Large bonfire, celebration |
+| 1152 | Replace the background with a Chuseok Korean harvest festival with songpyeon rice cakes | 将背景替换为有松糕的韩国秋夕丰收节 | Holiday / Other | Korean harvest, moon |
+| 1153 | Place the subject at a New Year's Eve countdown with fireworks and confetti | 将主体放在有烟花和彩纸的新年倒计时 | Holiday / Other | Midnight, fireworks, party |
+| 1154 | Set the background to a Valentine's Day window display with heart decorations and roses | 将背景设为有心形装饰和玫瑰的情人节橱窗展示 | Holiday / Valentine's | Retail display, hearts |
+| 1155 | Replace the background with a Qingming Festival scene at a spring cemetery with green hills | 将背景替换为有绿色山丘的清明节春天扫墓场景 | Holiday / Other | Spring, remembrance |
+| 1156 | Place the subject at a Midsummer maypole celebration in Scandinavia with flower wreaths | 将主体放在有花环的北欧仲夏五月柱庆祝 | Holiday / Other | Flower wreaths, maypole |
+| 1157 | Set the scene at a traditional Sukkot celebration with a decorated sukkah booth | 将场景设在有装饰棚屋的传统住棚节庆祝 | Holiday / Other | Booth, hanging fruits |
+| 1158 | Replace the background with a Bastille Day celebration in Paris with flags and fireworks | 将背景替换为有旗帜和烟花的巴黎巴士底日庆祝 | Holiday / Other | Tricolor, Eiffel Tower |
+| 1159 | Place the subject in a Chinese Double Ninth Festival scene climbing a mountain with chrysanthemums | 将主体放在有菊花的重阳节登山场景 | Holiday / Other | Autumn, chrysanthemum |
+| 1160 | Set the background to a Pongal harvest festival in Tamil Nadu with decorated cows and kolam | 将背景设为有装饰牛和科兰图案的泰米尔纳德邦丰收节 | Holiday / Other | Harvest, colorful kolam |
+| 1161 | Replace the background with a traditional Chung Yeung Festival hilltop scene with autumn views | 将背景替换为有秋景的传统重阳节登高场景 | Holiday / Other | Mountain, autumn, elder respect |
+| 1162 | Place the subject at a Christmas nativity scene with stable and stars | 将主体放在有马厩和星星的圣诞耶稣诞生场景 | Holiday / Christmas | Nativity, starlight |
+| 1163 | Set the scene at a winter solstice celebration with bonfire and evergreen wreaths | 将场景设在有篝火和常绿花环的冬至庆祝 | Holiday / Other | Solstice fire, nature |
+| 1164 | Replace the background with an elaborate Chinese New Year temple light show | 将背景替换为华丽的春节寺庙灯光秀 | Holiday / Chinese New Year | Temple, spectacular lights |
+| 1165 | Place the subject at a Carnival parade in Rio with samba dancers and elaborate floats | 将主体放在有桑巴舞者和华丽花车的里约狂欢节游行 | Holiday / Carnival | Samba, feathers, energy |
+| 1166 | Set the background to an elegant New Year's Day champagne toast at midnight party | 将背景设为午夜派对上优雅的新年香槟干杯 | Holiday / Other | Champagne, sparkle |
+| 1167 | Replace the background with a Vesak Buddhist holiday temple with lotus offerings and candles | 将背景替换为有莲花供品和蜡烛的卫塞节佛教寺庙 | Holiday / Other | Buddhist, lotus, peaceful |
+| 1168 | Place the subject at a Guy Fawkes Night bonfire with fireworks in the UK | 将主体放在有烟花的英国篝火之夜 | Holiday / Other | Bonfire, sparklers |
+| 1169 | Set the scene in a beautifully decorated Sukkot booth with hung fruits and fairy lights | 将场景设在有悬挂水果和仙女灯的精美装饰住棚 | Holiday / Other | Harvest booth, natural |
+| 1170 | Replace the background with a Chinese Yuanxiao (Lantern Festival) night with tangyuan and riddles | 将背景替换为有汤圆和灯谜的中国元宵节之夜 | Holiday / Lantern Festival | Riddle lanterns, sweets |
+| 1171 | Place the subject at a Scottish Hogmanay New Year celebration with torchlight procession | 将主体放在有火把游行的苏格兰除夕新年庆祝 | Holiday / Other | Torch procession, midnight |
+| 1172 | Set the background to an Inti Raymi (Festival of the Sun) celebration in Cusco Peru | 将背景设为秘鲁库斯科的太阳节庆祝 | Holiday / Other | Incan, costume, sun |
+| 1173 | Replace the background with a traditional maple syrup festival in Canada with sugar shack | 将背景替换为有枫糖屋的加拿大传统枫糖节 | Holiday / Other | Maple trees, snow, syrup |
+| 1174 | Place the subject at an Epiphany Three Kings celebration with parade and gifts | 将主体放在有游行和礼物的主显节三王庆祝 | Holiday / Other | Three Kings, procession |
+| 1175 | Set the scene at a Burning Man art festival in the desert with sculpture and flames | 将场景设在有雕塑和火焰的沙漠火人节艺术节 | Holiday / Other | Desert art, flames, radical |
+| 1176 | Replace the background with a Halloween harvest festival with hay bales, corn maze, and pumpkins | 将背景替换为有干草捆、玉米迷宫和南瓜的万圣节丰收节 | Holiday / Halloween | Autumn harvest, rural |
+| 1177 | Place the subject in an Indian wedding mandap decorated with red flowers and gold drapes | 将主体放在有红花和金帷幔装饰的印度婚礼棚 | Holiday / Other | Wedding, ornate, red-gold |
+| 1178 | Set the background to a Christmas Eve midnight mass in a candlelit cathedral | 将背景设为烛光大教堂的圣诞前夕午夜弥撒 | Holiday / Christmas | Candles, sacred, solemn |
+| 1179 | Replace the background with a spring Nowruz table with goldfish bowl, green sprouts and mirror | 将背景替换为有金鱼缸、绿芽和镜子的春天纳乌鲁兹桌 | Holiday / Other | Persian spring symbols |
+| 1180 | Place the subject at a Thai Loy Krathong floating basket ceremony on a moonlit river | 将主体放在月光河上的泰国水灯节放灯仪式 | Holiday / Other | Floating baskets, moonlit |
+# Part 3: Face, Hair & Beauty / 面部、头发与美妆
+
+| # | English Prompt | 中文提示词 | Category | Config Notes |
+|---|---------------|-----------|----------|--------------|
+| 1 | Change hair color to platinum blonde | 将发色改为铂金色 | Hair Color | steps=40, cfg=4.0 |
+| 2 | Change hair color to ash blonde | 将发色改为灰金色 | Hair Color | steps=40, cfg=4.0 |
+| 3 | Change hair color to honey blonde | 将发色改为蜜金色 | Hair Color | steps=40, cfg=4.0 |
+| 4 | Change hair color to strawberry blonde | 将发色改为草莓金 | Hair Color | steps=40, cfg=4.0 |
+| 5 | Change hair color to golden blonde | 将发色改为金色 | Hair Color | steps=40, cfg=4.0 |
+| 6 | Change hair color to dirty blonde | 将发色改为暗金色 | Hair Color | steps=40, cfg=4.0 |
+| 7 | Change hair color to sandy blonde | 将发色改为沙金色 | Hair Color | steps=40, cfg=4.0 |
+| 8 | Change hair color to buttery blonde | 将发色改为奶油金 | Hair Color | steps=40, cfg=4.0 |
+| 9 | Change hair color to champagne blonde | 将发色改为香槟金 | Hair Color | steps=40, cfg=4.0 |
+| 10 | Change hair color to white blonde | 将发色改为白金色 | Hair Color | steps=40, cfg=4.0 |
+| 11 | Change hair color to chocolate brown | 将发色改为巧克力棕 | Hair Color | steps=40, cfg=4.0 |
+| 12 | Change hair color to chestnut brown | 将发色改为栗棕色 | Hair Color | steps=40, cfg=4.0 |
+| 13 | Change hair color to caramel brown | 将发色改为焦糖棕 | Hair Color | steps=40, cfg=4.0 |
+| 14 | Change hair color to mahogany brown | 将发色改为红褐色 | Hair Color | steps=40, cfg=4.0 |
+| 15 | Change hair color to auburn | 将发色改为赤褐色 | Hair Color | steps=40, cfg=4.0 |
+| 16 | Change hair color to dark brown | 将发色改为深棕色 | Hair Color | steps=40, cfg=4.0 |
+| 17 | Change hair color to espresso brown | 将发色改为浓咖啡棕 | Hair Color | steps=40, cfg=4.0 |
+| 18 | Change hair color to mocha brown | 将发色改为摩卡棕 | Hair Color | steps=40, cfg=4.0 |
+| 19 | Change hair color to toffee brown | 将发色改为太妃棕 | Hair Color | steps=40, cfg=4.0 |
+| 20 | Change hair color to cinnamon brown | 将发色改为肉桂棕 | Hair Color | steps=40, cfg=4.0 |
+| 21 | Change hair color to jet black | 将发色改为乌黑色 | Hair Color | steps=40, cfg=4.0 |
+| 22 | Change hair color to blue-black | 将发色改为蓝黑色 | Hair Color | steps=40, cfg=4.0 |
+| 23 | Change hair color to warm black | 将发色改为暖黑色 | Hair Color | steps=40, cfg=4.0 |
+| 24 | Change hair color to soft black | 将发色改为柔和黑 | Hair Color | steps=40, cfg=4.0 |
+| 25 | Change hair color to copper red | 将发色改为铜红色 | Hair Color | steps=40, cfg=4.0 |
+| 26 | Change hair color to ginger red | 将发色改为姜红色 | Hair Color | steps=40, cfg=4.0 |
+| 27 | Change hair color to cherry red | 将发色改为樱桃红 | Hair Color | steps=40, cfg=4.0 |
+| 28 | Change hair color to burgundy | 将发色改为酒红色 | Hair Color | steps=40, cfg=4.0 |
+| 29 | Change hair color to wine red | 将发色改为葡萄酒红 | Hair Color | steps=40, cfg=4.0 |
+| 30 | Change hair color to scarlet red | 将发色改为猩红色 | Hair Color | steps=40, cfg=4.0 |
+| 31 | Change hair color to fire engine red | 将发色改为消防车红 | Hair Color | steps=40, cfg=4.0 |
+| 32 | Change hair color to ruby red | 将发色改为宝石红 | Hair Color | steps=40, cfg=4.0 |
+| 33 | Change hair color to crimson | 将发色改为深红色 | Hair Color | steps=40, cfg=4.0 |
+| 34 | Change hair color to maroon | 将发色改为栗色 | Hair Color | steps=40, cfg=4.0 |
+| 35 | Change hair color to silver gray | 将发色改为银灰色 | Hair Color | steps=40, cfg=4.0 |
+| 36 | Change hair color to salt-and-pepper | 将发色改为花白色 | Hair Color | steps=40, cfg=4.0 |
+| 37 | Change hair color to steel gray | 将发色改为钢灰色 | Hair Color | steps=40, cfg=4.0 |
+| 38 | Change hair color to charcoal gray | 将发色改为炭灰色 | Hair Color | steps=40, cfg=4.0 |
+| 39 | Change hair color to pearl white | 将发色改为珍珠白 | Hair Color | steps=40, cfg=4.0 |
+| 40 | Change hair color to pastel pink | 将发色改为粉彩粉 | Hair Color | steps=40, cfg=4.0 |
+| 41 | Change hair color to hot pink | 将发色改为荧光粉 | Hair Color | steps=40, cfg=4.0 |
+| 42 | Change hair color to rose gold | 将发色改为玫瑰金 | Hair Color | steps=40, cfg=4.0 |
+| 43 | Change hair color to bubblegum pink | 将发色改为泡泡糖粉 | Hair Color | steps=40, cfg=4.0 |
+| 44 | Change hair color to dusty rose | 将发色改为灰玫瑰色 | Hair Color | steps=40, cfg=4.0 |
+| 45 | Change hair color to ice blue | 将发色改为冰蓝色 | Hair Color | steps=40, cfg=4.0 |
+| 46 | Change hair color to navy blue | 将发色改为海军蓝 | Hair Color | steps=40, cfg=4.0 |
+| 47 | Change hair color to electric blue | 将发色改为电光蓝 | Hair Color | steps=40, cfg=4.0 |
+| 48 | Change hair color to teal | 将发色改为青蓝色 | Hair Color | steps=40, cfg=4.0 |
+| 49 | Change hair color to sky blue | 将发色改为天蓝色 | Hair Color | steps=40, cfg=4.0 |
+| 50 | Change hair color to cobalt blue | 将发色改为钴蓝色 | Hair Color | steps=40, cfg=4.0 |
+| 51 | Change hair color to lavender | 将发色改为薰衣草紫 | Hair Color | steps=40, cfg=4.0 |
+| 52 | Change hair color to violet | 将发色改为紫罗兰色 | Hair Color | steps=40, cfg=4.0 |
+| 53 | Change hair color to plum purple | 将发色改为梅紫色 | Hair Color | steps=40, cfg=4.0 |
+| 54 | Change hair color to lilac | 将发色改为丁香紫 | Hair Color | steps=40, cfg=4.0 |
+| 55 | Change hair color to deep purple | 将发色改为深紫色 | Hair Color | steps=40, cfg=4.0 |
+| 56 | Change hair color to emerald green | 将发色改为祖母绿 | Hair Color | steps=40, cfg=4.0 |
+| 57 | Change hair color to mint green | 将发色改为薄荷绿 | Hair Color | steps=40, cfg=4.0 |
+| 58 | Change hair color to forest green | 将发色改为森林绿 | Hair Color | steps=40, cfg=4.0 |
+| 59 | Change hair color to sage green | 将发色改为鼠尾草绿 | Hair Color | steps=40, cfg=4.0 |
+| 60 | Change hair color to olive green | 将发色改为橄榄绿 | Hair Color | steps=40, cfg=4.0 |
+| 61 | Change hair color to neon orange | 将发色改为荧光橙 | Hair Color | steps=40, cfg=4.0 |
+| 62 | Change hair color to peach | 将发色改为蜜桃色 | Hair Color | steps=40, cfg=4.0 |
+| 63 | Change hair color to tangerine | 将发色改为橘红色 | Hair Color | steps=40, cfg=4.0 |
+| 64 | Change hair color to coral | 将发色改为珊瑚色 | Hair Color | steps=40, cfg=4.0 |
+| 65 | Change hair to blonde-to-brown ombre | 将头发改为金棕色渐变 | Hair Color / Multi | steps=45, cfg=4.5 |
+| 66 | Change hair to brown-to-blonde ombre | 将头发改为棕金色渐变 | Hair Color / Multi | steps=45, cfg=4.5 |
+| 67 | Change hair to black-to-red ombre | 将头发改为黑红色渐变 | Hair Color / Multi | steps=45, cfg=4.5 |
+| 68 | Change hair to dark-to-caramel ombre | 将头发改为深色到焦糖渐变 | Hair Color / Multi | steps=45, cfg=4.5 |
+| 69 | Change hair to black-to-blue ombre | 将头发改为黑蓝色渐变 | Hair Color / Multi | steps=45, cfg=4.5 |
+| 70 | Change hair to brown-to-rose-gold ombre | 将头发改为棕到玫瑰金渐变 | Hair Color / Multi | steps=45, cfg=4.5 |
+| 71 | Change hair to dark-to-purple ombre tips | 将头发改为深色到紫色渐变发尾 | Hair Color / Multi | steps=45, cfg=4.5 |
+| 72 | Change hair to brown-to-caramel balayage | 将头发改为棕色焦糖挑染 | Hair Color / Multi | steps=45, cfg=4.5 |
+| 73 | Change hair to dark-to-honey balayage | 将头发改为深色蜜金挑染 | Hair Color / Multi | steps=45, cfg=4.5 |
+| 74 | Change hair to ash brown balayage | 将头发改为灰棕色挑染 | Hair Color / Multi | steps=45, cfg=4.5 |
+| 75 | Change hair to blonde balayage on dark hair | 将头发改为深色上的金色挑染 | Hair Color / Multi | steps=45, cfg=4.5 |
+| 76 | Change hair to blonde highlights on brown hair | 将头发改为棕发上金色挑染 | Hair Color / Multi | steps=45, cfg=4.5 |
+| 77 | Change hair to caramel highlights | 将头发改为焦糖色挑染 | Hair Color / Multi | steps=45, cfg=4.5 |
+| 78 | Change hair to platinum highlights | 将头发改为铂金色挑染 | Hair Color / Multi | steps=45, cfg=4.5 |
+| 79 | Change hair to honey lowlights on blonde | 将头发改为金发上蜜色低光 | Hair Color / Multi | steps=45, cfg=4.5 |
+| 80 | Change hair to ash brown lowlights | 将头发改为灰棕色低光 | Hair Color / Multi | steps=45, cfg=4.5 |
+| 81 | Change hair to pink dip-dyed tips | 将头发改为粉色浸染发尾 | Hair Color / Multi | steps=45, cfg=4.5 |
+| 82 | Change hair to blue dip-dyed tips | 将头发改为蓝色浸染发尾 | Hair Color / Multi | steps=45, cfg=4.5 |
+| 83 | Change hair to purple dip-dyed tips | 将头发改为紫色浸染发尾 | Hair Color / Multi | steps=45, cfg=4.5 |
+| 84 | Change hair to green dip-dyed tips | 将头发改为绿色浸染发尾 | Hair Color / Multi | steps=45, cfg=4.5 |
+| 85 | Change hair to half-black half-white split dye | 将头发改为一半黑一半白 | Hair Color / Multi | steps=45, cfg=4.5 |
+| 86 | Change hair to half-pink half-purple split dye | 将头发改为一半粉一半紫 | Hair Color / Multi | steps=45, cfg=4.5 |
+| 87 | Change hair to half-red half-black split dye | 将头发改为一半红一半黑 | Hair Color / Multi | steps=45, cfg=4.5 |
+| 88 | Change hair to half-blue half-green split dye | 将头发改为一半蓝一半绿 | Hair Color / Multi | steps=45, cfg=4.5 |
+| 89 | Change hair to rainbow multicolor | 将头发改为彩虹多色 | Hair Color / Multi | steps=45, cfg=4.5 |
+| 90 | Change hair to mermaid blue-green | 将头发改为美人鱼蓝绿色 | Hair Color / Multi | steps=45, cfg=4.5 |
+| 91 | Change hair to mermaid purple-blue-teal | 将头发改为美人鱼紫蓝青色 | Hair Color / Multi | steps=45, cfg=4.5 |
+| 92 | Change hair to unicorn pastel pink-purple-blue | 将头发改为独角兽粉紫蓝色 | Hair Color / Multi | steps=45, cfg=4.5 |
+| 93 | Change hair to peekaboo purple underneath | 将头发改为下层紫色隐藏挑染 | Hair Color / Multi | steps=45, cfg=4.5 |
+| 94 | Change hair to peekaboo blue underneath | 将头发改为下层蓝色隐藏挑染 | Hair Color / Multi | steps=45, cfg=4.5 |
+| 95 | Change hair to peekaboo pink underneath | 将头发改为下层粉色隐藏挑染 | Hair Color / Multi | steps=45, cfg=4.5 |
+| 96 | Change hair to blonde money piece face-framing | 将头发改为金色脸部框架挑染 | Hair Color / Multi | steps=45, cfg=4.5 |
+| 97 | Change hair to caramel money piece face-framing | 将头发改为焦糖色脸部框架挑染 | Hair Color / Multi | steps=45, cfg=4.5 |
+| 98 | Change hair to platinum money piece face-framing | 将头发改为铂金色脸部框架挑染 | Hair Color / Multi | steps=45, cfg=4.5 |
+| 99 | Change hair to dark root shadow with blonde ends | 将头发改为深色发根配金色发尾 | Hair Color / Multi | steps=45, cfg=4.5 |
+| 100 | Change hair to dark root shadow with silver ends | 将头发改为深色发根配银色发尾 | Hair Color / Multi | steps=45, cfg=4.5 |
+| 101 | Change hair to dark root shadow with pink ends | 将头发改为深色发根配粉色发尾 | Hair Color / Multi | steps=45, cfg=4.5 |
+| 102 | Change hairstyle to a short textured pixie cut | 将发型改为短碎纹理精灵头 | Hair Style / Women | steps=40, cfg=4.0 |
+| 103 | Change hairstyle to a classic chin-length bob | 将发型改为经典齐下巴波波头 | Hair Style / Women | steps=40, cfg=4.0 |
+| 104 | Change hairstyle to an inverted bob shorter at back | 将发型改为后短前长反向波波头 | Hair Style / Women | steps=40, cfg=4.0 |
+| 105 | Change hairstyle to an asymmetric bob with one side longer | 将发型改为不对称单侧长波波头 | Hair Style / Women | steps=40, cfg=4.0 |
+| 106 | Change hairstyle to a shoulder-length lob | 将发型改为齐肩长波波头 | Hair Style / Women | steps=40, cfg=4.0 |
+| 107 | Change hairstyle to long layered hair with face-framing layers | 将发型改为长碎层配脸部框架层次 | Hair Style / Women | steps=40, cfg=4.0 |
+| 108 | Change hairstyle to curtain bangs parted in center | 将发型改为中分窗帘刘海 | Hair Style / Women | steps=40, cfg=4.0 |
+| 109 | Change hairstyle to blunt straight-across bangs | 将发型改为齐平直刘海 | Hair Style / Women | steps=40, cfg=4.0 |
+| 110 | Change hairstyle to side-swept bangs to the left | 将发型改为左侧偏分刘海 | Hair Style / Women | steps=40, cfg=4.0 |
+| 111 | Change hairstyle to wispy thin see-through bangs | 将发型改为轻薄空气刘海 | Hair Style / Women | steps=40, cfg=4.0 |
+| 112 | Change hairstyle to micro bangs above eyebrows | 将发型改为超短眉上刘海 | Hair Style / Women | steps=40, cfg=4.0 |
+| 113 | Change hairstyle to a layered shag cut with texture | 将发型改为层次感碎短发 | Hair Style / Women | steps=40, cfg=4.0 |
+| 114 | Change hairstyle to a wolf cut with layers and volume | 将发型改为狼尾碎层发型 | Hair Style / Women | steps=40, cfg=4.0 |
+| 115 | Change hairstyle to a Japanese hime cut straight | 将发型改为日式公主切直发 | Hair Style / Women | steps=40, cfg=4.0 |
+| 116 | Change hairstyle to a butterfly cut with face-framing | 将发型改为蝴蝶碎层发型 | Hair Style / Women | steps=40, cfg=4.0 |
+| 117 | Change hairstyle to pin-straight sleek hair | 将发型改为笔直光滑直发 | Hair Style / Women | steps=40, cfg=4.0 |
+| 118 | Change hairstyle to loose beach waves | 将发型改为松散海滩波浪卷 | Hair Style / Women | steps=40, cfg=4.0 |
+| 119 | Change hairstyle to vintage finger waves | 将发型改为复古手指卷 | Hair Style / Women | steps=40, cfg=4.0 |
+| 120 | Change hairstyle to glamorous Hollywood waves | 将发型改为好莱坞大波浪卷 | Hair Style / Women | steps=40, cfg=4.0 |
+| 121 | Change hairstyle to elegant S-shaped waves | 将发型改为优雅S型波浪 | Hair Style / Women | steps=40, cfg=4.0 |
+| 122 | Change hairstyle to tight ringlet curls | 将发型改为紧密螺旋卷 | Hair Style / Women | steps=40, cfg=4.0 |
+| 123 | Change hairstyle to long spiral curls | 将发型改为长螺旋卷发 | Hair Style / Women | steps=40, cfg=4.0 |
+| 124 | Change hairstyle to an elegant high bun | 将发型改为优雅高丸子头 | Hair Style / Women | steps=40, cfg=4.0 |
+| 125 | Change hairstyle to a messy loose bun | 将发型改为松散凌乱丸子头 | Hair Style / Women | steps=40, cfg=4.0 |
+| 126 | Change hairstyle to a low chignon at the nape | 将发型改为低盘发髻 | Hair Style / Women | steps=40, cfg=4.0 |
+| 127 | Change hairstyle to a classic French twist updo | 将发型改为经典法式盘发 | Hair Style / Women | steps=40, cfg=4.0 |
+| 128 | Change hairstyle to a high topknot bun | 将发型改为高顶发髻 | Hair Style / Women | steps=40, cfg=4.0 |
+| 129 | Change hairstyle to double space buns | 将发型改为双丸子头 | Hair Style / Women | steps=40, cfg=4.0 |
+| 130 | Change hairstyle to a single French braid down the back | 将发型改为背后法式编发 | Hair Style / Women | steps=40, cfg=4.0 |
+| 131 | Change hairstyle to a Dutch braid | 将发型改为荷兰编发 | Hair Style / Women | steps=40, cfg=4.0 |
+| 132 | Change hairstyle to a fishtail braid | 将发型改为鱼骨辫 | Hair Style / Women | steps=40, cfg=4.0 |
+| 133 | Change hairstyle to double boxer braids | 将发型改为双拳击辫 | Hair Style / Women | steps=40, cfg=4.0 |
+| 134 | Change hairstyle to a crown braid halo | 将发型改为围绕头顶的花环编发 | Hair Style / Women | steps=40, cfg=4.0 |
+| 135 | Change hairstyle to a waterfall braid | 将发型改为瀑布编发 | Hair Style / Women | steps=40, cfg=4.0 |
+| 136 | Change hairstyle to cornrow braids | 将发型改为玉米辫 | Hair Style / Women | steps=40, cfg=4.0 |
+| 137 | Change hairstyle to long box braids | 将发型改为长方形编发 | Hair Style / Women | steps=40, cfg=4.0 |
+| 138 | Change hairstyle to thick goddess braids | 将发型改为粗壮女神编发 | Hair Style / Women | steps=40, cfg=4.0 |
+| 139 | Change hairstyle to twist braids | 将发型改为扭转编发 | Hair Style / Women | steps=40, cfg=4.0 |
+| 140 | Change hairstyle to knotless braids | 将发型改为无结编发 | Hair Style / Women | steps=40, cfg=4.0 |
+| 141 | Change hairstyle to a high sleek ponytail | 将发型改为高光滑马尾 | Hair Style / Women | steps=40, cfg=4.0 |
+| 142 | Change hairstyle to a low relaxed ponytail | 将发型改为低松散马尾 | Hair Style / Women | steps=40, cfg=4.0 |
+| 143 | Change hairstyle to a side ponytail | 将发型改为侧马尾 | Hair Style / Women | steps=40, cfg=4.0 |
+| 144 | Change hairstyle to a braided ponytail | 将发型改为编发马尾 | Hair Style / Women | steps=40, cfg=4.0 |
+| 145 | Change hairstyle to a bubble ponytail with sections | 将发型改为泡泡马尾 | Hair Style / Women | steps=40, cfg=4.0 |
+| 146 | Change hairstyle to a sleek slicked-back ponytail | 将发型改为光滑后梳马尾 | Hair Style / Women | steps=40, cfg=4.0 |
+| 147 | Change hairstyle to half-up half-down with curls | 将发型改为半扎半散卷发 | Hair Style / Women | steps=40, cfg=4.0 |
+| 148 | Change hairstyle to pigtails | 将发型改为双马尾 | Hair Style / Women | steps=40, cfg=4.0 |
+| 149 | Change hairstyle to anime-style twintails | 将发型改为动漫风双马尾 | Hair Style / Women | steps=40, cfg=4.0 |
+| 150 | Change hairstyle to a low bun with face-framing tendrils | 将发型改为低发髻配脸部碎发 | Hair Style / Women | steps=40, cfg=4.0 |
+| 151 | Change hairstyle to a top knot with loose strands | 将发型改为顶髻配松散发丝 | Hair Style / Women | steps=40, cfg=4.0 |
+| 152 | Change hairstyle to a skin fade with short top | 将发型改为肤色渐变短顶发型 | Hair Style / Men | steps=40, cfg=4.0 |
+| 153 | Change hairstyle to a low fade clean cut | 将发型改为低渐变整洁发型 | Hair Style / Men | steps=40, cfg=4.0 |
+| 154 | Change hairstyle to a mid fade with textured top | 将发型改为中渐变纹理顶发型 | Hair Style / Men | steps=40, cfg=4.0 |
+| 155 | Change hairstyle to a high fade sharp | 将发型改为高渐变锐利发型 | Hair Style / Men | steps=40, cfg=4.0 |
+| 156 | Change hairstyle to a drop fade behind the ear | 将发型改为耳后落差渐变 | Hair Style / Men | steps=40, cfg=4.0 |
+| 157 | Change hairstyle to a classic taper fade | 将发型改为经典锥形渐变 | Hair Style / Men | steps=40, cfg=4.0 |
+| 158 | Change hairstyle to an undercut with long top | 将发型改为长顶削底发型 | Hair Style / Men | steps=40, cfg=4.0 |
+| 159 | Change hairstyle to a buzz cut number one guard | 将发型改为一号推子寸头 | Hair Style / Men | steps=40, cfg=4.0 |
+| 160 | Change hairstyle to a military crew cut | 将发型改为军事小平头 | Hair Style / Men | steps=40, cfg=4.0 |
+| 161 | Change hairstyle to a classic pompadour | 将发型改为经典飞机头 | Hair Style / Men | steps=40, cfg=4.0 |
+| 162 | Change hairstyle to a modern quiff with volume | 将发型改为蓬松现代飞机头 | Hair Style / Men | steps=40, cfg=4.0 |
+| 163 | Change hairstyle to slicked-back gelled hair | 将发型改为油头后梳发型 | Hair Style / Men | steps=40, cfg=4.0 |
+| 164 | Change hairstyle to a man bun | 将发型改为男士丸子头 | Hair Style / Men | steps=40, cfg=4.0 |
+| 165 | Change hairstyle to a samurai top knot | 将发型改为武士顶髻 | Hair Style / Men | steps=40, cfg=4.0 |
+| 166 | Change hairstyle to a modern mullet | 将发型改为现代鲻鱼头 | Hair Style / Men | steps=40, cfg=4.0 |
+| 167 | Change hairstyle to men curtain bangs | 将发型改为男士窗帘刘海 | Hair Style / Men | steps=40, cfg=4.0 |
+| 168 | Change hairstyle to a textured messy crop | 将发型改为凌乱纹理剪裁 | Hair Style / Men | steps=40, cfg=4.0 |
+| 169 | Change hairstyle to a French crop with short fringe | 将发型改为法式短刘海剪裁 | Hair Style / Men | steps=40, cfg=4.0 |
+| 170 | Change hairstyle to a classic comb-over | 将发型改为经典侧分梳理 | Hair Style / Men | steps=40, cfg=4.0 |
+| 171 | Change hairstyle to a sharp side part | 将发型改为锐利侧分 | Hair Style / Men | steps=40, cfg=4.0 |
+| 172 | Change hairstyle to a Caesar cut with short bangs | 将发型改为凯撒短刘海发型 | Hair Style / Men | steps=40, cfg=4.0 |
+| 173 | Change hairstyle to a sharp mohawk | 将发型改为锐利莫西干 | Hair Style / Men | steps=40, cfg=4.0 |
+| 174 | Change hairstyle to a styled faux hawk | 将发型改为造型假莫西干 | Hair Style / Men | steps=40, cfg=4.0 |
+| 175 | Change hairstyle to an Edgar cut with straight fringe | 将发型改为爱德加直刘海发型 | Hair Style / Men | steps=40, cfg=4.0 |
+| 176 | Change hairstyle to spiky gelled hair | 将发型改为刺猬胶定发型 | Hair Style / Men | steps=40, cfg=4.0 |
+| 177 | Change hairstyle to messy bedhead style | 将发型改为凌乱自然起床发 | Hair Style / Men | steps=40, cfg=4.0 |
+| 178 | Change hairstyle to natural wavy men hair | 将发型改为自然波浪男士发 | Hair Style / Men | steps=40, cfg=4.0 |
+| 179 | Change hairstyle to long flowing men hair | 将发型改为飘逸长发男士 | Hair Style / Men | steps=40, cfg=4.0 |
+| 180 | Change hairstyle to shoulder-length men hair | 将发型改为齐肩男士长发 | Hair Style / Men | steps=40, cfg=4.0 |
+| 181 | Change hairstyle to bald shaved head | 将发型改为光头 | Hair Style / Men | steps=40, cfg=4.0 |
+| 182 | Give the person fair porcelain skin | 给人物白皙瓷器般的肤色 | Skin & Complexion | steps=40, cfg=4.0 |
+| 183 | Give the person light skin tone | 给人物浅色肤色 | Skin & Complexion | steps=40, cfg=4.0 |
+| 184 | Give the person medium skin tone | 给人物中等肤色 | Skin & Complexion | steps=40, cfg=4.0 |
+| 185 | Give the person olive skin tone | 给人物橄榄色肤色 | Skin & Complexion | steps=40, cfg=4.0 |
+| 186 | Give the person golden tan skin | 给人物金色古铜肤色 | Skin & Complexion | steps=40, cfg=4.0 |
+| 187 | Give the person sun-kissed bronze skin | 给人物阳光古铜色肤色 | Skin & Complexion | steps=40, cfg=4.0 |
+| 188 | Give the person medium brown skin | 给人物中棕色肤色 | Skin & Complexion | steps=40, cfg=4.0 |
+| 189 | Give the person dark brown skin | 给人物深棕色肤色 | Skin & Complexion | steps=40, cfg=4.0 |
+| 190 | Give the person deep ebony skin | 给人物深乌黑色肤色 | Skin & Complexion | steps=40, cfg=4.0 |
+| 191 | Make the skin look smooth and perfected | 让皮肤看起来光滑完美 | Skin & Complexion | steps=40, cfg=4.0 |
+| 192 | Add light natural freckles across the nose | 在鼻子上添加自然淡雀斑 | Skin & Complexion | steps=40, cfg=4.0 |
+| 193 | Add heavy dense freckles on the face | 在脸上添加浓密雀斑 | Skin & Complexion | steps=40, cfg=4.0 |
+| 194 | Add sun-kissed freckles on cheeks | 在脸颊添加阳光雀斑 | Skin & Complexion | steps=40, cfg=4.0 |
+| 195 | Add a single beauty mark on the left cheek | 在左脸添加一颗美人痣 | Skin & Complexion | steps=40, cfg=4.0 |
+| 196 | Make skin clear and blemish-free | 让皮肤干净无瑕 | Skin & Complexion | steps=40, cfg=4.0 |
+| 197 | Give dewy glowing hydrated skin | 给予水润发光肌肤 | Skin & Complexion | steps=40, cfg=4.0 |
+| 198 | Give matte oil-free skin finish | 给予哑光无油肌肤 | Skin & Complexion | steps=40, cfg=4.0 |
+| 199 | Give a sun-kissed warm glow | 给予日晒温暖光泽 | Skin & Complexion | steps=40, cfg=4.0 |
+| 200 | Add naturally flushed rosy cheeks | 添加自然红润脸颊 | Skin & Complexion | steps=40, cfg=4.0 |
+| 201 | Add cute dimples on both cheeks | 在双颊添加可爱酒窝 | Skin & Complexion | steps=40, cfg=4.0 |
+| 202 | Add fine expression lines | 添加细微表情纹 | Skin & Complexion | steps=40, cfg=4.0 |
+| 203 | Add visible crow feet wrinkles at eye corners | 在眼角添加鱼尾纹 | Skin & Complexion | steps=40, cfg=4.0 |
+| 204 | Add horizontal forehead wrinkles | 添加额头横纹 | Skin & Complexion | steps=40, cfg=4.0 |
+| 205 | Add prominent smile and laugh lines | 添加明显法令纹 | Skin & Complexion | steps=40, cfg=4.0 |
+| 206 | Add visible tan lines on shoulders | 在肩部添加晒痕 | Skin & Complexion | steps=40, cfg=4.0 |
+| 207 | Add light sunburn on nose and cheeks | 在鼻子和脸颊添加轻微晒伤 | Skin & Complexion | steps=40, cfg=4.0 |
+| 208 | Show natural skin texture with visible pores | 展示有毛孔的自然肤质 | Skin & Complexion | steps=40, cfg=4.0 |
+| 209 | Give flawless airbrushed porcelain look | 给予完美无瑕瓷器效果 | Skin & Complexion | steps=40, cfg=4.0 |
+| 210 | Give youthful plump skin | 给予年轻饱满肌肤 | Skin & Complexion | steps=40, cfg=4.0 |
+| 211 | Give aged weathered mature skin | 给予年老风化成熟肌肤 | Skin & Complexion | steps=40, cfg=4.0 |
+| 212 | Apply classic black smoky eye makeup | 涂经典黑色烟熏眼妆 | Makeup / Eyes | steps=40, cfg=4.0 |
+| 213 | Apply warm brown smoky eye | 涂温暖棕色烟熏眼妆 | Makeup / Eyes | steps=40, cfg=4.0 |
+| 214 | Apply deep navy smoky eye | 涂深海军蓝烟熏眼妆 | Makeup / Eyes | steps=40, cfg=4.0 |
+| 215 | Apply rich burgundy smoky eye | 涂浓郁酒红烟熏眼妆 | Makeup / Eyes | steps=40, cfg=4.0 |
+| 216 | Apply forest green smoky eye | 涂森林绿烟熏眼妆 | Makeup / Eyes | steps=40, cfg=4.0 |
+| 217 | Apply deep purple smoky eye | 涂深紫色烟熏眼妆 | Makeup / Eyes | steps=40, cfg=4.0 |
+| 218 | Apply precise cut crease eyeshadow | 涂精准欧式双眼皮眼影 | Makeup / Eyes | steps=40, cfg=4.0 |
+| 219 | Apply soft halo eye shimmer | 涂柔和光晕眼妆 | Makeup / Eyes | steps=40, cfg=4.0 |
+| 220 | Apply gradient light-to-dark eyeshadow | 涂由浅到深渐变眼影 | Makeup / Eyes | steps=40, cfg=4.0 |
+| 221 | Apply chunky silver glitter eyeshadow | 涂银色闪片眼影 | Makeup / Eyes | steps=40, cfg=4.0 |
+| 222 | Apply fine gold glitter eyeshadow | 涂金色细闪眼影 | Makeup / Eyes | steps=40, cfg=4.0 |
+| 223 | Apply matte nude all-over eyeshadow | 涂哑光裸色全眼影 | Makeup / Eyes | steps=40, cfg=4.0 |
+| 224 | Apply champagne shimmer eyeshadow | 涂香槟色珠光眼影 | Makeup / Eyes | steps=40, cfg=4.0 |
+| 225 | Apply rose gold metallic eyeshadow | 涂玫瑰金金属眼影 | Makeup / Eyes | steps=40, cfg=4.0 |
+| 226 | Apply warm copper eyeshadow | 涂温暖铜色眼影 | Makeup / Eyes | steps=40, cfg=4.0 |
+| 227 | Apply rich bronze eyeshadow | 涂浓郁古铜眼影 | Makeup / Eyes | steps=40, cfg=4.0 |
+| 228 | Apply bright gold eyeshadow | 涂明亮金色眼影 | Makeup / Eyes | steps=40, cfg=4.0 |
+| 229 | Apply cool silver eyeshadow | 涂冷银色眼影 | Makeup / Eyes | steps=40, cfg=4.0 |
+| 230 | Apply deep emerald green eyeshadow | 涂深祖母绿眼影 | Makeup / Eyes | steps=40, cfg=4.0 |
+| 231 | Apply vivid sapphire blue eyeshadow | 涂鲜艳宝石蓝眼影 | Makeup / Eyes | steps=40, cfg=4.0 |
+| 232 | Apply royal amethyst purple eyeshadow | 涂皇家紫水晶眼影 | Makeup / Eyes | steps=40, cfg=4.0 |
+| 233 | Apply soft coral eyeshadow | 涂柔和珊瑚眼影 | Makeup / Eyes | steps=40, cfg=4.0 |
+| 234 | Apply warm peach eyeshadow | 涂温暖蜜桃眼影 | Makeup / Eyes | steps=40, cfg=4.0 |
+| 235 | Apply dusty mauve eyeshadow | 涂灰粉紫色眼影 | Makeup / Eyes | steps=40, cfg=4.0 |
+| 236 | Apply neutral taupe eyeshadow | 涂中性灰褐眼影 | Makeup / Eyes | steps=40, cfg=4.0 |
+| 237 | Apply dark charcoal eyeshadow | 涂深碳灰眼影 | Makeup / Eyes | steps=40, cfg=4.0 |
+| 238 | Apply sunset gradient orange-pink eyeshadow | 涂日落渐变橘粉眼影 | Makeup / Eyes | steps=40, cfg=4.0 |
+| 239 | Apply galaxy purple-blue eyeshadow | 涂星空紫蓝眼影 | Makeup / Eyes | steps=40, cfg=4.0 |
+| 240 | Apply rainbow multi-color eyeshadow | 涂彩虹多色眼影 | Makeup / Eyes | steps=40, cfg=4.0 |
+| 241 | Apply classic thin black cat-eye liner | 画经典黑色细猫眼线 | Makeup / Eyes | steps=40, cfg=4.0 |
+| 242 | Apply dramatic thick winged eyeliner | 画粗戏剧性翼形眼线 | Makeup / Eyes | steps=40, cfg=4.0 |
+| 243 | Apply subtle small wing liner | 画微翘小翼眼线 | Makeup / Eyes | steps=40, cfg=4.0 |
+| 244 | Apply blue colored eyeliner | 画蓝色彩色眼线 | Makeup / Eyes | steps=40, cfg=4.0 |
+| 245 | Apply green colored eyeliner | 画绿色彩色眼线 | Makeup / Eyes | steps=40, cfg=4.0 |
+| 246 | Apply purple colored eyeliner | 画紫色彩色眼线 | Makeup / Eyes | steps=40, cfg=4.0 |
+| 247 | Apply white eyeliner on lower waterline | 在下眼线画白色眼线 | Makeup / Eyes | steps=40, cfg=4.0 |
+| 248 | Apply gold metallic eyeliner | 画金色金属眼线 | Makeup / Eyes | steps=40, cfg=4.0 |
+| 249 | Apply smudged kohl eyeliner | 画晕染科尔眼线 | Makeup / Eyes | steps=40, cfg=4.0 |
+| 250 | Apply fox-eye liner elongated | 画拉长狐狸眼线 | Makeup / Eyes | steps=40, cfg=4.0 |
+| 251 | Apply soft puppy-eye rounded liner | 画柔和小狗眼圆润眼线 | Makeup / Eyes | steps=40, cfg=4.0 |
+| 252 | Apply natural-looking mascara | 涂自然观感睫毛膏 | Makeup / Eyes | steps=40, cfg=4.0 |
+| 253 | Apply dramatic volume mascara | 涂浓密戏剧睫毛膏 | Makeup / Eyes | steps=40, cfg=4.0 |
+| 254 | Apply feathery separated lashes mascara | 涂羽毛状分明睫毛膏 | Makeup / Eyes | steps=40, cfg=4.0 |
+| 255 | Give natural full eyebrows | 画自然浓眉 | Makeup / Eyes | steps=40, cfg=4.0 |
+| 256 | Give bold thick bushy eyebrows | 画粗壮浓密眉 | Makeup / Eyes | steps=40, cfg=4.0 |
+| 257 | Give thin pencil-drawn eyebrows | 画细铅笔眉 | Makeup / Eyes | steps=40, cfg=4.0 |
+| 258 | Give high arched eyebrows | 画高挑拱形眉 | Makeup / Eyes | steps=40, cfg=4.0 |
+| 259 | Give straight Korean-style eyebrows | 画韩式一字眉 | Makeup / Eyes | steps=40, cfg=4.0 |
+| 260 | Give laminated brushed-up eyebrows | 画刷上定型眉 | Makeup / Eyes | steps=40, cfg=4.0 |
+| 261 | Apply natural false lashes | 贴自然假睫毛 | Makeup / Eyes | steps=40, cfg=4.0 |
+| 262 | Apply dramatic full false lashes | 贴浓密假睫毛 | Makeup / Eyes | steps=40, cfg=4.0 |
+| 263 | Apply wispy fluttery false lashes | 贴飘逸假睫毛 | Makeup / Eyes | steps=40, cfg=4.0 |
+| 264 | Apply cat-eye angled false lashes | 贴猫眼角度假睫毛 | Makeup / Eyes | steps=40, cfg=4.0 |
+| 265 | Conceal and brighten the under-eye area | 遮盖并提亮眼下区域 | Makeup / Eyes | steps=40, cfg=4.0 |
+| 266 | Apply nude pink lipstick | 涂裸粉色唇膏 | Makeup / Lips | steps=40, cfg=4.0 |
+| 267 | Apply nude beige lipstick | 涂裸米色唇膏 | Makeup / Lips | steps=40, cfg=4.0 |
+| 268 | Apply nude mauve lipstick | 涂裸紫褐唇膏 | Makeup / Lips | steps=40, cfg=4.0 |
+| 269 | Apply classic red lipstick | 涂经典红色唇膏 | Makeup / Lips | steps=40, cfg=4.0 |
+| 270 | Apply cherry red lipstick | 涂樱桃红唇膏 | Makeup / Lips | steps=40, cfg=4.0 |
+| 271 | Apply brick red lipstick | 涂砖红色唇膏 | Makeup / Lips | steps=40, cfg=4.0 |
+| 272 | Apply wine red lipstick | 涂酒红色唇膏 | Makeup / Lips | steps=40, cfg=4.0 |
+| 273 | Apply ruby red lipstick | 涂宝石红唇膏 | Makeup / Lips | steps=40, cfg=4.0 |
+| 274 | Apply deep crimson lipstick | 涂深红色唇膏 | Makeup / Lips | steps=40, cfg=4.0 |
+| 275 | Apply bright scarlet lipstick | 涂猩红色唇膏 | Makeup / Lips | steps=40, cfg=4.0 |
+| 276 | Apply baby pink lipstick | 涂婴儿粉唇膏 | Makeup / Lips | steps=40, cfg=4.0 |
+| 277 | Apply hot pink lipstick | 涂荧光粉唇膏 | Makeup / Lips | steps=40, cfg=4.0 |
+| 278 | Apply dusty pink lipstick | 涂灰粉色唇膏 | Makeup / Lips | steps=40, cfg=4.0 |
+| 279 | Apply rose pink lipstick | 涂玫瑰粉唇膏 | Makeup / Lips | steps=40, cfg=4.0 |
+| 280 | Apply fuchsia lipstick | 涂紫红色唇膏 | Makeup / Lips | steps=40, cfg=4.0 |
+| 281 | Apply coral lipstick | 涂珊瑚色唇膏 | Makeup / Lips | steps=40, cfg=4.0 |
+| 282 | Apply chocolate brown lipstick | 涂巧克力棕唇膏 | Makeup / Lips | steps=40, cfg=4.0 |
+| 283 | Apply coffee brown lipstick | 涂咖啡棕唇膏 | Makeup / Lips | steps=40, cfg=4.0 |
+| 284 | Apply caramel lipstick | 涂焦糖色唇膏 | Makeup / Lips | steps=40, cfg=4.0 |
+| 285 | Apply plum lipstick | 涂梅子色唇膏 | Makeup / Lips | steps=40, cfg=4.0 |
+| 286 | Apply mulberry lipstick | 涂桑葚色唇膏 | Makeup / Lips | steps=40, cfg=4.0 |
+| 287 | Apply cranberry lipstick | 涂蔓越莓色唇膏 | Makeup / Lips | steps=40, cfg=4.0 |
+| 288 | Apply tangerine orange lipstick | 涂橘红色唇膏 | Makeup / Lips | steps=40, cfg=4.0 |
+| 289 | Apply peach lipstick | 涂蜜桃色唇膏 | Makeup / Lips | steps=40, cfg=4.0 |
+| 290 | Apply rust orange lipstick | 涂铁锈橙唇膏 | Makeup / Lips | steps=40, cfg=4.0 |
+| 291 | Apply black lipstick gothic | 涂黑色哥特唇膏 | Makeup / Lips | steps=40, cfg=4.0 |
+| 292 | Apply gold metallic lipstick | 涂金色金属唇膏 | Makeup / Lips | steps=40, cfg=4.0 |
+| 293 | Apply silver metallic lipstick | 涂银色金属唇膏 | Makeup / Lips | steps=40, cfg=4.0 |
+| 294 | Apply matte red lip finish | 涂哑光红唇 | Makeup / Lips | steps=40, cfg=4.0 |
+| 295 | Apply high-gloss glass lips | 涂高光玻璃唇 | Makeup / Lips | steps=40, cfg=4.0 |
+| 296 | Apply velvet finish lipstick | 涂丝绒唇膏 | Makeup / Lips | steps=40, cfg=4.0 |
+| 297 | Apply ombre gradient lips red-to-pink | 涂红到粉渐变唇 | Makeup / Lips | steps=40, cfg=4.0 |
+| 298 | Apply Korean bitten lip stain | 涂韩式咬唇妆 | Makeup / Lips | steps=40, cfg=4.0 |
+| 299 | Apply overlined fuller lips | 涂丰唇超越唇线 | Makeup / Lips | steps=40, cfg=4.0 |
+| 300 | Apply glitter sparkle lips | 涂闪光唇 | Makeup / Lips | steps=40, cfg=4.0 |
+| 301 | Apply dewy luminous foundation | 涂水润光泽粉底 | Makeup / Face | steps=40, cfg=4.0 |
+| 302 | Apply matte poreless foundation | 涂哑光零毛孔粉底 | Makeup / Face | steps=40, cfg=4.0 |
+| 303 | Apply glass skin K-beauty foundation | 涂韩式玻璃肌粉底 | Makeup / Face | steps=40, cfg=4.0 |
+| 304 | Apply soft pink blush on cheeks | 在脸颊涂柔和粉色腮红 | Makeup / Face | steps=40, cfg=4.0 |
+| 305 | Apply warm peach blush | 涂温暖蜜桃腮红 | Makeup / Face | steps=40, cfg=4.0 |
+| 306 | Apply bright coral blush | 涂明亮珊瑚腮红 | Makeup / Face | steps=40, cfg=4.0 |
+| 307 | Apply deep berry blush | 涂深浆果色腮红 | Makeup / Face | steps=40, cfg=4.0 |
+| 308 | Apply Japanese igari hangover blush | 涂日式宿醉腮红 | Makeup / Face | steps=40, cfg=4.0 |
+| 309 | Apply Chinese Douyin blush on nose | 涂抖音式鼻尖腮红 | Makeup / Face | steps=40, cfg=4.0 |
+| 310 | Apply sculpted sharp contour | 画锐利修容 | Makeup / Face | steps=40, cfg=4.0 |
+| 311 | Apply soft natural contour | 画柔和自然修容 | Makeup / Face | steps=40, cfg=4.0 |
+| 312 | Apply nose contour for slimming | 画鼻部修容显瘦 | Makeup / Face | steps=40, cfg=4.0 |
+| 313 | Apply champagne shimmer highlighter | 涂香槟珠光高光 | Makeup / Face | steps=40, cfg=4.0 |
+| 314 | Apply warm gold highlighter | 涂温暖金色高光 | Makeup / Face | steps=40, cfg=4.0 |
+| 315 | Apply holographic rainbow highlighter | 涂全息彩虹高光 | Makeup / Face | steps=40, cfg=4.0 |
+| 316 | Apply natural sun-kissed bronzer | 涂自然日晒古铜 | Makeup / Face | steps=40, cfg=4.0 |
+| 317 | Apply no-makeup makeup natural look | 涂自然裸妆效果 | Makeup / Look | steps=40, cfg=4.0 |
+| 318 | Apply clean girl minimal makeup | 涂清爽女孩极简妆 | Makeup / Look | steps=40, cfg=4.0 |
+| 319 | Apply old money elegant subtle makeup | 涂老钱风优雅低调妆 | Makeup / Look | steps=40, cfg=4.0 |
+| 320 | Apply mob wife bold glamorous makeup | 涂大嫂风浓艳妆 | Makeup / Look | steps=40, cfg=4.0 |
+| 321 | Apply Y2K glossy shimmer makeup | 涂Y2K水润闪亮妆 | Makeup / Look | steps=40, cfg=4.0 |
+| 322 | Apply 90s supermodel matte brown lip look | 涂90年代超模哑光棕唇妆 | Makeup / Look | steps=40, cfg=4.0 |
+| 323 | Apply K-beauty glass skin dewy look | 涂韩式玻璃肌水光妆 | Makeup / Look | steps=40, cfg=4.0 |
+| 324 | Apply Bollywood glamorous dramatic eye look | 涂宝莱坞华丽戏剧眼妆 | Makeup / Look | steps=40, cfg=4.0 |
+| 325 | Apply soft romantic bridal makeup | 涂柔和浪漫新娘妆 | Makeup / Look | steps=40, cfg=4.0 |
+| 326 | Apply dramatic glamorous bridal makeup | 涂华丽戏剧新娘妆 | Makeup / Look | steps=40, cfg=4.0 |
+| 327 | Apply festival sparkle Coachella makeup | 涂音乐节闪光妆 | Makeup / Look | steps=40, cfg=4.0 |
+| 328 | Apply vampire dark lips pale skin Halloween | 涂吸血鬼暗唇苍白万圣节妆 | Makeup / Look | steps=40, cfg=4.0 |
+| 329 | Apply skull skeleton face paint | 涂骷髅面部彩绘 | Makeup / Look | steps=40, cfg=4.0 |
+| 330 | Apply effortless French girl makeup | 涂法式慵懒女孩妆 | Makeup / Look | steps=40, cfg=4.0 |
+| 331 | Apply latte warm brown tones makeup | 涂拿铁温暖棕色调妆 | Makeup / Look | steps=40, cfg=4.0 |
+| 332 | Apply strawberry girl pink blush red lips | 涂草莓女孩粉腮红唇妆 | Makeup / Look | steps=40, cfg=4.0 |
+| 333 | Apply peach girl coral and peach tones | 涂蜜桃女孩珊瑚蜜桃色调 | Makeup / Look | steps=40, cfg=4.0 |
+| 334 | Apply drag queen full glam transformation | 涂变装皇后华丽全妆 | Makeup / Look | steps=40, cfg=4.0 |
+| 335 | Apply ice queen silver blue frozen look | 涂冰雪女王银蓝冰冻妆 | Makeup / Look | steps=40, cfg=4.0 |
+| 336 | Apply bronze goddess sun-kissed makeup | 涂古铜女神阳光妆 | Makeup / Look | steps=40, cfg=4.0 |
+| 337 | Reshape face to oval shape | 将脸型改为椭圆形 | Facial Features | steps=40, cfg=4.0 |
+| 338 | Reshape face to round shape | 将脸型改为圆形 | Facial Features | steps=40, cfg=4.0 |
+| 339 | Reshape face to square shape | 将脸型改为方形 | Facial Features | steps=40, cfg=4.0 |
+| 340 | Reshape face to heart shape | 将脸型改为心形 | Facial Features | steps=40, cfg=4.0 |
+| 341 | Make the nose narrower | 让鼻子更窄 | Facial Features | steps=40, cfg=4.0 |
+| 342 | Give a button nose | 给予小巧圆鼻 | Facial Features | steps=40, cfg=4.0 |
+| 343 | Give an aquiline Roman nose | 给予鹰钩罗马鼻 | Facial Features | steps=40, cfg=4.0 |
+| 344 | Give a straight nose | 给予直鼻 | Facial Features | steps=40, cfg=4.0 |
+| 345 | Make lips fuller and plumper | 让嘴唇更丰满 | Facial Features | steps=40, cfg=4.0 |
+| 346 | Make lips thinner | 让嘴唇更薄 | Facial Features | steps=40, cfg=4.0 |
+| 347 | Make eyes appear larger | 让眼睛看起来更大 | Facial Features | steps=40, cfg=4.0 |
+| 348 | Give almond-shaped eyes | 给予杏仁眼形 | Facial Features | steps=40, cfg=4.0 |
+| 349 | Add double eyelid crease | 添加双眼皮 | Facial Features | steps=40, cfg=4.0 |
+| 350 | Give monolid eyes | 给予单眼皮 | Facial Features | steps=40, cfg=4.0 |
+| 351 | Make cheekbones more prominent | 让颧骨更突出 | Facial Features | steps=40, cfg=4.0 |
+| 352 | Make jawline sharper | 让下颌线更锋利 | Facial Features | steps=40, cfg=4.0 |
+| 353 | Give V-line jawline | 给予V线下颌 | Facial Features | steps=40, cfg=4.0 |
+| 354 | Make chin more pointed | 让下巴更尖 | Facial Features | steps=40, cfg=4.0 |
+| 355 | Add cleft chin dimple | 添加下巴酒窝 | Facial Features | steps=40, cfg=4.0 |
+| 356 | Give pointed elf ears | 给予精灵尖耳朵 | Facial Features | steps=40, cfg=4.0 |
+| 357 | Add a full thick beard | 添加浓密络腮胡 | Facial Hair | steps=40, cfg=4.0 |
+| 358 | Add light 5 oclock shadow stubble | 添加轻微傍晚胡茬 | Facial Hair | steps=40, cfg=4.0 |
+| 359 | Add designer trimmed stubble | 添加精修短胡茬 | Facial Hair | steps=40, cfg=4.0 |
+| 360 | Add a classic goatee | 添加经典山羊胡 | Facial Hair | steps=40, cfg=4.0 |
+| 361 | Add a Van Dyke beard | 添加范戴克胡 | Facial Hair | steps=40, cfg=4.0 |
+| 362 | Add a Balbo beard style | 添加巴尔博胡型 | Facial Hair | steps=40, cfg=4.0 |
+| 363 | Add a chin strap beard | 添加下巴带胡 | Facial Hair | steps=40, cfg=4.0 |
+| 364 | Add a small soul patch | 添加小灵魂片胡 | Facial Hair | steps=40, cfg=4.0 |
+| 365 | Add mutton chop sideburns | 添加羊排鬓角 | Facial Hair | steps=40, cfg=4.0 |
+| 366 | Add a Garibaldi rounded beard | 添加加里波第圆胡 | Facial Hair | steps=40, cfg=4.0 |
+| 367 | Add a long Bandholz beard | 添加班德霍兹长胡 | Facial Hair | steps=40, cfg=4.0 |
+| 368 | Add a pointed ducktail beard | 添加鸭尾尖胡 | Facial Hair | steps=40, cfg=4.0 |
+| 369 | Add a Viking Norse beard with braids | 添加维京编辫长胡 | Facial Hair | steps=40, cfg=4.0 |
+| 370 | Add a lumberjack beard | 添加伐木工粗犷胡 | Facial Hair | steps=40, cfg=4.0 |
+| 371 | Add a handlebar mustache | 添加翘把手胡 | Facial Hair | steps=40, cfg=4.0 |
+| 372 | Add a chevron mustache | 添加V形胡 | Facial Hair | steps=40, cfg=4.0 |
+| 373 | Add a pencil mustache | 添加细铅笔胡 | Facial Hair | steps=40, cfg=4.0 |
+| 374 | Add a walrus mustache | 添加海象宽胡 | Facial Hair | steps=40, cfg=4.0 |
+| 375 | Add a horseshoe mustache | 添加马蹄形胡 | Facial Hair | steps=40, cfg=4.0 |
+| 376 | Add a Dali mustache | 添加达利翘胡 | Facial Hair | steps=40, cfg=4.0 |
+| 377 | Make face completely clean-shaven | 让面部完全刮净 | Facial Hair | steps=40, cfg=4.0 |
+| 378 | Add salt-and-pepper gray beard | 添加花白灰胡 | Facial Hair | steps=40, cfg=4.0 |
+| 379 | Add white Santa-style beard | 添加白色圣诞老人胡 | Facial Hair | steps=40, cfg=4.0 |
+| 380 | Remove all facial hair | 完全移除面部毛发 | Facial Hair | steps=40, cfg=4.0 |
+| 381 | Add subtle fine wrinkles around eyes | 在眼周添加细微皱纹 | Age Transform | steps=40, cfg=4.0 |
+| 382 | Add deep pronounced wrinkles on face | 在面部添加深刻皱纹 | Age Transform | steps=40, cfg=4.0 |
+| 383 | Add crow feet at eye corners | 在眼角添加鱼尾纹 | Age Transform | steps=40, cfg=4.0 |
+| 384 | Add laugh lines around mouth | 在嘴角添加法令纹 | Age Transform | steps=40, cfg=4.0 |
+| 385 | Add forehead wrinkles | 添加额头横纹 | Age Transform | steps=40, cfg=4.0 |
+| 386 | Add gray streaks to hair | 在头发中添加灰色条纹 | Age Transform | steps=40, cfg=4.0 |
+| 387 | Change all hair to full gray silver | 将头发全部变为灰白 | Age Transform | steps=40, cfg=4.0 |
+| 388 | Add age spots on face | 在脸上添加老年斑 | Age Transform | steps=40, cfg=4.0 |
+| 389 | Add sagging skin on jawline | 添加下颌下垂皮肤 | Age Transform | steps=40, cfg=4.0 |
+| 390 | Add thinning hair on top | 添加头顶稀疏毛发 | Age Transform | steps=40, cfg=4.0 |
+| 391 | Add receding hairline | 添加后退发际线 | Age Transform | steps=40, cfg=4.0 |
+| 392 | De-age to smooth youthful skin | 减龄至光滑年轻肌肤 | Age Transform | steps=40, cfg=4.0 |
+| 393 | De-age to fuller thicker hair | 减龄至更浓密头发 | Age Transform | steps=40, cfg=4.0 |
+| 394 | De-age by reducing all wrinkles | 通过减少皱纹减龄 | Age Transform | steps=40, cfg=4.0 |
+| 395 | Make the person look 20 years old | 让人物看起来20岁 | Age Transform | steps=40, cfg=4.0 |
+| 396 | Make the person look 30 years old | 让人物看起来30岁 | Age Transform | steps=40, cfg=4.0 |
+| 397 | Make the person look 40 years old | 让人物看起来40岁 | Age Transform | steps=40, cfg=4.0 |
+| 398 | Make the person look 50 years old | 让人物看起来50岁 | Age Transform | steps=40, cfg=4.0 |
+| 399 | Make the person look 60 years old | 让人物看起来60岁 | Age Transform | steps=40, cfg=4.0 |
+| 400 | Make the person look 70 years old | 让人物看起来70岁 | Age Transform | steps=40, cfg=4.0 |
+| 401 | Make the person look 80 years old | 让人物看起来80岁 | Age Transform | steps=40, cfg=4.0 |
+| 402 | Transform to baby face infant look | 变换为婴儿面孔 | Age Transform | steps=40, cfg=4.0 |
+| 403 | Transform to young teenager look | 变换为青少年面孔 | Age Transform | steps=40, cfg=4.0 |
+| 404 | Transform to elderly senior look | 变换为老年人面孔 | Age Transform | steps=40, cfg=4.0 |
+| 405 | Keep identity but age 20 years | 保持身份特征但老化20年 | Age Transform | steps=40, cfg=4.0 |
+
+
+# Part 4: Style Transfer, Effects & Object Manipulation
+
+| # | English Prompt | 中文提示词 | Category | Config Notes |
+|---|---------------|-----------|----------|--------------|
+| 1 | Convert to Impressionist oil painting style | 转换为印象派油画风格 | Style Transfer | steps=40, cfg=4.0 |
+| 2 | Convert to Baroque oil painting | 转换为巴洛克油画 | Style Transfer | steps=40, cfg=4.0 |
+| 3 | Convert to Renaissance oil painting | 转换为文艺复兴油画 | Style Transfer | steps=40, cfg=4.0 |
+| 4 | Convert to Romantic oil painting | 转换为浪漫主义油画 | Style Transfer | steps=40, cfg=4.0 |
+| 5 | Convert to Realist oil painting | 转换为写实主义油画 | Style Transfer | steps=40, cfg=4.0 |
+| 6 | Convert to Rococo painting | 转换为洛可可画风 | Style Transfer | steps=40, cfg=4.0 |
+| 7 | Convert to Pre-Raphaelite painting | 转换为拉斐尔前派画风 | Style Transfer | steps=40, cfg=4.0 |
+| 8 | Convert to wet-on-wet watercolor | 转换为湿画法水彩 | Style Transfer | steps=40, cfg=4.0 |
+| 9 | Convert to dry brush watercolor | 转换为干笔水彩 | Style Transfer | steps=40, cfg=4.0 |
+| 10 | Convert to botanical watercolor illustration | 转换为植物水彩插画 | Style Transfer | steps=40, cfg=4.0 |
+| 11 | Convert to urban watercolor sketch | 转换为城市水彩速写 | Style Transfer | steps=40, cfg=4.0 |
+| 12 | Convert to Chinese ink wash shuimo painting | 转换为中国水墨画 | Style Transfer | steps=40, cfg=4.0 |
+| 13 | Convert to Japanese sumi-e ink painting | 转换为日本墨绘 | Style Transfer | steps=40, cfg=4.0 |
+| 14 | Convert to detailed pencil sketch | 转换为精细铅笔素描 | Style Transfer | steps=40, cfg=4.0 |
+| 15 | Convert to charcoal sketch | 转换为炭笔素描 | Style Transfer | steps=40, cfg=4.0 |
+| 16 | Convert to soft pastel painting | 转换为软粉彩画 | Style Transfer | steps=40, cfg=4.0 |
+| 17 | Convert to ukiyo-e woodblock print | 转换为浮世绘版画 | Style Transfer | steps=40, cfg=4.0 |
+| 18 | Convert to stained glass window art | 转换为彩色玻璃窗画 | Style Transfer | steps=40, cfg=4.0 |
+| 19 | Convert to Byzantine gold mosaic | 转换为拜占庭金色马赛克 | Style Transfer | steps=40, cfg=4.0 |
+| 20 | Convert to medieval tapestry | 转换为中世纪挂毯风格 | Style Transfer | steps=40, cfg=4.0 |
+| 21 | Convert to Warhol Pop Art | 转换为沃霍尔波普艺术 | Style Transfer | steps=40, cfg=4.0 |
+| 22 | Convert to Lichtenstein Ben-Day dots | 转换为利希滕斯坦网点风格 | Style Transfer | steps=40, cfg=4.0 |
+| 23 | Convert to Kandinsky abstract | 转换为康定斯基抽象风格 | Style Transfer | steps=40, cfg=4.0 |
+| 24 | Convert to Mondrian geometric blocks | 转换为蒙德里安几何方块 | Style Transfer | steps=40, cfg=4.0 |
+| 25 | Convert to Pollock drip painting | 转换为波洛克滴画 | Style Transfer | steps=40, cfg=4.0 |
+| 26 | Convert to Picasso Cubism | 转换为毕加索立体主义 | Style Transfer | steps=40, cfg=4.0 |
+| 27 | Convert to Dali Surrealism | 转换为达利超现实主义 | Style Transfer | steps=40, cfg=4.0 |
+| 28 | Convert to Art Nouveau organic style | 转换为新艺术流线风格 | Style Transfer | steps=40, cfg=4.0 |
+| 29 | Convert to Art Deco geometric glamour | 转换为装饰艺术几何华丽 | Style Transfer | steps=40, cfg=4.0 |
+| 30 | Convert to Bauhaus functional design | 转换为包豪斯功能主义 | Style Transfer | steps=40, cfg=4.0 |
+| 31 | Convert to Pointillism | 转换为点彩派 | Style Transfer | steps=40, cfg=4.0 |
+| 32 | Convert to Fauvism bold color | 转换为野兽派大胆色彩 | Style Transfer | steps=40, cfg=4.0 |
+| 33 | Convert to Minimalist art | 转换为极简主义艺术 | Style Transfer | steps=40, cfg=4.0 |
+| 34 | Convert to 8-bit pixel art | 转换为8位像素艺术 | Style Transfer | steps=40, cfg=4.0 |
+| 35 | Convert to 16-bit pixel art | 转换为16位像素艺术 | Style Transfer | steps=40, cfg=4.0 |
+| 36 | Convert to isometric pixel art | 转换为等距像素艺术 | Style Transfer | steps=40, cfg=4.0 |
+| 37 | Convert to flat vector illustration | 转换为扁平矢量插画 | Style Transfer | steps=40, cfg=4.0 |
+| 38 | Convert to low poly 3D art | 转换为低多边形3D艺术 | Style Transfer | steps=40, cfg=4.0 |
+| 39 | Convert to vaporwave aesthetic | 转换为蒸汽波美学 | Style Transfer | steps=40, cfg=4.0 |
+| 40 | Convert to synthwave neon | 转换为合成波霓虹 | Style Transfer | steps=40, cfg=4.0 |
+| 41 | Convert to glitch art RGB split | 转换为故障艺术RGB分裂 | Style Transfer | steps=40, cfg=4.0 |
+| 42 | Convert to concept art digital painting | 转换为概念数字绘画 | Style Transfer | steps=40, cfg=4.0 |
+| 43 | Convert to Studio Ghibli anime style | 转换为吉卜力动画风格 | Style Transfer | steps=40, cfg=4.0 |
+| 44 | Convert to Disney Pixar 3D cartoon | 转换为迪士尼皮克斯3D卡通 | Style Transfer | steps=40, cfg=4.0 |
+| 45 | Convert to shonen action anime | 转换为少年动作动漫 | Style Transfer | steps=40, cfg=4.0 |
+| 46 | Convert to chibi anime | 转换为Q版动漫 | Style Transfer | steps=40, cfg=4.0 |
+| 47 | Convert to manga black and white | 转换为黑白漫画 | Style Transfer | steps=40, cfg=4.0 |
+| 48 | Convert to manhwa webtoon style | 转换为韩国网漫风格 | Style Transfer | steps=40, cfg=4.0 |
+| 49 | Convert to claymation stop-motion | 转换为粘土定格动画 | Style Transfer | steps=40, cfg=4.0 |
+| 50 | Apply 35mm film grain | 应用35mm胶片颗粒 | Photography | steps=40, cfg=4.0 |
+| 51 | Apply Polaroid instant photo frame | 应用宝丽来相框 | Photography | steps=40, cfg=4.0 |
+| 52 | Apply high contrast black and white | 应用高对比度黑白 | Photography | steps=40, cfg=4.0 |
+| 53 | Apply film noir dramatic B&W | 应用黑色电影黑白 | Photography | steps=40, cfg=4.0 |
+| 54 | Apply sepia vintage tone | 应用复古棕褐色调 | Photography | steps=40, cfg=4.0 |
+| 55 | Apply 1970s warm faded photo | 应用70年代温暖褪色 | Photography | steps=40, cfg=4.0 |
+| 56 | Apply tilt-shift miniature effect | 应用移轴微缩效果 | Photography | steps=40, cfg=4.0 |
+| 57 | Apply long exposure light trails | 应用长曝光光轨 | Photography | steps=40, cfg=4.0 |
+| 58 | Apply double exposure portrait nature | 应用双重曝光人像自然 | Photography | steps=40, cfg=4.0 |
+| 59 | Apply cyanotype blue print | 应用蓝晒工艺 | Photography | steps=40, cfg=4.0 |
+| 60 | Remove the person from the image | 从图片中移除人物 | Object Removal | steps=40, cfg=4.0 |
+| 61 | Remove the person on the left | 移除左边的人 | Object Removal | steps=40, cfg=4.0 |
+| 62 | Remove the person on the right | 移除右边的人 | Object Removal | steps=40, cfg=4.0 |
+| 63 | Remove all people from background | 移除背景中所有人 | Object Removal | steps=40, cfg=4.0 |
+| 64 | Remove the car | 移除汽车 | Object Removal | steps=40, cfg=4.0 |
+| 65 | Remove the parked cars | 移除停放的汽车 | Object Removal | steps=40, cfg=4.0 |
+| 66 | Remove the tree on the left | 移除左边的树 | Object Removal | steps=40, cfg=4.0 |
+| 67 | Remove the street sign | 移除路标 | Object Removal | steps=40, cfg=4.0 |
+| 68 | Remove the power lines | 移除电线 | Object Removal | steps=40, cfg=4.0 |
+| 69 | Remove the fence | 移除围栏 | Object Removal | steps=40, cfg=4.0 |
+| 70 | Remove the bench | 移除长椅 | Object Removal | steps=40, cfg=4.0 |
+| 71 | Remove the trash | 移除垃圾 | Object Removal | steps=40, cfg=4.0 |
+| 72 | Remove the shadow | 移除阴影 | Object Removal | steps=40, cfg=4.0 |
+| 73 | Remove the reflection | 移除倒影 | Object Removal | steps=40, cfg=4.0 |
+| 74 | Remove the watermark | 移除水印 | Object Removal | steps=40, cfg=4.0 |
+| 75 | Remove the text overlay | 移除文字覆盖 | Object Removal | steps=40, cfg=4.0 |
+| 76 | Remove the logo | 移除标志 | Object Removal | steps=40, cfg=4.0 |
+| 77 | Remove the birds from sky | 移除天空中的鸟 | Object Removal | steps=40, cfg=4.0 |
+| 78 | Remove the clouds | 移除云朵 | Object Removal | steps=40, cfg=4.0 |
+| 79 | Remove the building in background | 移除背景建筑 | Object Removal | steps=40, cfg=4.0 |
+| 80 | Remove the blemish on face | 移除脸上瑕疵 | Object Removal | steps=40, cfg=4.0 |
+| 81 | Remove the scar | 移除疤痕 | Object Removal | steps=40, cfg=4.0 |
+| 82 | Remove the tattoo | 移除纹身 | Object Removal | steps=40, cfg=4.0 |
+| 83 | Remove the glasses | 移除眼镜 | Object Removal | steps=40, cfg=4.0 |
+| 84 | Remove the hat | 移除帽子 | Object Removal | steps=40, cfg=4.0 |
+| 85 | Remove the phone from hand | 移除手中手机 | Object Removal | steps=40, cfg=4.0 |
+| 86 | Remove the watch | 移除手表 | Object Removal | steps=40, cfg=4.0 |
+| 87 | Remove the necklace | 移除项链 | Object Removal | steps=40, cfg=4.0 |
+| 88 | Remove the graffiti from wall | 移除墙上涂鸦 | Object Removal | steps=40, cfg=4.0 |
+| 89 | Remove the crowd in background | 移除背景人群 | Object Removal | steps=40, cfg=4.0 |
+| 90 | Add a golden retriever next to person | 在人物旁添加一只金毛犬 | Object Addition | steps=40, cfg=4.0 |
+| 91 | Add a tabby cat on the lap | 在膝盖上添加一只猫 | Object Addition | steps=40, cfg=4.0 |
+| 92 | Add a butterfly on shoulder | 在肩膀添加蝴蝶 | Object Addition | steps=40, cfg=4.0 |
+| 93 | Add a white dove flying | 添加白鸽飞翔 | Object Addition | steps=40, cfg=4.0 |
+| 94 | Add red roses in hands | 在手中添加红玫瑰 | Object Addition | steps=40, cfg=4.0 |
+| 95 | Add sunflower bouquet | 添加向日葵花束 | Object Addition | steps=40, cfg=4.0 |
+| 96 | Add cherry blossom petals falling | 添加飘落樱花 | Object Addition | steps=40, cfg=4.0 |
+| 97 | Add a lotus flower | 添加莲花 | Object Addition | steps=40, cfg=4.0 |
+| 98 | Add reading glasses on face | 添加阅读眼镜 | Object Addition | steps=40, cfg=4.0 |
+| 99 | Add a fedora hat | 添加费多拉帽 | Object Addition | steps=40, cfg=4.0 |
+| 100 | Add a flower crown | 添加花冠 | Object Addition | steps=40, cfg=4.0 |
+| 101 | Add a gold crown tiara | 添加金色皇冠 | Object Addition | steps=40, cfg=4.0 |
+| 102 | Add an umbrella | 添加雨伞 | Object Addition | steps=40, cfg=4.0 |
+| 103 | Add a leather backpack | 添加皮革背包 | Object Addition | steps=40, cfg=4.0 |
+| 104 | Add a coffee cup in hand | 在手中添加咖啡杯 | Object Addition | steps=40, cfg=4.0 |
+| 105 | Add a wine glass | 添加红酒杯 | Object Addition | steps=40, cfg=4.0 |
+| 106 | Add colorful balloons | 添加彩色气球 | Object Addition | steps=40, cfg=4.0 |
+| 107 | Add confetti falling | 添加飘落彩纸 | Object Addition | steps=40, cfg=4.0 |
+| 108 | Add string fairy lights | 添加串灯 | Object Addition | steps=40, cfg=4.0 |
+| 109 | Add paper lanterns | 添加纸灯笼 | Object Addition | steps=40, cfg=4.0 |
+| 110 | Add bookshelf behind | 在身后添加书架 | Object Addition | steps=40, cfg=4.0 |
+| 111 | Add potted plants | 添加盆栽植物 | Object Addition | steps=40, cfg=4.0 |
+| 112 | Add a pearl necklace | 添加珍珠项链 | Object Addition | steps=40, cfg=4.0 |
+| 113 | Add diamond earrings | 添加钻石耳环 | Object Addition | steps=40, cfg=4.0 |
+| 114 | Change the car color to red | 将汽车颜色改为红色 | Color | steps=40, cfg=4.0 |
+| 115 | Change the car to blue | 将汽车改为蓝色 | Color | steps=40, cfg=4.0 |
+| 116 | Change the car to white | 将汽车改为白色 | Color | steps=40, cfg=4.0 |
+| 117 | Change the car to black | 将汽车改为黑色 | Color | steps=40, cfg=4.0 |
+| 118 | Change the car to silver | 将汽车改为银色 | Color | steps=40, cfg=4.0 |
+| 119 | Change the car to gold | 将汽车改为金色 | Color | steps=40, cfg=4.0 |
+| 120 | Change the wall to white | 将墙壁改为白色 | Color | steps=40, cfg=4.0 |
+| 121 | Change the wall to blue | 将墙壁改为蓝色 | Color | steps=40, cfg=4.0 |
+| 122 | Change the wall to pink | 将墙壁改为粉色 | Color | steps=40, cfg=4.0 |
+| 123 | Change the flower to red | 将花改为红色 | Color | steps=40, cfg=4.0 |
+| 124 | Change the flower to pink | 将花改为粉色 | Color | steps=40, cfg=4.0 |
+| 125 | Change the flower to yellow | 将花改为黄色 | Color | steps=40, cfg=4.0 |
+| 126 | Change eye color to blue | 将眼睛改为蓝色 | Color | steps=40, cfg=4.0 |
+| 127 | Change eye color to green | 将眼睛改为绿色 | Color | steps=40, cfg=4.0 |
+| 128 | Apply warm color grading | 应用暖色调调色 | Color | steps=40, cfg=4.0 |
+| 129 | Apply cool color grading | 应用冷色调调色 | Color | steps=40, cfg=4.0 |
+| 130 | Apply desaturated faded look | 应用去饱和褪色 | Color | steps=40, cfg=4.0 |
+| 131 | Apply sepia tone | 应用棕褐色调 | Color | steps=40, cfg=4.0 |
+| 132 | Apply teal and orange cinematic | 应用青橙电影调色 | Color | steps=40, cfg=4.0 |
+| 133 | Apply Kodak Portra film emulation | 应用柯达Portra胶片 | Color | steps=40, cfg=4.0 |
+| 134 | Apply golden hour sunset lighting | 应用黄金时段日落光照 | Lighting | steps=40, cfg=4.0 |
+| 135 | Apply blue hour twilight | 应用蓝调暮光 | Lighting | steps=40, cfg=4.0 |
+| 136 | Apply harsh midday sunlight | 应用强烈正午阳光 | Lighting | steps=40, cfg=4.0 |
+| 137 | Apply soft overcast lighting | 应用柔和阴天散射光 | Lighting | steps=40, cfg=4.0 |
+| 138 | Apply dappled sunlight through leaves | 应用透过树叶斑驳阳光 | Lighting | steps=40, cfg=4.0 |
+| 139 | Apply window side lighting | 应用侧窗光 | Lighting | steps=40, cfg=4.0 |
+| 140 | Apply backlit silhouette | 应用背光剪影 | Lighting | steps=40, cfg=4.0 |
+| 141 | Apply rim light glow | 应用轮廓光 | Lighting | steps=40, cfg=4.0 |
+| 142 | Apply Rembrandt lighting | 应用伦勃朗光 | Lighting | steps=40, cfg=4.0 |
+| 143 | Apply neon red glow | 应用霓虹红光 | Lighting | steps=40, cfg=4.0 |
+| 144 | Apply neon blue glow | 应用霓虹蓝光 | Lighting | steps=40, cfg=4.0 |
+| 145 | Apply neon purple glow | 应用霓虹紫光 | Lighting | steps=40, cfg=4.0 |
+| 146 | Apply volumetric god rays | 应用丁达尔光线 | Lighting | steps=40, cfg=4.0 |
+| 147 | Apply fog with backlight | 应用雾气背光 | Lighting | steps=40, cfg=4.0 |
+| 148 | Apply lens flare | 应用镜头光晕 | Lighting | steps=40, cfg=4.0 |
+| 149 | Apply bokeh background lights | 应用背景散景光斑 | Lighting | steps=40, cfg=4.0 |
+| 150 | Apply moonlight blue glow | 应用月光蓝色光晕 | Lighting | steps=40, cfg=4.0 |
+| 151 | Apply candlelight warm | 应用烛光温暖 | Lighting | steps=40, cfg=4.0 |
+| 152 | Add light rain drizzle | 添加细雨 | Weather | steps=40, cfg=4.0 |
+| 153 | Add heavy downpour | 添加倾盆大雨 | Weather | steps=40, cfg=4.0 |
+| 154 | Add rain drops on lens | 添加镜头雨滴 | Weather | steps=40, cfg=4.0 |
+| 155 | Add light snow flurry | 添加小雪 | Weather | steps=40, cfg=4.0 |
+| 156 | Add heavy snowfall | 添加大雪 | Weather | steps=40, cfg=4.0 |
+| 157 | Add frost on surface | 添加霜冻 | Weather | steps=40, cfg=4.0 |
+| 158 | Add morning mist | 添加晨雾 | Weather | steps=40, cfg=4.0 |
+| 159 | Add dense fog | 添加浓雾 | Weather | steps=40, cfg=4.0 |
+| 160 | Add lightning background | 添加闪电背景 | Weather | steps=40, cfg=4.0 |
+| 161 | Add storm clouds | 添加暴风云 | Weather | steps=40, cfg=4.0 |
+| 162 | Add cherry blossom petals spring | 添加春天樱花 | Seasonal | steps=40, cfg=4.0 |
+| 163 | Add falling autumn leaves | 添加飘落秋叶 | Seasonal | steps=40, cfg=4.0 |
+| 164 | Add snow covering everything | 添加积雪 | Seasonal | steps=40, cfg=4.0 |
+| 165 | Add morning dew drops | 添加晨露 | Seasonal | steps=40, cfg=4.0 |
+| 166 | Add motion blur speed | 添加运动模糊 | Motion | steps=40, cfg=4.0 |
+| 167 | Add water splash | 添加水花飞溅 | Motion | steps=40, cfg=4.0 |
+| 168 | Add hair blowing in wind | 添加风中飘发 | Motion | steps=40, cfg=4.0 |
+| 169 | Add paint splash | 添加颜料飞溅 | Motion | steps=40, cfg=4.0 |
+| 170 | Apply dreamy soft focus | 应用梦幻柔焦 | Mood | steps=40, cfg=4.0 |
+| 171 | Apply dark gothic mood | 应用黑暗哥特氛围 | Mood | steps=40, cfg=4.0 |
+| 172 | Apply romantic pink warmth | 应用浪漫粉色温暖 | Mood | steps=40, cfg=4.0 |
+| 173 | Apply nostalgic vintage | 应用怀旧复古 | Mood | steps=40, cfg=4.0 |
+| 174 | Apply epic cinematic | 应用史诗电影感 | Mood | steps=40, cfg=4.0 |
+| 175 | Apply film grain overlay | 应用胶片颗粒叠加 | Texture | steps=40, cfg=4.0 |
+| 176 | Add chromatic aberration | 添加色差 | Texture | steps=40, cfg=4.0 |
+| 177 | Add VHS distortion | 添加VHS失真 | Texture | steps=40, cfg=4.0 |
+| 178 | Apply marble texture | 应用大理石纹理 | Texture | steps=40, cfg=4.0 |
+
+
+# Part 5: Products, Food, Animals, Text & Multi-Image
+
+| # | English Prompt | 中文提示词 | Category | Config Notes |
+|---|---------------|-----------|----------|--------------|
+| 1 | Place the moisturizer on white marble with water drops | 将保湿霜放在有水珠的白色大理石上 | Product / Skincare | steps=40, cfg=4.0 |
+| 2 | Position serum bottle next to fresh roses on dewy surface | 将精华液瓶放在有露水的玫瑰旁 | Product / Skincare | steps=40, cfg=4.0 |
+| 3 | Put sunscreen on beach towel with ocean backdrop | 将防晒霜放在沙滩巾上配海洋背景 | Product / Skincare | steps=40, cfg=4.0 |
+| 4 | Display cleanser in spa bathroom with bamboo | 在水疗浴室中展示洁面乳 | Product / Skincare | steps=40, cfg=4.0 |
+| 5 | Show toner on vanity mirror shelf with soft lighting | 在梳妆镜架上展示爽肤水 | Product / Skincare | steps=40, cfg=4.0 |
+| 6 | Place face mask on clean bathroom counter | 将面膜放在干净浴室台面 | Product / Skincare | steps=40, cfg=4.0 |
+| 7 | Display foundation bottle on makeup station | 在化妆台展示粉底液 | Product / Skincare | steps=40, cfg=4.0 |
+| 8 | Show moisturizer floating in water with petals | 展示漂浮在花瓣水中的保湿霜 | Product / Skincare | steps=40, cfg=4.0 |
+| 9 | Position skincare set with botanical plants | 在植物旁摆放护肤品套装 | Product / Skincare | steps=40, cfg=4.0 |
+| 10 | Display cream jar with texture swatch on marble | 在大理石上展示面霜罐和质地样本 | Product / Skincare | steps=40, cfg=4.0 |
+| 11 | Place white sneakers on concrete with graffiti wall | 将白色运动鞋放在涂鸦墙前的混凝土上 | Product / Fashion | steps=40, cfg=4.0 |
+| 12 | Display leather boots on autumn leaves in forest | 在森林秋叶上展示皮靴 | Product / Fashion | steps=40, cfg=4.0 |
+| 13 | Show high heels on marble floor with gold light | 在大理石地板上展示高跟鞋配金光 | Product / Fashion | steps=40, cfg=4.0 |
+| 14 | Place handbag on cafe table with latte | 将手提包放在有拿铁的咖啡桌上 | Product / Fashion | steps=40, cfg=4.0 |
+| 15 | Display watch on leather flatlay with notebook | 在有笔记本的皮革平铺上展示手表 | Product / Fashion | steps=40, cfg=4.0 |
+| 16 | Show sunglasses with beach sunset reflection | 展示有海滩日落倒影的太阳镜 | Product / Fashion | steps=40, cfg=4.0 |
+| 17 | Position necklace on black velvet display | 在黑色天鹅绒展架上摆放项链 | Product / Fashion | steps=40, cfg=4.0 |
+| 18 | Display ring close-up on rose petal | 在玫瑰花瓣上展示戒指特写 | Product / Fashion | steps=40, cfg=4.0 |
+| 19 | Place smartphone in hand with city background | 手持手机配城市背景 | Product / Electronics | steps=40, cfg=4.0 |
+| 20 | Display laptop on minimalist desk setup | 在极简桌面上展示笔记本电脑 | Product / Electronics | steps=40, cfg=4.0 |
+| 21 | Show tablet being used for reading | 展示使用平板阅读 | Product / Electronics | steps=40, cfg=4.0 |
+| 22 | Position earbuds case on gym bag | 将耳机盒放在健身包上 | Product / Electronics | steps=40, cfg=4.0 |
+| 23 | Display smartwatch on wrist during run | 在跑步时展示手腕上的智能手表 | Product / Electronics | steps=40, cfg=4.0 |
+| 24 | Show gaming headset on RGB desk setup | 在RGB桌面上展示游戏耳机 | Product / Electronics | steps=40, cfg=4.0 |
+| 25 | Display drone over mountain landscape | 在山景上展示无人机 | Product / Electronics | steps=40, cfg=4.0 |
+| 26 | Place phone on cafe table next to coffee | 将手机放在咖啡旁的咖啡桌上 | Product / Electronics | steps=40, cfg=4.0 |
+| 27 | Place car on mountain road with sunset | 将汽车放在日落山路上 | Product / Auto | steps=40, cfg=4.0 |
+| 28 | Show SUV on desert highway | 在沙漠高速公路上展示SUV | Product / Auto | steps=40, cfg=4.0 |
+| 29 | Display sports car in showroom spotlight | 在展厅聚光灯下展示跑车 | Product / Auto | steps=40, cfg=4.0 |
+| 30 | Position sedan on rainy city street at night | 在雨夜城市街道上摆放轿车 | Product / Auto | steps=40, cfg=4.0 |
+| 31 | Show car on autumn road with falling leaves | 在有落叶的秋季公路上展示汽车 | Product / Auto | steps=40, cfg=4.0 |
+| 32 | Display car on snowy mountain road | 在雪山公路上展示汽车 | Product / Auto | steps=40, cfg=4.0 |
+| 33 | Show classic car on European cobblestone | 在欧洲鹅卵石街上展示古典车 | Product / Auto | steps=40, cfg=4.0 |
+| 34 | Detail shot of wheel rim with brake caliper | 轮毂和刹车卡钳细节照 | Product / Auto | steps=40, cfg=4.0 |
+| 35 | Dim sum spread on bamboo steamers with steam | 竹蒸笼上的点心配蒸汽 | Food / Chinese | steps=40, cfg=4.0 |
+| 36 | Peking duck being carved on wooden board | 在木板上片北京烤鸭 | Food / Chinese | steps=40, cfg=4.0 |
+| 37 | Hot pot boiling with meat and vegetables | 翻滚的火锅配肉和蔬菜 | Food / Chinese | steps=40, cfg=4.0 |
+| 38 | Mapo tofu in clay pot with chili oil | 砂锅麻婆豆腐配辣椒油 | Food / Chinese | steps=40, cfg=4.0 |
+| 39 | Kung pao chicken sizzling in wok | 宫保鸡丁在锅中爆炒 | Food / Chinese | steps=40, cfg=4.0 |
+| 40 | Xiaolongbao with steam rising and dipping sauce | 小笼包蒸汽升腾配蘸酱 | Food / Chinese | steps=40, cfg=4.0 |
+| 41 | Mooncakes with tea for Mid-Autumn Festival | 中秋月饼配茶 | Food / Chinese | steps=40, cfg=4.0 |
+| 42 | Dumplings being folded by hand | 手工包饺子 | Food / Chinese | steps=40, cfg=4.0 |
+| 43 | Dan dan noodles in bowl with toppings | 碗中担担面配浇头 | Food / Chinese | steps=40, cfg=4.0 |
+| 44 | Cantonese roast goose on cutting board | 砧板上的广式烧鹅 | Food / Chinese | steps=40, cfg=4.0 |
+| 45 | Spring rolls golden crispy on plate | 盘中金黄酥脆春卷 | Food / Chinese | steps=40, cfg=4.0 |
+| 46 | Congee with century egg and pork | 皮蛋瘦肉粥 | Food / Chinese | steps=40, cfg=4.0 |
+| 47 | Char siu BBQ pork on cutting board | 砧板上的叉烧 | Food / Chinese | steps=40, cfg=4.0 |
+| 48 | Wonton soup in ceramic bowl | 瓷碗馄饨汤 | Food / Chinese | steps=40, cfg=4.0 |
+| 49 | Fried rice tossed in hot wok | 热锅中翻炒的炒饭 | Food / Chinese | steps=40, cfg=4.0 |
+| 50 | Red braised pork belly close-up | 红烧肉特写 | Food / Chinese | steps=40, cfg=4.0 |
+| 51 | Steamed fish with ginger and scallion | 姜葱蒸鱼 | Food / Chinese | steps=40, cfg=4.0 |
+| 52 | Bubble tea being poured with tapioca | 倒入冲泡的珍珠奶茶 | Food / Chinese | steps=40, cfg=4.0 |
+| 53 | Tanghulu candied fruits on stick | 竹签上的冰糖葫芦 | Food / Chinese | steps=40, cfg=4.0 |
+| 54 | Lanzhou hand-pulled beef noodles | 兰州拉面 | Food / Chinese | steps=40, cfg=4.0 |
+| 55 | Sichuan boiled fish in chili oil broth | 四川水煮鱼麻辣汤底 | Food / Chinese | steps=40, cfg=4.0 |
+| 56 | Baozi steamed buns in bamboo steamer | 竹蒸笼里的包子 | Food / Chinese | steps=40, cfg=4.0 |
+| 57 | Jianbing crepe being made on griddle | 铁板上制作煎饼 | Food / Chinese | steps=40, cfg=4.0 |
+| 58 | Scallion pancakes cut and stacked | 切好叠放的葱油饼 | Food / Chinese | steps=40, cfg=4.0 |
+| 59 | Sushi platter on wooden board | 木板上的寿司拼盘 | Food / Japanese | steps=40, cfg=4.0 |
+| 60 | Tonkotsu ramen with steam and toppings | 豚骨拉面配蒸汽和浇头 | Food / Japanese | steps=40, cfg=4.0 |
+| 61 | Matcha tea being whisked in bowl | 碗中搅拌抹茶 | Food / Japanese | steps=40, cfg=4.0 |
+| 62 | Tempura platter with dipping sauce | 天妇罗拼盘配蘸汁 | Food / Japanese | steps=40, cfg=4.0 |
+| 63 | Yakitori skewers on charcoal grill | 炭火烤串烧鸡 | Food / Japanese | steps=40, cfg=4.0 |
+| 64 | Bento box with compartments | 分格便当盒 | Food / Japanese | steps=40, cfg=4.0 |
+| 65 | Sashimi arrangement on ice | 冰上的刺身摆盘 | Food / Japanese | steps=40, cfg=4.0 |
+| 66 | Wagyu steak being seared | 炙烤和牛牛排 | Food / Japanese | steps=40, cfg=4.0 |
+| 67 | Korean BBQ table with grilling meat | 韩式烤肉桌烤肉中 | Food / Korean | steps=40, cfg=4.0 |
+| 68 | Bibimbap in hot stone bowl | 石锅拌饭 | Food / Korean | steps=40, cfg=4.0 |
+| 69 | Kimchi jjigae bubbling in pot | 锅中翻滚的泡菜汤 | Food / Korean | steps=40, cfg=4.0 |
+| 70 | Tteokbokki in spicy sauce | 辣酱炒年糕 | Food / Korean | steps=40, cfg=4.0 |
+| 71 | Korean fried chicken with sauce | 韩式炸鸡配酱 | Food / Korean | steps=40, cfg=4.0 |
+| 72 | Kimbap rolls sliced | 切好的紫菜包饭 | Food / Korean | steps=40, cfg=4.0 |
+| 73 | Bingsu shaved ice dessert | 雪花冰甜品 | Food / Korean | steps=40, cfg=4.0 |
+| 74 | Spaghetti carbonara with egg yolk | 蛋黄培根意面 | Food / Western | steps=40, cfg=4.0 |
+| 75 | Margherita pizza from wood-fired oven | 柴火窑烤玛格丽特披萨 | Food / Western | steps=40, cfg=4.0 |
+| 76 | Medium-rare steak on cast iron | 铸铁锅上的中等牛排 | Food / Western | steps=40, cfg=4.0 |
+| 77 | Gourmet burger stacked with toppings | 堆叠配料的美食汉堡 | Food / Western | steps=40, cfg=4.0 |
+| 78 | French croissants golden and flaky | 金黄酥脆的法式牛角包 | Food / Western | steps=40, cfg=4.0 |
+| 79 | Colorful French macarons arranged | 排列整齐的彩色马卡龙 | Food / Western | steps=40, cfg=4.0 |
+| 80 | Cheese board with fruits and nuts | 配水果坚果的芝士拼盘 | Food / Western | steps=40, cfg=4.0 |
+| 81 | Eggs Benedict with hollandaise | 班尼迪克蛋配荷兰酱 | Food / Western | steps=40, cfg=4.0 |
+| 82 | Layered chocolate cake slice with ganache | 巧克力甘纳许层蛋糕 | Food / Dessert | steps=40, cfg=4.0 |
+| 83 | Decorated cupcakes with buttercream | 奶油花装饰纸杯蛋糕 | Food / Dessert | steps=40, cfg=4.0 |
+| 84 | Cookies fresh from oven | 刚出炉的曲奇饼干 | Food / Dessert | steps=40, cfg=4.0 |
+| 85 | New York cheesecake with berry sauce | 纽约芝士蛋糕配浆果酱 | Food / Dessert | steps=40, cfg=4.0 |
+| 86 | Tiramisu in glass dish | 玻璃盘中的提拉米苏 | Food / Dessert | steps=40, cfg=4.0 |
+| 87 | Creme brulee being torched | 火枪炙烤焦糖布丁 | Food / Dessert | steps=40, cfg=4.0 |
+| 88 | Ice cream scoops vanilla chocolate strawberry | 香草巧克力草莓冰淇淋球 | Food / Dessert | steps=40, cfg=4.0 |
+| 89 | Waffles with berries and syrup | 配浆果糖浆的华夫饼 | Food / Dessert | steps=40, cfg=4.0 |
+| 90 | Add a golden retriever playing in park | 添加在公园玩耍的金毛犬 | Animal / Dog | steps=40, cfg=4.0 |
+| 91 | Add a husky in snow with blue eyes | 添加雪中蓝眼哈士奇 | Animal / Dog | steps=40, cfg=4.0 |
+| 92 | Add a corgi in garden with flowers | 添加花园中的柯基 | Animal / Dog | steps=40, cfg=4.0 |
+| 93 | Add a German Shepherd looking alert | 添加警觉的德国牧羊犬 | Animal / Dog | steps=40, cfg=4.0 |
+| 94 | Add a Labrador swimming in lake | 添加在湖中游泳的拉布拉多 | Animal / Dog | steps=40, cfg=4.0 |
+| 95 | Add a Shiba Inu with smile | 添加微笑的柴犬 | Animal / Dog | steps=40, cfg=4.0 |
+| 96 | Add a French Bulldog in cafe | 添加咖啡馆中的法斗 | Animal / Dog | steps=40, cfg=4.0 |
+| 97 | Add a Samoyed in snow | 添加雪中萨摩耶 | Animal / Dog | steps=40, cfg=4.0 |
+| 98 | Add a poodle groomed in studio | 添加工作室精心修饰的贵宾犬 | Animal / Dog | steps=40, cfg=4.0 |
+| 99 | Add a puppy sleeping curled up | 添加蜷缩睡觉的小狗 | Animal / Dog | steps=40, cfg=4.0 |
+| 100 | Add a Persian cat on velvet cushion | 添加天鹅绒靠垫上的波斯猫 | Animal / Cat | steps=40, cfg=4.0 |
+| 101 | Add a Siamese cat on windowsill | 添加窗台上的暹罗猫 | Animal / Cat | steps=40, cfg=4.0 |
+| 102 | Add a British Shorthair in studio | 添加工作室中的英国短毛猫 | Animal / Cat | steps=40, cfg=4.0 |
+| 103 | Add an orange tabby sleeping curled | 添加蜷缩睡觉的橘猫 | Animal / Cat | steps=40, cfg=4.0 |
+| 104 | Add a black cat on bookshelf | 添加书架上的黑猫 | Animal / Cat | steps=40, cfg=4.0 |
+| 105 | Add a cat playing with yarn | 添加玩毛线的猫 | Animal / Cat | steps=40, cfg=4.0 |
+| 106 | Add a kitten playing with toy | 添加玩玩具的小猫 | Animal / Cat | steps=40, cfg=4.0 |
+| 107 | Add a cat in sunbeam relaxing | 添加阳光下放松的猫 | Animal / Cat | steps=40, cfg=4.0 |
+| 108 | Add a tiger in jungle backdrop | 添加丛林背景中的老虎 | Animal / Wild | steps=40, cfg=4.0 |
+| 109 | Add a lion on African savanna | 添加非洲草原上的狮子 | Animal / Wild | steps=40, cfg=4.0 |
+| 110 | Add an elephant at waterhole | 添加水塘边的大象 | Animal / Wild | steps=40, cfg=4.0 |
+| 111 | Add a deer in misty meadow | 添加雾蒙蒙草地的鹿 | Animal / Wild | steps=40, cfg=4.0 |
+| 112 | Add a fox in snow | 添加雪中的狐狸 | Animal / Wild | steps=40, cfg=4.0 |
+| 113 | Add a panda eating bamboo | 添加吃竹子的熊猫 | Animal / Wild | steps=40, cfg=4.0 |
+| 114 | Add a dolphin jumping from water | 添加跃出水面的海豚 | Animal / Wild | steps=40, cfg=4.0 |
+| 115 | Add a butterfly on a flower | 添加花上的蝴蝶 | Animal / Wild | steps=40, cfg=4.0 |
+| 116 | Add an eagle soaring in sky | 添加翱翔天际的鹰 | Animal / Wild | steps=40, cfg=4.0 |
+| 117 | Add a peacock displaying tail | 添加展翅孔雀 | Animal / Wild | steps=40, cfg=4.0 |
+| 118 | Add a Chinese dragon flying in clouds | 添加腾云驾雾的中国龙 | Animal / Fantasy | steps=40, cfg=4.0 |
+| 119 | Add a Western fire-breathing dragon | 添加喷火的西方龙 | Animal / Fantasy | steps=40, cfg=4.0 |
+| 120 | Add a unicorn in meadow with rainbow | 添加彩虹草地上的独角兽 | Animal / Fantasy | steps=40, cfg=4.0 |
+| 121 | Add a phoenix rising from flames | 添加浴火重生的凤凰 | Animal / Fantasy | steps=40, cfg=4.0 |
+| 122 | Add a nine-tailed fox | 添加九尾狐 | Animal / Fantasy | steps=40, cfg=4.0 |
+| 123 | Add a kirin qilin auspicious beast | 添加祥瑞麒麟 | Animal / Fantasy | steps=40, cfg=4.0 |
+| 124 | Add text OPEN on the shop sign | 在商店标牌上添加OPEN文字 | Text | steps=40, cfg=4.0 |
+| 125 | Write Welcome Home on the doormat | 在门垫上写上Welcome Home | Text | steps=40, cfg=4.0 |
+| 126 | Add SALE 50% OFF on the banner | 在横幅上添加五折优惠文字 | Text | steps=40, cfg=4.0 |
+| 127 | Write Happy Birthday on the cake | 在蛋糕上写生日快乐 | Text | steps=40, cfg=4.0 |
+| 128 | Add Coffee text on the cup | 在杯子上添加Coffee文字 | Text | steps=40, cfg=4.0 |
+| 129 | Write I Love You on the card | 在卡片上写我爱你 | Text | steps=40, cfg=4.0 |
+| 130 | Add Menu on the chalkboard | 在黑板上添加菜单文字 | Text | steps=40, cfg=4.0 |
+| 131 | Write Thank You on the gift tag | 在礼品标签上写谢谢 | Text | steps=40, cfg=4.0 |
+| 132 | Add Coming Soon on billboard | 在广告牌上添加即将推出 | Text | steps=40, cfg=4.0 |
+| 133 | Add neon BAR sign glowing on wall | 在墙上添加霓虹BAR发光标志 | Text | steps=40, cfg=4.0 |
+| 134 | Place logo on product packaging box | 将标志放在产品包装盒上 | Logo | steps=40, cfg=4.0 |
+| 135 | Put logo on business card | 在名片上放置标志 | Logo | steps=40, cfg=4.0 |
+| 136 | Add logo on storefront sign | 在店面招牌上添加标志 | Logo | steps=40, cfg=4.0 |
+| 137 | Place logo embroidered on polo shirt | 将标志绣在Polo衫上 | Logo | steps=40, cfg=4.0 |
+| 138 | Print logo on coffee mug | 在咖啡杯上印标志 | Logo | steps=40, cfg=4.0 |
+| 139 | Add logo watermark on photo | 在照片上添加标志水印 | Logo | steps=40, cfg=4.0 |
+| 140 | Create 3D extruded text effect | 创建3D凸出文字效果 | Typography | steps=40, cfg=4.0 |
+| 141 | Make neon glowing text on wall | 制作墙上霓虹发光文字 | Typography | steps=40, cfg=4.0 |
+| 142 | Apply gold foil text on paper | 在纸上应用金箔文字 | Typography | steps=40, cfg=4.0 |
+| 143 | Create embossed text effect | 创建浮雕文字效果 | Typography | steps=40, cfg=4.0 |
+| 144 | Make fire burning text | 制作火焰燃烧文字 | Typography | steps=40, cfg=4.0 |
+| 145 | Create ice frozen text | 创建冰冻文字 | Typography | steps=40, cfg=4.0 |
+| 146 | Make chrome metallic text | 制作铬金属文字 | Typography | steps=40, cfg=4.0 |
+| 147 | Create wooden carved text | 创建木雕文字 | Typography | steps=40, cfg=4.0 |
+| 148 | Two friends posing together smiling | 两位朋友合影微笑 | Multi / Person+Person | steps=40, cfg=4.0 |
+| 149 | Couple romantic photo at sunset | 情侣日落浪漫合影 | Multi / Person+Person | steps=40, cfg=4.0 |
+| 150 | Family portrait in living room | 客厅家庭合影 | Multi / Person+Person | steps=40, cfg=4.0 |
+| 151 | Group friends at birthday party | 朋友生日派对合影 | Multi / Person+Person | steps=40, cfg=4.0 |
+| 152 | Wedding couple at altar | 婚礼祭坛上的新人 | Multi / Person+Person | steps=40, cfg=4.0 |
+| 153 | Parent and child holding hands | 父母和孩子牵手 | Multi / Person+Person | steps=40, cfg=4.0 |
+| 154 | Graduation with friends in cap and gown | 穿学位服的毕业合影 | Multi / Person+Person | steps=40, cfg=4.0 |
+| 155 | Model holding skincare bottle smiling | 模特微笑手持护肤品 | Multi / Person+Product | steps=40, cfg=4.0 |
+| 156 | Chef presenting signature dish | 厨师展示招牌菜 | Multi / Person+Product | steps=40, cfg=4.0 |
+| 157 | Athlete with sports equipment | 运动员持运动装备 | Multi / Person+Product | steps=40, cfg=4.0 |
+| 158 | Musician playing instrument | 音乐家演奏乐器 | Multi / Person+Product | steps=40, cfg=4.0 |
+| 159 | Barista pouring latte art | 咖啡师倒拿铁拉花 | Multi / Person+Product | steps=40, cfg=4.0 |
+| 160 | Photographer with camera outdoors | 摄影师在户外持相机 | Multi / Person+Product | steps=40, cfg=4.0 |
+| 161 | Person in front of Eiffel Tower | 人物站在埃菲尔铁塔前 | Multi / Person+Scene | steps=40, cfg=4.0 |
+| 162 | Person hiking on mountain trail | 人物在山路徒步 | Multi / Person+Scene | steps=40, cfg=4.0 |
+| 163 | Person at Japanese temple | 人物在日本寺庙 | Multi / Person+Scene | steps=40, cfg=4.0 |
+| 164 | Person on tropical beach vacation | 人物在热带海滩度假 | Multi / Person+Scene | steps=40, cfg=4.0 |
+| 165 | Person at Great Wall of China | 人物在长城 | Multi / Person+Scene | steps=40, cfg=4.0 |
+| 166 | Person at cherry blossom park Tokyo | 人物在东京樱花公园 | Multi / Person+Scene | steps=40, cfg=4.0 |
+| 167 | Product comparison side by side | 产品并排对比 | Multi / Object+Object | steps=40, cfg=4.0 |
+| 168 | Before and after transformation | 前后对比变换 | Multi / Object+Object | steps=40, cfg=4.0 |
+| 169 | Outfit combination flatlay on bed | 床上衣物组合平铺 | Multi / Object+Object | steps=40, cfg=4.0 |
+| 170 | Recipe ingredients arranged on counter | 台面上排列的食材 | Multi / Object+Object | steps=40, cfg=4.0 |
+| 171 | Skincare routine products in order | 护肤步骤产品排列 | Multi / Object+Object | steps=40, cfg=4.0 |
+
+
+# Part 6: Cosplay, Character Transforms & Special Clothing
+
+| # | English Prompt | 中文提示词 | Category | Config Notes |
+|---|---------------|-----------|----------|--------------|
+| 1 | Convert the anime character to a realistic photograph of a real person | 将动漫角色转换为真实人物照片 | Cosplay-to-Real | steps=40, cfg=4.0 |
+| 2 | Transform the illustrated character into a photorealistic portrait | 将插画角色转换为写实照片肖像 | Cosplay-to-Real | steps=40, cfg=4.0 |
+| 3 | Convert the cartoon face to a real human face with natural skin | 将卡通面孔转换为有自然皮肤的真人面孔 | Cosplay-to-Real | steps=40, cfg=4.0 |
+| 4 | Transform the 2D anime girl into a 3D realistic photo | 将2D动漫女孩转换为3D写实照片 | Cosplay-to-Real | steps=40, cfg=4.0 |
+| 5 | Convert the manga character to a real person keeping the same pose | 将漫画角色转换为保持相同姿势的真人 | Cosplay-to-Real | steps=40, cfg=4.0 |
+| 6 | Transform the chibi character into a realistic child portrait | 将Q版角色转换为写实儿童肖像 | Cosplay-to-Real | steps=40, cfg=4.0 |
+| 7 | Convert the pixel art character to a photorealistic person | 将像素画角色转换为写实人物 | Cosplay-to-Real | steps=40, cfg=4.0 |
+| 8 | Transform the comic book hero into a realistic movie still | 将漫画英雄转换为写实电影剧照 | Cosplay-to-Real | steps=40, cfg=4.0 |
+| 9 | Convert the animated Disney princess to a realistic portrait | 将迪士尼公主转换为写实肖像 | Cosplay-to-Real | steps=40, cfg=4.0 |
+| 10 | Transform the Ghibli character to photorealistic person | 将吉卜力角色转换为写实人物 | Cosplay-to-Real | steps=40, cfg=4.0 |
+| 11 | Convert the game character to a real person photo | 将游戏角色转换为真人照片 | Cosplay-to-Real | steps=40, cfg=4.0 |
+| 12 | Transform the illustrated avatar into a professional headshot | 将插画头像转换为专业证件照 | Cosplay-to-Real | steps=40, cfg=4.0 |
+| 13 | Convert the watercolor portrait to a sharp realistic photo | 将水彩肖像转换为清晰写实照片 | Cosplay-to-Real | steps=40, cfg=4.0 |
+| 14 | Transform the oil painting portrait to a modern photograph | 将油画肖像转换为现代照片 | Cosplay-to-Real | steps=40, cfg=4.0 |
+| 15 | Convert the sketch portrait to a detailed realistic photo | 将素描肖像转换为详细写实照片 | Cosplay-to-Real | steps=40, cfg=4.0 |
+| 16 | Transform the clay figure into a real person | 将陶土人物转换为真人 | Cosplay-to-Real | steps=40, cfg=4.0 |
+| 17 | Convert the LEGO minifigure style to a real person | 将乐高小人风格转换为真人 | Cosplay-to-Real | steps=40, cfg=4.0 |
+| 18 | Transform the 3D cartoon character to photo-real | 将3D卡通角色转换为照片写实 | Cosplay-to-Real | steps=40, cfg=4.0 |
+| 19 | Convert the Funko Pop style to realistic person | 将Funko Pop风格转换为写实人物 | Cosplay-to-Real | steps=40, cfg=4.0 |
+| 20 | Transform the vector illustration person to real photo | 将矢量插画人物转换为真实照片 | Cosplay-to-Real | steps=40, cfg=4.0 |
+| 21 | Convert the photo to Studio Ghibli anime character | 将照片转换为吉卜力动漫角色 | Real-to-Cosplay | steps=40, cfg=4.0 |
+| 22 | Transform the person into a Disney animated character | 将人物转换为迪士尼动画角色 | Real-to-Cosplay | steps=40, cfg=4.0 |
+| 23 | Convert the portrait to shonen anime art style | 将肖像转换为少年动漫画风 | Real-to-Cosplay | steps=40, cfg=4.0 |
+| 24 | Transform the person into a shojo manga character | 将人物转换为少女漫画角色 | Real-to-Cosplay | steps=40, cfg=4.0 |
+| 25 | Convert the photo to chibi super-deformed anime | 将照片转换为Q版超变形动漫 | Real-to-Cosplay | steps=40, cfg=4.0 |
+| 26 | Transform the person into a Pixar 3D cartoon character | 将人物转换为皮克斯3D卡通角色 | Real-to-Cosplay | steps=40, cfg=4.0 |
+| 27 | Convert the portrait to comic book superhero style | 将肖像转换为漫画超级英雄风格 | Real-to-Cosplay | steps=40, cfg=4.0 |
+| 28 | Transform the person into a Simpsons character | 将人物转换为辛普森角色 | Real-to-Cosplay | steps=40, cfg=4.0 |
+| 29 | Convert the photo to Rick and Morty cartoon style | 将照片转换为瑞克和莫蒂卡通风格 | Real-to-Cosplay | steps=40, cfg=4.0 |
+| 30 | Transform the person into a Korean webtoon character | 将人物转换为韩国网漫角色 | Real-to-Cosplay | steps=40, cfg=4.0 |
+| 31 | Convert the portrait to Chinese donghua animation style | 将肖像转换为中国动画风格 | Real-to-Cosplay | steps=40, cfg=4.0 |
+| 32 | Transform the person into a retro 8-bit pixel art character | 将人物转换为复古8位像素角色 | Real-to-Cosplay | steps=40, cfg=4.0 |
+| 33 | Convert the photo to vintage ukiyo-e woodblock style | 将照片转换为浮世绘版画风格 | Real-to-Cosplay | steps=40, cfg=4.0 |
+| 34 | Transform the person into a Minecraft-style blocky character | 将人物转换为我的世界方块角色 | Real-to-Cosplay | steps=40, cfg=4.0 |
+| 35 | Convert the portrait to Pop Art Warhol style | 将肖像转换为沃霍尔波普艺术 | Real-to-Cosplay | steps=40, cfg=4.0 |
+| 36 | Transform the person into an oil painting Renaissance portrait | 将人物转换为文艺复兴油画肖像 | Real-to-Cosplay | steps=40, cfg=4.0 |
+| 37 | Convert the photo to watercolor portrait illustration | 将照片转换为水彩肖像插画 | Real-to-Cosplay | steps=40, cfg=4.0 |
+| 38 | Transform the person into a charcoal sketch portrait | 将人物转换为炭笔素描肖像 | Real-to-Cosplay | steps=40, cfg=4.0 |
+| 39 | Convert the portrait to Chinese ink wash painting | 将肖像转换为中国水墨画 | Real-to-Cosplay | steps=40, cfg=4.0 |
+| 40 | Transform the person into a stained glass window portrait | 将人物转换为彩色玻璃窗肖像 | Real-to-Cosplay | steps=40, cfg=4.0 |
+| 41 | Convert the photo to claymation character | 将照片转换为粘土动画角色 | Real-to-Cosplay | steps=40, cfg=4.0 |
+| 42 | Transform the person into a Barbie/Ken doll style | 将人物转换为芭比/肯娃娃风格 | Real-to-Cosplay | steps=40, cfg=4.0 |
+| 43 | Convert the portrait to anime avatar with big eyes | 将肖像转换为大眼动漫头像 | Real-to-Cosplay | steps=40, cfg=4.0 |
+| 44 | Transform the person into a South Park style character | 将人物转换为南方公园风格角色 | Real-to-Cosplay | steps=40, cfg=4.0 |
+| 45 | Convert the photo to vintage Art Deco poster illustration | 将照片转换为装饰艺术复古海报 | Real-to-Cosplay | steps=40, cfg=4.0 |
+| 46 | Dress the person in Sailor Moon cosplay outfit | 给人物穿上美少女战士角色扮演服装 | Cosplay Outfit | steps=40, cfg=4.0 |
+| 47 | Change outfit to Naruto orange jumpsuit cosplay | 将服装改为火影忍者橙色运动服角色扮演 | Cosplay Outfit | steps=40, cfg=4.0 |
+| 48 | Dress the person in Genshin Impact cosplay | 给人物穿上原神角色扮演服装 | Cosplay Outfit | steps=40, cfg=4.0 |
+| 49 | Change outfit to Attack on Titan Survey Corps uniform | 将服装改为进击的巨人调查兵团制服 | Cosplay Outfit | steps=40, cfg=4.0 |
+| 50 | Dress in Demon Slayer kimono cosplay | 穿上鬼灭之刃和服角色扮演 | Cosplay Outfit | steps=40, cfg=4.0 |
+| 51 | Change to Jujutsu Kaisen school uniform cosplay | 改为咒术回战校服角色扮演 | Cosplay Outfit | steps=40, cfg=4.0 |
+| 52 | Dress in My Hero Academia hero costume | 穿上我的英雄学院英雄服 | Cosplay Outfit | steps=40, cfg=4.0 |
+| 53 | Change outfit to Dragon Ball Z Saiyan armor | 将服装改为龙珠Z赛亚人战甲 | Cosplay Outfit | steps=40, cfg=4.0 |
+| 54 | Dress the person in Spider-Man suit cosplay | 给人物穿上蜘蛛侠战服角色扮演 | Cosplay Outfit | steps=40, cfg=4.0 |
+| 55 | Change to Batman Dark Knight costume | 改为蝙蝠侠黑暗骑士战服 | Cosplay Outfit | steps=40, cfg=4.0 |
+| 56 | Dress in Wonder Woman cosplay armor | 穿上神奇女侠角色扮演盔甲 | Cosplay Outfit | steps=40, cfg=4.0 |
+| 57 | Change outfit to Harry Potter Hogwarts robes | 将服装改为哈利波特霍格沃茨长袍 | Cosplay Outfit | steps=40, cfg=4.0 |
+| 58 | Dress in Star Wars Jedi robes | 穿上星球大战绝地武士长袍 | Cosplay Outfit | steps=40, cfg=4.0 |
+| 59 | Change to Lara Croft adventure outfit | 改为劳拉探险装 | Cosplay Outfit | steps=40, cfg=4.0 |
+| 60 | Dress the person in Link from Zelda cosplay | 给人物穿上塞尔达林克角色扮演 | Cosplay Outfit | steps=40, cfg=4.0 |
+| 61 | Change outfit to Final Fantasy character cosplay | 将服装改为最终幻想角色扮演 | Cosplay Outfit | steps=40, cfg=4.0 |
+| 62 | Dress in Hatsune Miku cosplay with teal twintails | 穿上初音未来蓝绿双马尾角色扮演 | Cosplay Outfit | steps=40, cfg=4.0 |
+| 63 | Change to Evangelion plugsuit cosplay | 改为新世纪福音战士驾驶服 | Cosplay Outfit | steps=40, cfg=4.0 |
+| 64 | Dress in Cardcaptor Sakura magical girl costume | 穿上魔卡少女樱魔法少女服 | Cosplay Outfit | steps=40, cfg=4.0 |
+| 65 | Change outfit to One Piece pirate cosplay | 将服装改为海贼王海盗角色扮演 | Cosplay Outfit | steps=40, cfg=4.0 |
+| 66 | Change to a fitted black bodycon mini dress | 换成黑色紧身迷你连衣裙 | Clothing / Sexy | steps=40, cfg=4.0 |
+| 67 | Replace outfit with a deep V-neck satin camisole top | 将服装换成深V领缎面吊带上衣 | Clothing / Sexy | steps=40, cfg=4.0 |
+| 68 | Change to an off-shoulder crop top with high-waisted jeans | 换成一字肩短上衣配高腰牛仔裤 | Clothing / Sexy | steps=40, cfg=4.0 |
+| 69 | Replace with a backless halter top | 换成露背挂脖上衣 | Clothing / Sexy | steps=40, cfg=4.0 |
+| 70 | Change to a lace-trim satin slip dress in black | 换成黑色蕾丝边缎面吊带裙 | Clothing / Sexy | steps=40, cfg=4.0 |
+| 71 | Replace outfit with a fitted leather mini skirt and crop top | 将服装换成修身皮短裙配短上衣 | Clothing / Sexy | steps=40, cfg=4.0 |
+| 72 | Change to a sheer mesh long-sleeve top over bralette | 换成透明网纱长袖上衣搭文胸 | Clothing / Sexy | steps=40, cfg=4.0 |
+| 73 | Replace with a high-slit evening gown in red satin | 换成红色缎面高开衩晚礼服 | Clothing / Sexy | steps=40, cfg=4.0 |
+| 74 | Change to a corset-style top with wide-leg pants | 换成束腰上衣配阔腿裤 | Clothing / Sexy | steps=40, cfg=4.0 |
+| 75 | Replace outfit with a tube top mini dress | 将服装换成抹胸迷你连衣裙 | Clothing / Sexy | steps=40, cfg=4.0 |
+| 76 | Change to a cutout bodysuit with high-waisted bottoms | 换成镂空连体衣配高腰下装 | Clothing / Sexy | steps=40, cfg=4.0 |
+| 77 | Replace with a wrap-front crop top showing midriff | 换成裹身短上衣露出腰部 | Clothing / Sexy | steps=40, cfg=4.0 |
+| 78 | Change to a strappy camisole with pencil skirt | 换成细带吊带配铅笔裙 | Clothing / Sexy | steps=40, cfg=4.0 |
+| 79 | Replace outfit with a fitted mermaid gown in sequins | 将服装换成亮片修身鱼尾裙 | Clothing / Sexy | steps=40, cfg=4.0 |
+| 80 | Change to a one-shoulder asymmetric mini dress | 换成单肩不对称迷你裙 | Clothing / Sexy | steps=40, cfg=4.0 |
+| 81 | Change to a black lace bralette with matching shorts | 换成黑色蕾丝文胸配同款短裤 | Clothing / Lingerie | steps=40, cfg=4.0 |
+| 82 | Replace with a silk robe in champagne | 换成香槟色丝绸浴袍 | Clothing / Lingerie | steps=40, cfg=4.0 |
+| 83 | Change to a satin chemise nightgown in blush pink | 换成腮红粉缎面吊带睡裙 | Clothing / Lingerie | steps=40, cfg=4.0 |
+| 84 | Replace outfit with a lace bodysuit in black | 将服装换成黑色蕾丝连体衣 | Clothing / Lingerie | steps=40, cfg=4.0 |
+| 85 | Change to a silk camisole and shorts pajama set | 换成丝绸吊带短裤睡衣套装 | Clothing / Lingerie | steps=40, cfg=4.0 |
+| 86 | Change the revealing outfit to a modest business suit | 将暴露服装改为端庄商务套装 | Clothing / Sexy-to-General | steps=40, cfg=4.0 |
+| 87 | Replace the low-cut top with a high-neck blouse | 将低胸上衣换成高领衬衫 | Clothing / Sexy-to-General | steps=40, cfg=4.0 |
+| 88 | Change the mini skirt to a knee-length A-line skirt | 将迷你裙换成及膝A字裙 | Clothing / Sexy-to-General | steps=40, cfg=4.0 |
+| 89 | Replace the crop top with a full-length button-down shirt | 将短上衣换成全长扣衬衫 | Clothing / Sexy-to-General | steps=40, cfg=4.0 |
+| 90 | Change the bodycon dress to a relaxed shift dress | 将紧身裙换成宽松直筒裙 | Clothing / Sexy-to-General | steps=40, cfg=4.0 |
+| 91 | Replace the sheer top with an opaque cotton blouse | 将透明上衣换成不透明棉衬衫 | Clothing / Sexy-to-General | steps=40, cfg=4.0 |
+| 92 | Change the backless dress to a full-back conservative dress | 将露背裙换成保守全背连衣裙 | Clothing / Sexy-to-General | steps=40, cfg=4.0 |
+| 93 | Replace the spaghetti straps with wide shoulder straps | 将细吊带换成宽肩带 | Clothing / Sexy-to-General | steps=40, cfg=4.0 |
+| 94 | Change the oversized t-shirt to a fitted crop top | 将宽松T恤换成修身短上衣 | Clothing / General-to-Sexy | steps=40, cfg=4.0 |
+| 95 | Replace the loose dress with a fitted bodycon dress | 将宽松裙换成紧身裙 | Clothing / General-to-Sexy | steps=40, cfg=4.0 |
+| 96 | Change the long skirt to a thigh-high slit version | 将长裙改为大腿高开衩版 | Clothing / General-to-Sexy | steps=40, cfg=4.0 |
+| 97 | Replace the turtleneck with a deep scoop neck top | 将高领衫换成深U领上衣 | Clothing / General-to-Sexy | steps=40, cfg=4.0 |
+| 98 | Change the full-length dress to a mini length | 将长款裙改为迷你长度 | Clothing / General-to-Sexy | steps=40, cfg=4.0 |
+| 99 | Replace the baggy jeans with form-fitting leather pants | 将宽松牛仔裤换成修身皮裤 | Clothing / General-to-Sexy | steps=40, cfg=4.0 |
+| 100 | Change the cardigan to an open-front lace top | 将开衫换成前开式蕾丝上衣 | Clothing / General-to-Sexy | steps=40, cfg=4.0 |
+| 101 | Replace the polo shirt with a plunging V-neck blouse | 将Polo衫换成深V领衬衫 | Clothing / General-to-Sexy | steps=40, cfg=4.0 |
+| 102 | Change to a classic black one-piece swimsuit | 换成经典黑色连体泳衣 | Clothing / Swimwear | steps=40, cfg=4.0 |
+| 103 | Replace with a red string bikini | 换成红色绑带比基尼 | Clothing / Swimwear | steps=40, cfg=4.0 |
+| 104 | Change to a tropical print one-piece swimsuit | 换成热带印花连体泳衣 | Clothing / Swimwear | steps=40, cfg=4.0 |
+| 105 | Replace outfit with a white bikini with gold accents | 将服装换成白色金色点缀比基尼 | Clothing / Swimwear | steps=40, cfg=4.0 |
+| 106 | Change to a high-waisted retro bikini in polka dots | 换成波点高腰复古比基尼 | Clothing / Swimwear | steps=40, cfg=4.0 |
+| 107 | Replace with a sporty rash guard and board shorts | 换成运动防晒衣配冲浪短裤 | Clothing / Swimwear | steps=40, cfg=4.0 |
+| 108 | Change to a crochet bikini in white | 换成白色钩针比基尼 | Clothing / Swimwear | steps=40, cfg=4.0 |
+| 109 | Replace with a cutout one-piece swimsuit in emerald | 换成祖母绿镂空连体泳衣 | Clothing / Swimwear | steps=40, cfg=4.0 |
+| 110 | Change to swim trunks and no shirt for men | 换成男士泳裤不穿上衣 | Clothing / Swimwear | steps=40, cfg=4.0 |
+| 111 | Replace with a wetsuit for surfing | 换成冲浪潜水衣 | Clothing / Swimwear | steps=40, cfg=4.0 |
+
+
+# Part 7: Missing Patterns from Guide
+
+| # | English Prompt | 中文提示词 | Category | Config Notes |
+|---|---------------|-----------|----------|--------------|
+| 1 | Rotate the object 90 degrees to show the side view | 将物体旋转90度展示侧面视图 | Pose & View Change | steps=40, cfg=4.0 |
+| 2 | Rotate the object 180 degrees to show the back view | 将物体旋转180度展示背面视图 | Pose & View Change | steps=40, cfg=4.0 |
+| 3 | Show the product from a top-down bird-eye perspective | 从俯视鸟瞰角度展示产品 | Pose & View Change | steps=40, cfg=4.0 |
+| 4 | Show the product from a low-angle looking up | 从仰视角度展示产品 | Pose & View Change | steps=40, cfg=4.0 |
+| 5 | Show the product from a 45-degree angle | 从45度角展示产品 | Pose & View Change | steps=40, cfg=4.0 |
+| 6 | Show the product from eye-level straight on | 从平视角度正面展示产品 | Pose & View Change | steps=40, cfg=4.0 |
+| 7 | Show the building from a dramatic low-angle shot | 以戏剧性仰视角度展示建筑 | Pose & View Change | steps=40, cfg=4.0 |
+| 8 | Show the building from an aerial drone perspective | 以航拍无人机视角展示建筑 | Pose & View Change | steps=40, cfg=4.0 |
+| 9 | Change the person pose to sitting down | 把人物姿势改为坐姿 | Pose & View Change | steps=40, cfg=4.0 |
+| 10 | Change the person pose to standing with arms crossed | 把人物姿势改为双臂交叉站立 | Pose & View Change | steps=40, cfg=4.0 |
+| 11 | Change the person pose to lying down relaxed | 把人物姿势改为轻松躺卧 | Pose & View Change | steps=40, cfg=4.0 |
+| 12 | Change the person pose to walking forward | 把人物姿势改为向前走路 | Pose & View Change | steps=40, cfg=4.0 |
+| 13 | Change the person pose to running | 把人物姿势改为奔跑 | Pose & View Change | steps=40, cfg=4.0 |
+| 14 | Change the person pose to jumping in the air | 把人物姿势改为跳跃腾空 | Pose & View Change | steps=40, cfg=4.0 |
+| 15 | Change the person pose to leaning against a wall | 把人物姿势改为靠墙站立 | Pose & View Change | steps=40, cfg=4.0 |
+| 16 | Change the person pose to kneeling on one knee | 把人物姿势改为单膝跪地 | Pose & View Change | steps=40, cfg=4.0 |
+| 17 | Change the person pose to waving at the camera | 把人物姿势改为向镜头挥手 | Pose & View Change | steps=40, cfg=4.0 |
+| 18 | Change the person pose to looking over the shoulder | 把人物姿势改为回头看 | Pose & View Change | steps=40, cfg=4.0 |
+| 19 | Change the person pose to hands on hips power pose | 把人物姿势改为双手叉腰 | Pose & View Change | steps=40, cfg=4.0 |
+| 20 | Change the person pose to pointing forward | 把人物姿势改为指向前方 | Pose & View Change | steps=40, cfg=4.0 |
+| 21 | Turn the character to face the camera directly | 让角色转向正面面对镜头 | Pose & View Change | steps=40, cfg=4.0 |
+| 22 | Turn the character to show the left profile | 让角色转向展示左侧面 | Pose & View Change | steps=40, cfg=4.0 |
+| 23 | Turn the character to show the right profile | 让角色转向展示右侧面 | Pose & View Change | steps=40, cfg=4.0 |
+| 24 | Turn the character to face three-quarter angle to the left | 让角色转向左侧四分之三角度 | Pose & View Change | steps=40, cfg=4.0 |
+| 25 | Turn the character to show the back of the head | 让角色转向展示后脑勺 | Pose & View Change | steps=40, cfg=4.0 |
+| 26 | Change to a close-up headshot framing | 改为特写头像构图 | Pose & View Change | steps=40, cfg=4.0 |
+| 27 | Change to a medium shot waist-up framing | 改为中景腰部以上构图 | Pose & View Change | steps=40, cfg=4.0 |
+| 28 | Change to a full-body wide shot framing | 改为全身远景构图 | Pose & View Change | steps=40, cfg=4.0 |
+| 29 | Change to an extreme close-up of the eyes | 改为眼部极端特写 | Pose & View Change | steps=40, cfg=4.0 |
+| 30 | Zoom out to show more of the surrounding environment | 缩小以展示更多周围环境 | Pose & View Change | steps=40, cfg=4.0 |
+| 31 | Zoom in closer to the face | 放大靠近面部 | Pose & View Change | steps=40, cfg=4.0 |
+| 32 | Tilt the camera angle to a Dutch angle | 倾斜镜头角度为荷兰角 | Pose & View Change | steps=40, cfg=4.0 |
+| 33 | Show a mirror reflection of the subject | 展示主体的镜像倒影 | Pose & View Change | steps=40, cfg=4.0 |
+| 34 | Change the composition to rule of thirds with subject on right | 改为三分法构图主体在右侧 | Pose & View Change | steps=40, cfg=4.0 |
+| 35 | Change to a symmetrical centered composition | 改为对称居中构图 | Pose & View Change | steps=40, cfg=4.0 |
+| 36 | Show the subject from behind looking at the horizon | 从背后拍摄主体望向地平线 | Pose & View Change | steps=40, cfg=4.0 |
+| 37 | Change to a through-the-door or through-the-window frame composition | 改为门框或窗框取景构图 | Pose & View Change | steps=40, cfg=4.0 |
+| 38 | Show the subject walking away from the camera | 展示主体背对镜头走远 | Pose & View Change | steps=40, cfg=4.0 |
+| 39 | Change the person to be looking up at the sky | 让人物抬头仰望天空 | Pose & View Change | steps=40, cfg=4.0 |
+| 40 | Change the person to be looking down at their phone | 让人物低头看手机 | Pose & View Change | steps=40, cfg=4.0 |
+| 41 | Change the wooden table to white marble | 把木桌改成白色大理石材质 | Material & Texture | steps=40, cfg=4.0 |
+| 42 | Change the wooden table to black granite | 把木桌改成黑色花岗岩材质 | Material & Texture | steps=40, cfg=4.0 |
+| 43 | Change the wooden table to glass and chrome | 把木桌改成玻璃铬金属材质 | Material & Texture | steps=40, cfg=4.0 |
+| 44 | Change the wooden table to rustic reclaimed wood | 把木桌改成复古回收木材质 | Material & Texture | steps=40, cfg=4.0 |
+| 45 | Change the wooden table to polished concrete | 把木桌改成抛光混凝土材质 | Material & Texture | steps=40, cfg=4.0 |
+| 46 | Change the wooden table to bamboo | 把木桌改成竹材质 | Material & Texture | steps=40, cfg=4.0 |
+| 47 | Make the walls look like exposed red brick | 让墙壁看起来像裸露红砖 | Material & Texture | steps=40, cfg=4.0 |
+| 48 | Make the walls look like rough stone | 让墙壁看起来像粗糙石材 | Material & Texture | steps=40, cfg=4.0 |
+| 49 | Make the walls look like smooth plaster | 让墙壁看起来像光滑灰泥 | Material & Texture | steps=40, cfg=4.0 |
+| 50 | Make the walls look like wood paneling | 让墙壁看起来像木镶板 | Material & Texture | steps=40, cfg=4.0 |
+| 51 | Make the walls look like weathered barnwood | 让墙壁看起来像风化谷仓木板 | Material & Texture | steps=40, cfg=4.0 |
+| 52 | Make the walls look like white subway tile | 让墙壁看起来像白色地铁砖 | Material & Texture | steps=40, cfg=4.0 |
+| 53 | Make the walls look like Moroccan zellige tile | 让墙壁看起来像摩洛哥泽利格瓷砖 | Material & Texture | steps=40, cfg=4.0 |
+| 54 | Make the walls look like Japanese washi paper | 让墙壁看起来像日本和纸 | Material & Texture | steps=40, cfg=4.0 |
+| 55 | Change the metal surface to brushed aluminum | 把金属表面改为拉丝铝 | Material & Texture | steps=40, cfg=4.0 |
+| 56 | Change the metal surface to polished brass | 把金属表面改为抛光黄铜 | Material & Texture | steps=40, cfg=4.0 |
+| 57 | Change the metal surface to matte black iron | 把金属表面改为哑光黑铁 | Material & Texture | steps=40, cfg=4.0 |
+| 58 | Change the metal surface to copper with green patina | 把金属表面改为有绿色铜锈的铜 | Material & Texture | steps=40, cfg=4.0 |
+| 59 | Change the metal surface to rose gold | 把金属表面改为玫瑰金 | Material & Texture | steps=40, cfg=4.0 |
+| 60 | Change the metal surface to chrome mirror finish | 把金属表面改为镀铬镜面 | Material & Texture | steps=40, cfg=4.0 |
+| 61 | Replace the leather upholstery with velvet | 把皮革内饰换成天鹅绒 | Material & Texture | steps=40, cfg=4.0 |
+| 62 | Replace the leather with linen fabric | 把皮革换成亚麻布 | Material & Texture | steps=40, cfg=4.0 |
+| 63 | Replace the leather with woven rattan | 把皮革换成编织藤 | Material & Texture | steps=40, cfg=4.0 |
+| 64 | Replace the leather with denim fabric | 把皮革换成牛仔布 | Material & Texture | steps=40, cfg=4.0 |
+| 65 | Replace the leather with faux fur | 把皮革换成人造毛皮 | Material & Texture | steps=40, cfg=4.0 |
+| 66 | Replace the leather with silk | 把皮革换成丝绸 | Material & Texture | steps=40, cfg=4.0 |
+| 67 | Replace the leather with suede | 把皮革换成麂皮 | Material & Texture | steps=40, cfg=4.0 |
+| 68 | Make the floor look like polished concrete | 让地板看起来像抛光混凝土 | Material & Texture | steps=40, cfg=4.0 |
+| 69 | Make the floor look like herringbone parquet wood | 让地板看起来像人字形木地板 | Material & Texture | steps=40, cfg=4.0 |
+| 70 | Make the floor look like hexagonal marble tile | 让地板看起来像六边形大理石砖 | Material & Texture | steps=40, cfg=4.0 |
+| 71 | Make the floor look like tatami mat | 让地板看起来像榻榻米 | Material & Texture | steps=40, cfg=4.0 |
+| 72 | Make the floor look like terrazzo | 让地板看起来像水磨石 | Material & Texture | steps=40, cfg=4.0 |
+| 73 | Make the floor look like Persian carpet | 让地板看起来像波斯地毯 | Material & Texture | steps=40, cfg=4.0 |
+| 74 | Change the plastic object to ceramic | 把塑料物品改成陶瓷材质 | Material & Texture | steps=40, cfg=4.0 |
+| 75 | Change the plastic object to glass crystal | 把塑料物品改成玻璃水晶 | Material & Texture | steps=40, cfg=4.0 |
+| 76 | Change the plastic object to carved wood | 把塑料物品改成雕刻木材 | Material & Texture | steps=40, cfg=4.0 |
+| 77 | Change the plastic object to cast iron | 把塑料物品改成铸铁 | Material & Texture | steps=40, cfg=4.0 |
+| 78 | Change the plastic object to stone | 把塑料物品改成石材 | Material & Texture | steps=40, cfg=4.0 |
+| 79 | Change the paper to aged parchment | 把纸张改成古旧羊皮纸 | Material & Texture | steps=40, cfg=4.0 |
+| 80 | Change the paper to handmade cotton rag paper | 把纸张改成手工棉浆纸 | Material & Texture | steps=40, cfg=4.0 |
+| 81 | Make the object look like it is made of ice | 让物品看起来像冰做的 | Material & Texture | steps=40, cfg=4.0 |
+| 82 | Make the object look like it is made of gold | 让物品看起来像纯金打造 | Material & Texture | steps=40, cfg=4.0 |
+| 83 | Make the object look like it is made of jade | 让物品看起来像翡翠材质 | Material & Texture | steps=40, cfg=4.0 |
+| 84 | Make the object look like it is made of crystal | 让物品看起来像水晶材质 | Material & Texture | steps=40, cfg=4.0 |
+| 85 | Make the object look like it is carved from chocolate | 让物品看起来像巧克力雕刻的 | Material & Texture | steps=40, cfg=4.0 |
+| 86 | Make the matte surface glossy and reflective | 让哑光表面变得光亮有反光 | Material & Texture | steps=40, cfg=4.0 |
+| 87 | Make the glossy surface matte and non-reflective | 让光亮表面变得哑光无反光 | Material & Texture | steps=40, cfg=4.0 |
+| 88 | Make the smooth surface rough and textured | 让光滑表面变得粗糙有纹理 | Material & Texture | steps=40, cfg=4.0 |
+| 89 | Make the rough surface smooth and polished | 让粗糙表面变得光滑抛光 | Material & Texture | steps=40, cfg=4.0 |
+| 90 | Add a pearlescent iridescent sheen to the surface | 给表面添加珍珠虹彩光泽 | Material & Texture | steps=40, cfg=4.0 |
+| 91 | Restore this old faded photo to full vibrant color | 将这张褪色老照片修复为鲜艳全彩 | Old Photo Restoration | steps=40, cfg=4.0 |
+| 92 | Restore this old photo and remove all scratches | 修复这张老照片并去除所有划痕 | Old Photo Restoration | steps=40, cfg=4.0 |
+| 93 | Repair the torn and damaged areas of this old photo | 修复这张老照片撕裂和破损的区域 | Old Photo Restoration | steps=40, cfg=4.0 |
+| 94 | Remove the yellow aging tint from this old photograph | 去除这张老照片的泛黄老化色调 | Old Photo Restoration | steps=40, cfg=4.0 |
+| 95 | Enhance the resolution and sharpen the blurry details | 提升分辨率并锐化模糊的细节 | Old Photo Restoration | steps=40, cfg=4.0 |
+| 96 | Colorize this black and white photo with natural lifelike colors | 用自然逼真的颜色给这张黑白照片上色 | Old Photo Restoration | steps=40, cfg=4.0 |
+| 97 | Colorize this black and white portrait with warm skin tones | 用温暖肤色给这张黑白肖像上色 | Old Photo Restoration | steps=40, cfg=4.0 |
+| 98 | Remove the water stains and mold marks from this old photo | 去除这张老照片上的水渍和霉斑 | Old Photo Restoration | steps=40, cfg=4.0 |
+| 99 | Fix the cracked and peeling surface of this old photograph | 修复这张老照片开裂剥落的表面 | Old Photo Restoration | steps=40, cfg=4.0 |
+| 100 | Remove the dust spots and debris from this scanned old photo | 去除这张扫描老照片上的灰尘斑点 | Old Photo Restoration | steps=40, cfg=4.0 |
+| 101 | Restore the faded faces in this old family portrait | 修复这张老家庭合影中褪色的面孔 | Old Photo Restoration | steps=40, cfg=4.0 |
+| 102 | Repair the missing corner section of this old photograph | 修复这张老照片缺失的角落部分 | Old Photo Restoration | steps=40, cfg=4.0 |
+| 103 | Remove the sepia tone and convert to modern color photo | 去除棕褐色调转换为现代彩色照片 | Old Photo Restoration | steps=40, cfg=4.0 |
+| 104 | Enhance the contrast and brightness of this dark old photo | 增强这张暗淡老照片的对比度和亮度 | Old Photo Restoration | steps=40, cfg=4.0 |
+| 105 | Remove noise and grain from this old scanned photograph | 去除这张扫描老照片的噪点和颗粒 | Old Photo Restoration | steps=40, cfg=4.0 |
+| 106 | Restore the overexposed washed-out areas of this old photo | 修复这张老照片过曝白化的区域 | Old Photo Restoration | steps=40, cfg=4.0 |
+| 107 | Fix the color cast and uneven fading in this vintage photo | 修复这张复古照片的偏色和不均匀褪色 | Old Photo Restoration | steps=40, cfg=4.0 |
+| 108 | Upscale this small old photo to high resolution while keeping details | 将这张小旧照片放大到高分辨率同时保留细节 | Old Photo Restoration | steps=40, cfg=4.0 |
+| 109 | Restore this 1950s family photo removing all damage and aging | 修复这张50年代家庭照去除所有损伤和老化 | Old Photo Restoration | steps=40, cfg=4.0 |
+| 110 | Restore this old wedding photo to look brand new | 将这张老婚纱照修复得如新 | Old Photo Restoration | steps=40, cfg=4.0 |
+| 111 | Remove the fold crease marks from this old photograph | 去除这张老照片上的折痕 | Old Photo Restoration | steps=40, cfg=4.0 |
+| 112 | Restore the faded ink writing on this old letter photo | 修复这张老信件照片上褪色的墨迹 | Old Photo Restoration | steps=40, cfg=4.0 |
+| 113 | Fix the red-eye and color issues in this old flash photo | 修复这张老闪光照片的红眼和色彩问题 | Old Photo Restoration | steps=40, cfg=4.0 |
+| 114 | Reconstruct the damaged background scenery in this old photo | 重建这张老照片中受损的背景景色 | Old Photo Restoration | steps=40, cfg=4.0 |
+| 115 | Restore this daguerreotype to a clear modern photograph | 将这张银版照片修复为清晰的现代照片 | Old Photo Restoration | steps=40, cfg=4.0 |
+| 116 | Redesign the packaging with a minimalist white aesthetic | 用极简白色美学重新设计包装 | Product Design | steps=40, cfg=4.0 |
+| 117 | Redesign the packaging with a luxury gold and black theme | 用奢华金黑主题重新设计包装 | Product Design | steps=40, cfg=4.0 |
+| 118 | Redesign the packaging with a colorful playful children theme | 用多彩趣味儿童主题重新设计包装 | Product Design | steps=40, cfg=4.0 |
+| 119 | Redesign the packaging with eco-friendly kraft paper look | 用环保牛皮纸外观重新设计包装 | Product Design | steps=40, cfg=4.0 |
+| 120 | Redesign the packaging with a Japanese minimalist zen style | 用日式极简禅意风格重新设计包装 | Product Design | steps=40, cfg=4.0 |
+| 121 | Redesign the packaging with a retro vintage 1960s theme | 用60年代复古主题重新设计包装 | Product Design | steps=40, cfg=4.0 |
+| 122 | Create an iteration with rounded corners and matte finish | 创建圆角哑光饰面的迭代版本 | Product Design | steps=40, cfg=4.0 |
+| 123 | Create an iteration with metallic foil accents | 创建金属箔点缀的迭代版本 | Product Design | steps=40, cfg=4.0 |
+| 124 | Create an iteration with transparent window showing product | 创建有透明窗口展示产品的迭代版本 | Product Design | steps=40, cfg=4.0 |
+| 125 | Change the product color scheme to pastel pink and mint | 将产品配色改为粉彩粉和薄荷绿 | Product Design | steps=40, cfg=4.0 |
+| 126 | Change the product color scheme to navy blue and gold | 将产品配色改为海军蓝和金色 | Product Design | steps=40, cfg=4.0 |
+| 127 | Change the product color scheme to all-black monochrome | 将产品配色改为全黑单色 | Product Design | steps=40, cfg=4.0 |
+| 128 | Change the product color scheme to earth tones brown and olive | 将产品配色改为大地色棕和橄榄 | Product Design | steps=40, cfg=4.0 |
+| 129 | Add Chinese calligraphy branding text to the product design | 在产品设计上添加中文书法品牌文字 | Product Design | steps=40, cfg=4.0 |
+| 130 | Add a floral pattern design to the product surface | 在产品表面添加花卉图案设计 | Product Design | steps=40, cfg=4.0 |
+| 131 | Add a geometric pattern design to the product surface | 在产品表面添加几何图案设计 | Product Design | steps=40, cfg=4.0 |
+| 132 | Add a marble texture to the product packaging | 给产品包装添加大理石纹理 | Product Design | steps=40, cfg=4.0 |
+| 133 | Change the product material from plastic to frosted glass | 将产品材质从塑料改为磨砂玻璃 | Product Design | steps=40, cfg=4.0 |
+| 134 | Change the product material from glass to ceramic | 将产品材质从玻璃改为陶瓷 | Product Design | steps=40, cfg=4.0 |
+| 135 | Change the product material from metal to bamboo | 将产品材质从金属改为竹子 | Product Design | steps=40, cfg=4.0 |
+| 136 | Create a seasonal limited edition spring cherry blossom design | 创建春季限定樱花设计 | Product Design | steps=40, cfg=4.0 |
+| 137 | Create a seasonal limited edition CNY red and gold design | 创建春节限定红金设计 | Product Design | steps=40, cfg=4.0 |
+| 138 | Create a seasonal limited edition Christmas green and red design | 创建圣诞限定红绿设计 | Product Design | steps=40, cfg=4.0 |
+| 139 | Add a QR code to the product packaging | 在产品包装上添加二维码 | Product Design | steps=40, cfg=4.0 |
+| 140 | Add a barcode to the product label | 在产品标签上添加条形码 | Product Design | steps=40, cfg=4.0 |
+| 141 | Create a hand-drawn water cycle diagram showing evaporation condensation precipitation | 创建手绘水循环图展示蒸发凝结降水 | Educational Poster | steps=50, cfg=5.0 |
+| 142 | Create a biology cell structure diagram with labeled organelles | 创建带标注细胞器的生物细胞结构图 | Educational Poster | steps=50, cfg=5.0 |
+| 143 | Create a solar system planets diagram with labels | 创建带标注的太阳系行星图 | Educational Poster | steps=50, cfg=5.0 |
+| 144 | Create a food chain illustration showing producers consumers decomposers | 创建食物链插图展示生产者消费者分解者 | Educational Poster | steps=50, cfg=5.0 |
+| 145 | Create a human skeleton anatomy diagram with labeled bones | 创建带标注骨骼的人体骨骼解剖图 | Educational Poster | steps=50, cfg=5.0 |
+| 146 | Create a world map with continents and oceans labeled | 创建带标注大陆和海洋的世界地图 | Educational Poster | steps=50, cfg=5.0 |
+| 147 | Create a photosynthesis process diagram with arrows and labels | 创建带箭头和标注的光合作用过程图 | Educational Poster | steps=50, cfg=5.0 |
+| 148 | Create a volcano cross-section diagram showing layers | 创建火山剖面图展示各层结构 | Educational Poster | steps=50, cfg=5.0 |
+| 149 | Create a food pyramid nutrition guide illustration | 创建食物金字塔营养指南插图 | Educational Poster | steps=50, cfg=5.0 |
+| 150 | Create a periodic table of elements poster design | 创建元素周期表海报设计 | Educational Poster | steps=50, cfg=5.0 |
+| 151 | Create a timeline infographic of world history events | 创建世界历史大事件时间轴信息图 | Educational Poster | steps=50, cfg=5.0 |
+| 152 | Create a math formulas reference poster with colorful design | 创建彩色数学公式参考海报 | Educational Poster | steps=50, cfg=5.0 |
+| 153 | Create a Chinese character stroke order teaching chart | 创建汉字笔画顺序教学图表 | Educational Poster | steps=50, cfg=5.0 |
+| 154 | Create an English alphabet learning poster for kids | 创建儿童英文字母学习海报 | Educational Poster | steps=50, cfg=5.0 |
+| 155 | Create a music notes and scales reference chart | 创建音符和音阶参考图表 | Educational Poster | steps=50, cfg=5.0 |
+| 156 | Turn this photo into a funny meme with exaggerated surprised expression | 把这张照片变成夸张惊讶表情的搞笑表情包 | Meme & Emoji | steps=40, cfg=4.0 |
+| 157 | Turn this photo into a meme with exaggerated crying expression | 把这张照片变成夸张哭泣表情的表情包 | Meme & Emoji | steps=40, cfg=4.0 |
+| 158 | Turn this photo into a meme with exaggerated angry expression | 把这张照片变成夸张愤怒表情的表情包 | Meme & Emoji | steps=40, cfg=4.0 |
+| 159 | Turn this photo into a meme with exaggerated laughing expression | 把这张照片变成夸张大笑表情的表情包 | Meme & Emoji | steps=40, cfg=4.0 |
+| 160 | Turn this photo into a meme with thinking pondering expression | 把这张照片变成思考沉思表情的表情包 | Meme & Emoji | steps=40, cfg=4.0 |
+| 161 | Turn this photo into a meme with confused questioning expression | 把这张照片变成困惑疑问表情的表情包 | Meme & Emoji | steps=40, cfg=4.0 |
+| 162 | Turn this photo into a meme with smug satisfied expression | 把这张照片变成得意满足表情的表情包 | Meme & Emoji | steps=40, cfg=4.0 |
+| 163 | Turn this photo into a disappointed face palm meme | 把这张照片变成失望捂脸表情包 | Meme & Emoji | steps=40, cfg=4.0 |
+| 164 | Create an MBTI INTJ personality-themed emoji in cute chibi style | 创建INTJ人格主题的可爱Q版表情包 | Meme & Emoji | steps=40, cfg=4.0 |
+| 165 | Create an MBTI ENFP personality-themed emoji in cute chibi style | 创建ENFP人格主题的可爱Q版表情包 | Meme & Emoji | steps=40, cfg=4.0 |
+| 166 | Create an MBTI INFP personality-themed emoji in cute chibi style | 创建INFP人格主题的可爱Q版表情包 | Meme & Emoji | steps=40, cfg=4.0 |
+| 167 | Create an MBTI ESTJ personality-themed emoji in cute chibi style | 创建ESTJ人格主题的可爱Q版表情包 | Meme & Emoji | steps=40, cfg=4.0 |
+| 168 | Convert the person to a cute cartoon sticker with thick outline | 将人物转换为有粗轮廓的可爱卡通贴纸 | Meme & Emoji | steps=40, cfg=4.0 |
+| 169 | Convert the person to a chibi emoji with heart eyes | 将人物转换为爱心眼Q版表情 | Meme & Emoji | steps=40, cfg=4.0 |
+| 170 | Convert the person to a chibi emoji waving hello | 将人物转换为挥手打招呼Q版表情 | Meme & Emoji | steps=40, cfg=4.0 |
+| 171 | Convert the person to a chibi emoji giving thumbs up | 将人物转换为竖大拇指Q版表情 | Meme & Emoji | steps=40, cfg=4.0 |
+| 172 | Convert the person to a chibi emoji with sweat drop | 将人物转换为冒汗Q版表情 | Meme & Emoji | steps=40, cfg=4.0 |
+| 173 | Convert the person to a chibi emoji sleeping with ZZZ | 将人物转换为睡觉ZZZ的Q版表情 | Meme & Emoji | steps=40, cfg=4.0 |
+| 174 | Convert the photo to a LINE sticker style with text bubble | 将照片转换为有文字气泡的LINE贴纸风格 | Meme & Emoji | steps=40, cfg=4.0 |
+| 175 | Convert the photo to a WeChat emoji sticker style | 将照片转换为微信表情贴纸风格 | Meme & Emoji | steps=40, cfg=4.0 |
+| 176 | Create a reaction image with sparkly eyes excited expression | 创建星星眼兴奋表情的反应图 | Meme & Emoji | steps=40, cfg=4.0 |
+| 177 | Create a reaction image with dead fish eyes bored expression | 创建死鱼眼无聊表情的反应图 | Meme & Emoji | steps=40, cfg=4.0 |
+| 178 | Add speech bubble with text saying OK on the image | 在图片上添加写着OK的对话气泡 | Meme & Emoji | steps=40, cfg=4.0 |
+| 179 | Add thought bubble above the person with question mark | 在人物头上添加有问号的思考气泡 | Meme & Emoji | steps=40, cfg=4.0 |
+| 180 | Make the person expression dramatically shocked with mouth open | 让人物表情变成夸张震惊张嘴 | Meme & Emoji | steps=40, cfg=4.0 |
+| 181 | Change the rabbit color to purple | 把兔子的颜色改成紫色 | Color Change | steps=40, cfg=4.0 |
+| 182 | Change the rabbit color to golden yellow | 把兔子的颜色改成金黄色 | Color Change | steps=40, cfg=4.0 |
+| 183 | Change the rabbit color to sky blue | 把兔子的颜色改成天蓝色 | Color Change | steps=40, cfg=4.0 |
+| 184 | Make the cat fur color pure white | 把猫的毛色改成纯白色 | Color Change | steps=40, cfg=4.0 |
+| 185 | Make the cat fur color orange tabby | 把猫的毛色改成橘色虎斑 | Color Change | steps=40, cfg=4.0 |
+| 186 | Make the cat fur color black | 把猫的毛色改成黑色 | Color Change | steps=40, cfg=4.0 |
+| 187 | Change the bird feathers to bright red | 把鸟的羽毛改成鲜红色 | Color Change | steps=40, cfg=4.0 |
+| 188 | Change the bird feathers to electric blue | 把鸟的羽毛改成电光蓝 | Color Change | steps=40, cfg=4.0 |
+| 189 | Change the bird feathers to emerald green | 把鸟的羽毛改成翠绿色 | Color Change | steps=40, cfg=4.0 |
+| 190 | Change the horse color to pure white | 把马的颜色改成纯白色 | Color Change | steps=40, cfg=4.0 |
+| 191 | Change the horse color to chestnut brown | 把马的颜色改成栗棕色 | Color Change | steps=40, cfg=4.0 |
+| 192 | Change the horse color to black stallion | 把马的颜色改成黑色 | Color Change | steps=40, cfg=4.0 |
+| 193 | Change the sofa fabric color to dark green | 把沙发面料改成深绿色 | Color Change | steps=40, cfg=4.0 |
+| 194 | Change the sofa fabric color to dusty pink | 把沙发面料改成灰粉色 | Color Change | steps=40, cfg=4.0 |
+| 195 | Change the sofa fabric color to navy blue | 把沙发面料改成海军蓝 | Color Change | steps=40, cfg=4.0 |
+| 196 | Change the sofa fabric color to burnt orange | 把沙发面料改成焦橙色 | Color Change | steps=40, cfg=4.0 |
+| 197 | Change the sofa fabric color to cream white | 把沙发面料改成奶油白 | Color Change | steps=40, cfg=4.0 |
+| 198 | Change the curtains color to sheer white | 把窗帘颜色改成透明白 | Color Change | steps=40, cfg=4.0 |
+| 199 | Change the curtains color to deep burgundy | 把窗帘颜色改成深酒红 | Color Change | steps=40, cfg=4.0 |
+| 200 | Change the curtains color to sage green | 把窗帘颜色改成鼠尾草绿 | Color Change | steps=40, cfg=4.0 |
+| 201 | Change the door color to bright red | 把门的颜色改成鲜红色 | Color Change | steps=40, cfg=4.0 |
+| 202 | Change the door color to matte black | 把门的颜色改成哑光黑 | Color Change | steps=40, cfg=4.0 |
+| 203 | Change the door color to royal blue | 把门的颜色改成皇家蓝 | Color Change | steps=40, cfg=4.0 |
+| 204 | Make the sky a warm sunset orange-pink gradient | 把天空改成温暖的日落橘粉渐变 | Color Change | steps=40, cfg=4.0 |
+| 205 | Make the sky a dramatic stormy dark gray | 把天空改成戏剧性的暴风深灰 | Color Change | steps=40, cfg=4.0 |
+| 206 | Make the sky a bright clear azure blue | 把天空改成明亮清澈的蔚蓝 | Color Change | steps=40, cfg=4.0 |
+| 207 | Make the sky a magical aurora purple-green | 把天空改成魔幻极光紫绿色 | Color Change | steps=40, cfg=4.0 |
+| 208 | Change the shoes color to all white | 把鞋子颜色改成全白 | Color Change | steps=40, cfg=4.0 |
+| 209 | Change the shoes color to jet black | 把鞋子颜色改成纯黑 | Color Change | steps=40, cfg=4.0 |
+| 210 | Change the shoes color to bright red | 把鞋子颜色改成亮红色 | Color Change | steps=40, cfg=4.0 |
+| 211 | Change the bag color to tan brown leather | 把包的颜色改成棕褐色皮革 | Color Change | steps=40, cfg=4.0 |
+| 212 | Change the bag color to cherry red | 把包的颜色改成樱桃红 | Color Change | steps=40, cfg=4.0 |
+| 213 | Change the bag color to pastel pink | 把包的颜色改成粉彩粉 | Color Change | steps=40, cfg=4.0 |
+| 214 | Change the nail polish color to classic red | 把指甲油颜色改成经典红 | Color Change | steps=40, cfg=4.0 |
+| 215 | Change the nail polish color to nude pink | 把指甲油颜色改成裸粉色 | Color Change | steps=40, cfg=4.0 |
+| 216 | Change the nail polish color to matte black | 把指甲油颜色改成哑光黑 | Color Change | steps=40, cfg=4.0 |
+| 217 | Change the nail polish color to holographic rainbow | 把指甲油颜色改成全息彩虹 | Color Change | steps=40, cfg=4.0 |
+| 218 | Change the phone case color to clear transparent | 把手机壳颜色改成透明 | Color Change | steps=40, cfg=4.0 |
+| 219 | Change the phone case color to pastel lavender | 把手机壳颜色改成粉彩薰衣草 | Color Change | steps=40, cfg=4.0 |
+| 220 | Change the phone case color to forest green | 把手机壳颜色改成森林绿 | Color Change | steps=40, cfg=4.0 |
