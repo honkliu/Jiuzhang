@@ -26,6 +26,16 @@ public class ComfyUIService : IComfyUIService
         _httpClient.BaseAddress = new Uri(baseUrl);
         var timeoutSeconds = _configuration.GetValue<int?>("ComfyUI:TimeoutSeconds") ?? 300;
         _httpClient.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
+
+        var authUser = _configuration["ComfyUI:Auth:Username"];
+        var authPass = _configuration["ComfyUI:Auth:Password"];
+        if (!string.IsNullOrEmpty(authUser))
+        {
+            var credentials = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{authUser}:{authPass}"));
+            _httpClient.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", credentials);
+        }
+
         var maxConcurrent = Math.Max(1, _configuration.GetValue<int?>("ComfyUI:MaxConcurrent") ?? 1);
         if (_generationGate == null)
         {
