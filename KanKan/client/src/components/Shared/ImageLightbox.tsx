@@ -189,6 +189,26 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
     }
   };
 
+  const handleQuickPromptSelect = (sp: SelectedPrompt) => {
+    const keyParts = sp.key.split('-');
+    if (keyParts.length < 3 || keyParts[0] !== 'q') {
+      setSelectedPrompts((prev) => [...prev, sp]);
+      return;
+    }
+
+    const categoryId = keyParts.slice(1, -1).join('-');
+    setSelectedPrompts((prev) => {
+      const filtered = prev.filter((p) => {
+        if (!p.key.startsWith('q-')) return true;
+        const parts = p.key.split('-');
+        if (parts.length < 3 || parts[0] !== 'q') return true;
+        const existingCategory = parts.slice(1, -1).join('-');
+        return existingCategory !== categoryId;
+      });
+      return [...filtered, sp];
+    });
+  };
+
   const prev = useCallback(() => {
     setCurrentIndex((i) => (i > 0 ? i - 1 : activeImages.length - 1));
   }, [activeImages.length]);
@@ -553,7 +573,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
                 >
                   <AvatarQuickPicker
                     selectedKeys={new Set(selectedPrompts.map((p) => p.key))}
-                    onSelect={(sp) => setSelectedPrompts((prev) => [...prev, sp])}
+                    onSelect={handleQuickPromptSelect}
                     onDeselect={(key) => setSelectedPrompts((prev) => prev.filter((p) => p.key !== key))}
                   />
 
