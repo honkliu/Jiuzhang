@@ -63,6 +63,19 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
     offsetX: 0,
     offsetY: 0,
   });
+  const touchStateRef = useRef({
+    mode: 'none' as 'none' | 'pan' | 'pinch',
+    moved: false,
+    startX: 0,
+    startY: 0,
+    offsetX: 0,
+    offsetY: 0,
+    startDistance: 0,
+    startZoom: 1,
+    startCenterX: 0,
+    startCenterY: 0,
+  });
+  const suppressTapToggleRef = useRef(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
   const thumbnailRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -165,6 +178,24 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
     });
   };
 
+  const getTouchDistance = (touches: React.TouchList) => {
+    if (touches.length < 2) return 0;
+    const deltaX = touches[0].clientX - touches[1].clientX;
+    const deltaY = touches[0].clientY - touches[1].clientY;
+    return Math.hypot(deltaX, deltaY);
+  };
+
+  const getTouchCenter = (touches: React.TouchList) => {
+    if (touches.length === 0) return { x: 0, y: 0 };
+    if (touches.length === 1) {
+      return { x: touches[0].clientX, y: touches[0].clientY };
+    }
+    return {
+      x: (touches[0].clientX + touches[1].clientX) / 2,
+      y: (touches[0].clientY + touches[1].clientY) / 2,
+    };
+  };
+
   const computeFitZoom = () => {
     if (!imgRef.current || !containerRef.current) return 1;
     const iw = imgRef.current.naturalWidth || 1;
@@ -221,6 +252,125 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
       event.preventDefault();
       event.stopPropagation();
     }
+  };
+
+  const handleTouchStart = (event: React.TouchEvent) => {
+    if (event.touches.length >= 2) {
+      const center = getTouchCenter(event.touches);
+      touchStateRef.current = {
+        mode: 'pinch',
+        moved: false,
+        startX: center.x,
+        startY: center.y,
+        offsetX: panOffset.x,
+        offsetY: panOffset.y,
+        startDistance: getTouchDistance(event.touches),
+        startZoom: zoom,
+        startCenterX: center.x,
+        startCenterY: center.y,
+      };
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+
+    if (event.touches.length === 1) {
+      touchStateRef.current = {
+        mode: 'pan',
+        moved: false,
+        startX: event.touches[0].clientX,
+        startY: event.touches[0].clientY,
+        offsetX: panOffset.x,
+        offsetY: panOffset.y,
+        startDistance: 0,
+        startZoom: zoom,
+        startCenterX: event.touches[0].clientX,
+        startCenterY: event.touches[0].clientY,
+      };
+    }
+  };
+
+  const handleTouchMove = (event: React.TouchEvent) => {
+    if (touchStateRef.current.mode === 'pinch' && event.touches.length >= 2) {
+      const distance = getTouchDistance(event.touches);
+      const center = getTouchCenter(event.touches);
+      const zoomRatio = touchStateRef.current.startDistance > 0
+        ? distance / touchStateRef.current.startDistance
+        : 1;
+      const nextZoom = Number(Math.min(3, Math.max(0.5, touchStateRef.current.startZoom * zoomRatio)).toFixed(2));
+      const deltaX = center.x - touchStateRef.current.startCenterX;
+      const deltaY = center.y - touchStateRef.current.startCenterY;
+
+      if (Math.abs(nextZoom - zoom) > 0.005 || Math.abs(deltaX) > 2 || Math.abs(deltaY) > 2) {
+        touchStateRef.current.moved = true;
+        suppressTapToggleRef.current = true;
+      }
+
+      setZoom(nextZoom);
+      setPanOffset({
+        x: touchStateRef.current.offsetX + deltaX,
+        y: touchStateRef.current.offsetY + deltaY,
+      });
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+
+    if (touchStateRef.current.mode === 'pan' && event.touches.length === 1) {
+      const deltaX = event.touches[0].clientX - touchStateRef.current.startX;
+      const deltaY = event.touches[0].clientY - touchStateRef.current.startY;
+      if (Math.abs(deltaX) > 2 || Math.abs(deltaY) > 2) {
+        touchStateRef.current.moved = true;
+        suppressTapToggleRef.current = true;
+      }
+      setPanOffset({
+        x: touchStateRef.current.offsetX + deltaX,
+        y: touchStateRef.current.offsetY + deltaY,
+      });
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  };
+
+  const handleTouchEnd = (event: React.TouchEvent) => {
+    if (event.touches.length >= 2) {
+      const center = getTouchCenter(event.touches);
+      touchStateRef.current = {
+        mode: 'pinch',
+        moved: touchStateRef.current.moved,
+        startX: center.x,
+        startY: center.y,
+        offsetX: panOffset.x,
+        offsetY: panOffset.y,
+        startDistance: getTouchDistance(event.touches),
+        startZoom: zoom,
+        startCenterX: center.x,
+        startCenterY: center.y,
+      };
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+
+    if (event.touches.length === 1) {
+      touchStateRef.current = {
+        mode: 'pan',
+        moved: touchStateRef.current.moved,
+        startX: event.touches[0].clientX,
+        startY: event.touches[0].clientY,
+        offsetX: panOffset.x,
+        offsetY: panOffset.y,
+        startDistance: 0,
+        startZoom: zoom,
+        startCenterX: event.touches[0].clientX,
+        startCenterY: event.touches[0].clientY,
+      };
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+
+    touchStateRef.current.mode = 'none';
   };
 
   const handleQuickPromptSelect = (sp: SelectedPrompt) => {
@@ -425,9 +575,15 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
             cursor: isDraggable
               ? (dragStateRef.current.isDragging ? 'grabbing' : 'grab')
               : 'pointer',
+            touchAction: 'none',
           }}
           onWheel={handleWheelZoom}
           onClick={(event: React.MouseEvent) => {
+            if (suppressTapToggleRef.current) {
+              suppressTapToggleRef.current = false;
+              event.stopPropagation();
+              return;
+            }
             if (dragStateRef.current.moved) {
               dragStateRef.current.moved = false;
               event.stopPropagation();
@@ -439,6 +595,10 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
           onMouseMove={handleDragMove}
           onMouseUp={handleDragEnd}
           onMouseLeave={handleDragEnd}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          onTouchCancel={handleTouchEnd}
         >
           <BoxAny
             component="img"
@@ -452,6 +612,11 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
               setPanOffset({ x: 0, y: 0 });
             }}
             onClick={(e: React.MouseEvent) => {
+              if (suppressTapToggleRef.current) {
+                suppressTapToggleRef.current = false;
+                e.stopPropagation();
+                return;
+              }
               e.stopPropagation();
               setIsUiHidden((prev) => !prev);
             }}
