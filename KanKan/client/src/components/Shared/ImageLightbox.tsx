@@ -64,6 +64,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
     offsetY: 0,
   });
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const imgRef = useRef<HTMLImageElement | null>(null);
   const thumbnailRefs = useRef<(HTMLDivElement | null)[]>([]);
   const isIos = /iP(ad|hone|od)/i.test(navigator.userAgent);
 
@@ -84,7 +85,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
     if (!open) return;
     setCurrentIndex(initialIndex);
     setActiveGroupIndex(initialGroupIndex ?? 0);
-    setZoom(1);
+    // zoom will be set when the image loads to reflect fit-to-view vs natural size
     setIsUiHidden(false);
     setPanOffset({ x: 0, y: 0 });
     if (!hasGroups) {
@@ -138,7 +139,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
   useEffect(() => {
     if (!hasGroups) return;
     setSelectedImageUrl(activeImages[currentIndex] || '');
-    setZoom(1);
+    // zoom will be set when the image loads
     setIsUiHidden(false);
     setPanOffset({ x: 0, y: 0 });
   }, [activeImages, currentIndex, hasGroups]);
@@ -146,13 +147,32 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
   const handleZoomIn = () => setZoom((prev) => Math.min(3, Number((prev + 0.01).toFixed(2))));
   const handleZoomOut = () => setZoom((prev) => Math.max(0.5, Number((prev - 0.01).toFixed(2))));
   const handleZoomReset = () => {
-    setZoom(1);
+    setZoom(computeFitZoom());
     setPanOffset({ x: 0, y: 0 });
   };
-  const effectiveMaxSize = zoom <= 1 ? '100%' : 'none';
+
+  const computeFitZoom = () => {
+    if (!imgRef.current || !containerRef.current) return 1;
+    const iw = imgRef.current.naturalWidth || 1;
+    const ih = imgRef.current.naturalHeight || 1;
+    const cw = containerRef.current.clientWidth || 1;
+    const ch = containerRef.current.clientHeight || 1;
+    const fit = Math.min(cw / iw, ch / ih);
+    return Math.min(1, Number(fit.toFixed(4)));
+  };
+  // Always render at natural size; `zoom` 1.0 means 100% actual image size
+  const effectiveMaxSize = 'none';
+
+  const isDraggable = useMemo(() => {
+    if (!imgRef.current || !containerRef.current) return false;
+    const iw = imgRef.current.naturalWidth * zoom;
+    const ih = imgRef.current.naturalHeight * zoom;
+    // draggable only when the scaled natural image is larger than the container
+    return iw > containerRef.current.clientWidth || ih > containerRef.current.clientHeight;
+  }, [zoom]);
 
   const handleDragStart = (event: React.MouseEvent) => {
-    if (zoom <= 1) return;
+    if (!isDraggable) return;
     dragStateRef.current = {
       isDragging: true,
       moved: false,
@@ -388,7 +408,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
             alignItems: 'center',
             justifyContent: 'center',
             overflow: 'hidden',
-            cursor: zoom > 1
+            cursor: isDraggable
               ? (dragStateRef.current.isDragging ? 'grabbing' : 'grab')
               : 'pointer',
           }}
@@ -407,8 +427,15 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
         >
           <BoxAny
             component="img"
+            ref={imgRef}
             src={displayedImage}
             alt={`Image ${currentIndex + 1}`}
+            onLoad={() => {
+              const fit = computeFitZoom();
+              // If current zoom is unset or equals previous default, update to fit
+              setZoom((prev) => (prev === 1 ? fit : prev));
+              setPanOffset({ x: 0, y: 0 });
+            }}
             onClick={(e: React.MouseEvent) => {
               e.stopPropagation();
               setIsUiHidden((prev) => !prev);
