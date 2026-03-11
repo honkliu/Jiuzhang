@@ -54,7 +54,6 @@ export const MomentsPage: React.FC = () => {
     groupIndex?: number;
   } | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const imageClickTimerRef = React.useRef<number | null>(null);
 
   const loadMoments = async () => {
     setLoading(true);
@@ -356,8 +355,6 @@ export const MomentsPage: React.FC = () => {
                         openOnHover={isHoverCapable}
                         openOnLongPress={!isHoverCapable}
                         openOnTap={false}
-                        openOnDoubleClick
-                        closeOnTriggerClickWhenOpen
                       >
                         {(previewProps) => (
                           <BoxAny
@@ -370,28 +367,13 @@ export const MomentsPage: React.FC = () => {
                               event.preventDefault();
                             }}
                             onClick={(event: React.MouseEvent<HTMLElement>) => {
-                              previewProps.onClick?.(event);
-                              if (event.defaultPrevented) return;
-                              if (imageClickTimerRef.current) {
-                                window.clearTimeout(imageClickTimerRef.current);
-                              }
-                              imageClickTimerRef.current = window.setTimeout(() => {
-                                const urls = moment.content?.mediaUrls || [];
-                                setLightbox({
-                                  images: urls,
-                                  index: idx,
-                                  groups: buildMomentGroups(moment, urls),
-                                  groupIndex: idx,
-                                });
-                                imageClickTimerRef.current = null;
-                              }, 220);
-                            }}
-                            onDoubleClick={(event: React.MouseEvent<HTMLElement>) => {
-                              if (imageClickTimerRef.current) {
-                                window.clearTimeout(imageClickTimerRef.current);
-                                imageClickTimerRef.current = null;
-                              }
-                              previewProps.onDoubleClick?.(event);
+                              const urls = moment.content?.mediaUrls || [];
+                              setLightbox({
+                                images: urls,
+                                index: idx,
+                                groups: buildMomentGroups(moment, urls),
+                                groupIndex: idx,
+                              });
                             }}
                             sx={{
                               width: '100%',

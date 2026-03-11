@@ -132,7 +132,6 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
   imageGroupIndexByUrl,
 }) => {
   const [lightbox, setLightbox] = useState<{ images: string[]; index: number; groupIndex?: number } | null>(null);
-  const imageClickTimerRef = useRef<number | null>(null);
   const layoutRef = useRef<HTMLDivElement | null>(null);
   const [layoutWidth, setLayoutWidth] = useState<number>(0);
   const [layoutHeight, setLayoutHeight] = useState<number>(0);
@@ -314,8 +313,6 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
                 openOnHover={isHoverCapable}
                 openOnLongPress={!isHoverCapable}
                 openOnTap={false}
-                openOnDoubleClick
-                closeOnTriggerClickWhenOpen
               >
                 {(previewProps) => (
                   <BoxAny
@@ -327,26 +324,11 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
                       event.preventDefault();
                     }}
                     onClick={(event: React.MouseEvent<HTMLElement>) => {
-                      previewProps.onClick?.(event);
-                      if (event.defaultPrevented) return;
-                      if (imageClickTimerRef.current) {
-                        window.clearTimeout(imageClickTimerRef.current);
-                      }
-                      imageClickTimerRef.current = window.setTimeout(() => {
-                        setLightbox({
-                          images: mediaUrls,
-                          index: i,
-                          groupIndex: imageGroupIndexByUrl?.[url],
-                        });
-                        imageClickTimerRef.current = null;
-                      }, 220);
-                    }}
-                    onDoubleClick={(event: React.MouseEvent<HTMLElement>) => {
-                      if (imageClickTimerRef.current) {
-                        window.clearTimeout(imageClickTimerRef.current);
-                        imageClickTimerRef.current = null;
-                      }
-                      previewProps.onDoubleClick?.(event);
+                      setLightbox({
+                        images: mediaUrls,
+                        index: i,
+                        groupIndex: imageGroupIndexByUrl?.[url],
+                      });
                     }}
                     sx={{
                       width: '100%',
