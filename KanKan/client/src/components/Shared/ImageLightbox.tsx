@@ -151,6 +151,20 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
     setPanOffset({ x: 0, y: 0 });
   };
 
+  const handleWheelZoom = (event: React.WheelEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const delta = event.deltaY;
+    if (delta === 0) return;
+
+    const wheelStep = Math.min(0.12, Math.max(0.01, Math.abs(delta) / 400));
+    setZoom((prev) => {
+      const next = delta < 0 ? prev + wheelStep : prev - wheelStep;
+      return Number(Math.min(3, Math.max(0.5, next)).toFixed(2));
+    });
+  };
+
   const computeFitZoom = () => {
     if (!imgRef.current || !containerRef.current) return 1;
     const iw = imgRef.current.naturalWidth || 1;
@@ -412,6 +426,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
               ? (dragStateRef.current.isDragging ? 'grabbing' : 'grab')
               : 'pointer',
           }}
+          onWheel={handleWheelZoom}
           onClick={(event: React.MouseEvent) => {
             if (dragStateRef.current.moved) {
               dragStateRef.current.moved = false;
