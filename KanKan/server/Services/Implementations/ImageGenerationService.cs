@@ -639,7 +639,12 @@ public class ImageGenerationService : IImageGenerationService
                     _logger.LogInformation("Generating variation {Index}/{Total} for job {JobId}", i + 1, totalCount, jobId);
 
                     // Generate via ComfyUI
-                    var fullPrompt = $"{prompt}, high quality, detailed";
+                    var fullPrompt = $"Edit the input image with the following instruction: {prompt}. Preserve the original proportions. High quality, detailed.";
+                    var extraPrompt = request.ExtraPrompt?.Trim();
+                    if (!string.IsNullOrWhiteSpace(extraPrompt))
+                    {
+                        fullPrompt = $"{fullPrompt} {extraPrompt}";
+                    }
                     var generatedBase64 = await _comfyUIService.GenerateImageAsync(imageBase64, fullPrompt);
 
                     // Save to file system
