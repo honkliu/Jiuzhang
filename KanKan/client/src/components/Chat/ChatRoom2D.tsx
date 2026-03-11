@@ -134,7 +134,6 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
   const [lightbox, setLightbox] = useState<{ images: string[]; index: number; groupIndex?: number } | null>(null);
   const layoutRef = useRef<HTMLDivElement | null>(null);
   const [layoutWidth, setLayoutWidth] = useState<number>(0);
-  const [layoutHeight, setLayoutHeight] = useState<number>(0);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isHoverCapable = useMediaQuery('(hover: hover) and (pointer: fine)');
@@ -145,7 +144,6 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
       const entry = entries[0];
       if (!entry) return;
       setLayoutWidth(entry.contentRect.width);
-      setLayoutHeight(entry.contentRect.height);
     });
     observer.observe(layoutRef.current);
     return () => observer.disconnect();
@@ -153,7 +151,6 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
 
   const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
   const baseWidth = layoutWidth || window.innerWidth;
-  const baseHeight = layoutHeight || window.innerHeight;
   const columnWidth = baseWidth / 2;
 
   // Keep bubble sizes consistent until narrow; cap at <= 2/3 view width.
@@ -323,7 +320,7 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
                     onContextMenu={(event: React.MouseEvent<HTMLElement>) => {
                       event.preventDefault();
                     }}
-                    onClick={(event: React.MouseEvent<HTMLElement>) => {
+                    onClick={() => {
                       setLightbox({
                         images: mediaUrls,
                         index: i,

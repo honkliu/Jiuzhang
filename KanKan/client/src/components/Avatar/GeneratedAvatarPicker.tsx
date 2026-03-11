@@ -144,6 +144,7 @@ export const GeneratedAvatarPicker: React.FC<GeneratedAvatarPickerProps> = ({
   const { loading, items } = useMoodPickerData(open, avatarImageId);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isHoverCapable = useMediaQuery('(hover: hover) and (pointer: fine)');
   const tileW = isMobile ? 64 : 56;
   const popoverW = isMobile ? tileW * 3 + 32 + 16 : 216;  // 3 tiles + gap + padding
 
@@ -189,13 +190,13 @@ export const GeneratedAvatarPicker: React.FC<GeneratedAvatarPickerProps> = ({
   };
 
   const previewBehavior = {
-    openOnHover: true,
-    openOnLongPress: true,
+    openOnHover: isHoverCapable,
+    openOnLongPress: !isHoverCapable,
     openOnTap: false,
     openOnClick: false,
     openOnDoubleClick: false,
     closeOnClickWhenOpen: true,
-    closeOnTriggerClickWhenOpen: true,
+    closeOnTriggerClickWhenOpen: false,
   } as const;
 
   return (

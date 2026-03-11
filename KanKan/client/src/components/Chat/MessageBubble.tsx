@@ -135,7 +135,6 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
   const isDraft = message.id.startsWith('draft_');
   const [displayText, setDisplayText] = useState(message.text || '');
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
-  const imageClickTimerRef = useRef<number | null>(null);
   const animRef = useRef<number | null>(null);
   const lastTextRef = useRef(message.text || '');
 
@@ -315,8 +314,6 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
             openOnHover={isHoverCapable}
             openOnLongPress={!isHoverCapable}
             openOnTap={false}
-            openOnDoubleClick
-            closeOnTriggerClickWhenOpen
           >
             {(previewProps) => (
               <BoxAny
@@ -328,23 +325,8 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
                 onContextMenu={(event: React.MouseEvent<HTMLElement>) => {
                   event.preventDefault();
                 }}
-                onClick={(event: React.MouseEvent<HTMLElement>) => {
-                  previewProps.onClick?.(event);
-                  if (event.defaultPrevented) return;
-                  if (imageClickTimerRef.current) {
-                    window.clearTimeout(imageClickTimerRef.current);
-                  }
-                  imageClickTimerRef.current = window.setTimeout(() => {
-                    setIsLightboxOpen(true);
-                    imageClickTimerRef.current = null;
-                  }, 220);
-                }}
-                onDoubleClick={(event: React.MouseEvent<HTMLElement>) => {
-                  if (imageClickTimerRef.current) {
-                    window.clearTimeout(imageClickTimerRef.current);
-                    imageClickTimerRef.current = null;
-                  }
-                  previewProps.onDoubleClick?.(event);
+                onClick={() => {
+                  setIsLightboxOpen(true);
                 }}
                 sx={{
                   maxWidth: '100%',
