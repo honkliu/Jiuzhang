@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Box, Button, CircularProgress, IconButton, Modal, TextField, Typography } from '@mui/material';
+import { Box, Button, CircularProgress, IconButton, Modal, TextField, Typography, useMediaQuery, useTheme } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
@@ -7,9 +7,9 @@ import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
 import LibraryBooksIcon from '@mui/icons-material/LibraryBooks';
 import TuneIcon from '@mui/icons-material/Tune';
-import ZoomInIcon from '@mui/icons-material/ZoomIn';
-import ZoomOutIcon from '@mui/icons-material/ZoomOut';
-import CropFreeIcon from '@mui/icons-material/CropFree';
+import RemoveIcon from '@mui/icons-material/Remove';
+import AddIcon from '@mui/icons-material/Add';
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import { imageGenerationService } from '@/services/imageGeneration.service';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { AvatarQuickPicker } from '@/components/Avatar/AvatarQuickPicker';
@@ -41,9 +41,10 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
   initialGroupIndex,
 }) => {
   const { t, language } = useLanguage();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [activeGroupIndex, setActiveGroupIndex] = useState(initialGroupIndex ?? 0);
-  const [selectedImageUrl, setSelectedImageUrl] = useState<string>('');
   const [prompt, setPrompt] = useState('');
   const [composerOpen, setComposerOpen] = useState(false);
   const [selectedPrompts, setSelectedPrompts] = useState<SelectedPrompt[]>([]);
@@ -53,7 +54,13 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
   const [isPseudoFullscreen, setIsPseudoFullscreen] = useState(false);
   const [showPromptTools, setShowPromptTools] = useState(false);
   const [zoom, setZoom] = useState(1);
+  const [fitZoom, setFitZoom] = useState(1);
+  const [isImageReady, setIsImageReady] = useState(false);
+  const [renderedImage, setRenderedImage] = useState('');
   const [isUiHidden, setIsUiHidden] = useState(false);
+  const [thumbnailMode, setThumbnailMode] = useState<'sources' | 'edits'>('sources');
+  const [selectedEditIndexByGroup, setSelectedEditIndexByGroup] = useState<Record<string, number | null>>({});
+  const [showSourceInEdits, setShowSourceInEdits] = useState(true);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const dragStateRef = useRef({
     isDragging: false,
@@ -83,6 +90,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
 
   const hasGroups = Boolean(groups && groups.length > 0);
   const activeGroup = hasGroups ? groups![Math.min(activeGroupIndex, groups!.length - 1)] : null;
+  const sourceImages = useMemo(() => (hasGroups ? groups!.map((group) => group.sourceUrl) : images), [groups, hasGroups, images]);
 
   const activeGeneratedUrls = useMemo(() => {
     if (!activeGroup) return [];
@@ -90,9 +98,13 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
   }, [activeGroup, generatedByGroup]);
 
   const activeImages = useMemo(() => {
-    if (!activeGroup) return images;
-    return [activeGroup.sourceUrl, ...activeGeneratedUrls];
-  }, [activeGroup, activeGeneratedUrls, images]);
+    if (!hasGroups) return images;
+    return thumbnailMode === 'edits' ? activeGeneratedUrls : sourceImages;
+  }, [activeGeneratedUrls, hasGroups, images, sourceImages, thumbnailMode]);
+
+  const canToggleToEdits = hasGroups && activeGeneratedUrls.length > 0;
+  const currentEditIndex = activeGroup ? (selectedEditIndexByGroup[activeGroup.messageId] ?? null) : null;
+  const zoomPercent = Math.round(zoom * 100);
 
   useEffect(() => {
     if (!open) return;
@@ -100,15 +112,14 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
     setActiveGroupIndex(initialGroupIndex ?? 0);
     // zoom will be set when the image loads to reflect fit-to-view vs natural size
     setIsUiHidden(false);
+    setThumbnailMode('sources');
     setPanOffset({ x: 0, y: 0 });
-    if (!hasGroups) {
-      setSelectedImageUrl(images[initialIndex] || '');
-      return;
+    if (hasGroups) {
+      setCurrentIndex(0);
     }
-
-    const nextGroup = groups![Math.min(initialGroupIndex ?? 0, groups!.length - 1)];
-    setCurrentIndex(0);
-    setSelectedImageUrl(nextGroup?.sourceUrl || '');
+    setIsImageReady(false);
+    setRenderedImage('');
+    setShowSourceInEdits(true);
   }, [open, initialIndex, initialGroupIndex, images, groups, hasGroups]);
 
   useEffect(() => {
@@ -150,18 +161,17 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
   }, [currentIndex, activeGroupIndex, hasGroups]);
 
   useEffect(() => {
-    if (!hasGroups) return;
-    setSelectedImageUrl(activeImages[currentIndex] || '');
-    // zoom will be set when the image loads
-    setIsUiHidden(false);
+    if (!hasGroups || thumbnailMode !== 'edits') return;
     setPanOffset({ x: 0, y: 0 });
-  }, [activeImages, currentIndex, hasGroups]);
+  }, [currentIndex, hasGroups, thumbnailMode]);
 
-  const handleZoomIn = () => setZoom((prev) => Math.min(3, Number((prev + 0.01).toFixed(2))));
-  const handleZoomOut = () => setZoom((prev) => Math.max(0.5, Number((prev - 0.01).toFixed(2))));
   const handleZoomReset = () => {
-    setZoom(computeFitZoom());
+    setZoom(fitZoom);
     setPanOffset({ x: 0, y: 0 });
+  };
+
+  const handleZoomStep = (delta: number) => {
+    setZoom((prev) => Number(Math.min(3, Math.max(0.5, prev + delta)).toFixed(2)));
   };
 
   const handleWheelZoom = (event: React.WheelEvent) => {
@@ -196,15 +206,24 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
     };
   };
 
-  const computeFitZoom = () => {
-    if (!imgRef.current || !containerRef.current) return 1;
-    const iw = imgRef.current.naturalWidth || 1;
-    const ih = imgRef.current.naturalHeight || 1;
+  const computeFitZoom = (naturalWidth?: number, naturalHeight?: number) => {
+    const iw = naturalWidth || imgRef.current?.naturalWidth || 1;
+    const ih = naturalHeight || imgRef.current?.naturalHeight || 1;
+    if (!containerRef.current) return 1;
     const cw = containerRef.current.clientWidth || 1;
     const ch = containerRef.current.clientHeight || 1;
     const fit = Math.min(cw / iw, ch / ih);
     return Math.min(1, Number(fit.toFixed(4)));
   };
+
+  const stopOverlayPropagation = (event: React.SyntheticEvent) => {
+    event.stopPropagation();
+  };
+
+  const stopOverlayTouchPropagation = (event: React.TouchEvent) => {
+    event.stopPropagation();
+  };
+
   // Always render at natural size; `zoom` 1.0 means 100% actual image size
   const effectiveMaxSize = 'none';
 
@@ -394,12 +413,56 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
   };
 
   const prev = useCallback(() => {
-    setCurrentIndex((i) => (i > 0 ? i - 1 : activeImages.length - 1));
-  }, [activeImages.length]);
+    if (!hasGroups) {
+      setCurrentIndex((i) => (i > 0 ? i - 1 : images.length - 1));
+      return;
+    }
+
+    if (thumbnailMode === 'sources') {
+      setActiveGroupIndex((i) => (i > 0 ? i - 1 : sourceImages.length - 1));
+      setCurrentIndex(0);
+      setShowSourceInEdits(true);
+      return;
+    }
+
+    if (!activeGroup) return;
+    const total = activeGeneratedUrls.length + 1;
+    const combinedIndex = showSourceInEdits ? 0 : (currentEditIndex ?? 0);
+    const nextCombinedIndex = combinedIndex > 0 ? combinedIndex - 1 : total - 1;
+    setSelectedEditIndexByGroup((prevState) => ({
+      ...prevState,
+      [activeGroup.messageId]: nextCombinedIndex,
+    }));
+    setShowSourceInEdits(nextCombinedIndex === 0);
+  }, [activeGeneratedUrls.length, activeGroup, currentEditIndex, hasGroups, images.length, showSourceInEdits, sourceImages.length, thumbnailMode]);
 
   const next = useCallback(() => {
-    setCurrentIndex((i) => (i < activeImages.length - 1 ? i + 1 : 0));
-  }, [activeImages.length]);
+    if (!hasGroups) {
+      setCurrentIndex((i) => (i < images.length - 1 ? i + 1 : 0));
+      return;
+    }
+
+    if (thumbnailMode === 'sources') {
+      setActiveGroupIndex((i) => (i < sourceImages.length - 1 ? i + 1 : 0));
+      setCurrentIndex(0);
+      setShowSourceInEdits(true);
+      return;
+    }
+
+    if (!activeGroup) return;
+    const total = activeGeneratedUrls.length + 1;
+    const combinedIndex = showSourceInEdits ? 0 : (currentEditIndex ?? 0);
+    const nextCombinedIndex = combinedIndex < total - 1 ? combinedIndex + 1 : 0;
+    setSelectedEditIndexByGroup((prevState) => ({
+      ...prevState,
+      [activeGroup.messageId]: nextCombinedIndex,
+    }));
+    setShowSourceInEdits(nextCombinedIndex === 0);
+  }, [activeGeneratedUrls.length, activeGroup, currentEditIndex, hasGroups, images.length, showSourceInEdits, sourceImages.length, thumbnailMode]);
+
+  const showChrome = () => setIsUiHidden(false);
+  const hideChrome = () => setIsUiHidden(true);
+  const toggleChrome = () => setIsUiHidden((prev) => !prev);
 
   useEffect(() => {
     if (!open) return;
@@ -438,21 +501,109 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
     };
   }, [open, isPseudoFullscreen]);
 
-  if (!activeImages.length) return null;
+  const displayedImage = hasGroups
+    ? (thumbnailMode === 'edits'
+      ? ((showSourceInEdits || currentEditIndex === null || currentEditIndex === 0)
+        ? (activeGroup?.sourceUrl || '')
+        : (activeGeneratedUrls[currentEditIndex - 1] || activeGroup?.sourceUrl || ''))
+        : (activeGroup?.sourceUrl || ''))
+    : activeImages[currentIndex];
 
-  const displayedImage = hasGroups ? (selectedImageUrl || activeImages[currentIndex]) : activeImages[currentIndex];
+  useEffect(() => {
+    if (!open || !displayedImage) return;
+    let cancelled = false;
+    const nextImage = new Image();
+
+    setIsImageReady(false);
+    nextImage.decoding = 'async';
+
+    const commitImage = () => {
+      if (cancelled) return;
+      const fit = computeFitZoom(nextImage.naturalWidth || 1, nextImage.naturalHeight || 1);
+      setFitZoom(fit);
+      setZoom(fit);
+      setPanOffset({ x: 0, y: 0 });
+      setRenderedImage(displayedImage);
+      requestAnimationFrame(() => {
+        if (!cancelled) {
+          setIsImageReady(true);
+        }
+      });
+    };
+
+    nextImage.onload = commitImage;
+    nextImage.onerror = () => {
+      if (cancelled) return;
+      setRenderedImage(displayedImage);
+      setPanOffset({ x: 0, y: 0 });
+      setIsImageReady(true);
+    };
+    nextImage.src = displayedImage;
+
+    if (nextImage.complete) {
+      commitImage();
+    }
+
+    return () => {
+      cancelled = true;
+      nextImage.onload = null;
+      nextImage.onerror = null;
+    };
+  }, [displayedImage, open]);
+
+  if (!activeImages.length && !(hasGroups && thumbnailMode === 'sources')) return null;
 
   const handleSelectGroup = (index: number) => {
     if (!groups) return;
-    const nextGroup = groups[index];
     setActiveGroupIndex(index);
     setCurrentIndex(0);
-    setSelectedImageUrl(nextGroup.sourceUrl);
+    setThumbnailMode('sources');
+    setShowSourceInEdits(true);
+    showChrome();
   };
 
-  const handleSelectGenerated = (url: string, index: number) => {
-    setSelectedImageUrl(url);
-    setCurrentIndex(index);
+  const handleSelectGenerated = (_url: string, index: number) => {
+    if (!activeGroup) return;
+    setSelectedEditIndexByGroup((prev) => ({ ...prev, [activeGroup.messageId]: index }));
+    setThumbnailMode('edits');
+    setShowSourceInEdits(index === 0);
+    showChrome();
+  };
+
+  const handleToggleLayer = () => {
+    if (!hasGroups) return;
+
+    if (thumbnailMode === 'edits') {
+      setThumbnailMode('sources');
+      setCurrentIndex(0);
+      setShowSourceInEdits(true);
+      showChrome();
+      return;
+    }
+
+    if (!canToggleToEdits) return;
+
+    if (activeGroup) {
+      setSelectedEditIndexByGroup((prev) => ({
+        ...prev,
+        [activeGroup.messageId]: prev[activeGroup.messageId] ?? 0,
+      }));
+    }
+    setThumbnailMode('edits');
+    setShowSourceInEdits(true);
+    showChrome();
+  };
+
+  const handleNavigatePrev = (event: React.MouseEvent) => {
+    event.stopPropagation();
+    hideChrome();
+    prev();
+  };
+
+  const handleNavigateNext = (event: React.MouseEvent) => {
+    event.stopPropagation();
+    hideChrome();
+    next();
   };
 
   const handleToggleFullscreen = async () => {
@@ -507,14 +658,22 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
       const urls = Array.isArray(result.results) ? (result.results as string[]) : [];
       setGeneratedByGroup((prev) => ({ ...prev, [activeGroup.messageId]: urls }));
       if (urls.length > 0) {
-        const latest = urls[urls.length - 1];
-        setSelectedImageUrl(latest);
-        setCurrentIndex(urls.length);
+        setSelectedEditIndexByGroup((prev) => ({ ...prev, [activeGroup.messageId]: urls.length }));
+        setThumbnailMode('edits');
+        setShowSourceInEdits(false);
       }
     } finally {
       setIsGenerating(false);
     }
   };
+
+  useEffect(() => {
+    if (thumbnailMode === 'edits' && activeGeneratedUrls.length === 0) {
+      setThumbnailMode('sources');
+      setCurrentIndex(0);
+      setShowSourceInEdits(true);
+    }
+  }, [activeGeneratedUrls.length, thumbnailMode]);
 
   return (
     <Modal
@@ -527,9 +686,9 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
         sx={{
           display: 'flex',
           flexDirection: 'column',
-          width: isPseudoFullscreen ? '100vw' : '90vw',
-          maxWidth: isPseudoFullscreen ? 'none' : 1100,
-          height: isPseudoFullscreen ? '100vh' : '90vh',
+          width: '100vw',
+          maxWidth: 'none',
+          height: '100dvh',
           bgcolor: 'rgba(10, 10, 10, 0.97)',
           borderRadius: isPseudoFullscreen ? 0 : 2,
           overflow: 'hidden',
@@ -538,30 +697,127 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
         }}
         onClick={(e: React.MouseEvent) => e.stopPropagation()}
       >
-        {/* Header */}
         {!isUiHidden && (
           <BoxAny
             sx={{
+              position: 'absolute',
+              top: 'max(8px, env(safe-area-inset-top))',
+              right: 'calc(max(8px, env(safe-area-inset-right)) + 84px)',
+              zIndex: 4,
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'space-between',
-              px: 2,
-              py: 1,
-              flexShrink: 0,
+              gap: 0.375,
+              px: 0.375,
+              py: 0.25,
+              borderRadius: 999,
+              bgcolor: 'rgba(0,0,0,0.34)',
+              backdropFilter: 'blur(10px)',
             }}
+            onClick={stopOverlayPropagation}
+            onMouseDown={stopOverlayPropagation}
+            onTouchStart={stopOverlayTouchPropagation}
+            onTouchMove={stopOverlayTouchPropagation}
+            onTouchEnd={stopOverlayTouchPropagation}
           >
-            <IconButton onClick={handleToggleFullscreen} sx={{ color: 'rgba(255,255,255,0.8)' }}>
-              {(isFullscreen || isPseudoFullscreen) ? <FullscreenExitIcon /> : <FullscreenIcon />}
+            <IconButton
+              size="small"
+              onClick={() => handleZoomStep(-0.1)}
+              sx={{ color: 'rgba(255,255,255,0.88)', bgcolor: 'rgba(255,255,255,0.08)', width: 28, height: 28 }}
+            >
+              <RemoveIcon sx={{ fontSize: 17 }} />
             </IconButton>
-            <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem' }}>
-              {currentIndex + 1} / {activeImages.length}
-              {hasGroups ? `  -  ${activeGroupIndex + 1} / ${groups!.length}` : ''}
-            </Typography>
-            <IconButton onClick={handleClose} sx={{ color: 'rgba(255,255,255,0.8)' }}>
-              <CloseIcon />
+            <Button
+              size="small"
+              onClick={handleZoomReset}
+              sx={{
+                minWidth: 0,
+                width: 40,
+                px: 0.5,
+                py: 0.4,
+                color: 'rgba(255,255,255,0.92)',
+                bgcolor: Math.abs(zoom - fitZoom) > 0.01 ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.06)',
+                borderRadius: 999,
+                fontSize: '0.72rem',
+                lineHeight: 1,
+                fontVariantNumeric: 'tabular-nums',
+                textAlign: 'center',
+              }}
+            >
+              {zoomPercent}
+            </Button>
+            <IconButton
+              size="small"
+              onClick={() => handleZoomStep(0.1)}
+              sx={{ color: 'rgba(255,255,255,0.88)', bgcolor: 'rgba(255,255,255,0.08)', width: 28, height: 28 }}
+            >
+              <AddIcon sx={{ fontSize: 17 }} />
+            </IconButton>
+            <IconButton
+              size="small"
+              onClick={handleToggleFullscreen}
+              sx={{ color: 'rgba(255,255,255,0.88)', bgcolor: 'rgba(255,255,255,0.08)', width: 28, height: 28 }}
+            >
+              {(isFullscreen || isPseudoFullscreen) ? <FullscreenExitIcon sx={{ fontSize: 17 }} /> : <FullscreenIcon sx={{ fontSize: 17 }} />}
             </IconButton>
           </BoxAny>
         )}
+
+        <BoxAny
+          sx={{
+            position: 'absolute',
+            top: 'max(8px, env(safe-area-inset-top))',
+            right: 'max(8px, env(safe-area-inset-right))',
+            zIndex: 5,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 0.5,
+          }}
+          onClick={stopOverlayPropagation}
+          onMouseDown={stopOverlayPropagation}
+          onTouchStart={stopOverlayTouchPropagation}
+          onTouchMove={stopOverlayTouchPropagation}
+          onTouchEnd={stopOverlayTouchPropagation}
+        >
+          {hasGroups && (
+            <IconButton
+              size="small"
+              onClick={handleToggleLayer}
+              disabled={!canToggleToEdits && thumbnailMode !== 'edits'}
+              sx={{
+                width: 32,
+                height: 32,
+                color: 'white',
+                bgcolor: 'rgba(211, 47, 47, 0.95)',
+                border: '1px solid rgba(255,255,255,0.18)',
+                opacity: !canToggleToEdits && thumbnailMode !== 'edits' ? 0.55 : 1,
+                '&:hover': {
+                  bgcolor: 'rgba(198, 40, 40, 1)',
+                },
+              }}
+            >
+              <KeyboardArrowDownIcon
+                sx={{
+                  fontSize: 19,
+                  transform: thumbnailMode === 'edits' ? 'rotate(180deg)' : 'rotate(0deg)',
+                  transition: 'transform 0.15s ease',
+                }}
+              />
+            </IconButton>
+          )}
+
+          <IconButton
+            onClick={handleClose}
+            size="small"
+            sx={{
+              width: 32,
+              height: 32,
+              color: 'rgba(255,255,255,0.9)',
+              bgcolor: 'rgba(0,0,0,0.3)',
+            }}
+          >
+            <CloseIcon sx={{ fontSize: 18 }} />
+          </IconButton>
+        </BoxAny>
 
         {/* Main image area */}
         <BoxAny
@@ -575,7 +831,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
             cursor: isDraggable
               ? (dragStateRef.current.isDragging ? 'grabbing' : 'grab')
               : 'pointer',
-            touchAction: 'none',
+            touchAction: zoom > fitZoom + 0.01 ? 'none' : 'manipulation',
           }}
           onWheel={handleWheelZoom}
           onClick={(event: React.MouseEvent) => {
@@ -589,7 +845,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
               event.stopPropagation();
               return;
             }
-            setIsUiHidden((prev) => !prev);
+            toggleChrome();
           }}
           onMouseDown={handleDragStart}
           onMouseMove={handleDragMove}
@@ -602,15 +858,12 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
         >
           <BoxAny
             component="img"
+            key={renderedImage || displayedImage}
             ref={imgRef}
-            src={displayedImage}
+            src={renderedImage || displayedImage}
             alt={`Image ${currentIndex + 1}`}
-            onLoad={() => {
-              const fit = computeFitZoom();
-              // If current zoom is unset or equals previous default, update to fit
-              setZoom((prev) => (prev === 1 ? fit : prev));
-              setPanOffset({ x: 0, y: 0 });
-            }}
+            onLoad={() => setIsImageReady(true)}
+            onError={() => setIsImageReady(true)}
             onClick={(e: React.MouseEvent) => {
               if (suppressTapToggleRef.current) {
                 suppressTapToggleRef.current = false;
@@ -618,7 +871,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
                 return;
               }
               e.stopPropagation();
-              setIsUiHidden((prev) => !prev);
+              toggleChrome();
             }}
             sx={{
               maxWidth: effectiveMaxSize,
@@ -629,16 +882,21 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
               cursor: 'default',
               transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoom})`,
               transformOrigin: 'center center',
+              opacity: isImageReady ? 1 : 0,
+              transition: isImageReady ? 'opacity 0.12s ease-out' : 'none',
             }}
           />
 
           {/* Left arrow */}
           {activeImages.length > 1 && (
             <IconButton
-              onClick={(e) => { e.stopPropagation(); prev(); }}
+              onClick={handleNavigatePrev}
               sx={{
                 position: 'absolute',
-                left: 8,
+                top: '50%',
+                left: 'max(8px, env(safe-area-inset-left))',
+                transform: 'translateY(-50%)',
+                zIndex: 3,
                 color: 'white',
                 bgcolor: 'rgba(0,0,0,0.4)',
                 '&:hover': { bgcolor: 'rgba(0,0,0,0.65)' },
@@ -651,10 +909,13 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
           {/* Right arrow */}
           {activeImages.length > 1 && (
             <IconButton
-              onClick={(e) => { e.stopPropagation(); next(); }}
+              onClick={handleNavigateNext}
               sx={{
                 position: 'absolute',
-                right: 8,
+                top: '50%',
+                right: 'max(8px, env(safe-area-inset-right))',
+                transform: 'translateY(-50%)',
+                zIndex: 3,
                 color: 'white',
                 bgcolor: 'rgba(0,0,0,0.4)',
                 '&:hover': { bgcolor: 'rgba(0,0,0,0.65)' },
@@ -664,330 +925,303 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
             </IconButton>
           )}
 
-          {!isUiHidden && hasGroups && activeGroup?.canEdit && (
+          {!isUiHidden && (
             <BoxAny
-              onClick={(e: React.MouseEvent) => e.stopPropagation()}
-              onMouseDown={(e: React.MouseEvent) => e.stopPropagation()}
+              onClick={stopOverlayPropagation}
+              onMouseDown={stopOverlayPropagation}
+              onTouchStart={stopOverlayTouchPropagation}
+              onTouchMove={stopOverlayTouchPropagation}
+              onTouchEnd={stopOverlayTouchPropagation}
               sx={{
                 position: 'absolute',
-                top: 12,
-                left: 12,
-                right: 12,
-                maxWidth: 720,
+                left: 'max(12px, env(safe-area-inset-left))',
+                right: 'max(12px, env(safe-area-inset-right))',
+                bottom: 'calc(max(12px, env(safe-area-inset-bottom)) + 12px)',
+                maxWidth: isMobile ? 'none' : 860,
                 mx: 'auto',
-                p: 1.25,
-                borderRadius: 1.5,
-                bgcolor: 'rgba(0,0,0,0.6)',
-                backdropFilter: 'blur(6px)',
+                p: isMobile ? 0.75 : 1,
+                borderRadius: 2,
+                bgcolor: 'rgba(0,0,0,0.72)',
+                backdropFilter: 'blur(10px)',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: 0.75,
+                zIndex: 4,
+                touchAction: 'auto',
+                maxHeight: isMobile ? '32dvh' : '26dvh',
+                overflowY: 'auto',
               }}
             >
-              <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <TextField
-                  value={prompt}
-                  onChange={(event) => setPrompt(event.target.value)}
-                  placeholder={t('image.editPromptPlaceholder')}
-                  size="small"
-                  fullWidth
-                  disabled={isGenerating}
-                  sx={{
-                    '& .MuiInputBase-input': { color: 'rgba(255,255,255,0.95)' },
-                    '& .MuiInputBase-input::placeholder': {
-                      color: 'rgba(255,255,255,0.55)',
-                      opacity: 1,
-                    },
-                    '& .MuiOutlinedInput-root': {
-                      backgroundColor: 'rgba(255,255,255,0.08)',
-                    },
-                    '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.25)' },
-                    '& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline': {
-                      borderColor: 'rgba(255,255,255,0.45)',
-                    },
-                  }}
-                />
-                <IconButton
-                  size="small"
-                  title={t('promptComposer.browsePrompts')}
-                  onClick={() => setComposerOpen(true)}
-                  sx={{ color: 'rgba(255,255,255,0.85)' }}
-                >
-                  <LibraryBooksIcon fontSize="small" />
-                </IconButton>
-                <IconButton
-                  size="small"
-                  title={t('promptComposer.browsePrompts')}
-                  onClick={() => setShowPromptTools((prev) => !prev)}
-                  sx={{ color: 'rgba(255,255,255,0.85)' }}
-                >
-                  <TuneIcon fontSize="small" />
-                </IconButton>
-                <Button
-                  variant="contained"
-                  onClick={handlePicEdit}
-                  disabled={isGenerating || (!prompt.trim() && selectedPrompts.length === 0)}
-                  sx={{ minWidth: 110 }}
-                >
-                  {isGenerating ? <CircularProgress size={18} sx={{ color: 'white' }} /> : t('image.editAction')}
-                </Button>
-                <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
-                  <IconButton
-                    size="small"
-                    onClick={handleZoomOut}
-                    sx={{ color: 'white' }}
-                    disabled={zoom <= 0.5}
-                  >
-                    <ZoomOutIcon fontSize="small" />
-                  </IconButton>
-                  <Typography sx={{ color: 'rgba(255,255,255,0.85)', fontSize: '0.75rem', minWidth: 44, textAlign: 'center' }}>
-                    {Math.round(zoom * 100)}%
-                  </Typography>
-                  <IconButton
-                    size="small"
-                    onClick={handleZoomIn}
-                    sx={{ color: 'white' }}
-                    disabled={zoom >= 3}
-                  >
-                    <ZoomInIcon fontSize="small" />
-                  </IconButton>
-                  <IconButton
-                    size="small"
-                    onClick={handleZoomReset}
-                    sx={{ color: 'white' }}
-                  >
-                    <CropFreeIcon fontSize="small" />
-                  </IconButton>
-                </BoxAny>
-              </BoxAny>
+              {hasGroups && activeGroup?.canEdit && (
+                <>
+                  <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <TextField
+                      value={prompt}
+                      onChange={(event) => setPrompt(event.target.value)}
+                      placeholder={t('image.editPromptPlaceholder')}
+                      size="small"
+                      fullWidth
+                      disabled={isGenerating}
+                      sx={{
+                        '& .MuiInputBase-input': { color: 'rgba(255,255,255,0.95)' },
+                        '& .MuiInputBase-input::placeholder': {
+                          color: 'rgba(255,255,255,0.55)',
+                          opacity: 1,
+                        },
+                        '& .MuiOutlinedInput-root': {
+                          backgroundColor: 'rgba(255,255,255,0.08)',
+                          minHeight: isMobile ? 40 : 42,
+                        },
+                        '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.25)' },
+                        '& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline': {
+                          borderColor: 'rgba(255,255,255,0.45)',
+                        },
+                      }}
+                    />
+                    <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 0.25, flexShrink: 0 }}>
+                      <IconButton
+                        size="small"
+                        title={t('promptComposer.browsePrompts')}
+                        onClick={() => setComposerOpen(true)}
+                        sx={{ color: 'rgba(255,255,255,0.85)' }}
+                      >
+                        <LibraryBooksIcon fontSize="small" />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        title={t('promptComposer.browsePrompts')}
+                        onClick={() => setShowPromptTools((prev) => !prev)}
+                        sx={{ color: showPromptTools ? 'white' : 'rgba(255,255,255,0.85)' }}
+                      >
+                        <TuneIcon fontSize="small" />
+                      </IconButton>
+                      <Button
+                        variant="contained"
+                        onClick={handlePicEdit}
+                        disabled={isGenerating || (!prompt.trim() && selectedPrompts.length === 0)}
+                        sx={{ minWidth: isMobile ? 78 : 92, px: isMobile ? 1.25 : 1.75, flexShrink: 0 }}
+                      >
+                        {isGenerating ? <CircularProgress size={18} sx={{ color: 'white' }} /> : t('image.editAction')}
+                      </Button>
+                    </BoxAny>
+                  </BoxAny>
 
-              {showPromptTools && (
-                <BoxAny
-                  sx={{
-                    px: 0.5,
-                    py: 0.25,
-                    borderRadius: 1,
-                    bgcolor: 'rgba(255,255,255,0.06)',
-                    '& .MuiChip-root': {
-                      color: 'rgba(255,255,255,0.9)',
-                      borderColor: 'rgba(255,255,255,0.35)',
-                      backgroundColor: 'rgba(255,255,255,0.08)',
-                    },
-                    '& .MuiChip-root.MuiChip-filled': {
-                      backgroundColor: 'rgba(255,255,255,0.18)',
-                    },
-                  }}
-                >
-                  <AvatarQuickPicker
-                    selectedKeys={new Set(selectedPrompts.map((p) => p.key))}
-                    onSelect={handleQuickPromptSelect}
-                    onDeselect={(key) => setSelectedPrompts((prev) => prev.filter((p) => p.key !== key))}
-                  />
+                  {showPromptTools && (
+                    <BoxAny
+                      sx={{
+                        px: 0.5,
+                        py: 0.25,
+                        borderRadius: 1,
+                        bgcolor: 'rgba(255,255,255,0.06)',
+                        '& .MuiChip-root': {
+                          color: 'rgba(255,255,255,0.9)',
+                          borderColor: 'rgba(255,255,255,0.35)',
+                          backgroundColor: 'rgba(255,255,255,0.08)',
+                        },
+                        '& .MuiChip-root.MuiChip-filled': {
+                          backgroundColor: 'rgba(255,255,255,0.18)',
+                        },
+                      }}
+                    >
+                      <AvatarQuickPicker
+                        selectedKeys={new Set(selectedPrompts.map((p) => p.key))}
+                        onSelect={handleQuickPromptSelect}
+                        onDeselect={(key) => setSelectedPrompts((prev) => prev.filter((p) => p.key !== key))}
+                      />
 
-                  {selectedPrompts.length > 0 && (
-                    <BoxAny sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
-                      {selectedPrompts.map((sp) => (
-                        <Button
-                          key={sp.key}
-                          size="small"
-                          variant="outlined"
-                          onClick={() => setSelectedPrompts((prev) => prev.filter((p) => p.key !== sp.key))}
-                          sx={{
-                            color: 'rgba(255,255,255,0.8)',
-                            borderColor: 'rgba(255,255,255,0.25)',
-                            fontSize: '0.7rem',
-                            textTransform: 'none',
-                          }}
-                        >
-                          {language === 'zh' ? sp.zh : sp.en}
-                        </Button>
-                      ))}
+                      {selectedPrompts.length > 0 && (
+                        <BoxAny sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                          {selectedPrompts.map((sp) => (
+                            <Button
+                              key={sp.key}
+                              size="small"
+                              variant="outlined"
+                              onClick={() => setSelectedPrompts((prev) => prev.filter((p) => p.key !== sp.key))}
+                              sx={{
+                                color: 'rgba(255,255,255,0.8)',
+                                borderColor: 'rgba(255,255,255,0.25)',
+                                fontSize: '0.7rem',
+                                textTransform: 'none',
+                              }}
+                            >
+                              {language === 'zh' ? sp.zh : sp.en}
+                            </Button>
+                          ))}
+                        </BoxAny>
+                      )}
                     </BoxAny>
                   )}
+                </>
+              )}
+
+              {hasGroups && (
+                <BoxAny
+                  sx={{
+                    display: 'flex',
+                    gap: 0.5,
+                    alignItems: 'center',
+                    minHeight: 58,
+                  }}
+                >
+                  <IconButton
+                    onClick={handleToggleLayer}
+                    disabled={!canToggleToEdits && thumbnailMode !== 'edits'}
+                    sx={{
+                      flexShrink: 0,
+                      width: 32,
+                      height: 32,
+                      color: 'white',
+                      bgcolor: 'rgba(211, 47, 47, 0.95)',
+                      border: '1px solid rgba(255,255,255,0.18)',
+                      opacity: !canToggleToEdits && thumbnailMode !== 'edits' ? 0.45 : 1,
+                      '&:hover': { bgcolor: 'rgba(198, 40, 40, 1)' },
+                    }}
+                  >
+                    <KeyboardArrowDownIcon
+                      sx={{
+                        fontSize: 19,
+                        transform: thumbnailMode === 'edits' ? 'rotate(180deg)' : 'rotate(0deg)',
+                        transition: 'transform 0.15s ease',
+                      }}
+                    />
+                  </IconButton>
+
+                  <BoxAny
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 0.75,
+                      px: 0.25,
+                      py: 0.25,
+                      overflowX: 'auto',
+                      flex: 1,
+                      minWidth: 0,
+                      scrollbarWidth: 'thin',
+                      scrollbarColor: 'rgba(255,255,255,0.2) transparent',
+                    }}
+                  >
+                    {thumbnailMode === 'sources'
+                      ? groups!.map((group, i) => {
+                          const count = generatedByGroup[group.messageId]?.length || 0;
+                          const isActive = i === activeGroupIndex;
+                          return (
+                            <BoxAny
+                              key={group.messageId}
+                              ref={(el: HTMLDivElement | null) => { thumbnailRefs.current[i] = el; }}
+                              onClick={() => handleSelectGroup(i)}
+                              sx={{
+                                position: 'relative',
+                                flexShrink: 0,
+                                width: 48,
+                                height: 48,
+                                borderRadius: 1,
+                                overflow: 'hidden',
+                                cursor: 'pointer',
+                                border: isActive
+                                  ? '2px solid rgba(255,255,255,0.9)'
+                                  : '2px solid transparent',
+                                opacity: isActive ? 1 : 0.7,
+                                transition: 'opacity 0.15s, border-color 0.15s',
+                              }}
+                            >
+                              <BoxAny
+                                component="img"
+                                src={group.sourceUrl}
+                                alt="Source"
+                                sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                              />
+                              {count > 0 && (
+                                <BoxAny
+                                  sx={{
+                                    position: 'absolute',
+                                    right: 3,
+                                    top: 3,
+                                    bgcolor: 'rgba(0,0,0,0.72)',
+                                    color: 'white',
+                                    fontSize: '0.6rem',
+                                    px: 0.4,
+                                    borderRadius: 0.5,
+                                  }}
+                                >
+                                  {count}
+                                </BoxAny>
+                              )}
+                            </BoxAny>
+                          );
+                        })
+                      : (
+                        <>
+                          <BoxAny
+                            onClick={() => {
+                              setThumbnailMode('edits');
+                              setShowSourceInEdits(true);
+                            }}
+                            sx={{
+                              position: 'relative',
+                              flexShrink: 0,
+                              width: 48,
+                              height: 48,
+                              borderRadius: 1,
+                              overflow: 'hidden',
+                              cursor: 'pointer',
+                              border: showSourceInEdits
+                                ? '2px solid rgba(255,255,255,0.9)'
+                                : '2px solid transparent',
+                              opacity: showSourceInEdits ? 1 : 0.7,
+                              transition: 'opacity 0.15s, border-color 0.15s',
+                            }}
+                          >
+                            <BoxAny
+                              component="img"
+                              src={activeGroup?.sourceUrl}
+                              alt="Source"
+                              sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            />
+                          </BoxAny>
+
+                          {activeGeneratedUrls.length === 0
+                            ? (
+                              <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.8rem' }}>
+                                {t('image.noEditsYet')}
+                              </Typography>
+                            )
+                            : activeGeneratedUrls.map((url, index) => {
+                                const isActive = !showSourceInEdits && currentEditIndex === index + 1;
+                                return (
+                                  <BoxAny
+                                    key={url}
+                                    onClick={() => handleSelectGenerated(url, index + 1)}
+                                    sx={{
+                                      flexShrink: 0,
+                                      width: 48,
+                                      height: 48,
+                                      borderRadius: 1,
+                                      overflow: 'hidden',
+                                      cursor: 'pointer',
+                                      border: isActive
+                                        ? '2px solid rgba(255,255,255,0.9)'
+                                        : '2px solid transparent',
+                                      opacity: isActive ? 1 : 0.7,
+                                      transition: 'opacity 0.15s, border-color 0.15s',
+                                    }}
+                                  >
+                                    <BoxAny
+                                      component="img"
+                                      src={url}
+                                      alt="Edit"
+                                      sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                    />
+                                  </BoxAny>
+                                );
+                              })}
+                        </>
+                      )}
+                  </BoxAny>
                 </BoxAny>
               )}
             </BoxAny>
           )}
 
-          {!isUiHidden && hasGroups && (
-            <BoxAny
-              onClick={(e: React.MouseEvent) => e.stopPropagation()}
-              onMouseDown={(e: React.MouseEvent) => e.stopPropagation()}
-              sx={{
-                position: 'absolute',
-                left: 12,
-                right: 12,
-                bottom: 12,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 0.75,
-                pointerEvents: 'auto',
-              }}
-            >
-              <BoxAny
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 1,
-                  px: 1.5,
-                  py: 0.75,
-                  overflowX: 'auto',
-                  bgcolor: 'rgba(0,0,0,0.55)',
-                  borderRadius: 1,
-                  scrollbarWidth: 'thin',
-                  scrollbarColor: 'rgba(255,255,255,0.2) transparent',
-                }}
-              >
-                {groups!.map((group, i) => {
-                  const count = generatedByGroup[group.messageId]?.length || 0;
-                  const isActive = i === activeGroupIndex;
-                  return (
-                    <BoxAny
-                      key={group.messageId}
-                      ref={(el: HTMLDivElement | null) => { thumbnailRefs.current[i] = el; }}
-                      onClick={() => handleSelectGroup(i)}
-                      sx={{
-                        position: 'relative',
-                        flexShrink: 0,
-                        width: 56,
-                        height: 56,
-                        borderRadius: 1,
-                        overflow: 'hidden',
-                        cursor: 'pointer',
-                        border: isActive
-                          ? '2px solid rgba(255,255,255,0.9)'
-                          : '2px solid transparent',
-                        opacity: isActive ? 1 : 0.6,
-                        transition: 'opacity 0.15s, border-color 0.15s',
-                        '&:hover': { opacity: 1 },
-                      }}
-                    >
-                      <BoxAny
-                        component="img"
-                        src={group.sourceUrl}
-                        alt="Source"
-                        sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                      />
-                      {count > 0 && (
-                        <BoxAny
-                          sx={{
-                            position: 'absolute',
-                            right: 4,
-                            top: 4,
-                            bgcolor: 'rgba(0,0,0,0.7)',
-                            color: 'white',
-                            fontSize: '0.65rem',
-                            px: 0.5,
-                            borderRadius: 0.5,
-                          }}
-                        >
-                          {count}
-                        </BoxAny>
-                      )}
-                    </BoxAny>
-                  );
-                })}
-              </BoxAny>
-
-              <BoxAny
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 1,
-                  px: 1.5,
-                  py: 0.75,
-                  overflowX: 'auto',
-                  bgcolor: 'rgba(0,0,0,0.4)',
-                  borderRadius: 1,
-                  scrollbarWidth: 'thin',
-                  scrollbarColor: 'rgba(255,255,255,0.2) transparent',
-                }}
-              >
-                {activeGeneratedUrls.length === 0 ? (
-                  <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.8rem' }}>
-                    {t('image.noEditsYet')}
-                  </Typography>
-                ) : (
-                  activeGeneratedUrls.map((url, index) => {
-                    const isActive = selectedImageUrl === url;
-                    return (
-                      <BoxAny
-                        key={url}
-                        onClick={() => handleSelectGenerated(url, index + 1)}
-                        sx={{
-                          flexShrink: 0,
-                          width: 52,
-                          height: 52,
-                          borderRadius: 1,
-                          overflow: 'hidden',
-                          cursor: 'pointer',
-                          border: isActive
-                            ? '2px solid rgba(255,255,255,0.9)'
-                            : '2px solid transparent',
-                          opacity: isActive ? 1 : 0.6,
-                          transition: 'opacity 0.15s, border-color 0.15s',
-                          '&:hover': { opacity: 1 },
-                        }}
-                      >
-                        <BoxAny
-                          component="img"
-                          src={url}
-                          alt="Edit"
-                          sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                        />
-                      </BoxAny>
-                    );
-                  })
-                )}
-              </BoxAny>
-            </BoxAny>
-          )}
-
-          {isUiHidden && (
-            <BoxAny
-              onClick={(e: React.MouseEvent) => e.stopPropagation()}
-              sx={{
-                position: 'absolute',
-                top: 12,
-                right: 12,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 0.5,
-                px: 0.75,
-                py: 0.5,
-                borderRadius: 1,
-                bgcolor: 'rgba(0,0,0,0.55)',
-                color: 'white',
-              }}
-            >
-              <IconButton
-                size="small"
-                onClick={handleZoomOut}
-                sx={{ color: 'white' }}
-                disabled={zoom <= 0.5}
-              >
-                <ZoomOutIcon fontSize="small" />
-              </IconButton>
-              <Typography sx={{ color: 'rgba(255,255,255,0.85)', fontSize: '0.75rem', minWidth: 44, textAlign: 'center' }}>
-                {Math.round(zoom * 100)}%
-              </Typography>
-              <IconButton
-                size="small"
-                onClick={handleZoomIn}
-                sx={{ color: 'white' }}
-                disabled={zoom >= 3}
-              >
-                <ZoomInIcon fontSize="small" />
-              </IconButton>
-              <IconButton
-                size="small"
-                onClick={handleZoomReset}
-                sx={{ color: 'white' }}
-              >
-                <CropFreeIcon fontSize="small" />
-              </IconButton>
-            </BoxAny>
-          )}
         </BoxAny>
 
         {hasGroups && activeGroup?.canEdit && (
@@ -1007,12 +1241,15 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
 
         {!hasGroups && images.length > 1 && (
           <BoxAny
-            onClick={(e: React.MouseEvent) => e.stopPropagation()}
+            onClick={stopOverlayPropagation}
+            onTouchStart={stopOverlayTouchPropagation}
+            onTouchMove={stopOverlayTouchPropagation}
+            onTouchEnd={stopOverlayTouchPropagation}
             sx={{
               position: 'absolute',
-              left: 12,
-              right: 12,
-              bottom: 12,
+              left: 'max(12px, env(safe-area-inset-left))',
+              right: 'max(12px, env(safe-area-inset-right))',
+              bottom: 'calc(max(12px, env(safe-area-inset-bottom)) + 12px)',
               display: 'flex',
               alignItems: 'center',
               gap: 1,
@@ -1023,6 +1260,8 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
               borderRadius: 1,
               scrollbarWidth: 'thin',
               scrollbarColor: 'rgba(255,255,255,0.2) transparent',
+              backdropFilter: 'blur(10px)',
+              zIndex: 4,
             }}
           >
             {images.map((url, i) => (
