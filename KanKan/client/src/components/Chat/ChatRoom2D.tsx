@@ -331,7 +331,7 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
                       width: '100%',
                       flexShrink: 0,
                       aspectRatio: 'auto',
-                      objectFit: 'cover',
+                      objectFit: 'contain',
                       borderRadius: 1,
                       boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
                       cursor: 'pointer',

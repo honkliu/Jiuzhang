@@ -605,10 +605,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
       if (cancelled) return;
       const fit = computeFitZoom(nextImage.naturalWidth || 1, nextImage.naturalHeight || 1);
       setFitZoom(fit);
-      if (!hasInitializedZoomRef.current) {
-        hasInitializedZoomRef.current = true;
-        setZoom(fit);
-      }
+      setZoom(fit);
       setPanOffset({ x: 0, y: 0 });
       setRenderedImage(displayedImage);
       requestAnimationFrame(() => {

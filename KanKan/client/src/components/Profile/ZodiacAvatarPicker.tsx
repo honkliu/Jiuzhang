@@ -49,7 +49,7 @@ const AvatarOptionTile: React.FC<AvatarOptionTileProps> = ({
             height: size,
             // IMPORTANT: use explicit px radius (not MUI numeric scaling)
             // so the tile never becomes a circle under a custom theme.
-            borderRadius: '10px',
+            borderRadius: '4px',
             overflow: 'hidden',
             cursor: disabled ? 'not-allowed' : 'pointer',
             opacity: disabled ? 0.6 : 1,

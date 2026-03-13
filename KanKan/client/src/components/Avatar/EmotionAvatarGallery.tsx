@@ -1,9 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Grid,
-  Card,
-  CardMedia,
-  CardContent,
   Typography,
   Button,
   IconButton,
@@ -50,7 +46,6 @@ export const EmotionAvatarGallery: React.FC<EmotionAvatarGalleryProps> = ({ user
   };
 
   const defaultEmotionLabels = ['angry', 'smile', 'sad', 'happy', 'crying', 'thinking', 'surprised', 'neutral', 'excited'];
-  const tileSize = isMobile ? 'calc((100vw - 48px) / 3)' : 125;
 
   const [emotions, setEmotions] = useState<EmotionThumbnailResult[]>([]);
   const [emotionLabels, setEmotionLabels] = useState<string[]>(defaultEmotionLabels);
@@ -412,127 +407,96 @@ export const EmotionAvatarGallery: React.FC<EmotionAvatarGalleryProps> = ({ user
           <CircularProgress />
         </BoxAny>
       ) : (
-        <Grid container spacing={0.15} justifyContent="center">
+        <BoxAny
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, 1fr)',
+            columnGap: '22px',
+            rowGap: 0,
+          }}
+        >
           {emotionLabels.map((label) => {
             const match = emotions.find((e) => (e.emotion || '').toLowerCase() === label);
+            const isGeneratingThis = generating === label;
             return (
-              <Grid item xs={4} key={label}>
-                <Card
+              <BoxAny key={label} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                {match ? (
+                  <ImageHoverPreview
+                    key={`${label}-${match.avatarImageId}`}
+                    src={fullById.get(match.avatarImageId) || match.imageUrl}
+                    alt={`${match.emotion || label} preview`}
+                    maxSize={400}
+                    openOnHover={false}
+                    openOnLongPress={false}
+                    openOnTap
+                    openOnClick
+                    openOnDoubleClick={false}
+                    dismissOnHoverOut={false}
+                    closeOnClickWhenOpen
+                    closeOnTriggerClickWhenOpen
+                  >
+                    {(previewProps) => (
+                      <BoxAny
+                        {...previewProps}
+                        component="img"
+                        src={match.thumbnailDataUrl || buildThumbnailUrl(match.imageUrl)}
+                        alt={match.emotion || label}
+                        sx={{
+                          width: '100%',
+                          aspectRatio: '1 / 1',
+                          objectFit: 'cover',
+                          borderRadius: '5px',
+                          display: 'block',
+                          cursor: 'pointer',
+                          WebkitTouchCallout: 'none',
+                          WebkitUserSelect: 'none',
+                          userSelect: 'none',
+                          WebkitUserDrag: 'none',
+                        }}
+                      />
+                    )}
+                  </ImageHoverPreview>
+                ) : (
+                  <BoxAny
+                    sx={{
+                      width: '100%',
+                      aspectRatio: '1 / 1',
+                      background: '#f0f0f0',
+                      borderRadius: '5px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#888',
+                      fontSize: 12,
+                    }}
+                  >
+                    Not generated
+                  </BoxAny>
+                )}
+                <Typography
+                  variant="caption"
+                  onClick={() => {
+                    if (generating === null && !generatingAll && avatarId) {
+                      void handlePromptSubmit(label);
+                    }
+                  }}
                   sx={{
-                    p: 0.15,
-                    borderRadius: 1,
-                    transition: 'box-shadow 120ms ease',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    lineHeight: 1,
+                    py: 0.5,
+                    color: 'primary.main',
+                    cursor: (generating !== null || generatingAll || !avatarId) ? 'default' : 'pointer',
+                    opacity: isGeneratingThis ? 0.6 : 1,
+                    '&:hover': (generating !== null || generatingAll || !avatarId) ? {} : { textDecoration: 'underline' },
                   }}
                 >
-                  {match ? (
-                    <ImageHoverPreview
-                      key={`${label}-${match.avatarImageId}`}
-                      src={fullById.get(match.avatarImageId) || match.imageUrl}
-                      alt={`${match.emotion || label} preview`}
-                      maxSize={400}
-                      openOnHover={false}
-                      openOnLongPress={false}
-                      openOnTap
-                      openOnClick
-                      openOnDoubleClick={false}
-                      dismissOnHoverOut={false}
-                      closeOnClickWhenOpen
-                      closeOnTriggerClickWhenOpen
-                    >
-                      {(previewProps) => (
-                        <BoxAny
-                          {...previewProps}
-                          sx={{
-                            display: 'flex',
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                            width: '100%',
-                            cursor: 'pointer',
-                          }}
-                        >
-                          <CardMedia
-                            component="img"
-                            image={match.thumbnailDataUrl || buildThumbnailUrl(match.imageUrl)}
-                            alt={match.emotion || label}
-                            sx={{
-                              width: tileSize,
-                              height: tileSize,
-                              objectFit: 'cover',
-                              borderRadius: 1.5,
-                              display: 'block',
-                              transition: 'transform 120ms ease',
-                              '&:hover': {
-                                transform: 'translateY(-1px)',
-                              },
-                              WebkitTouchCallout: 'none',
-                              WebkitUserSelect: 'none',
-                              userSelect: 'none',
-                              WebkitUserDrag: 'none',
-                            }}
-                          />
-                        </BoxAny>
-                      )}
-                    </ImageHoverPreview>
-                  ) : (
-                    <BoxAny
-                      sx={{
-                        height: tileSize,
-                        width: tileSize,
-                        margin: '0 auto',
-                        background: '#f0f0f0',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: '#888',
-                        fontSize: 12,
-                      }}
-                    >
-                      Not generated
-                    </BoxAny>
-                  )}
-                  <CardContent sx={{ p: 0.15, pt: 0.15, '&:last-child': { pb: 0.15 } }}>
-                    <BoxAny sx={{ display: 'flex', alignItems: 'center', position: 'relative', minHeight: 20 }}>
-                      <Typography
-                        variant="caption"
-                        sx={{
-                          fontSize: '0.55rem',
-                          lineHeight: 1,
-                          position: 'absolute',
-                          left: '50%',
-                          transform: 'translateX(-50%)',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {label}
-                      </Typography>
-                      <Button
-                        size="small"
-                        variant="contained"
-                        color="primary"
-                        onClick={() => {
-                          void handlePromptSubmit(label);
-                        }}
-                        disabled={generating !== null || generatingAll || !avatarId}
-                        sx={{
-                          ml: 'auto',
-                          minWidth: 0,
-                          minHeight: 24,
-                          px: 1,
-                          fontSize: '0.7rem',
-                          lineHeight: 1,
-                          borderRadius: 1.5,
-                          boxShadow: '0 6px 14px rgba(7, 193, 96, 0.25)',
-                        }}
-                      >
-                        {generating === label ? t('avatar.generatingOne') : t('avatar.generateOne')}
-                      </Button>
-                    </BoxAny>
-                  </CardContent>
-                </Card>
-              </Grid>
+                  {isGeneratingThis ? t('avatar.generatingOne') : `✦ ${label}`}
+                </Typography>
+              </BoxAny>
             );
           })}
-        </Grid>
+        </BoxAny>
       )}
     </BoxAny>
   );

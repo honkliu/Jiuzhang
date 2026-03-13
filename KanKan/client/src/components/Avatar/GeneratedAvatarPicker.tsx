@@ -244,7 +244,7 @@ export const GeneratedAvatarPicker: React.FC<GeneratedAvatarPickerProps> = ({
                   sx={{
                     width: tileW,
                     height: tileW,
-                    borderRadius: '10px',
+                    borderRadius: '4px',
                     bgcolor: '#fff',
                     border: '1px solid rgba(15, 23, 42, 0.12)',
                   }}
@@ -271,7 +271,7 @@ export const GeneratedAvatarPicker: React.FC<GeneratedAvatarPickerProps> = ({
                     sx={{
                       width: tileW,
                       height: tileW,
-                      borderRadius: '10px',
+                      borderRadius: '4px',
                       overflow: 'hidden',
                       border: isSelected
                         ? '2px solid rgba(25, 118, 210, 0.95)'

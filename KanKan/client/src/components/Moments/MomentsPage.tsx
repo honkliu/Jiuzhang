@@ -271,8 +271,8 @@ export const MomentsPage: React.FC = () => {
                       alt={t('moments.imagePreview')}
                       sx={{
                         width: '100%',
-                        aspectRatio: '1 / 1',
-                        objectFit: 'cover',
+                        maxHeight: 200,
+                        objectFit: 'contain',
                         borderRadius: 2,
                         border: '1px solid rgba(15, 23, 42, 0.12)',
                         display: 'block',
@@ -311,7 +311,7 @@ export const MomentsPage: React.FC = () => {
           <Typography color="text.secondary">{t('moments.empty')}</Typography>
         ) : (
           moments.map((moment) => (
-            <Card key={moment.id} sx={{ mb: 2 }}>
+            <Card key={moment.id} sx={{ mb: 2, borderRadius: 0, transform: 'scale(0.9)', transformOrigin: 'top center' }}>
               <CardHeader
                 avatar={
                   <UserAvatar
@@ -341,9 +341,9 @@ export const MomentsPage: React.FC = () => {
                 {moment.content?.mediaUrls?.length ? (
                   <BoxAny
                     sx={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
-                      gap: 1,
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: 0.5,
                       mt: 1,
                     }}
                   >
@@ -376,10 +376,11 @@ export const MomentsPage: React.FC = () => {
                               });
                             }}
                             sx={{
-                              width: '100%',
-                              aspectRatio: '1 / 1',
+                              height: 140,
+                              width: 'auto',
+                              maxWidth: '100%',
                               objectFit: 'cover',
-                              borderRadius: 2,
+                              borderRadius: 0,
                               border: '1px solid rgba(15, 23, 42, 0.12)',
                               cursor: 'pointer',
                               transition: 'opacity 0.15s',
