@@ -1035,8 +1035,8 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
               onTouchEnd={stopOverlayTouchPropagation}
               sx={{
                 position: 'absolute',
-                left: 'max(12px, env(safe-area-inset-left))',
-                right: 'max(12px, env(safe-area-inset-right))',
+                left: 'env(safe-area-inset-left)',
+                right: 'env(safe-area-inset-right)',
                 bottom: thumbnailBottomInset,
                 maxWidth: isMobile ? 'none' : 860,
                 mx: 'auto',
@@ -1159,19 +1159,19 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
                 <BoxAny
                   sx={{
                     display: 'flex',
-                    flexDirection: isMobile ? 'column' : 'row',
-                    gap: isMobile ? 0.5 : 0.5,
-                    alignItems: isMobile ? 'stretch' : 'center',
-                    minHeight: isMobile ? 0 : 58,
+                    flexDirection: 'row',
+                    gap: 0.5,
+                    alignItems: 'center',
+                    minHeight: 0,
                   }}
                 >
                   <BoxAny
                     sx={{
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: isMobile ? 'space-between' : 'flex-start',
+                      justifyContent: 'flex-start',
                       gap: 0.5,
-                      width: isMobile ? '100%' : 'auto',
+                      width: 'auto',
                     }}
                   >
                     <IconButton
@@ -1196,60 +1196,22 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
                         }}
                       />
                     </IconButton>
-
-                    {isMobile ? (
-                      <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                        <IconButton
-                          onClick={() => scrollThumbnailStripBy(-1)}
-                          disabled={!canScrollThumbnailsLeft}
-                          sx={{
-                            flexShrink: 0,
-                            width: thumbnailStripButtonSize,
-                            height: thumbnailStripButtonSize,
-                            color: 'white',
-                            bgcolor: 'rgba(255,255,255,0.1)',
-                            border: '1px solid rgba(255,255,255,0.14)',
-                            opacity: canScrollThumbnailsLeft ? 1 : 0.35,
-                            '&:hover': { bgcolor: 'rgba(255,255,255,0.18)' },
-                          }}
-                        >
-                          <ArrowBackIosNewIcon sx={{ fontSize: thumbnailStripControlIconSize }} />
-                        </IconButton>
-                        <IconButton
-                          onClick={() => scrollThumbnailStripBy(1)}
-                          disabled={!canScrollThumbnailsRight}
-                          sx={{
-                            flexShrink: 0,
-                            width: thumbnailStripButtonSize,
-                            height: thumbnailStripButtonSize,
-                            color: 'white',
-                            bgcolor: 'rgba(255,255,255,0.1)',
-                            border: '1px solid rgba(255,255,255,0.14)',
-                            opacity: canScrollThumbnailsRight ? 1 : 0.35,
-                            '&:hover': { bgcolor: 'rgba(255,255,255,0.18)' },
-                          }}
-                        >
-                          <ArrowForwardIosIcon sx={{ fontSize: thumbnailStripControlIconSize }} />
-                        </IconButton>
-                      </BoxAny>
-                    ) : (
-                      <IconButton
-                        onClick={() => scrollThumbnailStripBy(-1)}
-                        disabled={!canScrollThumbnailsLeft}
-                        sx={{
-                          flexShrink: 0,
-                          width: thumbnailStripButtonSize,
-                          height: thumbnailStripButtonSize,
-                          color: 'white',
-                          bgcolor: 'rgba(255,255,255,0.1)',
-                          border: '1px solid rgba(255,255,255,0.14)',
-                          opacity: canScrollThumbnailsLeft ? 1 : 0.35,
-                          '&:hover': { bgcolor: 'rgba(255,255,255,0.18)' },
-                        }}
-                      >
-                        <ArrowBackIosNewIcon sx={{ fontSize: thumbnailStripControlIconSize }} />
-                      </IconButton>
-                    )}
+                    <IconButton
+                      onClick={() => scrollThumbnailStripBy(-1)}
+                      disabled={!canScrollThumbnailsLeft}
+                      sx={{
+                        flexShrink: 0,
+                        width: thumbnailStripButtonSize,
+                        height: thumbnailStripButtonSize,
+                        color: 'white',
+                        bgcolor: 'rgba(255,255,255,0.1)',
+                        border: '1px solid rgba(255,255,255,0.14)',
+                        opacity: canScrollThumbnailsLeft ? 1 : 0.35,
+                        '&:hover': { bgcolor: 'rgba(255,255,255,0.18)' },
+                      }}
+                    >
+                      <ArrowBackIosNewIcon sx={{ fontSize: thumbnailStripControlIconSize }} />
+                    </IconButton>
                   </BoxAny>
 
                   <BoxAny
@@ -1394,24 +1356,22 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
                       )}
                   </BoxAny>
 
-                  {!isMobile && (
-                    <IconButton
-                      onClick={() => scrollThumbnailStripBy(1)}
-                      disabled={!canScrollThumbnailsRight}
-                      sx={{
-                        flexShrink: 0,
-                        width: thumbnailStripButtonSize,
-                        height: thumbnailStripButtonSize,
-                        color: 'white',
-                        bgcolor: 'rgba(255,255,255,0.1)',
-                        border: '1px solid rgba(255,255,255,0.14)',
-                        opacity: canScrollThumbnailsRight ? 1 : 0.35,
-                        '&:hover': { bgcolor: 'rgba(255,255,255,0.18)' },
-                      }}
-                    >
-                      <ArrowForwardIosIcon sx={{ fontSize: thumbnailStripControlIconSize }} />
-                    </IconButton>
-                  )}
+                  <IconButton
+                    onClick={() => scrollThumbnailStripBy(1)}
+                    disabled={!canScrollThumbnailsRight}
+                    sx={{
+                      flexShrink: 0,
+                      width: thumbnailStripButtonSize,
+                      height: thumbnailStripButtonSize,
+                      color: 'white',
+                      bgcolor: 'rgba(255,255,255,0.1)',
+                      border: '1px solid rgba(255,255,255,0.14)',
+                      opacity: canScrollThumbnailsRight ? 1 : 0.35,
+                      '&:hover': { bgcolor: 'rgba(255,255,255,0.18)' },
+                    }}
+                  >
+                    <ArrowForwardIosIcon sx={{ fontSize: thumbnailStripControlIconSize }} />
+                  </IconButton>
                 </BoxAny>
               )}
             </BoxAny>
@@ -1442,12 +1402,12 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
             onTouchEnd={stopOverlayTouchPropagation}
             sx={{
               position: 'absolute',
-              left: 'max(12px, env(safe-area-inset-left))',
-              right: 'max(12px, env(safe-area-inset-right))',
+              left: 'env(safe-area-inset-left)',
+              right: 'env(safe-area-inset-right)',
               bottom: thumbnailBottomInset,
               display: 'flex',
-              flexDirection: isMobile ? 'column' : 'row',
-              alignItems: isMobile ? 'stretch' : 'center',
+              flexDirection: 'row',
+              alignItems: 'center',
               gap: isMobile ? 0.5 : 1,
               px: isMobile ? 0.75 : 1.5,
               py: isMobile ? 0.5 : 0.75,
@@ -1457,59 +1417,22 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
               zIndex: 4,
             }}
           >
-            {isMobile ? (
-              <BoxAny sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5, width: '100%' }}>
-                <IconButton
-                  onClick={() => scrollThumbnailStripBy(-1)}
-                  disabled={!canScrollThumbnailsLeft}
-                  sx={{
-                    flexShrink: 0,
-                    width: thumbnailStripButtonSize,
-                    height: thumbnailStripButtonSize,
-                    color: 'white',
-                    bgcolor: 'rgba(255,255,255,0.1)',
-                    border: '1px solid rgba(255,255,255,0.14)',
-                    opacity: canScrollThumbnailsLeft ? 1 : 0.35,
-                    '&:hover': { bgcolor: 'rgba(255,255,255,0.18)' },
-                  }}
-                >
-                  <ArrowBackIosNewIcon sx={{ fontSize: thumbnailStripControlIconSize }} />
-                </IconButton>
-                <IconButton
-                  onClick={() => scrollThumbnailStripBy(1)}
-                  disabled={!canScrollThumbnailsRight}
-                  sx={{
-                    flexShrink: 0,
-                    width: thumbnailStripButtonSize,
-                    height: thumbnailStripButtonSize,
-                    color: 'white',
-                    bgcolor: 'rgba(255,255,255,0.1)',
-                    border: '1px solid rgba(255,255,255,0.14)',
-                    opacity: canScrollThumbnailsRight ? 1 : 0.35,
-                    '&:hover': { bgcolor: 'rgba(255,255,255,0.18)' },
-                  }}
-                >
-                  <ArrowForwardIosIcon sx={{ fontSize: thumbnailStripControlIconSize }} />
-                </IconButton>
-              </BoxAny>
-            ) : (
-              <IconButton
-                onClick={() => scrollThumbnailStripBy(-1)}
-                disabled={!canScrollThumbnailsLeft}
-                sx={{
-                  flexShrink: 0,
-                  width: thumbnailStripButtonSize,
-                  height: thumbnailStripButtonSize,
-                  color: 'white',
-                  bgcolor: 'rgba(255,255,255,0.1)',
-                  border: '1px solid rgba(255,255,255,0.14)',
-                  opacity: canScrollThumbnailsLeft ? 1 : 0.35,
-                  '&:hover': { bgcolor: 'rgba(255,255,255,0.18)' },
-                }}
-              >
-                <ArrowBackIosNewIcon sx={{ fontSize: thumbnailStripControlIconSize }} />
-              </IconButton>
-            )}
+            <IconButton
+              onClick={() => scrollThumbnailStripBy(-1)}
+              disabled={!canScrollThumbnailsLeft}
+              sx={{
+                flexShrink: 0,
+                width: thumbnailStripButtonSize,
+                height: thumbnailStripButtonSize,
+                color: 'white',
+                bgcolor: 'rgba(255,255,255,0.1)',
+                border: '1px solid rgba(255,255,255,0.14)',
+                opacity: canScrollThumbnailsLeft ? 1 : 0.35,
+                '&:hover': { bgcolor: 'rgba(255,255,255,0.18)' },
+              }}
+            >
+              <ArrowBackIosNewIcon sx={{ fontSize: thumbnailStripControlIconSize }} />
+            </IconButton>
 
             <BoxAny
               ref={thumbnailStripRef}
@@ -1561,24 +1484,22 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
               ))}
             </BoxAny>
 
-            {!isMobile && (
-              <IconButton
-                onClick={() => scrollThumbnailStripBy(1)}
-                disabled={!canScrollThumbnailsRight}
-                sx={{
-                  flexShrink: 0,
-                  width: thumbnailStripButtonSize,
-                  height: thumbnailStripButtonSize,
-                  color: 'white',
-                  bgcolor: 'rgba(255,255,255,0.1)',
-                  border: '1px solid rgba(255,255,255,0.14)',
-                  opacity: canScrollThumbnailsRight ? 1 : 0.35,
-                  '&:hover': { bgcolor: 'rgba(255,255,255,0.18)' },
-                }}
-              >
-                <ArrowForwardIosIcon sx={{ fontSize: thumbnailStripControlIconSize }} />
-              </IconButton>
-            )}
+            <IconButton
+              onClick={() => scrollThumbnailStripBy(1)}
+              disabled={!canScrollThumbnailsRight}
+              sx={{
+                flexShrink: 0,
+                width: thumbnailStripButtonSize,
+                height: thumbnailStripButtonSize,
+                color: 'white',
+                bgcolor: 'rgba(255,255,255,0.1)',
+                border: '1px solid rgba(255,255,255,0.14)',
+                opacity: canScrollThumbnailsRight ? 1 : 0.35,
+                '&:hover': { bgcolor: 'rgba(255,255,255,0.18)' },
+              }}
+            >
+              <ArrowForwardIosIcon sx={{ fontSize: thumbnailStripControlIconSize }} />
+            </IconButton>
           </BoxAny>
         )}
       </BoxAny>
