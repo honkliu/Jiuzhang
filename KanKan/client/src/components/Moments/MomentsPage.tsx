@@ -376,7 +376,7 @@ export const MomentsPage: React.FC = () => {
                               });
                             }}
                             sx={{
-                              height: 140,
+                              height: 112,
                               width: 'auto',
                               maxWidth: '100%',
                               objectFit: 'cover',
