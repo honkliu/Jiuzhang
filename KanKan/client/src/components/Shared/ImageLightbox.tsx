@@ -1126,27 +1126,27 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
                         onSelect={handleQuickPromptSelect}
                         onDeselect={(key) => setSelectedPrompts((prev) => prev.filter((p) => p.key !== key))}
                       />
+                    </BoxAny>
+                  )}
 
-                      {selectedPrompts.length > 0 && (
-                        <BoxAny sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
-                          {selectedPrompts.map((sp) => (
-                            <Button
-                              key={sp.key}
-                              size="small"
-                              variant="outlined"
-                              onClick={() => setSelectedPrompts((prev) => prev.filter((p) => p.key !== sp.key))}
-                              sx={{
-                                color: 'rgba(255,255,255,0.8)',
-                                borderColor: 'rgba(255,255,255,0.25)',
-                                fontSize: '0.7rem',
-                                textTransform: 'none',
-                              }}
-                            >
-                              {language === 'zh' ? sp.zh : sp.en}
-                            </Button>
-                          ))}
-                        </BoxAny>
-                      )}
+                  {selectedPrompts.length > 0 && (
+                    <BoxAny sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                      {selectedPrompts.map((sp) => (
+                        <Button
+                          key={sp.key}
+                          size="small"
+                          variant="outlined"
+                          onClick={() => setSelectedPrompts((prev) => prev.filter((p) => p.key !== sp.key))}
+                          sx={{
+                            color: 'rgba(255,255,255,0.8)',
+                            borderColor: 'rgba(255,255,255,0.25)',
+                            fontSize: '0.7rem',
+                            textTransform: 'none',
+                          }}
+                        >
+                          {language === 'zh' ? sp.zh : sp.en}
+                        </Button>
+                      ))}
                     </BoxAny>
                   )}
                 </>
