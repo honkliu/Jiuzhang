@@ -169,7 +169,6 @@ public class ComfyUIService : IComfyUIService
             throw new InvalidOperationException("ComfyUI workflow file is missing. Configure ComfyUI:WorkflowPath with an API workflow JSON.");
         }
 
-        var uploadedFileName = await UploadImageAsync(imageBase64, cancellationToken);
         var workflowJson = await File.ReadAllTextAsync(workflowPath, cancellationToken);
         var workflow = JsonNode.Parse(workflowJson)?.AsObject();
         if (workflow == null)
@@ -192,11 +191,32 @@ public class ComfyUIService : IComfyUIService
             };
         }
 
-        ApplyPromptOverrides(promptGraph, uploadedFileName, prompt);
+        var needsUpload = NeedsImageUpload(promptGraph);
+        string? uploadedFileName = null;
+        if (needsUpload)
+        {
+            uploadedFileName = await UploadImageAsync(imageBase64, cancellationToken);
+        }
+
+        ApplyPromptOverrides(promptGraph, imageBase64, uploadedFileName, prompt);
         return workflow;
     }
 
-    private static void ApplyPromptOverrides(JsonObject promptGraph, string uploadedFileName, string prompt)
+    private static bool NeedsImageUpload(JsonObject promptGraph)
+    {
+        foreach (var node in promptGraph)
+        {
+            if (node.Value is not JsonObject nodeObj) continue;
+            var classType = nodeObj["class_type"]?.GetValue<string>();
+            if (string.Equals(classType, "LoadImage", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static void ApplyPromptOverrides(JsonObject promptGraph, string imageBase64, string? uploadedFileName, string prompt)
     {
         foreach (var node in promptGraph)
         {
@@ -212,8 +232,15 @@ public class ComfyUIService : IComfyUIService
             }
 
             var classType = nodeObj["class_type"]?.GetValue<string>();
-            if (string.Equals(classType, "LoadImage", StringComparison.OrdinalIgnoreCase)
+
+            if (string.Equals(classType, "ETN_LoadImageBase64", StringComparison.OrdinalIgnoreCase)
                 && inputs.ContainsKey("image"))
+            {
+                inputs["image"] = imageBase64;
+            }
+
+            if (string.Equals(classType, "LoadImage", StringComparison.OrdinalIgnoreCase)
+                && inputs.ContainsKey("image") && uploadedFileName != null)
             {
                 inputs["image"] = uploadedFileName;
             }
@@ -319,10 +346,17 @@ public class ComfyUIService : IComfyUIService
                     var subfolder = image.TryGetProperty("subfolder", out var subfolderElement)
                         ? subfolderElement.GetString()
                         : string.Empty;
+                    var imageType = image.TryGetProperty("type", out var typeElement)
+                        ? typeElement.GetString()
+                        : "output";
                     var viewUrl = $"/view?filename={Uri.EscapeDataString(fileName ?? string.Empty)}";
                     if (!string.IsNullOrWhiteSpace(subfolder))
                     {
                         viewUrl += $"&subfolder={Uri.EscapeDataString(subfolder)}";
+                    }
+                    if (!string.IsNullOrWhiteSpace(imageType))
+                    {
+                        viewUrl += $"&type={Uri.EscapeDataString(imageType)}";
                     }
 
                     var imageBytes = await _httpClient.GetByteArrayAsync(viewUrl, cancellationToken);
