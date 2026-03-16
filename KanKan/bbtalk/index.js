@@ -8,6 +8,7 @@ import axios from 'axios';
 import chalk from 'chalk';
 import * as signalR from '@microsoft/signalr';
 import WebSocket from 'ws';
+import { Writable } from 'stream';
 import { renderMessage } from './renderer.js';
 
 const WA_USER_ID = 'user_ai_wa';
@@ -74,10 +75,68 @@ const createApi = (cfg) => {
   return axios.create({ baseURL, headers });
 };
 
-const ensureAuth = (cfg) => {
+const promptInput = (question) => {
+  return new Promise((resolve) => {
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+    rl.question(question, (answer) => {
+      rl.close();
+      resolve(answer.trim());
+    });
+  });
+};
+
+const promptPassword = (question) => {
+  return new Promise((resolve) => {
+    const muted = new Writable({ write(chunk, encoding, cb) { cb(); } });
+    const rl = readline.createInterface({ input: process.stdin, output: muted, terminal: true });
+    process.stdout.write(question);
+    rl.question('', (answer) => {
+      process.stdout.write('\n');
+      rl.close();
+      resolve(answer.trim());
+    });
+  });
+};
+
+const doLogin = async (cfg, email, password, baseUrl) => {
+  const api = axios.create({ baseURL: getBaseUrl(cfg, baseUrl) });
+  const res = await api.post('/auth/login', { email, password });
+  const accessToken = res.data?.accessToken;
+  const user = res.data?.user;
+  if (!accessToken || !user?.id) {
+    throw new Error('Login succeeded but missing token/user in response.');
+  }
+  const next = {
+    ...cfg,
+    baseUrl: getBaseUrl(cfg, baseUrl),
+    token: accessToken,
+    userId: user.id,
+    userName: user.displayName || user.handle || user.id,
+    isAdmin: Boolean(user.isAdmin),
+  };
+  writeConfig(next);
+  return next;
+};
+
+const ensureAuth = async (cfg) => {
   const token = getToken(cfg);
-  if (!token) {
-    console.error(chalk.red('Not logged in. Run: bbtalk login <email> <password>'));
+  if (token) return cfg;
+
+  console.log(chalk.yellow('Not logged in. Please enter your credentials.'));
+  const email = await promptInput('Email: ');
+  const password = await promptPassword('Password: ');
+  if (!email || !password) {
+    console.error(chalk.red('Email and password are required.'));
+    process.exit(1);
+  }
+  try {
+    const next = await doLogin(cfg, email, password);
+    console.log(chalk.green('✓ Login successful!'));
+    console.log(chalk.gray(`  User: ${next.userName}`));
+    return next;
+  } catch (err) {
+    const msg = err?.response?.data?.message || err.message;
+    console.error(chalk.red(`✗ Login failed: ${msg}`));
     process.exit(1);
   }
 };
@@ -942,6 +1001,27 @@ const leaveChatRealtime = async (state, chatId) => {
   }
 };
 
+const sendDraftChanged = (state, text) => {
+  if (!state.connection || !state.currentChat) return;
+  state.connection.invoke('DraftChanged', state.currentChat.id, text).catch(() => {});
+};
+
+const resetTypingTimer = (state) => {
+  if (state.typingTimer) clearTimeout(state.typingTimer);
+  sendDraftChanged(state, state.inputBuffer);
+  state.typingTimer = setTimeout(() => {
+    sendDraftChanged(state, '');
+  }, 3000);
+};
+
+const stopTyping = (state) => {
+  if (state.typingTimer) {
+    clearTimeout(state.typingTimer);
+    state.typingTimer = null;
+  }
+  sendDraftChanged(state, '');
+};
+
 const attachRealtime = async (state) => {
   const hubUrl = getHubUrl(state.cfg);
   const connection = new signalR.HubConnectionBuilder()
@@ -964,6 +1044,11 @@ const attachRealtime = async (state) => {
       state.messages[message.chatId].push(message);
     }
     if (state.currentChat?.id === message.chatId) {
+      // Mark message as read if it's from someone else
+      if (message.senderId !== state.meId) {
+        connection.invoke('MessageRead', message.chatId, message.id).catch(() => {});
+        connection.invoke('MessageDelivered', message.chatId, message.id).catch(() => {});
+      }
       if (state.helpExpanded) {
         state.helpShrinkEnabled = true;
       }
@@ -1034,6 +1119,15 @@ const selectChatByIndex = async (state, idx) => {
 
   await loadMessages(state, chat.id);
   const messages = state.messages[chat.id] || [];
+
+  // Mark all unread messages as read (same as main client does on chat open)
+  for (const m of messages) {
+    if (m.senderId !== state.meId && (!m.readBy || !m.readBy.includes(state.meId))) {
+      state.connection.invoke('MessageRead', chat.id, m.id).catch(() => {});
+      state.connection.invoke('MessageDelivered', chat.id, m.id).catch(() => {});
+    }
+  }
+
   messages.slice(-HISTORY_LIMIT).forEach((m) => {
     if (m.senderId === state.meId) {
       printMessage(state, 'user', m.text || '');
@@ -1274,8 +1368,8 @@ const handleCommand = async (state, line) => {
 };
 
 const startInteractive = async () => {
-  const cfg = readConfig();
-  ensureAuth(cfg);
+  let cfg = readConfig();
+  cfg = await ensureAuth(cfg);
   const api = createApi(cfg);
 
   console.clear();
@@ -1316,6 +1410,7 @@ const startInteractive = async () => {
     lastRows: null,
     lastLayoutKey: null,
     contentLineCount: 0,
+    typingTimer: null,
     lastVisibleHeight: null,
   };
 
@@ -1350,6 +1445,7 @@ const startInteractive = async () => {
     process.stdin.setRawMode(true);
   }
   readline.emitKeypressEvents(process.stdin);
+  process.stdin.resume();
 
   // Setup scroll region and draw initial input area
   setupScrollRegion(state);
@@ -1378,6 +1474,7 @@ const startInteractive = async () => {
 
     // Handle Ctrl+C
     if (key.ctrl && key.name === 'c') {
+      stopTyping(state);
       if (state.currentChat) {
         await leaveChatRealtime(state, state.currentChat.id);
       }
@@ -1391,6 +1488,7 @@ const startInteractive = async () => {
 
     // Handle Enter
     if (key.name === 'return' || key.name === 'enter') {
+      stopTyping(state);
       const text = state.inputBuffer.trim();
       state.inputBuffer = '';
       state.commandMode = false;
@@ -1442,6 +1540,9 @@ const startInteractive = async () => {
     if (key.name === 'backspace') {
       if (state.inputBuffer.length > 0) {
         state.inputBuffer = state.inputBuffer.slice(0, -1);
+        if (state.inputBuffer.length === 0) {
+          stopTyping(state);
+        }
         const redrew = await updateCommandMode(state);
         if (!redrew) {
           redrawInputArea(state);
@@ -1452,6 +1553,7 @@ const startInteractive = async () => {
 
     // Handle Escape
     if (key.name === 'escape') {
+      stopTyping(state);
       state.inputBuffer = '';
       state.commandMode = false;
       if (state.helpExpanded || state.helpContent.length > 0) {
@@ -1465,6 +1567,9 @@ const startInteractive = async () => {
     // Handle regular character input
     if (str && !key.ctrl && !key.meta) {
       state.inputBuffer += str;
+      if (state.currentChat && !state.inputBuffer.startsWith('/')) {
+        resetTypingTimer(state);
+      }
       const redrew = await updateCommandMode(state);
       if (!redrew) {
         redrawInputArea(state);
@@ -1488,29 +1593,21 @@ const startInteractive = async () => {
 program
   .command('login')
   .description('Login and store token')
-  .argument('<email>')
-  .argument('<password>')
+  .argument('[email]', 'Email (prompted if omitted)')
+  .argument('[password]', 'Password (prompted if omitted)')
   .option('--base-url <url>', 'API base URL (or set BBTALK_BASE_URL)')
   .action(async (email, password, options) => {
     const cfg = readConfig();
-    const api = axios.create({ baseURL: getBaseUrl(cfg, options.baseUrl) });
     try {
-      const res = await api.post('/auth/login', { email, password });
-      const accessToken = res.data?.accessToken;
-      const user = res.data?.user;
-      if (!accessToken || !user?.id) {
-        console.error(chalk.red('Login succeeded but missing token/user in response.'));
+      if (!email || !password) {
+        if (!email) email = await promptInput('Email: ');
+        if (!password) password = await promptPassword('Password: ');
+      }
+      if (!email || !password) {
+        console.error(chalk.red('Email and password are required.'));
         process.exit(1);
       }
-      const next = {
-        ...cfg,
-        baseUrl: getBaseUrl(cfg, options.baseUrl),
-        token: accessToken,
-        userId: user.id,
-        userName: user.displayName || user.handle || user.id,
-        isAdmin: Boolean(user.isAdmin),
-      };
-      writeConfig(next);
+      const next = await doLogin(cfg, email, password, options.baseUrl);
       console.log(chalk.green('✓ Login successful!'));
       console.log(chalk.gray(`  User: ${next.userName}`));
       console.log(chalk.gray(`  Server: ${next.baseUrl}`));
