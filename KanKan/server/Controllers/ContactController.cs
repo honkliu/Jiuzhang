@@ -83,7 +83,8 @@ public class ContactController : ControllerBase
         Gender = user.Gender,
         Bio = user.Bio,
         IsOnline = user.IsOnline,
-        LastSeen = user.LastSeen
+        LastSeen = user.LastSeen,
+        CreatedAt = user.CreatedAt
     };
 
     private async Task<UserDto> ToUserDtoNormalizedAsync(User user, bool includeDomain)

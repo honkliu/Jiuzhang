@@ -23,6 +23,7 @@ import { contactService, User } from '@/services/contact.service';
 import { mediaService } from '@/services/media.service';
 import { ImageLightbox } from '@/components/Shared/ImageLightbox';
 import { ImageHoverPreview } from '@/components/Shared/ImageHoverPreview';
+import { UserProfilePopover } from '@/components/Shared/UserProfilePopover';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/store';
 import { useLanguage } from '@/i18n/LanguageContext';
@@ -47,6 +48,7 @@ export const MomentsPage: React.FC = () => {
   const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [commentOpenFor, setCommentOpenFor] = useState<string | null>(null);
+  const [profilePopover, setProfilePopover] = useState<{ anchorEl: HTMLElement; userId: string } | null>(null);
   const [lightbox, setLightbox] = useState<{
     images: string[];
     index: number;
@@ -324,7 +326,17 @@ export const MomentsPage: React.FC = () => {
                     closePreviewOnClick
                   />
                 }
-                title={moment.userName}
+                title={
+                  <Typography
+                    component="span"
+                    variant="body1"
+                    fontWeight={600}
+                    sx={{ cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
+                    onClick={(e: React.MouseEvent<HTMLElement>) => setProfilePopover({ anchorEl: e.currentTarget, userId: moment.userId })}
+                  >
+                    {moment.userName}
+                  </Typography>
+                }
                 subheader={formatDateTime(moment.createdAt)}
                 action={
                   moment.userId === user?.id ? (
@@ -414,7 +426,14 @@ export const MomentsPage: React.FC = () => {
                   <BoxAny sx={{ mt: 0.5, bgcolor: 'rgba(0,0,0,0.02)', borderRadius: 1, px: 1, py: 0.5 }}>
                     {moment.comments.map((c) => (
                       <Typography key={c.id} variant="body2" sx={{ py: 0.25 }}>
-                        <Typography component="span" variant="body2" fontWeight={600} color="primary.main">
+                        <Typography
+                          component="span"
+                          variant="body2"
+                          fontWeight={600}
+                          color="primary.main"
+                          sx={{ cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
+                          onClick={(e: React.MouseEvent<HTMLElement>) => setProfilePopover({ anchorEl: e.currentTarget, userId: c.userId })}
+                        >
                           {c.userName}
                         </Typography>
                         {': '}
@@ -494,6 +513,15 @@ export const MomentsPage: React.FC = () => {
           onClose={() => setLightbox(null)}
         />
       ) : null}
+
+      <UserProfilePopover
+        userId={profilePopover?.userId ?? null}
+        anchorEl={profilePopover?.anchorEl ?? null}
+        open={!!profilePopover}
+        onClose={() => setProfilePopover(null)}
+        friendIds={friendIdSet}
+        currentUserId={user?.id}
+      />
     </BoxAny>
   );
 };

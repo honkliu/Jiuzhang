@@ -14,6 +14,7 @@ public class UserDto
     public string Bio { get; set; } = string.Empty;
     public bool IsOnline { get; set; }
     public DateTime LastSeen { get; set; }
+    public DateTime CreatedAt { get; set; }
 }
 
 public class CreateUserDto
