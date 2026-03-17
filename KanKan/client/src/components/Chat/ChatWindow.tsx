@@ -443,6 +443,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
   const [isRoom3D, setIsRoom3D] = useState(false);
   const [isRoom2D, setIsRoom2D] = useState(false);
   const [otherAvatarImageId, setOtherAvatarImageId] = useState<string | null>(null);
+  const [otherLiveAvatarUrl, setOtherLiveAvatarUrl] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRootHostRef = useRef<HTMLDivElement | null>(null);
   const inputRootRef = useRef<Root | null>(null);
@@ -835,6 +836,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
   useEffect(() => {
     if (!otherParticipant?.userId) {
       setOtherAvatarImageId(null);
+      setOtherLiveAvatarUrl(null);
       return;
     }
 
@@ -844,10 +846,12 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
       .then((profile) => {
         if (!active) return;
         setOtherAvatarImageId(profile.avatarImageId || extractAvatarImageId(profile.avatarUrl) || null);
+        setOtherLiveAvatarUrl(profile.avatarUrl || null);
       })
       .catch(() => {
         if (!active) return;
         setOtherAvatarImageId(null);
+        setOtherLiveAvatarUrl(null);
       });
 
     return () => {
@@ -1222,7 +1226,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
             />
           ) : (
             <UserAvatar
-              src={displayParticipant?.avatarUrl || activeChat.avatar}
+              src={otherLiveAvatarUrl || displayParticipant?.avatarUrl || activeChat.avatar}
               gender={displayParticipant?.gender}
               sx={{ width: 40, height: 40, mr: 2 }}
               fallbackText={displayParticipant?.displayName || activeChat.name}

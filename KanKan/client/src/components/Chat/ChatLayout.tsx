@@ -28,6 +28,7 @@ import {
 } from '@/store/chatSlice';
 import { addNotification, fetchUnreadNotificationCount } from '@/store/notificationsSlice';
 import { chatService } from '@/services/chat.service';
+import { contactService } from '@/services/contact.service';
 
 // Work around TS2590 (“union type too complex”) from MUI Box typings in some TS versions.
 const BoxAny = Box as any;
@@ -61,6 +62,31 @@ export const ChatLayout: React.FC = () => {
   useEffect(() => {
     chatIdsRef.current = new Set(chats.map((c) => c.id));
   }, [chats]);
+
+  // Resolve live avatars for all chat participants
+  const resolvedAvatarsRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!chats.length || !myUserId) return;
+    const userIds = new Set<string>();
+    for (const chat of chats) {
+      for (const p of chat.participants) {
+        if (p.userId && p.userId !== myUserId && !resolvedAvatarsRef.current.has(p.userId)) {
+          userIds.add(p.userId);
+        }
+      }
+    }
+    for (const uid of userIds) {
+      resolvedAvatarsRef.current.add(uid);
+      contactService.getUser(uid).then((profile) => {
+        dispatch(upsertParticipantProfile({
+          userId: uid,
+          displayName: profile.displayName,
+          avatarUrl: profile.avatarUrl,
+          gender: profile.gender,
+        }));
+      }).catch(() => {});
+    }
+  }, [chats, myUserId]);
 
   useEffect(() => {
     // Fetch chats on mount
