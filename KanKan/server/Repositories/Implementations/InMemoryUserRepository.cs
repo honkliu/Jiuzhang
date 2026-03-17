@@ -22,6 +22,20 @@ public class InMemoryUserRepository : IUserRepository
         }
     }
 
+    public Task<List<UserEntity>> GetByIdsAsync(IEnumerable<string> ids)
+    {
+        lock (_lock)
+        {
+            var result = new List<UserEntity>();
+            foreach (var id in ids)
+            {
+                if (_users.TryGetValue(id, out var user))
+                    result.Add(user);
+            }
+            return Task.FromResult(result);
+        }
+    }
+
     public Task<UserEntity?> GetByEmailAsync(string email)
     {
         lock (_lock)

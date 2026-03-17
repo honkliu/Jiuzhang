@@ -166,8 +166,20 @@ public class ChatController : ControllerBase
                 chatUsers = await _chatUserRepository.GetUserChatsAsync(userId);
             }
 
-            var chatDtos = chatUsers
-                .Select(cu => ChatDomain.ToChatDto(ChatDomain.ToChat(cu), userId, ChatHub.IsUserOnline))
+            var chatEntities = chatUsers.Select(cu => ChatDomain.ToChat(cu)).ToList();
+
+            // Collect all unique participant user IDs and batch-fetch live profiles
+            var participantIds = chatEntities
+                .SelectMany(c => c.Participants)
+                .Select(p => p.UserId)
+                .Where(id => !string.IsNullOrWhiteSpace(id))
+                .Distinct(StringComparer.Ordinal)
+                .ToList();
+            var liveUsersList = await _userRepository.GetByIdsAsync(participantIds);
+            var liveUsers = liveUsersList.ToDictionary(u => u.Id, u => u, StringComparer.Ordinal);
+
+            var chatDtos = chatEntities
+                .Select(chat => ChatDomain.ToChatDto(chat, userId, ChatHub.IsUserOnline, liveUsers))
                 .ToList();
             return Ok(chatDtos);
         }

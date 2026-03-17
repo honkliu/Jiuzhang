@@ -13,6 +13,8 @@ import {
   InputBase,
   SxProps,
   Theme,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -45,6 +47,8 @@ interface ChatSidebarProps {
 }
 
 export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse, sx }) => {
+  const theme = useTheme();
+  const isCompact = useMediaQuery(theme.breakpoints.down('md'));
   const dispatch = useDispatch<AppDispatch>();
   const { chats, activeChat, loading } = useSelector((state: RootState) => state.chat);
   const { user } = useSelector((state: RootState) => state.auth);
@@ -159,7 +163,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
             {t('chat.title')}
           </Typography>
           <BoxAny>
-            {onCollapse && (
+            {onCollapse && !isCompact && (
               <IconButton onClick={onCollapse} title={t('nav.collapse')} size="small">
                 <KeyboardDoubleArrowLeftIcon />
               </IconButton>

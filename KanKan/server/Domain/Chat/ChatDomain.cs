@@ -60,7 +60,23 @@ public static class ChatDomain
     }
 
     public static ChatDto ToChatDto(ChatEntity chat, string currentUserId, Func<string, bool> isUserOnline)
+        => ToChatDto(chat, currentUserId, isUserOnline, null);
+
+    public static ChatDto ToChatDto(ChatEntity chat, string currentUserId, Func<string, bool> isUserOnline, IReadOnlyDictionary<string, User>? liveUsers)
     {
+        string ResolveAvatar(ChatParticipant p)
+        {
+            if (liveUsers != null && liveUsers.TryGetValue(p.UserId, out var u) && !string.IsNullOrWhiteSpace(u.AvatarUrl))
+                return u.AvatarUrl;
+            return p.AvatarUrl;
+        }
+        string ResolveGender(ChatParticipant p)
+        {
+            if (liveUsers != null && liveUsers.TryGetValue(p.UserId, out var u) && !string.IsNullOrWhiteSpace(u.Gender))
+                return u.Gender;
+            return p.Gender;
+        }
+
         string displayName = chat.GroupName ?? string.Empty;
         string displayAvatar = chat.GroupAvatar ?? string.Empty;
 
@@ -70,7 +86,7 @@ public static class ChatDomain
             if (displayParticipant != null)
             {
                 displayName = displayParticipant.DisplayName;
-                displayAvatar = displayParticipant.AvatarUrl;
+                displayAvatar = ResolveAvatar(displayParticipant);
             }
         }
         else
@@ -97,8 +113,8 @@ public static class ChatDomain
             {
                 UserId = p.UserId,
                 DisplayName = p.DisplayName,
-                AvatarUrl = p.AvatarUrl,
-                Gender = p.Gender,
+                AvatarUrl = ResolveAvatar(p),
+                Gender = ResolveGender(p),
                 IsOnline = isUserOnline(p.UserId)
             }).ToList(),
             LastMessage = chat.LastMessage != null ? new LastMessageDto

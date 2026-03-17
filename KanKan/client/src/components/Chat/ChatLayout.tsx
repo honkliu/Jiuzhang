@@ -28,7 +28,6 @@ import {
 } from '@/store/chatSlice';
 import { addNotification, fetchUnreadNotificationCount } from '@/store/notificationsSlice';
 import { chatService } from '@/services/chat.service';
-import { contactService } from '@/services/contact.service';
 
 // Work around TS2590 (“union type too complex”) from MUI Box typings in some TS versions.
 const BoxAny = Box as any;
@@ -36,6 +35,7 @@ const BoxAny = Box as any;
 export const ChatLayout: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isCompact = useMediaQuery(theme.breakpoints.down('md'));
   const isCompactHeader = useMediaQuery(theme.breakpoints.down('sm'));
   const dispatch = useDispatch<AppDispatch>();
   const { activeChat, chats } = useSelector((state: RootState) => state.chat);
@@ -62,31 +62,6 @@ export const ChatLayout: React.FC = () => {
   useEffect(() => {
     chatIdsRef.current = new Set(chats.map((c) => c.id));
   }, [chats]);
-
-  // Resolve live avatars for all chat participants
-  const resolvedAvatarsRef = useRef<Set<string>>(new Set());
-  useEffect(() => {
-    if (!chats.length || !myUserId) return;
-    const userIds = new Set<string>();
-    for (const chat of chats) {
-      for (const p of chat.participants) {
-        if (p.userId && p.userId !== myUserId && !resolvedAvatarsRef.current.has(p.userId)) {
-          userIds.add(p.userId);
-        }
-      }
-    }
-    for (const uid of userIds) {
-      resolvedAvatarsRef.current.add(uid);
-      contactService.getUser(uid).then((profile) => {
-        dispatch(upsertParticipantProfile({
-          userId: uid,
-          displayName: profile.displayName,
-          avatarUrl: profile.avatarUrl,
-          gender: profile.gender,
-        }));
-      }).catch(() => {});
-    }
-  }, [chats, myUserId]);
 
   useEffect(() => {
     // Fetch chats on mount
@@ -277,12 +252,12 @@ export const ChatLayout: React.FC = () => {
     };
   }, [dispatch]);
 
-  // On mobile, hide sidebar when chat is selected
+  // On compact/mobile, hide sidebar when chat is selected
   useEffect(() => {
-    if (isMobile && activeChat) {
+    if (isCompact && activeChat) {
       setShowSidebar(false);
     }
-  }, [isMobile, activeChat]);
+  }, [isCompact, activeChat]);
 
 
   const handleBackToList = () => {
@@ -323,13 +298,13 @@ export const ChatLayout: React.FC = () => {
             onNewChat={() => setNewChatOpen(true)}
             onCollapse={() => setShowSidebar(false)}
             sx={{
-              width: isMobile ? '100%' : 300,
+              width: isCompact ? '100%' : 300,
               flexShrink: 0,
               height: '100%',
               minHeight: 0,
             }}
           />
-        ) : !isMobile ? (
+        ) : !isCompact ? (
           // Collapsed rail (desktop): keep expand control on the left.
           <BoxAny
             sx={{
@@ -353,9 +328,9 @@ export const ChatLayout: React.FC = () => {
         ) : null}
 
         {/* Main Chat Window */}
-        {(!isMobile || !showSidebar) && (
+        {(!isCompact || !showSidebar) && (
           <ChatWindow
-            onBack={isMobile ? handleBackToList : undefined}
+            onBack={isCompact ? handleBackToList : undefined}
             sx={{ flexGrow: 1, minWidth: 0, minHeight: 0, height: '100%' }}
           />
         )}

@@ -5,6 +5,7 @@ namespace KanKan.API.Repositories.Interfaces;
 public interface IUserRepository
 {
     Task<UserEntity?> GetByIdAsync(string id);
+    Task<List<UserEntity>> GetByIdsAsync(IEnumerable<string> ids);
     Task<UserEntity?> GetByEmailAsync(string email);
     Task<UserEntity?> GetByRefreshTokenAsync(string token);
     Task<UserEntity> CreateAsync(UserEntity user);

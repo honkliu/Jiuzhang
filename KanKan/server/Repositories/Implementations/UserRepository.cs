@@ -29,6 +29,14 @@ public class UserRepository : IUserRepository
         return await _collection.Find(filter).FirstOrDefaultAsync();
     }
 
+    public async Task<List<UserEntity>> GetByIdsAsync(IEnumerable<string> ids)
+    {
+        var idList = ids.ToList();
+        if (idList.Count == 0) return new List<UserEntity>();
+        var filter = Builders<UserEntity>.Filter.In(u => u.Id, idList);
+        return await _collection.Find(filter).ToListAsync();
+    }
+
     public async Task<UserEntity?> GetByEmailAsync(string email)
     {
         var normalized = email.ToLower();

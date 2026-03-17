@@ -191,16 +191,6 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleSidebar, sidebarOp
     <AppBar position="fixed" color="default" elevation={0} sx={{ pt: 'env(safe-area-inset-top)' }}>
       <Toolbar sx={{ gap: 1.25, minHeight: { xs: 53, sm: 61 }, py: 0.25 }}>
         <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1, flexGrow: 1, minWidth: 0 }}>
-          {showChatToggle && isCompactNav && (
-            <IconButton
-              onClick={onToggleSidebar}
-              title={t('nav.toggleChatList')}
-              size="small"
-              edge="start"
-            >
-              {sidebarOpen ? <CloseIcon /> : <MenuIcon />}
-            </IconButton>
-          )}
           <Typography
             variant="subtitle1"
             fontWeight="bold"
