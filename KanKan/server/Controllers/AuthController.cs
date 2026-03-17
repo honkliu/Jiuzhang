@@ -45,7 +45,15 @@ public class AuthController : ControllerBase
             if (existingUser != null)
                 return BadRequest(new { message = "Email already registered" });
 
-            // No email is sent. Verification code is derived from domain.
+            // Check if an invite code already exists for this email; if not, generate one
+            var existing = await _authService.GetAllInviteCodesAsync();
+            var emailLower = request.Email.Trim().ToLower();
+            if (!existing.Any(c => c.Email == emailLower && c.Status == "pending"))
+            {
+                var code = Random.Shared.Next(1000, 10000).ToString();
+                await _authService.CreateVerificationCodeAsync(emailLower, code, "registration", 5256000);
+            }
+
             return Ok(new
             {
                 message = "Verification step ready",
@@ -64,12 +72,9 @@ public class AuthController : ControllerBase
     {
         try
         {
-            var domain = DomainRules.GetDomain(request.Email);
-            var expectedCode = DomainRules.BuildVerificationCode(domain);
-            var isValid = string.Equals(
-                expectedCode,
-                request.Code?.Trim(),
-                StringComparison.OrdinalIgnoreCase);
+            var isValid = await _authService.VerifyCodeAsync(
+                request.Email,
+                request.Code?.Trim() ?? "");
 
             if (!isValid)
                 return BadRequest(new { message = "Invalid or expired verification code" });

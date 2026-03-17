@@ -109,18 +109,6 @@ public static class DomainRules
         return isAdmin && IsSuperDomain(domain);
     }
 
-    public static string BuildVerificationCode(string? domain)
-    {
-        var normalized = Normalize(domain);
-        if (string.IsNullOrWhiteSpace(normalized))
-            return "520";
-
-        if (IsSuperDomain(normalized))
-            return $"580{normalized}";
-
-        return $"520{normalized}";
-    }
-
     public static bool CanAccess(string? viewerDomain, string? targetDomain)
     {
         var viewer = NormalizeDomain(viewerDomain);

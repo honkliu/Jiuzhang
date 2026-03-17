@@ -23,7 +23,7 @@ public class InMemoryAuthService : IAuthService
     private readonly ILogger<InMemoryAuthService> _logger;
 
     // In-memory storage for verification codes
-    private static readonly Dictionary<string, (string Code, string Purpose, DateTime ExpiresAt)> _verificationCodes = new();
+    private static readonly Dictionary<string, (string Code, string Purpose, DateTime ExpiresAt, DateTime CreatedAt)> _verificationCodes = new();
     private static readonly object _lock = new();
 
     public InMemoryAuthService(
@@ -41,12 +41,12 @@ public class InMemoryAuthService : IAuthService
         return await _userRepository.GetByEmailAsync(email);
     }
 
-    public Task CreateVerificationCodeAsync(string email, string code, string purpose)
+    public Task CreateVerificationCodeAsync(string email, string code, string purpose, int ttlMinutes = 10)
     {
         lock (_lock)
         {
             var key = email.ToLower();
-            _verificationCodes[key] = (code, purpose, DateTime.UtcNow.AddMinutes(10));
+            _verificationCodes[key] = (code, purpose, DateTime.UtcNow.AddMinutes(ttlMinutes), DateTime.UtcNow);
             _logger.LogInformation("Verification code created for {Email}: {Code}", email, code);
         }
         return Task.CompletedTask;
@@ -66,6 +66,18 @@ public class InMemoryAuthService : IAuthService
                 }
             }
             return Task.FromResult(false);
+        }
+    }
+
+    public Task<List<(string Email, string Code, DateTime CreatedAt, string Status)>> GetAllInviteCodesAsync()
+    {
+        lock (_lock)
+        {
+            var results = _verificationCodes
+                .Where(kv => kv.Value.Purpose == "registration")
+                .Select(kv => (kv.Key, kv.Value.Code, kv.Value.CreatedAt, "pending" as string))
+                .ToList();
+            return Task.FromResult(results);
         }
     }
 
@@ -266,14 +278,6 @@ public class InMemoryAuthService : IAuthService
 
     private string GetDefaultAvatar()
     {
-        var avatars = new[]
-        {
-            "https://i.pravatar.cc/150?img=1",
-            "https://i.pravatar.cc/150?img=2",
-            "https://i.pravatar.cc/150?img=3",
-            "https://i.pravatar.cc/150?img=4",
-            "https://i.pravatar.cc/150?img=5"
-        };
-        return avatars[new Random().Next(avatars.Length)];
+        return "/api/avatar/image/default";
     }
 }

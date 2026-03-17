@@ -64,7 +64,7 @@ public class MomentsController : ControllerBase
                 return Unauthorized();
 
             var currentDomain = ResolveDomain(currentUser);
-            var isSuperDomainUser = DomainRules.IsSuperDomain(currentDomain);
+            var isGlobalAdmin = currentUser.IsAdmin && DomainRules.IsSuperDomain(currentDomain);
 
             var moments = await _momentRepository.GetFeedAsync(limit, beforeDate);
             var domainByUserId = new Dictionary<string, string>();
@@ -87,7 +87,7 @@ public class MomentsController : ControllerBase
             foreach (var moment in moments)
             {
                 var momentDomain = await ResolveMomentDomainAsync(moment);
-                if (isSuperDomainUser || DomainRules.CanAccess(currentDomain, momentDomain))
+                if (isGlobalAdmin || DomainRules.IsVisibleDomain(currentDomain, momentDomain))
                 {
                     filtered.Add(moment);
                 }
@@ -194,8 +194,8 @@ public class MomentsController : ControllerBase
                 var author = await _userRepository.GetByIdAsync(moment.UserId);
                 momentDomain = author != null ? ResolveDomain(author) : string.Empty;
             }
-            if (!DomainRules.IsSuperDomain(currentDomain) &&
-                !DomainRules.CanAccess(currentDomain, momentDomain))
+            var isGlobalAdmin = user.IsAdmin && DomainRules.IsSuperDomain(currentDomain);
+            if (!isGlobalAdmin && !DomainRules.IsVisibleDomain(currentDomain, momentDomain))
                 return Forbid();
 
             moment.Comments.Add(new MomentComment
@@ -240,8 +240,8 @@ public class MomentsController : ControllerBase
                 var author = await _userRepository.GetByIdAsync(moment.UserId);
                 momentDomain = author != null ? ResolveDomain(author) : string.Empty;
             }
-            if (!DomainRules.IsSuperDomain(currentDomain) &&
-                !DomainRules.CanAccess(currentDomain, momentDomain))
+            var isGlobalAdmin = user.IsAdmin && DomainRules.IsSuperDomain(currentDomain);
+            if (!isGlobalAdmin && !DomainRules.IsVisibleDomain(currentDomain, momentDomain))
                 return Forbid();
 
             var existing = moment.Likes.FirstOrDefault(l => l.UserId == userId);

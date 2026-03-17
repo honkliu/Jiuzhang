@@ -21,6 +21,11 @@ class AdminService {
     const response = await apiClient.post<{ message: string }>(`/admin/users/${userId}/enable`);
     return response.data;
   }
+
+  async getInviteCodes(): Promise<{ email: string; code: string; createdAt: string; status: string }[]> {
+    const response = await apiClient.get<{ email: string; code: string; createdAt: string; status: string }[]>('/admin/invite-codes');
+    return response.data;
+  }
 }
 
 export const adminService = new AdminService();

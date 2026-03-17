@@ -12,6 +12,7 @@ import { MomentsPage } from './components/Moments/MomentsPage';
 import { ProfilePage } from './components/Profile/ProfilePage';
 import { ChatRoom3DTestPage } from './components/Chat/ChatRoom3DTestPage';
 import { FamilyPage } from './components/Family/FamilyPage';
+import { InviteCodesPage } from './components/Admin/InviteCodesPage';
 import { authService } from './services/auth.service';
 import { contactService } from './services/contact.service';
 import { LanguageProvider } from './i18n/LanguageContext';
@@ -291,6 +292,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <FamilyPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin"
+                element={
+                  <ProtectedRoute>
+                    <InviteCodesPage />
                   </ProtectedRoute>
                 }
               />

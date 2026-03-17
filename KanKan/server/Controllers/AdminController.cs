@@ -6,6 +6,7 @@ using KanKan.API.Models.DTOs.User;
 using KanKan.API.Models.Entities;
 using KanKan.API.Repositories.Interfaces;
 using KanKan.API.Services;
+using KanKan.API.Services.Interfaces;
 
 namespace KanKan.API.Controllers;
 
@@ -21,6 +22,7 @@ public class AdminController : ControllerBase
     private readonly IMessageRepository _messageRepository;
     private readonly IMomentRepository _momentRepository;
     private readonly IAvatarService _avatarService;
+    private readonly IAuthService _authService;
     private readonly ILogger<AdminController> _logger;
 
     public AdminController(
@@ -31,6 +33,7 @@ public class AdminController : ControllerBase
         IMessageRepository messageRepository,
         IMomentRepository momentRepository,
         IAvatarService avatarService,
+        IAuthService authService,
         ILogger<AdminController> logger)
     {
         _userRepository = userRepository;
@@ -40,6 +43,7 @@ public class AdminController : ControllerBase
         _messageRepository = messageRepository;
         _momentRepository = momentRepository;
         _avatarService = avatarService;
+        _authService = authService;
         _logger = logger;
     }
 
@@ -173,6 +177,22 @@ public class AdminController : ControllerBase
     public async Task<IActionResult> EnableUser(string userId)
     {
         return await SetUserDisabledState(userId, false);
+    }
+
+    [HttpGet("invite-codes")]
+    public async Task<IActionResult> GetInviteCodes()
+    {
+        var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
+        var currentUser = await _userRepository.GetByIdAsync(currentUserId);
+        if (currentUser == null) return Unauthorized();
+        var scope = GetAdminScope(currentUser);
+        if (!scope.IsAllowed) return Forbid();
+
+        var codes = await _authService.GetAllInviteCodesAsync();
+        var filtered = scope.IsGlobal
+            ? codes
+            : codes.Where(c => DomainRules.CanAccess(scope.Domain, DomainRules.GetDomain(c.Email))).ToList();
+        return Ok(filtered.Select(c => new { email = c.Email, code = c.Code, createdAt = c.CreatedAt, status = c.Status }));
     }
 
     private static string ResolveDomain(User user)

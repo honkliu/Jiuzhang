@@ -5,6 +5,7 @@ using System.Text;
 using MongoDB.Driver;
 using Microsoft.IdentityModel.Tokens;
 using KanKan.API.Domain;
+using KanKan.API.Models;
 using KanKan.API.Models.DTOs.Auth;
 using KanKan.API.Models.DTOs.User;
 using KanKan.API.Models.Entities;
@@ -19,6 +20,7 @@ public class AuthService : IAuthService
     private readonly IUserRepository _userRepository;
     private readonly IConfiguration _configuration;
     private readonly IMongoCollection<EmailVerification> _verificationCollection;
+    private readonly IMongoCollection<AvatarImage> _avatarCollection;
     private readonly ILogger<AuthService> _logger;
 
     public AuthService(
@@ -35,6 +37,7 @@ public class AuthService : IAuthService
         var collectionName = configuration["MongoDB:Collections:EmailVerifications"] ?? "EmailVerifications";
         var database = mongoClient.GetDatabase(databaseName);
         _verificationCollection = database.GetCollection<EmailVerification>(collectionName);
+        _avatarCollection = database.GetCollection<AvatarImage>("avatarImages");
     }
 
     public async Task<UserEntity?> GetUserByEmailAsync(string email)
@@ -42,7 +45,7 @@ public class AuthService : IAuthService
         return await _userRepository.GetByEmailAsync(email);
     }
 
-    public async Task CreateVerificationCodeAsync(string email, string code, string purpose)
+    public async Task CreateVerificationCodeAsync(string email, string code, string purpose, int ttlMinutes = 10)
     {
         var verification = new EmailVerification
         {
@@ -50,10 +53,10 @@ public class AuthService : IAuthService
             Email = email.ToLower(),
             VerificationCode = code,
             Purpose = purpose,
-            ExpiresAt = DateTime.UtcNow.AddMinutes(10),
+            ExpiresAt = DateTime.UtcNow.AddMinutes(ttlMinutes),
             IsUsed = false,
             CreatedAt = DateTime.UtcNow,
-            Ttl = 600 // 10 minutes
+            Ttl = ttlMinutes * 60
         };
 
         await _verificationCollection.InsertOneAsync(verification);
@@ -81,9 +84,18 @@ public class AuthService : IAuthService
         return true;
     }
 
+    public async Task<List<(string Email, string Code, DateTime CreatedAt, string Status)>> GetAllInviteCodesAsync()
+    {
+        var filter = Builders<EmailVerification>.Filter.Eq(v => v.Purpose, "registration");
+        var sort = Builders<EmailVerification>.Sort.Descending(v => v.CreatedAt);
+        var results = await _verificationCollection.Find(filter).Sort(sort).ToListAsync();
+        return results.Select(v => (v.Email, v.VerificationCode, v.CreatedAt, v.IsUsed ? "registered" : "pending")).ToList();
+    }
+
     public async Task<UserEntity> CreateUserAsync(CreateUserDto dto)
     {
         var isAdmin = IsConfiguredAdmin(dto.Email);
+        var defaultAvatar = await GetDefaultAvatarAsync();
 
         var user = new UserEntity
         {
@@ -97,7 +109,8 @@ public class AuthService : IAuthService
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
             Handle = GenerateUniqueHandle(dto.DisplayName),
             DisplayName = dto.DisplayName,
-            AvatarUrl = GetDefaultAvatar(),
+            AvatarUrl = defaultAvatar.url,
+            AvatarImageId = defaultAvatar.id,
             Bio = "Hello, I'm using KanKan!",
             IsOnline = false,
             LastSeen = DateTime.UtcNow,
@@ -277,16 +290,24 @@ public class AuthService : IAuthService
         return $"{cleanName}_{random}";
     }
 
-    private string GetDefaultAvatar()
+    private async Task<(string url, string? id)> GetDefaultAvatarAsync()
     {
-        var avatars = new[]
+        try
         {
-            "https://i.pravatar.cc/150?img=1",
-            "https://i.pravatar.cc/150?img=2",
-            "https://i.pravatar.cc/150?img=3",
-            "https://i.pravatar.cc/150?img=4",
-            "https://i.pravatar.cc/150?img=5"
-        };
-        return avatars[new Random().Next(avatars.Length)];
+            var filter = Builders<AvatarImage>.Filter.Eq(a => a.UserId, "system_predefined");
+            var count = await _avatarCollection.CountDocumentsAsync(filter);
+            if (count > 0)
+            {
+                var skip = Random.Shared.Next((int)count);
+                var avatar = await _avatarCollection.Find(filter).Skip(skip).Limit(1).FirstOrDefaultAsync();
+                if (avatar != null)
+                    return ($"/api/avatar/image/{avatar.Id}", avatar.Id);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to get predefined avatar, using fallback");
+        }
+        return ("/api/avatar/image/default", null);
     }
 }

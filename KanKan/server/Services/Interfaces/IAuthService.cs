@@ -7,8 +7,9 @@ namespace KanKan.API.Services.Interfaces;
 public interface IAuthService
 {
     Task<UserEntity?> GetUserByEmailAsync(string email);
-    Task CreateVerificationCodeAsync(string email, string code, string purpose);
+    Task CreateVerificationCodeAsync(string email, string code, string purpose, int ttlMinutes = 10);
     Task<bool> VerifyCodeAsync(string email, string code);
+    Task<List<(string Email, string Code, DateTime CreatedAt, string Status)>> GetAllInviteCodesAsync();
     Task<UserEntity> CreateUserAsync(CreateUserDto dto);
     Task<UserEntity?> ValidateCredentialsAsync(string email, string password);
     string GenerateAccessToken(UserEntity user);

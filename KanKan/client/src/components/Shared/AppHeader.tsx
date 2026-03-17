@@ -44,6 +44,7 @@ const navItems = [
   { label: 'Pa', path: '/pa', adminOnly: false },
   { label: 'Profile', path: '/profile', adminOnly: false },
   { label: '家谱', path: '/family', adminOnly: true },
+  { label: '验证管理', path: '/admin', adminOnly: true },
 ];
 
 interface AppHeaderProps {
