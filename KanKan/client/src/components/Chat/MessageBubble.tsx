@@ -112,6 +112,7 @@ interface MessageBubbleProps {
   message: Message;
   isOwn: boolean;
   showAvatar: boolean;
+  timeSeparator?: string | null;
   imageGallery?: string[];
   imageIndex?: number;
   imageGroups?: Array<{ sourceUrl: string; messageId: string; canEdit: boolean }>;
@@ -122,6 +123,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
   message,
   isOwn,
   showAvatar,
+  timeSeparator,
   imageGallery,
   imageIndex,
   imageGroups,
@@ -196,6 +198,21 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
 
   return (
     <>
+      {timeSeparator && (
+        <Typography
+          variant="caption"
+          sx={{
+            display: 'block',
+            textAlign: 'center',
+            color: 'text.secondary',
+            fontSize: '0.72rem',
+            py: 1,
+            opacity: 0.7,
+          }}
+        >
+          {timeSeparator}
+        </Typography>
+      )}
       <BoxAny
         sx={{
           display: 'flex',
@@ -359,26 +376,21 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
           <Typography variant="body2">[{message.messageType}]</Typography>
         )}
 
-        {/* Time and status */}
-        <BoxAny
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'flex-end',
-            gap: 0.5,
-            mt: 0.5,
-          }}
-        >
-          <Typography variant="caption" sx={{ opacity: 0.7, fontSize: '0.7rem' }}>
-            {formatTime(message.timestamp)}
-          </Typography>
-          {isOwn && !isAgent && !isDraft && message.readBy.length === 0 && (
+        {/* Read status */}
+        {isOwn && !isAgent && !isDraft && message.readBy.length === 0 && (
+          <BoxAny
+            sx={{
+              display: 'flex',
+              justifyContent: 'flex-end',
+              mt: 0.25,
+            }}
+          >
             <FiberManualRecordIcon
               sx={{ fontSize: 10, color: 'error.main' }}
               titleAccess={t('chat.message.unread')}
             />
-          )}
-        </BoxAny>
+          </BoxAny>
+        )}
       </Paper>
     </BoxAny>
         {message.messageType === 'image' && imageUrl ? (

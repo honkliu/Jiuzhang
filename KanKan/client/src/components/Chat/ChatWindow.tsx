@@ -129,6 +129,7 @@ const ChatMessages: React.FC<ChatMessagesProps> = React.memo(({
   messagesEndRef,
   noMessagesText,
 }) => {
+  const { language } = useLanguage();
   if (!activeChat) return null;
 
   if (isRoom3D) {
@@ -199,11 +200,38 @@ const ChatMessages: React.FC<ChatMessagesProps> = React.memo(({
           const prevMessage = index > 0 ? mergedMessages[index - 1] : null;
           const showAvatar = !prevMessage || prevMessage.senderId !== message.senderId;
 
+          // Show time separator if 5+ min gap or first message
+          let timeSeparator: string | null = null;
+          const curTime = new Date(message.timestamp).getTime();
+          const prevTime = prevMessage ? new Date(prevMessage.timestamp).getTime() : 0;
+          if (!prevMessage || curTime - prevTime >= 5 * 60 * 1000) {
+            const d = new Date(message.timestamp);
+            const now = new Date();
+            const isToday = d.toDateString() === now.toDateString();
+            const yesterday = new Date(now);
+            yesterday.setDate(yesterday.getDate() - 1);
+            const isYesterday = d.toDateString() === yesterday.toDateString();
+            const isZh = language === 'zh';
+            const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+            if (isToday) {
+              timeSeparator = time;
+            } else if (isYesterday) {
+              timeSeparator = isZh ? `昨天 ${time}` : `Yesterday ${time}`;
+            } else {
+              if (isZh) {
+                timeSeparator = `${d.getMonth() + 1}月${d.getDate()}日 ${time}`;
+              } else {
+                timeSeparator = `${d.toLocaleDateString('en', { month: 'short', day: 'numeric' })} ${time}`;
+              }
+            }
+          }
+
           return (
             <MessageBubble
               message={message}
               isOwn={message.senderId === user?.id}
               showAvatar={showAvatar}
+              timeSeparator={timeSeparator}
               imageGallery={imageGallery.urls}
               imageIndex={imageGallery.indexById[message.id]}
               imageGroups={imageGroups}
