@@ -63,7 +63,7 @@ public class AvatarService : IAvatarService
         {
             _logger.LogWarning(ex, "Failed to generate thumbnail for {FileName}, using original", storedFileName);
             thumbnailData = imageData;
-            thumbnailContentType = contentType;
+            thumbnailContentType = contentType ?? "image/webp";
         }
 
         var avatarImage = new AvatarImage
@@ -74,7 +74,7 @@ public class AvatarService : IAvatarService
             ImageData = imageData,
             ThumbnailData = thumbnailData,
             ThumbnailContentType = thumbnailContentType,
-            ContentType = contentType,
+            ContentType = contentType ?? "application/octet-stream",
             FileName = storedFileName,
             FileSize = imageData.Length,
             CreatedAt = DateTime.UtcNow,
