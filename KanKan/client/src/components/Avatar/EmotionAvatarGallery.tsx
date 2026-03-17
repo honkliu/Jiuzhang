@@ -40,9 +40,12 @@ export const EmotionAvatarGallery: React.FC<EmotionAvatarGalleryProps> = ({ user
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
 
-  const buildThumbnailUrl = (imageUrl: string) => {
+  const buildThumbnailUrl = (imageUrl: string, bust?: number) => {
     if (!imageUrl) return imageUrl;
-    return imageUrl.includes('?') ? `${imageUrl}&size=thumbnail` : `${imageUrl}?size=thumbnail`;
+    const sep = imageUrl.includes('?') ? '&' : '?';
+    let url = `${imageUrl}${sep}size=thumbnail`;
+    if (bust) url += `&_t=${bust}`;
+    return url;
   };
 
   const defaultEmotionLabels = ['angry', 'smile', 'sad', 'happy', 'crying', 'thinking', 'surprised', 'neutral', 'excited'];
@@ -60,6 +63,7 @@ export const EmotionAvatarGallery: React.FC<EmotionAvatarGalleryProps> = ({ user
   const [helpAnchorEl, setHelpAnchorEl] = useState<HTMLElement | null>(null);
   const [composerOpen, setComposerOpen] = useState(false);
   const [selectedPrompts, setSelectedPrompts] = useState<SelectedPrompt[]>([]);
+  const [cacheBust, setCacheBust] = useState<Record<string, number>>({});
 
   const helpOpen = Boolean(helpAnchorEl);
   const helpId = helpOpen ? 'emotion-prompt-help' : undefined;
@@ -123,6 +127,18 @@ export const EmotionAvatarGallery: React.FC<EmotionAvatarGalleryProps> = ({ user
       _thumbCache.set(targetAvatarId, generated);
       if (avatarIdRef.current === targetAvatarId) {
         setEmotions(generated);
+        // Clear cache-bust entries for items that now have fresh thumbnail data
+        const idsWithData = generated.filter((g) => g.thumbnailDataUrl).map((g) => g.avatarImageId);
+        if (idsWithData.length > 0) {
+          setCacheBust((prev) => {
+            const next = { ...prev };
+            let changed = false;
+            for (const id of idsWithData) {
+              if (id in next) { delete next[id]; changed = true; }
+            }
+            return changed ? next : prev;
+          });
+        }
       }
 
       const cachedFull = _fullCache.get(targetAvatarId);
@@ -204,6 +220,8 @@ export const EmotionAvatarGallery: React.FC<EmotionAvatarGalleryProps> = ({ user
           });
 
           notifyEmotionThumbnailsUpdated(targetAvatarId);
+
+          setCacheBust((prev) => ({ ...prev, [newAvatarId]: Date.now() }));
 
           setFullById((prev) => {
             const nextMap = new Map(prev);
@@ -422,8 +440,8 @@ export const EmotionAvatarGallery: React.FC<EmotionAvatarGalleryProps> = ({ user
               <BoxAny key={label} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                 {match ? (
                   <ImageHoverPreview
-                    key={`${label}-${match.avatarImageId}`}
-                    src={fullById.get(match.avatarImageId) || match.imageUrl}
+                    key={`${label}-${match.avatarImageId}-${cacheBust[match.avatarImageId] || 0}`}
+                    src={fullById.get(match.avatarImageId) || (cacheBust[match.avatarImageId] ? `${match.imageUrl}?_t=${cacheBust[match.avatarImageId]}` : match.imageUrl)}
                     alt={`${match.emotion || label} preview`}
                     maxSize={400}
                     openOnHover={false}
@@ -439,7 +457,7 @@ export const EmotionAvatarGallery: React.FC<EmotionAvatarGalleryProps> = ({ user
                       <BoxAny
                         {...previewProps}
                         component="img"
-                        src={match.thumbnailDataUrl || buildThumbnailUrl(match.imageUrl)}
+                        src={match.thumbnailDataUrl || buildThumbnailUrl(match.imageUrl, cacheBust[match.avatarImageId])}
                         alt={match.emotion || label}
                         sx={{
                           width: '100%',
