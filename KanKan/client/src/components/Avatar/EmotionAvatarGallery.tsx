@@ -366,6 +366,8 @@ export const EmotionAvatarGallery: React.FC<EmotionAvatarGalleryProps> = ({ user
         <TextField
           autoFocus
           size="small"
+          multiline
+          maxRows={6}
           label={t('avatar.extraPromptLabel')}
           placeholder={t('avatar.extraPromptPlaceholder')}
           fullWidth

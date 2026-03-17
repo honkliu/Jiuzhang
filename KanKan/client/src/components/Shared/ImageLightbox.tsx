@@ -1052,13 +1052,15 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
             >
               {hasGroups && activeGroup?.canEdit && (
                 <>
-                  <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <BoxAny sx={{ display: 'flex', alignItems: 'flex-end', gap: 0.5 }}>
                     <TextField
                       value={prompt}
                       onChange={(event) => setPrompt(event.target.value)}
                       placeholder={t('image.editPromptPlaceholder')}
                       size="small"
                       fullWidth
+                      multiline
+                      maxRows={6}
                       disabled={isGenerating}
                       sx={{
                         '& .MuiInputBase-input': { color: 'rgba(255,255,255,0.95)' },

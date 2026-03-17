@@ -11,12 +11,11 @@ import {
   CircularProgress,
   Alert,
   IconButton,
-  Divider,
   Stack,
   useMediaQuery,
   useTheme,
 } from '@mui/material';
-import { Delete as DeleteIcon, ThumbUpAltOutlined as ThumbUpIcon, ChatBubbleOutline as CommentIcon, Close as CloseIcon } from '@mui/icons-material';
+import { Delete as DeleteIcon, ThumbUpAltOutlined as ThumbUpIcon, ThumbUpAlt as ThumbUpFilledIcon, ChatBubbleOutline as CommentIcon, Close as CloseIcon } from '@mui/icons-material';
 import { AppHeader } from '@/components/Shared/AppHeader';
 import { UserAvatar } from '@/components/Shared/UserAvatar';
 import { momentService, Moment } from '../../services/moment.service';
@@ -29,7 +28,7 @@ import { RootState } from '@/store';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { useSettings } from '@/settings/SettingsContext';
 
-// Work around TS2590 (“union type too complex”) from MUI Box typings in some TS versions.
+// Work around TS2590 ("union type too complex") from MUI Box typings in some TS versions.
 const BoxAny = Box as any;
 
 export const MomentsPage: React.FC = () => {
@@ -47,6 +46,7 @@ export const MomentsPage: React.FC = () => {
   const [error, setError] = useState('');
   const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [commentOpenFor, setCommentOpenFor] = useState<string | null>(null);
   const [lightbox, setLightbox] = useState<{
     images: string[];
     index: number;
@@ -179,6 +179,7 @@ export const MomentsPage: React.FC = () => {
       const updated = await momentService.addComment(momentId, draft);
       updateMomentInState(updated);
       setCommentDrafts((prev) => ({ ...prev, [momentId]: '' }));
+      setCommentOpenFor(null);
     } catch (err: any) {
       setError(err.message || t('moments.commentFailed'));
     } finally {
@@ -236,7 +237,7 @@ export const MomentsPage: React.FC = () => {
               minRows={3}
               sx={{ mb: 2 }}
             />
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ mb: 2 }}>
+            <Stack direction="row" spacing={1} sx={{ mb: 2, flexWrap: 'wrap' }}>
               <Button variant="outlined" onClick={handlePickImages} disabled={posting}>
                 {t('moments.addImages')}
               </Button>
@@ -310,7 +311,9 @@ export const MomentsPage: React.FC = () => {
         ) : moments.length === 0 ? (
           <Typography color="text.secondary">{t('moments.empty')}</Typography>
         ) : (
-          moments.map((moment) => (
+          moments.map((moment) => {
+            const isLiked = moment.likes?.some((l) => l.userId === user?.id);
+            return (
             <Card key={moment.id} sx={{ mb: 2, borderRadius: 0, transform: 'scale(0.9)', transformOrigin: 'top center' }}>
               <CardHeader
                 avatar={
@@ -336,7 +339,7 @@ export const MomentsPage: React.FC = () => {
                   ) : null
                 }
               />
-              <CardContent>
+              <CardContent sx={{ pt: 0, '&:last-child': { pb: 1.5 } }}>
                 <Typography sx={{ mb: 1 }}>{moment.content?.text}</Typography>
                 {moment.content?.mediaUrls?.length ? (
                   <BoxAny
@@ -396,67 +399,91 @@ export const MomentsPage: React.FC = () => {
                   </BoxAny>
                 ) : null}
 
-                <Stack direction="row" spacing={2} alignItems="center" sx={{ mt: 2 }}>
-                  <Button
-                    size="small"
-                    startIcon={<ThumbUpIcon />}
-                    onClick={() => handleToggleLike(moment.id)}
-                    disabled={actionLoading === moment.id}
-                  >
-                    {t('moments.like')} ({moment.likes?.length || 0})
-                  </Button>
-                  <Button size="small" startIcon={<CommentIcon />} disabled>
-                    {t('moments.comment')} ({moment.comments?.length || 0})
-                  </Button>
-                </Stack>
+                {/* Likes display */}
+                {moment.likes?.length > 0 && (
+                  <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1, flexWrap: 'wrap' }}>
+                    <ThumbUpFilledIcon sx={{ fontSize: 14, color: 'primary.main' }} />
+                    <Typography variant="caption" color="text.secondary">
+                      {moment.likes.map((l) => l.userName).join(', ')}
+                    </Typography>
+                  </BoxAny>
+                )}
 
-                <Divider sx={{ my: 2 }} />
-
+                {/* Comments display */}
                 {moment.comments.length > 0 && (
-                  <Stack spacing={1} sx={{ mb: 2 }}>
+                  <BoxAny sx={{ mt: 0.5, bgcolor: 'rgba(0,0,0,0.02)', borderRadius: 1, px: 1, py: 0.5 }}>
                     {moment.comments.map((c) => (
-                      <Stack key={c.id} direction="row" spacing={1} alignItems="flex-start">
-                        <UserAvatar
-                          src={c.userAvatar}
-                          fallbackText={c.userName}
-                          sx={{ width: 28, height: 28 }}
-                        />
-                        <BoxAny>
-                          <Typography variant="body2" fontWeight={600}>
-                            {c.userName}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            {c.text}
-                          </Typography>
-                        </BoxAny>
-                      </Stack>
+                      <Typography key={c.id} variant="body2" sx={{ py: 0.25 }}>
+                        <Typography component="span" variant="body2" fontWeight={600} color="primary.main">
+                          {c.userName}
+                        </Typography>
+                        {': '}
+                        {c.text}
+                      </Typography>
                     ))}
+                  </BoxAny>
+                )}
+
+                {/* Inline comment input (shown when user clicks Comment) */}
+                {commentOpenFor === moment.id && (
+                  <Stack direction="row" spacing={1} alignItems="flex-end" sx={{ mt: 1 }}>
+                    <TextField
+                      autoFocus
+                      fullWidth
+                      size="small"
+                      multiline
+                      maxRows={6}
+                      placeholder={t('moments.addComment')}
+                      value={commentDrafts[moment.id] || ''}
+                      onChange={(e) =>
+                        setCommentDrafts((prev) => ({ ...prev, [moment.id]: e.target.value }))
+                      }
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          handleAddComment(moment.id);
+                        }
+                      }}
+                      sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1 } }}
+                    />
+                    <Button
+                      variant="contained"
+                      size="small"
+                      onClick={() => handleAddComment(moment.id)}
+                      disabled={actionLoading === moment.id}
+                      sx={{ minWidth: 'auto', px: 1.5, whiteSpace: 'nowrap', flexShrink: 0 }}
+                    >
+                      {t('moments.post')}
+                    </Button>
                   </Stack>
                 )}
 
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems="stretch">
-                  <TextField
-                    fullWidth
-                    size="small"
-                    label={t('moments.addComment')}
-                    value={commentDrafts[moment.id] || ''}
-                    onChange={(e) =>
-                      setCommentDrafts((prev) => ({ ...prev, [moment.id]: e.target.value }))
-                    }
-                  />
+                {/* Like + Comment buttons */}
+                <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 1 }}>
                   <Button
-                    variant="outlined"
-                    onClick={() => handleAddComment(moment.id)}
+                    size="small"
+                    startIcon={isLiked ? <ThumbUpFilledIcon /> : <ThumbUpIcon />}
+                    onClick={() => handleToggleLike(moment.id)}
                     disabled={actionLoading === moment.id}
                   >
-                    {t('moments.send')}
+                    {moment.likes?.length || 0}
+                  </Button>
+                  <Button
+                    size="small"
+                    startIcon={<CommentIcon />}
+                    onClick={() => setCommentOpenFor(commentOpenFor === moment.id ? null : moment.id)}
+                    disabled={actionLoading === moment.id}
+                  >
+                    {moment.comments?.length || 0}
                   </Button>
                 </Stack>
               </CardContent>
             </Card>
-          ))
+            );
+          })
         )}
       </Container>
+
       {lightbox ? (
         <ImageLightbox
           images={lightbox.images}

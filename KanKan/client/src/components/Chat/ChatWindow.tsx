@@ -372,7 +372,7 @@ const ChatInputPanel: React.FC<ChatInputPanelProps> = React.memo(({
           size="small"
           sx={{
             '& .MuiOutlinedInput-root': {
-              borderRadius: 3,
+              borderRadius: '5px',
               bgcolor: 'grey.100',
             },
           }}

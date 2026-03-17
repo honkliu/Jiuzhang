@@ -237,6 +237,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
           py: message.messageType === 'image' ? 0 : 1,
           bgcolor: message.messageType === 'image' ? 'transparent' : (isOwn ? 'rgba(7, 193, 96, 0.9)' : 'rgba(255, 255, 255, 0.6)'),
           color: isOwn ? 'primary.contrastText' : 'text.primary',
+          borderRadius: '10px',
           borderTopLeftRadius: !isOwn && !showAvatar ? 4 : undefined,
           borderTopRightRadius: isOwn && !showAvatar ? 4 : undefined,
           ml: isOwn ? 'auto' : 0,
