@@ -363,6 +363,8 @@ public class AuthController : ControllerBase
             Id = user.Id,
             Handle = user.Handle,
             IsAdmin = user.IsAdmin,
+            CanViewFamilyTree = FamilyAccessPolicy.CanViewFamilyTree(_configuration, user),
+            CanEditFamilyTree = FamilyAccessPolicy.CanEditAnyFamilyTree(_configuration, user),
             IsDisabled = user.IsDisabled,
             DisplayName = user.DisplayName,
             AvatarUrl = user.AvatarUrl,

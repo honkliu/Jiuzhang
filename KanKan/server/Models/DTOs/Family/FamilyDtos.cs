@@ -6,6 +6,7 @@ public class CreateFamilyTreeRequest
 {
     public string Name { get; set; } = string.Empty;
     public string? Surname { get; set; }
+    public string? Domain { get; set; }
     public int RootGeneration { get; set; } = 1;
     public List<string>? ZibeiPoem { get; set; }
 }
@@ -184,7 +185,11 @@ public class FullFamilyTreeResponse
 public class NestedPersonImport
 {
     public string Name { get; set; } = string.Empty;
+    public string? Gender { get; set; }
     public string? Spouse { get; set; }
+    public string? SpouseGender { get; set; }
+    public int? BirthYear { get; set; }
+    public int? DeathYear { get; set; }
     public int? Age { get; set; }
     public List<NestedPersonImport>? Children { get; set; }
 }

@@ -17,6 +17,7 @@ public class FamilyController : ControllerBase
     private readonly IFamilyPersonRepository _personRepo;
     private readonly IFamilyRelationshipRepository _relRepo;
     private readonly IUserRepository _userRepo;
+    private readonly IConfiguration _configuration;
     private readonly ILogger<FamilyController> _logger;
 
     public FamilyController(
@@ -24,12 +25,14 @@ public class FamilyController : ControllerBase
         IFamilyPersonRepository personRepo,
         IFamilyRelationshipRepository relRepo,
         IUserRepository userRepo,
+        IConfiguration configuration,
         ILogger<FamilyController> logger)
     {
         _treeRepo = treeRepo;
         _personRepo = personRepo;
         _relRepo = relRepo;
         _userRepo = userRepo;
+        _configuration = configuration;
         _logger = logger;
     }
 
@@ -39,11 +42,20 @@ public class FamilyController : ControllerBase
     {
         var user = await GetCurrentUserAsync();
         if (user == null) return Unauthorized();
-        if (!user.IsAdmin) return Forbid();
+        var visibleDomains = FamilyAccessPolicy.GetVisibleDomains(_configuration, user);
+        if (visibleDomains.Count == 0) return Forbid();
 
-        var domain = ResolveDomain(user);
-        var trees = await _treeRepo.GetByDomainAsync(domain);
-        return Ok(trees.Select(ToTreeResponse));
+        var trees = new List<FamilyTree>();
+        foreach (var domain in visibleDomains)
+        {
+            trees.AddRange(await _treeRepo.GetByDomainAsync(domain));
+        }
+
+        return Ok(trees
+            .GroupBy(t => t.Id, StringComparer.Ordinal)
+            .Select(group => group.First())
+            .OrderByDescending(t => t.UpdatedAt)
+            .Select(ToTreeResponse));
     }
 
     // ── POST /api/family ────────────────────────────────────────────────────
@@ -52,7 +64,10 @@ public class FamilyController : ControllerBase
     {
         var user = await GetCurrentUserAsync();
         if (user == null) return Unauthorized();
-        if (!user.IsAdmin) return Forbid();
+        var targetDomain = FamilyAccessPolicy.NormalizeDomain(string.IsNullOrWhiteSpace(req.Domain)
+            ? FamilyAccessPolicy.ResolveDomain(user)
+            : req.Domain);
+        if (!FamilyAccessPolicy.CanEditTreeDomain(_configuration, user, targetDomain)) return Forbid();
 
         var tree = new FamilyTree
         {
@@ -60,7 +75,7 @@ public class FamilyController : ControllerBase
             Name = req.Name,
             Surname = req.Surname,
             OwnerId = user.Id,
-            Domain = ResolveDomain(user),
+            Domain = targetDomain,
             RootGeneration = req.RootGeneration,
             ZibeiPoem = req.ZibeiPoem ?? new List<string>()
         };
@@ -75,11 +90,10 @@ public class FamilyController : ControllerBase
     {
         var user = await GetCurrentUserAsync();
         if (user == null) return Unauthorized();
-        if (!user.IsAdmin) return Forbid();
 
         var tree = await _treeRepo.GetByIdAsync(treeId);
         if (tree == null) return NotFound();
-        if (!IsSameDomain(user, tree.Domain)) return Forbid();
+        if (!FamilyAccessPolicy.CanViewTreeDomain(_configuration, user, tree.Domain)) return Forbid();
 
         var persons = await _personRepo.GetByTreeIdAsync(treeId);
         var rels = await _relRepo.GetByTreeIdAsync(treeId);
@@ -98,11 +112,10 @@ public class FamilyController : ControllerBase
     {
         var user = await GetCurrentUserAsync();
         if (user == null) return Unauthorized();
-        if (!user.IsAdmin) return Forbid();
 
         var tree = await _treeRepo.GetByIdAsync(treeId);
         if (tree == null) return NotFound();
-        if (!IsSameDomain(user, tree.Domain)) return Forbid();
+        if (!FamilyAccessPolicy.CanEditTreeDomain(_configuration, user, tree.Domain)) return Forbid();
 
         if (req.Name != null) tree.Name = req.Name;
         if (req.Surname != null) tree.Surname = req.Surname;
@@ -119,11 +132,10 @@ public class FamilyController : ControllerBase
     {
         var user = await GetCurrentUserAsync();
         if (user == null) return Unauthorized();
-        if (!user.IsAdmin) return Forbid();
 
         var tree = await _treeRepo.GetByIdAsync(treeId);
         if (tree == null) return NotFound();
-        if (!IsSameDomain(user, tree.Domain)) return Forbid();
+        if (!FamilyAccessPolicy.CanEditTreeDomain(_configuration, user, tree.Domain)) return Forbid();
 
         await _personRepo.DeleteByTreeIdAsync(treeId);
         await _relRepo.DeleteByTreeIdAsync(treeId);
@@ -137,11 +149,10 @@ public class FamilyController : ControllerBase
     {
         var user = await GetCurrentUserAsync();
         if (user == null) return Unauthorized();
-        if (!user.IsAdmin) return Forbid();
 
         var tree = await _treeRepo.GetByIdAsync(treeId);
         if (tree == null) return NotFound();
-        if (!IsSameDomain(user, tree.Domain)) return Forbid();
+        if (!FamilyAccessPolicy.CanEditTreeDomain(_configuration, user, tree.Domain)) return Forbid();
 
         var person = new FamilyPerson
         {
@@ -175,13 +186,12 @@ public class FamilyController : ControllerBase
     {
         var user = await GetCurrentUserAsync();
         if (user == null) return Unauthorized();
-        if (!user.IsAdmin) return Forbid();
 
         var person = await _personRepo.GetByIdAsync(personId);
         if (person == null || person.TreeId != treeId) return NotFound();
 
         var tree = await _treeRepo.GetByIdAsync(treeId);
-        if (tree == null || !IsSameDomain(user, tree.Domain)) return Forbid();
+        if (tree == null || !FamilyAccessPolicy.CanEditTreeDomain(_configuration, user, tree.Domain)) return Forbid();
 
         if (req.Name != null) person.Name = req.Name;
         if (req.Gender != null) person.Gender = req.Gender;
@@ -209,13 +219,12 @@ public class FamilyController : ControllerBase
     {
         var user = await GetCurrentUserAsync();
         if (user == null) return Unauthorized();
-        if (!user.IsAdmin) return Forbid();
 
         var person = await _personRepo.GetByIdAsync(personId);
         if (person == null || person.TreeId != treeId) return NotFound();
 
         var tree = await _treeRepo.GetByIdAsync(treeId);
-        if (tree == null || !IsSameDomain(user, tree.Domain)) return Forbid();
+        if (tree == null || !FamilyAccessPolicy.CanEditTreeDomain(_configuration, user, tree.Domain)) return Forbid();
 
         await _relRepo.DeleteByPersonIdAsync(personId);
         await _personRepo.DeleteAsync(personId);
@@ -228,11 +237,10 @@ public class FamilyController : ControllerBase
     {
         var user = await GetCurrentUserAsync();
         if (user == null) return Unauthorized();
-        if (!user.IsAdmin) return Forbid();
 
         var tree = await _treeRepo.GetByIdAsync(treeId);
         if (tree == null) return NotFound();
-        if (!IsSameDomain(user, tree.Domain)) return Forbid();
+        if (!FamilyAccessPolicy.CanEditTreeDomain(_configuration, user, tree.Domain)) return Forbid();
 
         var rel = new FamilyRelationship
         {
@@ -261,10 +269,10 @@ public class FamilyController : ControllerBase
     {
         var user = await GetCurrentUserAsync();
         if (user == null) return Unauthorized();
-        if (!user.IsAdmin) return Forbid();
 
         var rel = await _relRepo.GetByIdAsync(relId);
         if (rel == null || rel.TreeId != treeId) return NotFound();
+        if (!FamilyAccessPolicy.CanEditTreeDomain(_configuration, user, rel.Domain)) return Forbid();
 
         if (req.SortOrder.HasValue) rel.SortOrder = req.SortOrder.Value;
         if (req.Notes != null) rel.Notes = req.Notes;
@@ -279,10 +287,10 @@ public class FamilyController : ControllerBase
     {
         var user = await GetCurrentUserAsync();
         if (user == null) return Unauthorized();
-        if (!user.IsAdmin) return Forbid();
 
         var rel = await _relRepo.GetByIdAsync(relId);
         if (rel == null || rel.TreeId != treeId) return NotFound();
+        if (!FamilyAccessPolicy.CanEditTreeDomain(_configuration, user, rel.Domain)) return Forbid();
 
         await _relRepo.DeleteAsync(relId);
         return Ok(new { message = "Relationship deleted" });
@@ -294,11 +302,10 @@ public class FamilyController : ControllerBase
     {
         var user = await GetCurrentUserAsync();
         if (user == null) return Unauthorized();
-        if (!user.IsAdmin) return Forbid();
 
         var tree = await _treeRepo.GetByIdAsync(treeId);
         if (tree == null) return NotFound();
-        if (!IsSameDomain(user, tree.Domain)) return Forbid();
+        if (!FamilyAccessPolicy.CanEditTreeDomain(_configuration, user, tree.Domain)) return Forbid();
 
         var persons = new List<FamilyPerson>();
         var rels = new List<FamilyRelationship>();
@@ -317,11 +324,10 @@ public class FamilyController : ControllerBase
     {
         var user = await GetCurrentUserAsync();
         if (user == null) return Unauthorized();
-        if (!user.IsAdmin) return Forbid();
 
         var tree = await _treeRepo.GetByIdAsync(treeId);
         if (tree == null) return NotFound();
-        if (!IsSameDomain(user, tree.Domain)) return Forbid();
+        if (!FamilyAccessPolicy.CanViewTreeDomain(_configuration, user, tree.Domain)) return Forbid();
 
         var persons = await _personRepo.GetByTreeIdAsync(treeId);
         var rels = await _relRepo.GetByTreeIdAsync(treeId);
@@ -342,15 +348,6 @@ public class FamilyController : ControllerBase
     {
         var id = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
         return await _userRepo.GetByIdAsync(id);
-    }
-
-    private static string ResolveDomain(User user)
-        => string.IsNullOrWhiteSpace(user.Domain) ? DomainRules.GetDomain(user.Email) : user.Domain;
-
-    private bool IsSameDomain(User user, string domain)
-    {
-        if (DomainRules.IsSuperDomain(ResolveDomain(user))) return true;
-        return string.Equals(ResolveDomain(user), domain, StringComparison.OrdinalIgnoreCase);
     }
 
     private static FamilyTreeResponse ToTreeResponse(FamilyTree t) => new()
@@ -395,8 +392,11 @@ public class FamilyController : ControllerBase
             TreeId = tree.Id,
             Domain = tree.Domain,
             Name = node.Name,
-            Gender = "male",
-            Generation = generation
+            Gender = NormalizeGender(node.Gender, "male"),
+            Generation = generation,
+            BirthDate = node.BirthYear.HasValue ? new FamilyDate { Year = node.BirthYear.Value } : null,
+            DeathDate = node.DeathYear.HasValue ? new FamilyDate { Year = node.DeathYear.Value } : null,
+            IsAlive = node.DeathYear.HasValue ? false : null
         };
         persons.Add(person);
 
@@ -424,7 +424,7 @@ public class FamilyController : ControllerBase
                 TreeId = tree.Id,
                 Domain = tree.Domain,
                 Name = node.Spouse,
-                Gender = "female",
+                Gender = NormalizeGender(node.SpouseGender, "female"),
                 Generation = generation
             };
             persons.Add(spouse);
@@ -445,5 +445,17 @@ public class FamilyController : ControllerBase
             for (int i = 0; i < node.Children.Count; i++)
                 WalkImport(node.Children[i], person, tree, persons, rels, generation + 1, i);
         }
+    }
+
+    private static string NormalizeGender(string? value, string fallback)
+    {
+        var normalized = (value ?? string.Empty).Trim().ToLowerInvariant();
+        return normalized switch
+        {
+            "男" or "male" or "m" => "male",
+            "女" or "female" or "f" => "female",
+            "未知" or "unknown" => "unknown",
+            _ => fallback
+        };
     }
 }

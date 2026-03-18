@@ -25,6 +25,7 @@ public class ContactController : ControllerBase
     private readonly IAvatarService _avatarService;
     private readonly IHubContext<ChatHub> _hubContext;
     private readonly INotificationRepository _notificationRepository;
+    private readonly IConfiguration _configuration;
     private readonly ILogger<ContactController> _logger;
 
     public ContactController(
@@ -35,6 +36,7 @@ public class ContactController : ControllerBase
         IAvatarService avatarService,
         IHubContext<ChatHub> hubContext,
         INotificationRepository notificationRepository,
+        IConfiguration configuration,
         ILogger<ContactController> logger)
     {
         _userRepository = userRepository;
@@ -44,6 +46,7 @@ public class ContactController : ControllerBase
         _avatarService = avatarService;
         _hubContext = hubContext;
         _notificationRepository = notificationRepository;
+        _configuration = configuration;
         _logger = logger;
     }
 
@@ -72,13 +75,15 @@ public class ContactController : ControllerBase
         return DomainRules.CanAccess(ResolveDomain(viewer), ResolveDomain(target));
     }
 
-    private static UserDto ToUserDto(User user, bool includeDomain) => new()
+    private UserDto ToUserDto(User user, bool includeDomain) => new()
     {
         Id = user.Id,
         Domain = includeDomain
             ? (string.IsNullOrWhiteSpace(user.Domain) ? DomainRules.GetDomain(user.Email) : user.Domain)
             : null,
         IsAdmin = user.IsAdmin,
+        CanViewFamilyTree = FamilyAccessPolicy.CanViewFamilyTree(_configuration, user),
+        CanEditFamilyTree = FamilyAccessPolicy.CanEditAnyFamilyTree(_configuration, user),
         IsDisabled = user.IsDisabled,
         Handle = user.Handle,
         DisplayName = user.DisplayName,

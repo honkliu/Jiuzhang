@@ -10,7 +10,6 @@ import {
   CircularProgress,
   Checkbox,
   FormControlLabel,
-  Divider,
 } from '@mui/material';
 import { authService } from '@/services/auth.service';
 import { useDispatch } from 'react-redux';
@@ -44,27 +43,6 @@ export const Login: React.FC = () => {
       }
 
       // Redirect to main app
-      navigate('/chats');
-    } catch (err: any) {
-      setError(err.message || t('auth.login.failed'));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const quickLoginPassword = import.meta.env.VITE_QUICK_LOGIN_PASSWORD || '';
-
-  const quickLogin = async (quickEmail: string) => {
-    setError('');
-    setLoading(true);
-    try {
-      if (!quickLoginPassword) {
-        setError('Quick login password is not configured.');
-        return;
-      }
-      const response = await authService.login({ email: quickEmail, password: quickLoginPassword });
-      authService.saveAuth(response.accessToken, response.user);
-      dispatch(setAuth(response));
       navigate('/chats');
     } catch (err: any) {
       setError(err.message || t('auth.login.failed'));
@@ -170,39 +148,6 @@ export const Login: React.FC = () => {
             >
               {loading ? <CircularProgress size={24} /> : t('auth.login.signIn')}
             </Button>
-
-            <Divider sx={{ my: 2 }}>
-              <Typography variant="body2" color="text.secondary">
-                {t('auth.login.or')}
-              </Typography>
-            </Divider>
-
-            <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-              <Button
-                fullWidth
-                variant="outlined"
-                onClick={() => quickLogin('alice@example.com')}
-                disabled={loading}
-              >
-                Alice
-              </Button>
-              <Button
-                fullWidth
-                variant="outlined"
-                onClick={() => quickLogin('bob@example.com')}
-                disabled={loading}
-              >
-                Bob
-              </Button>
-              <Button
-                fullWidth
-                variant="outlined"
-                onClick={() => quickLogin('carol@example.com')}
-                disabled={loading}
-              >
-                Carol
-              </Button>
-            </div>
 
             <div style={{ textAlign: 'center' }}>
               <Typography variant="body2" color="text.secondary">

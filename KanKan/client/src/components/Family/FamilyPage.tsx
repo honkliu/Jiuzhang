@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   Box, Typography, CircularProgress, Alert, Select, MenuItem,
-  FormControl, InputLabel, Divider, Drawer, Button, Menu,
+  FormControl, Divider, Drawer, Button, Menu, Dialog,
+  DialogTitle, DialogContent, DialogActions,
   Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   TextField, Chip, Autocomplete, useMediaQuery, useTheme,
 } from '@mui/material';
@@ -16,13 +17,117 @@ import { FamilyNodeContextMenu } from './FamilyNodeContextMenu';
 import {
   familyService, buildTree,
   type FamilyTreeDto, type FamilyPersonDto, type FamilyRelationshipDto, type FamilyNode,
+  type NestedFamilyPersonImport,
 } from '@/services/family.service';
+import { useSelector } from 'react-redux';
+import type { RootState } from '@/store';
 
 const BoxAny = Box as any;
 
 type ViewMode = 'tree' | 'list' | 'generation';
 
 const MAX_VISIBLE_DEPTH = 3;
+
+const TEXT_IMPORT_EXAMPLE = [
+  '张三，男，李某，女，1980，',
+  '  张大，男，，，2005，',
+  '  张二，女，，，2008，',
+].join('\n');
+
+function normalizeImportGender(value?: string): 'male' | 'female' | 'unknown' | undefined {
+  const normalized = (value ?? '').trim().toLowerCase();
+  if (!normalized) return undefined;
+  if (normalized === '男' || normalized === 'male' || normalized === 'm') return 'male';
+  if (normalized === '女' || normalized === 'female' || normalized === 'f') return 'female';
+  if (normalized === '未知' || normalized === 'unknown') return 'unknown';
+  throw new Error(`无法识别性别：${value}`);
+}
+
+function parseOptionalYear(value: string | undefined, lineNumber: number, label: string): number | undefined {
+  const normalized = (value ?? '').trim();
+  if (!normalized) return undefined;
+  const year = Number.parseInt(normalized, 10);
+  if (Number.isNaN(year)) {
+    throw new Error(`第${lineNumber}行的${label}不是有效年份：${normalized}`);
+  }
+  return year;
+}
+
+function parseIndentedFamilyText(input: string): NestedFamilyPersonImport {
+  const lines = input
+    .split(/\r?\n/)
+    .map((raw, index) => ({ raw: raw.replace(/\t/g, '  '), lineNumber: index + 1 }))
+    .filter(line => line.raw.trim().length > 0);
+
+  if (lines.length === 0) {
+    throw new Error('请输入家谱文本。');
+  }
+
+  const roots: NestedFamilyPersonImport[] = [];
+  const stack: NestedFamilyPersonImport[] = [];
+
+  for (const line of lines) {
+    const indent = line.raw.match(/^ */)?.[0].length ?? 0;
+    if (indent % 2 !== 0) {
+      throw new Error(`第${line.lineNumber}行缩进不是两个空格的倍数。`);
+    }
+
+    const level = indent / 2;
+    const fields = line.raw.trim().split(/[，,]/).map(part => part.trim());
+    const [name, genderText, spouse, spouseGenderText, birthYearText, deathYearText] = fields;
+
+    if (!name) {
+      throw new Error(`第${line.lineNumber}行缺少姓名。`);
+    }
+
+    const person: NestedFamilyPersonImport = {
+      name,
+      gender: normalizeImportGender(genderText),
+      spouse: spouse || undefined,
+      spouseGender: spouse ? normalizeImportGender(spouseGenderText) : undefined,
+      birthYear: parseOptionalYear(birthYearText, line.lineNumber, '出生年'),
+      deathYear: parseOptionalYear(deathYearText, line.lineNumber, '去世年'),
+      children: [],
+    };
+
+    while (stack.length > level) {
+      stack.pop();
+    }
+
+    if (level > stack.length) {
+      throw new Error(`第${line.lineNumber}行缩进层级跳得太深。`);
+    }
+
+    if (level === 0) {
+      roots.push(person);
+    } else {
+      const parent = stack[level - 1];
+      if (!parent) {
+        throw new Error(`第${line.lineNumber}行找不到父节点。`);
+      }
+      parent.children = parent.children ?? [];
+      parent.children.push(person);
+    }
+
+    stack[level] = person;
+  }
+
+  if (roots.length !== 1) {
+    throw new Error('当前导入只支持一个根人物，请只保留一棵树的顶层人物。');
+  }
+
+  return roots[0];
+}
+
+function parseZibeiPoem(input: string): string[] | undefined {
+  const normalized = input.trim();
+  if (!normalized) return undefined;
+  if (/[\s,，]/.test(normalized)) {
+    const items = normalized.split(/[\s,，]+/).map(item => item.trim()).filter(Boolean);
+    return items.length > 0 ? items : undefined;
+  }
+  return Array.from(normalized).filter(Boolean);
+}
 
 function flattenTree(node: FamilyNode, result: FamilyNode[] = []): FamilyNode[] {
   result.push(node);
@@ -51,6 +156,7 @@ function getPersonTreeDepth(personId: string, allNodes: FamilyNode[]): number {
 }
 
 export const FamilyPage: React.FC = () => {
+  const currentUser = useSelector((state: RootState) => state.auth.user);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [trees, setTrees] = useState<FamilyTreeDto[]>([]);
@@ -68,10 +174,40 @@ export const FamilyPage: React.FC = () => {
   const [visibleStartDepth, setVisibleStartDepth] = useState(0);
   const [focusPersonId, setFocusPersonId] = useState<string | null>(null);
   const [viewMenuEl, setViewMenuEl] = useState<null | HTMLElement>(null);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [createTreeName, setCreateTreeName] = useState('');
+  const [createTreeSurname, setCreateTreeSurname] = useState('');
+  const [createTreeDomain, setCreateTreeDomain] = useState(currentUser?.domain ?? '');
+  const [createTreeRootGeneration, setCreateTreeRootGeneration] = useState('1');
+  const [createTreePoem, setCreateTreePoem] = useState('');
+  const [createTreeText, setCreateTreeText] = useState(TEXT_IMPORT_EXAMPLE);
+  const [createTreeError, setCreateTreeError] = useState<string | null>(null);
+  const [creatingTree, setCreatingTree] = useState(false);
   const canvasRef = useRef<FamilyHistoHandle>(null);
 
   const selectedTree = trees.find(t => t.id === selectedTreeId) ?? null;
   const treeMaxDepth = useMemo(() => rootNode ? getTreeDepth(rootNode) : 0, [rootNode]);
+
+  const loadTrees = useCallback(async (preferredTreeId?: string) => {
+    const list = await familyService.listTrees();
+    setTrees(list);
+    if (list.length === 0) {
+      setSelectedTreeId(null);
+      return;
+    }
+
+    if (preferredTreeId && list.some(tree => tree.id === preferredTreeId)) {
+      setSelectedTreeId(preferredTreeId);
+      return;
+    }
+
+    setSelectedTreeId(current => {
+      if (current && list.some(tree => tree.id === current)) {
+        return current;
+      }
+      return list[0].id;
+    });
+  }, []);
 
   // Load tree list on mount
   useEffect(() => {
@@ -82,6 +218,12 @@ export const FamilyPage: React.FC = () => {
       })
       .catch(() => setError('Failed to load trees'));
   }, []);
+
+  useEffect(() => {
+    if (currentUser?.domain && !createDialogOpen) {
+      setCreateTreeDomain(currentUser.domain);
+    }
+  }, [currentUser?.domain, createDialogOpen]);
 
   // Load full tree when selection changes
   useEffect(() => {
@@ -163,6 +305,71 @@ export const FamilyPage: React.FC = () => {
     if (value) navigateToPerson(value.id);
   }, [navigateToPerson]);
 
+  const handleOpenCreateDialog = useCallback(() => {
+    setCreateTreeError(null);
+    setCreateDialogOpen(true);
+  }, []);
+
+  const handleCloseCreateDialog = useCallback(() => {
+    if (creatingTree) return;
+    setCreateDialogOpen(false);
+    setCreateTreeError(null);
+  }, [creatingTree]);
+
+  const handleCreateTree = useCallback(async () => {
+    const treeName = createTreeName.trim();
+    if (!treeName) {
+      setCreateTreeError('请输入家谱名称。');
+      return;
+    }
+
+    const rootGeneration = Number.parseInt(createTreeRootGeneration, 10);
+    if (Number.isNaN(rootGeneration)) {
+      setCreateTreeError('始祖世代必须是数字。');
+      return;
+    }
+
+    let parsedRoot: NestedFamilyPersonImport | null = null;
+    if (createTreeText.trim()) {
+      try {
+        parsedRoot = parseIndentedFamilyText(createTreeText);
+      } catch (parseError) {
+        setCreateTreeError(parseError instanceof Error ? parseError.message : '家谱文本格式不正确。');
+        return;
+      }
+    }
+
+    setCreatingTree(true);
+    setCreateTreeError(null);
+
+    try {
+      const tree = await familyService.createTree({
+        name: treeName,
+        surname: createTreeSurname.trim() || undefined,
+        domain: createTreeDomain.trim() || undefined,
+        rootGeneration,
+        zibeiPoem: parseZibeiPoem(createTreePoem),
+      });
+
+      if (parsedRoot) {
+        await familyService.importTree(tree.id, parsedRoot);
+      }
+
+      await loadTrees(tree.id);
+      setCreateDialogOpen(false);
+      setCreateTreeName('');
+      setCreateTreeSurname('');
+      setCreateTreePoem('');
+      setCreateTreeRootGeneration('1');
+      setCreateTreeText(TEXT_IMPORT_EXAMPLE);
+      setCreateTreeError(null);
+    } catch (createError: any) {
+      setCreateTreeError(createError?.message || '创建家谱失败。');
+    } finally {
+      setCreatingTree(false);
+    }
+  }, [createTreeDomain, createTreeName, createTreePoem, createTreeRootGeneration, createTreeSurname, createTreeText, loadTrees]);
+
   const filteredPersons = listSearch
     ? persons.filter(p => p.name.includes(listSearch) || (p.aliases ?? []).some(a => a.includes(listSearch)))
     : persons;
@@ -179,18 +386,20 @@ export const FamilyPage: React.FC = () => {
   const viewMenuOpen = Boolean(viewMenuEl);
   const viewLabel = viewMode === 'tree' ? '树形' : viewMode === 'list' ? '列表' : '世代';
 
+  if (!currentUser?.canViewFamilyTree) {
+    return (
+      <BoxAny sx={{ display: 'flex', flexDirection: 'column', height: '100vh', pt: '61px' }}>
+        <AppHeader />
+        <BoxAny sx={{ flex: 1, p: 3 }}>
+          <Alert severity="warning">当前账号未开通家谱访问权限。</Alert>
+        </BoxAny>
+      </BoxAny>
+    );
+  }
+
   return (
     <BoxAny sx={{ display: 'flex', flexDirection: 'column', height: '100vh', pt: '61px' }}>
       <AppHeader />
-
-      {/* Toolbar */}
-      <BoxAny sx={{
-        display: 'flex', alignItems: 'center', gap: 1.5, px: 2, py: 1,
-        borderBottom: '1px solid rgba(15,23,42,0.08)', flexWrap: 'wrap',
-        background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(8px)',
-      }}>
-
-      </BoxAny>
 
       {/* Main content */}
       <BoxAny sx={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
@@ -419,6 +628,21 @@ export const FamilyPage: React.FC = () => {
             WebkitOverflowScrolling: 'touch',
           } : {}),
         }}>
+          {currentUser?.canEditFamilyTree && (
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={handleOpenCreateDialog}
+              sx={{
+                minHeight: 28,
+                ...(isMobile ? { flexShrink: 0 } : {}),
+                px: 1,
+                fontSize: 11,
+              }}
+            >
+              新建家谱
+            </Button>
+          )}
           {allNodes.length > 0 && (
             <Autocomplete
               size="small"
@@ -515,6 +739,75 @@ export const FamilyPage: React.FC = () => {
           }}
         />
       )}
+
+      <Dialog open={createDialogOpen} onClose={handleCloseCreateDialog} fullWidth maxWidth="md">
+        <DialogTitle>新建家谱</DialogTitle>
+        <DialogContent dividers>
+          <BoxAny sx={{ display: 'grid', gap: 1.25, pt: 0.5 }}>
+            {createTreeError && <Alert severity="error">{createTreeError}</Alert>}
+            <TextField
+              label="家谱名称"
+              value={createTreeName}
+              onChange={e => setCreateTreeName(e.target.value)}
+              size="small"
+              fullWidth
+            />
+            <TextField
+              label="姓氏"
+              value={createTreeSurname}
+              onChange={e => setCreateTreeSurname(e.target.value)}
+              size="small"
+              fullWidth
+            />
+            <TextField
+              label="目标域名"
+              value={createTreeDomain}
+              onChange={e => setCreateTreeDomain(e.target.value)}
+              size="small"
+              fullWidth
+              helperText="例如 four.com 或 five.com。服务器会校验你是否有权管理这个域。"
+            />
+            <TextField
+              label="始祖世代"
+              value={createTreeRootGeneration}
+              onChange={e => setCreateTreeRootGeneration(e.target.value)}
+              size="small"
+              fullWidth
+            />
+            <TextField
+              label="字辈"
+              value={createTreePoem}
+              onChange={e => setCreateTreePoem(e.target.value)}
+              size="small"
+              fullWidth
+              helperText="可留空。可输入连续汉字，或用空格/逗号分隔。"
+            />
+            <TextField
+              label="家谱文本"
+              value={createTreeText}
+              onChange={e => setCreateTreeText(e.target.value)}
+              multiline
+              minRows={12}
+              fullWidth
+              helperText="每行格式：姓名，性别，配偶姓名，配偶性别，出生年，去世年。可使用中文逗号。"
+            />
+            <Paper variant="outlined" sx={{ p: 1.25, bgcolor: 'rgba(15,23,42,0.02)' }}>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                示例
+              </Typography>
+              <Typography component="pre" sx={{ m: 0, fontFamily: 'monospace', fontSize: 12, whiteSpace: 'pre-wrap' }}>
+                {TEXT_IMPORT_EXAMPLE}
+              </Typography>
+            </Paper>
+          </BoxAny>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseCreateDialog} disabled={creatingTree}>取消</Button>
+          <Button onClick={handleCreateTree} variant="contained" disabled={creatingTree}>
+            {creatingTree ? '创建中…' : '创建'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </BoxAny>
   );
 };

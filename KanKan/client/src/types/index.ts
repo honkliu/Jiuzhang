@@ -3,6 +3,8 @@ export interface User {
   id: string;
   domain?: string;
   isAdmin?: boolean;
+  canViewFamilyTree?: boolean;
+  canEditFamilyTree?: boolean;
   isDisabled?: boolean;
   handle: string;
   displayName: string;

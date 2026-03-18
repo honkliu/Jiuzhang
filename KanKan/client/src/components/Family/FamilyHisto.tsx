@@ -262,7 +262,8 @@ function boxDims(node: FamilyNode): { w: number; h: number } {
   const hasSpouse = node.spouses.length > 0;
   const nameLen = node.name.length;
   const spouseLen = hasSpouse ? Math.max(...node.spouses.map(s => s.name.length)) : 0;
-  const h = Math.max(nameLen, spouseLen) * 18 + 24;
+  const effectiveNameRows = Math.max(nameLen, spouseLen, 3);
+  const h = effectiveNameRows * 18 + 24;
   const w = hasSpouse ? 42 : 26;
   return { w, h };
 }

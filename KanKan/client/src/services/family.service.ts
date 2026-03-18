@@ -92,6 +92,24 @@ export interface FamilyDocumentDto {
   updatedAt: string;
 }
 
+export interface CreateFamilyTreeRequest {
+  name: string;
+  surname?: string;
+  domain?: string;
+  rootGeneration?: number;
+  zibeiPoem?: string[];
+}
+
+export interface NestedFamilyPersonImport {
+  name: string;
+  gender?: 'male' | 'female' | 'unknown';
+  spouse?: string;
+  spouseGender?: 'male' | 'female' | 'unknown';
+  birthYear?: number;
+  deathYear?: number;
+  children?: NestedFamilyPersonImport[];
+}
+
 export interface FamilyNode extends FamilyPersonDto {
   children: FamilyNode[];
   spouses: FamilyNode[];
@@ -157,7 +175,7 @@ class FamilyService {
     return res.data;
   }
 
-  async createTree(data: Partial<FamilyTreeDto>): Promise<FamilyTreeDto> {
+  async createTree(data: CreateFamilyTreeRequest): Promise<FamilyTreeDto> {
     const res = await apiClient.post<FamilyTreeDto>('/family', data);
     return res.data;
   }
@@ -206,6 +224,11 @@ class FamilyService {
 
   async exportTree(treeId: string): Promise<FullTreeResponse> {
     const res = await apiClient.get<FullTreeResponse>(`/family/${treeId}/export`);
+    return res.data;
+  }
+
+  async importTree(treeId: string, root: NestedFamilyPersonImport): Promise<{ personsAdded: number; relationshipsAdded: number }> {
+    const res = await apiClient.post<{ personsAdded: number; relationshipsAdded: number }>(`/family/${treeId}/import`, root);
     return res.data;
   }
 }

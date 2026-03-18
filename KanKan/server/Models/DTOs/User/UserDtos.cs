@@ -5,6 +5,8 @@ public class UserDto
     public string Id { get; set; } = string.Empty;
     public string? Domain { get; set; }
     public bool IsAdmin { get; set; }
+    public bool CanViewFamilyTree { get; set; }
+    public bool CanEditFamilyTree { get; set; }
     public bool IsDisabled { get; set; }
     public string Handle { get; set; } = string.Empty;
     public string DisplayName { get; set; } = string.Empty;

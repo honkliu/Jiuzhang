@@ -17,9 +17,6 @@ import {
 import {
   Logout as LogoutIcon,
   Notifications as NotificationsIcon,
-  Menu as MenuIcon,
-  Close as CloseIcon,
-  MoreVert as MoreVertIcon,
   ExpandMore as ExpandMoreIcon,
 } from '@mui/icons-material';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -45,7 +42,7 @@ const navItems = [
   { label: 'Pa', path: '/pa', adminOnly: false },
   { label: 'Profile', path: '/profile', adminOnly: false },
   { label: '家谱', path: '/family', adminOnly: true },
-  { label: '验证管理', path: '/admin', adminOnly: true },
+  { label: '验证码', path: '/admin', adminOnly: true },
 ];
 
 interface AppHeaderProps {
@@ -53,9 +50,8 @@ interface AppHeaderProps {
   sidebarOpen?: boolean;
 }
 
-export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleSidebar, sidebarOpen }) => {
+export const AppHeader: React.FC<AppHeaderProps> = () => {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isCompactNav = useMediaQuery(theme.breakpoints.down('md'));
   const isHoverCapable = useMediaQuery('(hover: hover) and (pointer: fine)');
   const navigate = useNavigate();
@@ -70,9 +66,6 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleSidebar, sidebarOp
   const [notificationsAnchorEl, setNotificationsAnchorEl] = React.useState<null | HTMLElement>(null);
   const [navAnchorEl, setNavAnchorEl] = React.useState<null | HTMLElement>(null);
   const [avatarAnchorEl, setAvatarAnchorEl] = React.useState<null | HTMLElement>(null);
-  const avatarLongPressTimerRef = React.useRef<number | null>(null);
-  const avatarLongPressTriggeredRef = React.useRef(false);
-
   const notificationsOpen = Boolean(notificationsAnchorEl);
   const navOpen = Boolean(navAnchorEl);
   const avatarPickerOpen = Boolean(avatarAnchorEl);
@@ -112,36 +105,6 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleSidebar, sidebarOp
 
   const handleOpenAvatarPicker = (e: React.MouseEvent<HTMLElement>) => {
     setAvatarAnchorEl(e.currentTarget);
-  };
-
-  const handleAvatarTouchStart = (event: React.TouchEvent<HTMLElement>) => {
-    if (!isMobile) return;
-    avatarLongPressTriggeredRef.current = false;
-    avatarLongPressTimerRef.current = window.setTimeout(() => {
-      avatarLongPressTriggeredRef.current = true;
-      avatarLongPressTimerRef.current = null;
-    }, 450);
-  };
-
-  const handleAvatarTouchEnd = (event: React.TouchEvent<HTMLElement>) => {
-    if (avatarLongPressTimerRef.current) {
-      window.clearTimeout(avatarLongPressTimerRef.current);
-      avatarLongPressTimerRef.current = null;
-    }
-    if (avatarLongPressTriggeredRef.current) {
-      event.preventDefault();
-      event.stopPropagation();
-    }
-  };
-
-  const handleAvatarClick = (event: React.MouseEvent<HTMLElement>) => {
-    if (avatarLongPressTriggeredRef.current) {
-      avatarLongPressTriggeredRef.current = false;
-      event.preventDefault();
-      event.stopPropagation();
-      return;
-    }
-    handleOpenAvatarPicker(event);
   };
 
   const handleCloseAvatarPicker = () => {
@@ -201,8 +164,6 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleSidebar, sidebarOp
     navigate('/login');
   };
 
-  const showChatToggle = location.pathname.startsWith('/chats') && Boolean(onToggleSidebar);
-
   return (
     <AppBar position="fixed" color="default" elevation={0} sx={{ pt: 'env(safe-area-inset-top)' }}>
       <Toolbar sx={{ gap: 1.25, minHeight: { xs: 53, sm: 61 }, py: 0.25 }}>
@@ -220,7 +181,10 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleSidebar, sidebarOp
             </IconButton>
           )}
           <BoxAny sx={{ display: { xs: 'none', md: 'flex' }, gap: 1, overflow: 'hidden' }}>
-            {navItems.filter(item => !item.adminOnly || user?.isAdmin).map((item) => (
+            {navItems.filter(item => {
+              if (item.path === '/family') return Boolean(user?.canViewFamilyTree);
+              return !item.adminOnly || user?.isAdmin;
+            }).map((item) => (
               <Button
                 key={item.path}
                 color={location.pathname.startsWith(item.path) ? 'primary' : 'inherit'}
@@ -319,7 +283,10 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleSidebar, sidebarOp
             },
           }}
         >
-          {navItems.filter(item => !item.adminOnly || user?.isAdmin).map((item) => (
+          {navItems.filter(item => {
+            if (item.path === '/family') return Boolean(user?.canViewFamilyTree);
+            return !item.adminOnly || user?.isAdmin;
+          }).map((item) => (
             <MenuItem
               key={item.path}
               selected={location.pathname.startsWith(item.path)}
