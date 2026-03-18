@@ -243,7 +243,7 @@ public class AdminController : ControllerBase
             return true;
 
         var targetDomain = ResolveDomain(target);
-        return string.Equals(targetDomain, scope.Domain, StringComparison.OrdinalIgnoreCase);
+        return DomainRules.CanAccess(scope.Domain, targetDomain);
     }
 
     private async Task<IActionResult> SetUserDisabledState(string userId, bool isDisabled)

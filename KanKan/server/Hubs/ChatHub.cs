@@ -276,7 +276,7 @@ public class ChatHub : Hub
         // Save to database
         await _messageRepository.CreateAsync(newMessage);
 
-        // Create per-user notifications for recipients
+        // Create per-user notifications only for offline recipients
         var recipientIds = chat.Participants
             .Select(p => p.UserId)
             .Where(id => !string.IsNullOrWhiteSpace(id) && id != userId)
@@ -285,6 +285,9 @@ public class ChatHub : Hub
 
         foreach (var recipientId in recipientIds)
         {
+            if (IsUserOnline(recipientId))
+                continue;
+
             var notif = new Notification
             {
                 Id = $"notif_{recipientId}_{newMessage.Id}",

@@ -1,9 +1,14 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using System.Security.Claims;
 using KanKan.API.Domain;
+using KanKan.API.Hubs;
 using KanKan.API.Models.DTOs.Auth;
+using KanKan.API.Models.DTOs.Notification;
 using KanKan.API.Models.DTOs.User;
+using KanKan.API.Models.Entities;
+using KanKan.API.Repositories.Interfaces;
 using KanKan.API.Services.Interfaces;
 using KanKan.API.Services;
 using UserEntity = KanKan.API.Models.Entities.User;
@@ -17,17 +22,29 @@ public class AuthController : ControllerBase
     private readonly IAuthService _authService;
     private readonly IEmailService _emailService;
     private readonly IAvatarService _avatarService;
+    private readonly INotificationRepository _notificationRepository;
+    private readonly IUserRepository _userRepository;
+    private readonly IHubContext<ChatHub> _hubContext;
+    private readonly IConfiguration _configuration;
     private readonly ILogger<AuthController> _logger;
 
     public AuthController(
         IAuthService authService,
         IEmailService emailService,
         IAvatarService avatarService,
+        INotificationRepository notificationRepository,
+        IUserRepository userRepository,
+        IHubContext<ChatHub> hubContext,
+        IConfiguration configuration,
         ILogger<AuthController> logger)
     {
         _authService = authService;
         _emailService = emailService;
         _avatarService = avatarService;
+        _notificationRepository = notificationRepository;
+        _userRepository = userRepository;
+        _hubContext = hubContext;
+        _configuration = configuration;
         _logger = logger;
     }
 
@@ -52,6 +69,33 @@ public class AuthController : ControllerBase
             {
                 var code = Random.Shared.Next(1000, 10000).ToString();
                 await _authService.CreateVerificationCodeAsync(emailLower, code, "registration", 5256000);
+
+                // Notify admin users about new registration request
+                var adminEmails = _configuration.GetSection("AdminEmails").Get<string[]>() ?? Array.Empty<string>();
+                foreach (var adminEmail in adminEmails)
+                {
+                    var admin = await _authService.GetUserByEmailAsync(adminEmail);
+                    if (admin == null) continue;
+
+                    var regNotif = new Notification
+                    {
+                        Id = $"notif_reg_{admin.Id}_{emailLower}_{DateTime.UtcNow.Ticks}",
+                        UserId = admin.Id,
+                        Category = "registration",
+                        EntityId = emailLower,
+                        Title = emailLower,
+                        Body = "requested to register",
+                        IsRead = false,
+                        CreatedAt = DateTime.UtcNow,
+                        Ttl = 60 * 60 * 24 * 30
+                    };
+                    await _notificationRepository.CreateAsync(regNotif);
+                    await _hubContext.Clients.User(admin.Id).SendAsync("NotificationCreated", new NotificationDto
+                    {
+                        Id = regNotif.Id, Category = regNotif.Category, Title = regNotif.Title,
+                        Body = regNotif.Body, IsRead = false, CreatedAt = regNotif.CreatedAt
+                    });
+                }
             }
 
             return Ok(new

@@ -1,8 +1,11 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using System.Security.Claims;
 using KanKan.API.Domain;
+using KanKan.API.Hubs;
 using KanKan.API.Models.DTOs.Moment;
+using KanKan.API.Models.DTOs.Notification;
 using KanKan.API.Models.Entities;
 using KanKan.API.Repositories.Interfaces;
 
@@ -16,15 +19,21 @@ public class MomentsController : ControllerBase
 {
     private readonly IMomentRepository _momentRepository;
     private readonly IUserRepository _userRepository;
+    private readonly INotificationRepository _notificationRepository;
+    private readonly IHubContext<ChatHub> _hubContext;
     private readonly ILogger<MomentsController> _logger;
 
     public MomentsController(
         IMomentRepository momentRepository,
         IUserRepository userRepository,
+        INotificationRepository notificationRepository,
+        IHubContext<ChatHub> hubContext,
         ILogger<MomentsController> logger)
     {
         _momentRepository = momentRepository;
         _userRepository = userRepository;
+        _notificationRepository = notificationRepository;
+        _hubContext = hubContext;
         _logger = logger;
     }
 
@@ -209,6 +218,30 @@ public class MomentsController : ControllerBase
             });
 
             var updated = await _momentRepository.UpdateAsync(moment);
+
+            // Notify post author of the comment
+            if (moment.UserId != userId)
+            {
+                var commentNotif = new Notification
+                {
+                    Id = $"notif_comment_{moment.UserId}_{moment.Id}_{Guid.NewGuid():N}",
+                    UserId = moment.UserId,
+                    Category = "pa_comment",
+                    EntityId = moment.Id,
+                    Title = userName,
+                    Body = request.Text.Trim().Length > 50 ? request.Text.Trim()[..50] + "..." : request.Text.Trim(),
+                    IsRead = false,
+                    CreatedAt = DateTime.UtcNow,
+                    Ttl = 60 * 60 * 24 * 30
+                };
+                await _notificationRepository.CreateAsync(commentNotif);
+                await _hubContext.Clients.User(moment.UserId).SendAsync("NotificationCreated", new NotificationDto
+                {
+                    Id = commentNotif.Id, Category = commentNotif.Category, Title = commentNotif.Title,
+                    Body = commentNotif.Body, IsRead = false, CreatedAt = commentNotif.CreatedAt
+                });
+            }
+
             return Ok(MapToMomentDto(updated));
         }
         catch (Exception ex)
@@ -257,6 +290,29 @@ public class MomentsController : ControllerBase
                     UserName = userName,
                     Timestamp = DateTime.UtcNow
                 });
+
+                // Notify post author of the like
+                if (moment.UserId != userId)
+                {
+                    var likeNotif = new Notification
+                    {
+                        Id = $"notif_like_{moment.UserId}_{moment.Id}_{userId}",
+                        UserId = moment.UserId,
+                        Category = "pa_like",
+                        EntityId = moment.Id,
+                        Title = userName,
+                        Body = "liked your post",
+                        IsRead = false,
+                        CreatedAt = DateTime.UtcNow,
+                        Ttl = 60 * 60 * 24 * 30
+                    };
+                    await _notificationRepository.CreateAsync(likeNotif);
+                    await _hubContext.Clients.User(moment.UserId).SendAsync("NotificationCreated", new NotificationDto
+                    {
+                        Id = likeNotif.Id, Category = likeNotif.Category, Title = likeNotif.Title,
+                        Body = likeNotif.Body, IsRead = false, CreatedAt = likeNotif.CreatedAt
+                    });
+                }
             }
 
             var updated = await _momentRepository.UpdateAsync(moment);

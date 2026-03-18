@@ -5,6 +5,7 @@ using System.Security.Claims;
 using KanKan.API.Domain;
 using KanKan.API.Domain.Chat;
 using KanKan.API.Models.DTOs.User;
+using KanKan.API.Models.DTOs.Notification;
 using KanKan.API.Models.Entities;
 using KanKan.API.Hubs;
 using KanKan.API.Repositories.Interfaces;
@@ -23,6 +24,7 @@ public class ContactController : ControllerBase
     private readonly IChatUserRepository _chatUserRepository;
     private readonly IAvatarService _avatarService;
     private readonly IHubContext<ChatHub> _hubContext;
+    private readonly INotificationRepository _notificationRepository;
     private readonly ILogger<ContactController> _logger;
 
     public ContactController(
@@ -32,6 +34,7 @@ public class ContactController : ControllerBase
         IChatUserRepository chatUserRepository,
         IAvatarService avatarService,
         IHubContext<ChatHub> hubContext,
+        INotificationRepository notificationRepository,
         ILogger<ContactController> logger)
     {
         _userRepository = userRepository;
@@ -40,6 +43,7 @@ public class ContactController : ControllerBase
         _chatUserRepository = chatUserRepository;
         _avatarService = avatarService;
         _hubContext = hubContext;
+        _notificationRepository = notificationRepository;
         _logger = logger;
     }
 
@@ -328,6 +332,30 @@ public class ContactController : ControllerBase
             outgoing.AddedAt = DateTime.UtcNow;
             await _contactRepository.UpsertAsync(outgoing);
 
+            // Send notification to the target user
+            var friendNotif = new Notification
+            {
+                Id = $"notif_friend_{request.UserId}_{currentUser.Id}_{DateTime.UtcNow.Ticks}",
+                UserId = request.UserId,
+                Category = "friend_request",
+                EntityId = currentUser.Id,
+                Title = currentUser.DisplayName,
+                Body = "sent you a friend request",
+                IsRead = false,
+                CreatedAt = DateTime.UtcNow,
+                Ttl = 60 * 60 * 24 * 30
+            };
+            await _notificationRepository.CreateAsync(friendNotif);
+            await _hubContext.Clients.User(request.UserId).SendAsync("NotificationCreated", new NotificationDto
+            {
+                Id = friendNotif.Id,
+                Category = friendNotif.Category,
+                Title = friendNotif.Title,
+                Body = friendNotif.Body,
+                IsRead = false,
+                CreatedAt = friendNotif.CreatedAt
+            });
+
             return Ok(new { message = "Friend request sent" });
         }
         catch (Exception ex)
@@ -380,6 +408,26 @@ public class ContactController : ControllerBase
                 reverse.Status = "accepted";
                 reverse.AddedAt = DateTime.UtcNow;
                 await _contactRepository.UpsertAsync(reverse);
+
+                // Notify the original requester that their friend request was accepted
+                var acceptNotif = new Notification
+                {
+                    Id = $"notif_friend_accepted_{fromUserId}_{currentUser.Id}_{DateTime.UtcNow.Ticks}",
+                    UserId = fromUserId,
+                    Category = "friend_accepted",
+                    EntityId = currentUser.Id,
+                    Title = currentUser.DisplayName,
+                    Body = "accepted your friend request",
+                    IsRead = false,
+                    CreatedAt = DateTime.UtcNow,
+                    Ttl = 60 * 60 * 24 * 30
+                };
+                await _notificationRepository.CreateAsync(acceptNotif);
+                await _hubContext.Clients.User(fromUserId).SendAsync("NotificationCreated", new NotificationDto
+                {
+                    Id = acceptNotif.Id, Category = acceptNotif.Category, Title = acceptNotif.Title,
+                    Body = acceptNotif.Body, IsRead = false, CreatedAt = acceptNotif.CreatedAt
+                });
             }
 
             return Ok(new { message = "Friend request accepted" });

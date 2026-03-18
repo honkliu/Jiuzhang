@@ -28,7 +28,8 @@ import { RootState, AppDispatch } from '@/store';
 import { authService } from '@/services/auth.service';
 import { contactService } from '@/services/contact.service';
 import { useLanguage } from '@/i18n/LanguageContext';
-import { fetchNotifications, fetchUnreadNotificationCount } from '@/store/notificationsSlice';
+import { fetchNotifications, fetchUnreadNotificationCount, markAllReadLocal } from '@/store/notificationsSlice';
+import { notificationService } from '@/services/notification.service';
 import { clearChat, upsertParticipantProfile } from '@/store/chatSlice';
 import { updateUser } from '@/store/authSlice';
 import { UserAvatar } from '@/components/Shared/UserAvatar';
@@ -76,10 +77,25 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onToggleSidebar, sidebarOp
   const navOpen = Boolean(navAnchorEl);
   const avatarPickerOpen = Boolean(avatarAnchorEl);
 
+  // Poll unread count on page navigation and periodically
+  React.useEffect(() => {
+    dispatch(fetchUnreadNotificationCount());
+    const interval = setInterval(() => {
+      dispatch(fetchUnreadNotificationCount());
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [location.pathname]);
+
   const handleOpenNotifications = (e: React.MouseEvent<HTMLElement>) => {
     setNotificationsAnchorEl(e.currentTarget);
-    dispatch(fetchUnreadNotificationCount());
     dispatch(fetchNotifications({ limit: 25 }));
+
+    // Mark all as read when opening the panel
+    if (unreadNotifications > 0) {
+      notificationService.markAllRead().then(() => {
+        dispatch(markAllReadLocal());
+      }).catch(() => {});
+    }
   };
 
   const handleCloseNotifications = () => {

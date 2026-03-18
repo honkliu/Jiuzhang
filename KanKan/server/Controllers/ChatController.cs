@@ -808,6 +808,42 @@ public class ChatController : ControllerBase
                 .ToList();
             await _hubContext.Clients.Users(recipientIds).SendAsync("ReceiveMessage", messageDto);
 
+            // Create per-user notifications only for offline recipients
+            foreach (var recipientId in recipientIds.Where(id => id != userId))
+            {
+                if (ChatHub.IsUserOnline(recipientId))
+                    continue;
+
+                var notif = new Notification
+                {
+                    Id = $"notif_{recipientId}_{message.Id}",
+                    UserId = recipientId,
+                    Category = "message",
+                    ChatId = chat.Id,
+                    MessageId = message.Id,
+                    EntityId = message.Id,
+                    Title = message.SenderName,
+                    Body = message.Content.Text ?? "[Media]",
+                    IsRead = false,
+                    CreatedAt = DateTime.UtcNow,
+                    Ttl = 60 * 60 * 24 * 30
+                };
+
+                await _notificationRepository.CreateAsync(notif);
+                await _hubContext.Clients.User(recipientId).SendAsync("NotificationCreated", new NotificationDto
+                {
+                    Id = notif.Id,
+                    Category = notif.Category,
+                    ChatId = notif.ChatId,
+                    MessageId = notif.MessageId,
+                    Title = notif.Title,
+                    Body = notif.Body,
+                    IsRead = notif.IsRead,
+                    CreatedAt = notif.CreatedAt,
+                    ReadAt = notif.ReadAt
+                });
+            }
+
             // Add participants based on @mentions (e.g., @carol)
             await TryAddMentionedParticipantsAsync(chat, message, currentUser);
 
