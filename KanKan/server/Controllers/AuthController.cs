@@ -76,6 +76,7 @@ public class AuthController : ControllerBase
                 {
                     var admin = await _authService.GetUserByEmailAsync(adminEmail);
                     if (admin == null) continue;
+                    if (!CanAdminAccessEmail(admin, emailLower)) continue;
 
                     var regNotif = new Notification
                     {
@@ -336,6 +337,38 @@ public class AuthController : ControllerBase
         return DomainRules.IsValidAccount(email);
     }
 
+    private static bool CanAdminAccessEmail(UserEntity admin, string targetEmail)
+    {
+        var scope = GetAdminScope(admin);
+        if (!scope.IsAllowed)
+            return false;
+
+        if (scope.IsGlobal)
+            return true;
+
+        var targetDomain = DomainRules.GetDomain(targetEmail);
+        return DomainRules.CanAccess(scope.Domain, targetDomain);
+    }
+
+    private static AdminScope GetAdminScope(UserEntity user)
+    {
+        if (!user.IsAdmin)
+            return AdminScope.None;
+
+        var domain = ResolveDomain(user);
+        if (DomainRules.IsSuperDomain(domain))
+            return AdminScope.Global;
+
+        return new AdminScope(true, false, domain);
+    }
+
+    private static string ResolveDomain(UserEntity user)
+    {
+        return string.IsNullOrWhiteSpace(user.Domain)
+            ? DomainRules.GetDomain(user.Email)
+            : user.Domain;
+    }
+
     private string GetIpAddress()
     {
         if (Request.Headers.ContainsKey("X-Forwarded-For"))
@@ -374,5 +407,11 @@ public class AuthController : ControllerBase
             IsOnline = user.IsOnline,
             LastSeen = user.LastSeen
         };
+    }
+
+    private readonly record struct AdminScope(bool IsAllowed, bool IsGlobal, string Domain)
+    {
+        public static AdminScope None => new(false, false, string.Empty);
+        public static AdminScope Global => new(true, true, string.Empty);
     }
 }
