@@ -6,12 +6,11 @@ import {
   Popover,
   CircularProgress,
   Box,
-  Chip,
   TextField,
   useMediaQuery,
   useTheme,
 } from '@mui/material';
-import { AutoAwesome as MagicIcon, LibraryBooks as LibraryBooksIcon } from '@mui/icons-material';
+import { AutoAwesome as MagicIcon, LibraryBooks as LibraryBooksIcon, Tune as TuneIcon } from '@mui/icons-material';
 import { avatarService, type EmotionFullResult, type EmotionThumbnailResult } from '@/services/avatar.service';
 import { imageGenerationService } from '@/services/imageGeneration.service';
 import { ImageHoverPreview } from '@/components/Shared/ImageHoverPreview';
@@ -62,6 +61,7 @@ export const EmotionAvatarGallery: React.FC<EmotionAvatarGalleryProps> = ({ user
   const [promptValue, setPromptValue] = useState('');
   const [helpAnchorEl, setHelpAnchorEl] = useState<HTMLElement | null>(null);
   const [composerOpen, setComposerOpen] = useState(false);
+  const [showQuickPicker, setShowQuickPicker] = useState(false);
   const [selectedPrompts, setSelectedPrompts] = useState<SelectedPrompt[]>([]);
   const [cacheBust, setCacheBust] = useState<Record<string, number>>({});
 
@@ -381,24 +381,39 @@ export const EmotionAvatarGallery: React.FC<EmotionAvatarGalleryProps> = ({ user
         >
           <LibraryBooksIcon fontSize="small" />
         </IconButton>
+        <IconButton
+          size="small"
+          title={t('promptComposer.browsePrompts')}
+          onClick={() => setShowQuickPicker((prev) => !prev)}
+          color={showQuickPicker ? 'primary' : 'default'}
+        >
+          <TuneIcon fontSize="small" />
+        </IconButton>
       </BoxAny>
 
-      <AvatarQuickPicker
+      {showQuickPicker && (
+        <AvatarQuickPicker
         selectedKeys={new Set(selectedPrompts.map((p) => p.key))}
         onSelect={(sp) => setSelectedPrompts((prev) => [...prev, sp])}
         onDeselect={(key) => setSelectedPrompts((prev) => prev.filter((p) => p.key !== key))}
       />
+      )}
 
       {selectedPrompts.length > 0 && (
         <BoxAny sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 1 }}>
           {selectedPrompts.map((sp) => (
-            <Chip
+            <Button
               key={sp.key}
-              label={language === 'zh' ? sp.zh : sp.en}
               size="small"
-              onDelete={() => setSelectedPrompts((prev) => prev.filter((p) => p.key !== sp.key))}
-              sx={{ maxWidth: 220, fontSize: '0.7rem' }}
-            />
+              variant="outlined"
+              onClick={() => setSelectedPrompts((prev) => prev.filter((p) => p.key !== sp.key))}
+              sx={{
+                fontSize: '0.7rem',
+                textTransform: 'none',
+              }}
+            >
+              {language === 'zh' ? sp.zh : sp.en}
+            </Button>
           ))}
         </BoxAny>
       )}
