@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
+  Box,
   TextField,
   Button,
   Typography,
@@ -11,6 +12,7 @@ import {
   Checkbox,
   FormControlLabel,
 } from '@mui/material';
+import kankanLogo24 from '@/assets/brand/kankan-96-q95.jpg';
 import { authService } from '@/services/auth.service';
 import { useDispatch } from 'react-redux';
 import { setAuth } from '@/store/authSlice';
@@ -22,7 +24,7 @@ export const Login: React.FC = () => {
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
@@ -63,9 +65,40 @@ export const Login: React.FC = () => {
     <Container component="main" maxWidth="xs">
       <div style={containerStyle}>
         <Paper elevation={3} sx={{ p: 4, width: '100%' }}>
-          <Typography component="h1" variant="h4" align="center" gutterBottom>
-            {t('auth.login.title')}
-          </Typography>
+          {language === 'zh' ? (
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 0.75,
+                mb: 1,
+              }}
+            >
+              <Typography component="h1" variant="h4">
+                侃
+              </Typography>
+              <Box
+                component="img"
+                src={kankanLogo24}
+                alt="KanKan"
+                sx={{
+                  width: 24,
+                  height: 24,
+                  objectFit: 'cover',
+                  borderRadius: '5px',
+                  display: 'block',
+                }}
+              />
+              <Typography component="h1" variant="h4">
+                侃
+              </Typography>
+            </Box>
+          ) : (
+            <Typography component="h1" variant="h4" align="center" gutterBottom>
+              {t('auth.login.title')}
+            </Typography>
+          )}
 
           <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 3 }}>
             {t('auth.login.subtitle')}
