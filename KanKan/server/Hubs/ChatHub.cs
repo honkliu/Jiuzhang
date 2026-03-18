@@ -23,6 +23,7 @@ public class ChatHub : Hub
     private readonly INotificationRepository _notificationRepository;
     private readonly IAgentService _agentService;
     private readonly IAvatarService _avatarService;
+    private readonly IContactRepository _contactRepository;
     private readonly ILogger<ChatHub> _logger;
 
     // Track online users: UserId -> ConnectionIds
@@ -37,6 +38,7 @@ public class ChatHub : Hub
         INotificationRepository notificationRepository,
         IAgentService agentService,
         IAvatarService avatarService,
+        IContactRepository contactRepository,
         ILogger<ChatHub> logger)
     {
         _chatRepository = chatRepository;
@@ -46,6 +48,7 @@ public class ChatHub : Hub
         _notificationRepository = notificationRepository;
         _agentService = agentService;
         _avatarService = avatarService;
+        _contactRepository = contactRepository;
         _logger = logger;
     }
 
@@ -233,6 +236,21 @@ public class ChatHub : Hub
         {
             await Clients.Caller.SendAsync("Error", "You are not a member of this chat");
             return;
+        }
+
+        // Friendship check for direct chats
+        if (chat.ChatType == "direct")
+        {
+            var other = chat.Participants.FirstOrDefault(p => p.UserId != userId);
+            if (other != null && other.UserId != ChatDomain.AgentUserId)
+            {
+                var contact = await _contactRepository.GetByUserAndContactAsync(userId, other.UserId);
+                if (contact == null || contact.Status != "accepted")
+                {
+                    await Clients.Caller.SendAsync("Error", "Direct chats require friendship");
+                    return;
+                }
+            }
         }
 
         // Get user for avatar
@@ -482,6 +500,19 @@ public class ChatHub : Hub
 
         if (string.IsNullOrEmpty(userId))
             return;
+
+        // Skip draft for non-friends in direct chats
+        var chat = await _chatRepository.GetByIdAsync(chatId);
+        if (chat != null && chat.ChatType == "direct")
+        {
+            var other = chat.Participants.FirstOrDefault(p => p.UserId != userId);
+            if (other != null && other.UserId != ChatDomain.AgentUserId)
+            {
+                var contact = await _contactRepository.GetByUserAndContactAsync(userId, other.UserId);
+                if (contact == null || contact.Status != "accepted")
+                    return;
+            }
+        }
 
         await Clients.OthersInGroup(chatId).SendAsync("DraftChanged", chatId, userId, userName, text);
     }

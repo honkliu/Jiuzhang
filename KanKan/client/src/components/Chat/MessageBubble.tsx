@@ -196,6 +196,24 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
     (message as any)?.content?.thumbnailUrl ||
     '';
 
+  if (message.messageType === 'system' || message.senderId === '__system__') {
+    return (
+      <Typography
+        variant="caption"
+        sx={{
+          display: 'block',
+          textAlign: 'center',
+          color: 'text.secondary',
+          fontSize: '0.72rem',
+          py: 1,
+          opacity: 0.7,
+        }}
+      >
+        {message.text}
+      </Typography>
+    );
+  }
+
   return (
     <>
       {timeSeparator && (

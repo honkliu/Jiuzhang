@@ -48,7 +48,7 @@ export const ContactsPage: React.FC = () => {
     setLoading(true);
     try {
       const [allUsers, contactsData, requestsData] = await Promise.all([
-        isAdmin ? adminService.getUsers() : contactService.getAllUsers(),
+        contactService.getAllUsers(),
         contactService.getContacts(),
         contactService.getFriendRequests(),
       ]);

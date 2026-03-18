@@ -597,7 +597,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
       dispatch(updateChat(updated));
     } catch (e) {
       console.error('Failed to rename group', e);
-      alert(t('chat.renameFailed'));
+      addLocalInfoMessage(t('chat.renameFailed'));
     }
   };
 
@@ -620,10 +620,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
     const infoMessage = {
       id: `local_${Date.now()}_${Math.random().toString(16).slice(2)}`,
       chatId: activeChat.id,
-      senderId: WA_USER_ID,
-      senderName: 'Wa',
+      senderId: '__system__',
+      senderName: '',
       senderAvatar: '',
-      messageType: 'text',
+      messageType: 'system',
       text,
       timestamp: new Date().toISOString(),
       deliveredTo: [],
@@ -775,9 +775,11 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
       try {
         await runChatCommand(raw);
         return true;
-      } catch (error) {
+      } catch (error: any) {
         console.error('Failed to run command:', error);
-        signalRService.sendDraftChanged(activeChat.id, raw);
+        if (error?.response?.status === 403) {
+          addLocalInfoMessage(t('chat.notFriends'));
+        }
         return false;
       } finally {
         setSending(false);
@@ -808,9 +810,11 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
       });
       dispatch(addMessage(message));
       return true;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to send message:', error);
-      signalRService.sendDraftChanged(activeChat.id, text);
+      if (error?.response?.status === 403) {
+        addLocalInfoMessage(t('chat.notFriends'));
+      }
       return false;
     } finally {
       setSending(false);
@@ -843,9 +847,13 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
       });
 
       dispatch(addMessage(message));
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to upload/send file:', error);
-      alert(t('chat.sendFileFailed'));
+      if (error?.response?.status === 403) {
+        addLocalInfoMessage(t('chat.notFriends'));
+      } else {
+        addLocalInfoMessage(t('chat.sendFileFailed'));
+      }
     } finally {
       setUploading(false);
     }
