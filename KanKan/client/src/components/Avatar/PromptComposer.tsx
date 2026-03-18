@@ -171,7 +171,7 @@ export const PromptComposer: React.FC<PromptComposerProps> = ({ open, onClose, o
       fullScreen={isMobile}
       maxWidth="md"
       fullWidth
-      PaperProps={{ sx: { height: isMobile ? '100%' : '80vh', display: 'flex', flexDirection: 'column' } }}
+      PaperProps={{ sx: { height: isMobile ? '100%' : '80vh', display: 'flex', flexDirection: 'column', backgroundColor: '#ffffff', backgroundImage: 'none' } }}
     >
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', pb: 1 }}>
         <Typography variant="h6" sx={{ flex: 1 }}>{t('promptComposer.title')}</Typography>
