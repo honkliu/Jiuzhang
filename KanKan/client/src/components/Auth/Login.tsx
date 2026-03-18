@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
-  Box,
   TextField,
   Button,
   Typography,
@@ -17,6 +16,7 @@ import { authService } from '@/services/auth.service';
 import { useDispatch } from 'react-redux';
 import { setAuth } from '@/store/authSlice';
 import { useLanguage } from '@/i18n/LanguageContext';
+import './Login.css';
 
 export const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -53,52 +53,16 @@ export const Login: React.FC = () => {
     }
   };
 
-  const containerStyle: React.CSSProperties = {
-    marginTop: 64,
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-  };
-
-
   return (
     <Container component="main" maxWidth="xs">
-      <div style={containerStyle}>
+      <div className="loginContainer">
         <Paper elevation={3} sx={{ p: 4, width: '100%' }}>
-          {language === 'zh' ? (
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 0.75,
-                mb: 1,
-              }}
-            >
-              <Typography component="h1" variant="h4">
-                侃
-              </Typography>
-              <Box
-                component="img"
-                src={kankanLogo24}
-                alt="KanKan"
-                sx={{
-                  width: 24,
-                  height: 24,
-                  objectFit: 'cover',
-                  borderRadius: '5px',
-                  display: 'block',
-                }}
-              />
-              <Typography component="h1" variant="h4">
-                侃
-              </Typography>
-            </Box>
-          ) : (
-            <Typography component="h1" variant="h4" align="center" gutterBottom>
-              {t('auth.login.title')}
+          <div className="loginTitleRow">
+            <img src={kankanLogo24} alt="KanKan" className="loginLogo" />
+            <Typography component="h1" variant="h4" className="loginTitleText">
+              {language === 'zh' ? '欢迎你' : t('auth.login.title')}
             </Typography>
-          )}
+          </div>
 
           <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 3 }}>
             {t('auth.login.subtitle')}
@@ -140,14 +104,7 @@ export const Login: React.FC = () => {
               disabled={loading}
             />
 
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginTop: 8,
-              }}
-            >
+            <div className="loginOptionsRow">
               <FormControlLabel
                 control={
                   <Checkbox
@@ -161,11 +118,7 @@ export const Login: React.FC = () => {
               />
               <Link
                 to="/forgot-password"
-                style={{
-                  color: '#1976d2',
-                  textDecoration: 'none',
-                  fontSize: '0.875rem',
-                }}
+                className="loginLink loginLinkSmall"
               >
                 {t('auth.login.forgot')}
               </Link>
@@ -182,10 +135,10 @@ export const Login: React.FC = () => {
               {loading ? <CircularProgress size={24} /> : t('auth.login.signIn')}
             </Button>
 
-            <div style={{ textAlign: 'center' }}>
+            <div className="loginFooter">
               <Typography variant="body2" color="text.secondary">
                 {t('auth.login.noAccount')}{' '}
-                <Link to="/register" style={{ color: '#1976d2', textDecoration: 'none', fontWeight: 500 }}>
+                <Link to="/register" className="loginLink loginLinkStrong">
                   {t('auth.login.create')}
                 </Link>
               </Typography>
