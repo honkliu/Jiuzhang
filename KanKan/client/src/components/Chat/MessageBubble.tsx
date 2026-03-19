@@ -270,18 +270,42 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
         elevation={0}
         sx={{
           maxWidth: '76%',
-          px: message.messageType === 'image' || message.messageType === 'voice' ? 0 : 2,
-          py: message.messageType === 'image' || message.messageType === 'voice' ? 0 : 1,
-          bgcolor: message.messageType === 'image' || message.messageType === 'voice' ? 'transparent' : (isOwn ? 'rgba(7, 193, 96, 0.9)' : 'rgba(255, 255, 255, 0.6)'),
-          color: isOwn ? 'primary.contrastText' : 'text.primary',
-          borderRadius: '10px',
-          borderTopLeftRadius: !isOwn && !showAvatar ? 4 : undefined,
-          borderTopRightRadius: isOwn && !showAvatar ? 4 : undefined,
+          px: message.messageType === 'image' || message.messageType === 'voice' ? 0 : 1.5,
+          py: message.messageType === 'image' || message.messageType === 'voice' ? 0 : 0.75,
+          position: 'relative',
+          bgcolor: message.messageType === 'image' || message.messageType === 'voice'
+            ? 'transparent'
+            : (isOwn ? '#07c160' : '#ffffff'),
+          color: isOwn ? '#ffffff' : 'text.primary',
+          borderRadius: message.messageType === 'image' || message.messageType === 'voice'
+            ? 0
+            : '5px',
           ml: isOwn ? 'auto' : 0,
-          border: message.messageType === 'image' || message.messageType === 'voice' ? 'none' : '1px solid rgba(255,255,255,0.5)',
-          boxShadow: message.messageType === 'image' || message.messageType === 'voice' ? 'none' : '0 10px 30px rgba(15, 23, 42, 0.12)',
-          backdropFilter: message.messageType === 'image' || message.messageType === 'voice' ? 'none' : 'blur(12px) saturate(160%)',
-          WebkitBackdropFilter: message.messageType === 'image' || message.messageType === 'voice' ? 'none' : 'blur(12px) saturate(160%)',
+          border: 'none',
+          boxShadow: message.messageType === 'image' || message.messageType === 'voice'
+            ? 'none'
+            : '0 1px 2px rgba(0,0,0,0.15)',
+          ...(message.messageType !== 'image' && message.messageType !== 'voice' ? {
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              top: '12px',
+              transform: 'none',
+              width: 0,
+              height: 0,
+              ...(isOwn ? {
+                right: '-5px',
+                borderWidth: '5px 0 5px 5px',
+                borderStyle: 'solid',
+                borderColor: 'transparent transparent transparent #07c160',
+              } : {
+                left: '-5px',
+                borderWidth: '5px 5px 5px 0',
+                borderStyle: 'solid',
+                borderColor: 'transparent #ffffff transparent transparent',
+              }),
+            },
+          } : {}),
         }}
       >
         {/* Message content */}
