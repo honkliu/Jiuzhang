@@ -10,6 +10,7 @@ import {
   Paper,
   Stack,
   Chip,
+  ClickAwayListener,
   SxProps,
   Theme,
   CircularProgress,
@@ -18,6 +19,7 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material';
+import EmojiPicker, { Categories, SuggestionMode, emojiByUnified, type EmojiClickData } from 'emoji-picker-react';
 import { Virtuoso } from 'react-virtuoso';
 import { createRoot, type Root } from 'react-dom/client';
 import {
@@ -59,6 +61,31 @@ import { useLanguage } from '@/i18n/LanguageContext';
 const BoxAny = Box as any;
 
 const MAX_VOICE_DURATION_SECONDS = 60;
+const EMOJI_SUGGESTED_LS_KEY = 'epr_suggested';
+const MAX_RECENT_EMOJIS = 8;
+const EMOJI_PICKER_WIDTH = 248;
+
+const formatVoiceRecordingHint = (seconds: number) => {
+  const safeSeconds = Math.max(0, Math.min(MAX_VOICE_DURATION_SECONDS, seconds));
+  return `${String(safeSeconds).padStart(2, '0')}/${MAX_VOICE_DURATION_SECONDS}`;
+};
+
+const readRecentEmojiUnifieds = () => {
+  if (typeof window === 'undefined') return [] as string[];
+
+  try {
+    const raw = window.localStorage.getItem(EMOJI_SUGGESTED_LS_KEY);
+    if (!raw) return [] as string[];
+
+    const parsed = JSON.parse(raw) as Array<{ unified?: string }>;
+    return parsed
+      .map((item) => item.unified)
+      .filter((value): value is string => Boolean(value))
+      .slice(0, MAX_RECENT_EMOJIS);
+  } catch {
+    return [] as string[];
+  }
+};
 
 const getAudioExtension = (mimeType: string) => {
   const normalized = mimeType.toLowerCase();
@@ -286,6 +313,7 @@ interface ChatInputPanelProps {
   sending: boolean;
   uploading: boolean;
   isRecordingVoice: boolean;
+  recordingSeconds: number;
   chatCommands: Array<{ id: ChatCommandId; description: string; example: string }>;
   onSendMessage: (raw: string) => Promise<boolean>;
   onFileSelected: (event: React.ChangeEvent<HTMLInputElement>) => void;
@@ -300,6 +328,7 @@ const ChatInputPanel: React.FC<ChatInputPanelProps> = React.memo(({
   sending,
   uploading,
   isRecordingVoice,
+  recordingSeconds,
   chatCommands,
   onSendMessage,
   onFileSelected,
@@ -308,13 +337,18 @@ const ChatInputPanel: React.FC<ChatInputPanelProps> = React.memo(({
   onCancelVoiceRecording,
   t,
 }) => {
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const emojiButtonRef = useRef<HTMLButtonElement | null>(null);
   const draftDebounceRef = useRef<number | null>(null);
   const lastDraftRef = useRef<string>('');
   const lastDraftSentAtRef = useRef<number>(0);
+  const selectionStartRef = useRef<number | null>(null);
+  const selectionEndRef = useRef<number | null>(null);
   const [messageText, setMessageText] = useState('');
   const [commandSelectedIndex, setCommandSelectedIndex] = useState(0);
+  const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
+  const [recentEmojiUnifieds, setRecentEmojiUnifieds] = useState<string[]>([]);
 
   const isCommandMode = messageText.startsWith('/');
   const commandToken = (() => {
@@ -335,7 +369,19 @@ const ChatInputPanel: React.FC<ChatInputPanelProps> = React.memo(({
 
   useEffect(() => {
     setMessageText('');
+    setIsEmojiPickerOpen(false);
   }, [activeChatId]);
+
+  useEffect(() => {
+    if (isRecordingVoice) {
+      setIsEmojiPickerOpen(false);
+    }
+  }, [isRecordingVoice]);
+
+  useEffect(() => {
+    if (!isEmojiPickerOpen) return;
+    setRecentEmojiUnifieds(readRecentEmojiUnifieds());
+  }, [isEmojiPickerOpen]);
 
   useEffect(() => {
     return () => {
@@ -370,6 +416,59 @@ const ChatInputPanel: React.FC<ChatInputPanelProps> = React.memo(({
     fileInputRef.current?.click();
   }, [isRecordingVoice, uploading, sending]);
 
+  const syncSelection = useCallback((target?: HTMLInputElement | HTMLTextAreaElement | null) => {
+    if (!target) return;
+    selectionStartRef.current = target.selectionStart ?? null;
+    selectionEndRef.current = target.selectionEnd ?? null;
+  }, []);
+
+  const handleTextFieldSelection = useCallback((event: React.SyntheticEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    syncSelection(event.currentTarget);
+  }, [syncSelection]);
+
+  const handleEmojiButtonClick = useCallback(() => {
+    if (isRecordingVoice) return;
+    setIsEmojiPickerOpen((open) => !open);
+  }, [isRecordingVoice]);
+
+  const insertEmojiIntoMessage = useCallback((emoji: string) => {
+    const input = inputRef.current;
+    const start = selectionStartRef.current ?? messageText.length;
+    const end = selectionEndRef.current ?? start;
+    const nextValue = `${messageText.slice(0, start)}${emoji}${messageText.slice(end)}`;
+    const nextCursor = start + emoji.length;
+
+    setMessageText(nextValue);
+    if (activeChatId) {
+      scheduleDraftSend(nextValue);
+    }
+
+    selectionStartRef.current = nextCursor;
+    selectionEndRef.current = nextCursor;
+
+    window.requestAnimationFrame(() => {
+      if (!input) return;
+      input.focus();
+      input.setSelectionRange(nextCursor, nextCursor);
+    });
+  }, [activeChatId, messageText, scheduleDraftSend]);
+
+  const handleEmojiClick = useCallback((emojiData: EmojiClickData) => {
+    setRecentEmojiUnifieds((prev) => {
+      const next = [emojiData.unified, ...prev.filter((value) => value !== emojiData.unified)];
+      return next.slice(0, MAX_RECENT_EMOJIS);
+    });
+    insertEmojiIntoMessage(emojiData.emoji);
+  }, [insertEmojiIntoMessage]);
+
+  const handleRecentEmojiClick = useCallback((emoji: string, unified: string) => {
+    setRecentEmojiUnifieds((prev) => {
+      const next = [unified, ...prev.filter((value) => value !== unified)];
+      return next.slice(0, MAX_RECENT_EMOJIS);
+    });
+    insertEmojiIntoMessage(emoji);
+  }, [insertEmojiIntoMessage]);
+
   const handleVoiceButtonClick = useCallback(async () => {
     if (isRecordingVoice) {
       onStopVoiceRecording();
@@ -380,9 +479,10 @@ const ChatInputPanel: React.FC<ChatInputPanelProps> = React.memo(({
     await onStartVoiceRecording();
   }, [isRecordingVoice, onStartVoiceRecording, onStopVoiceRecording, sending, uploading]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const nextValue = e.target.value;
     setMessageText(nextValue);
+    syncSelection(e.target);
     if (activeChatId) {
       scheduleDraftSend(nextValue);
     }
@@ -400,6 +500,11 @@ const ChatInputPanel: React.FC<ChatInputPanelProps> = React.memo(({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape' && isEmojiPickerOpen) {
+      setIsEmojiPickerOpen(false);
+      return;
+    }
+
     if (!isCommandMode || commandSuggestions.length === 0) return;
 
     if (e.key === 'ArrowDown') {
@@ -430,8 +535,16 @@ const ChatInputPanel: React.FC<ChatInputPanelProps> = React.memo(({
           if (fileInputRef.current) fileInputRef.current.value = '';
         }}
       />
-      <BoxAny sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
-        <IconButton size="small" disabled>
+      <BoxAny sx={{ display: 'flex', alignItems: 'flex-end', gap: 0.375 }}>
+        <IconButton
+          ref={emojiButtonRef}
+          size="small"
+          onClick={handleEmojiButtonClick}
+          disabled={isRecordingVoice}
+          title={t('chat.emoji')}
+          aria-label={t('chat.emoji')}
+          sx={{ p: 0.5, color: 'primary.main' }}
+        >
           <EmojiIcon />
         </IconButton>
         <IconButton
@@ -440,16 +553,17 @@ const ChatInputPanel: React.FC<ChatInputPanelProps> = React.memo(({
           disabled={uploading || sending || isRecordingVoice}
           title={t('chat.attach')}
           aria-label={t('chat.attach')}
+          sx={{ p: 0.5, color: 'primary.main' }}
         >
           {uploading ? <CircularProgress size={18} /> : <AttachFileIcon />}
         </IconButton>
         <IconButton
           size="small"
-          color={isRecordingVoice ? 'error' : 'default'}
           onClick={handleVoiceButtonClick}
           disabled={uploading || sending}
           title={isRecordingVoice ? t('chat.voice.stop') : t('chat.voice.record')}
           aria-label={isRecordingVoice ? t('chat.voice.stop') : t('chat.voice.record')}
+          sx={{ p: 0.5, color: isRecordingVoice ? 'error.main' : 'primary.main' }}
         >
           {isRecordingVoice ? <StopCircleIcon /> : <MicIcon />}
         </IconButton>
@@ -459,6 +573,7 @@ const ChatInputPanel: React.FC<ChatInputPanelProps> = React.memo(({
             onClick={onCancelVoiceRecording}
             title={t('chat.voice.cancel')}
             aria-label={t('chat.voice.cancel')}
+            sx={{ p: 0.5 }}
           >
             <CloseIcon />
           </IconButton>
@@ -468,20 +583,167 @@ const ChatInputPanel: React.FC<ChatInputPanelProps> = React.memo(({
           fullWidth
           multiline
           maxRows={4}
-          placeholder={isRecordingVoice ? '' : t('chat.typeMessage')}
+          placeholder={isRecordingVoice ? formatVoiceRecordingHint(recordingSeconds) : t('chat.typeMessage')}
           value={messageText}
           onChange={handleChange}
           onKeyPress={handleKeyPress}
           onKeyDown={handleKeyDown}
           disabled={isRecordingVoice}
           size="small"
+          inputProps={{
+            onSelect: handleTextFieldSelection,
+            onClick: handleTextFieldSelection,
+            onKeyUp: handleTextFieldSelection,
+          }}
+          InputProps={{
+            sx: {
+              alignItems: 'flex-start',
+              '& textarea': {
+                paddingTop: '6px !important',
+                paddingBottom: '0px !important',
+                lineHeight: 1.25,
+                boxSizing: 'border-box',
+              },
+            },
+          }}
           sx={{
             '& .MuiOutlinedInput-root': {
-              borderRadius: '5px',
+              borderRadius: '8px',
               bgcolor: 'grey.100',
+              py: 0,
+              paddingLeft: '8px !important',
+              paddingRight: '8px !important',
             },
           }}
         />
+        {isEmojiPickerOpen ? (
+          <Popper
+            open
+            anchorEl={emojiButtonRef.current}
+            placement="top-start"
+            sx={{ zIndex: 1300 }}
+          >
+            <ClickAwayListener onClickAway={() => setIsEmojiPickerOpen(false)}>
+              <Paper
+                elevation={6}
+                sx={{
+                  mb: 1,
+                  overflow: 'hidden',
+                  bgcolor: '#ffffff',
+                  width: `${EMOJI_PICKER_WIDTH}px`,
+                  maxWidth: `${EMOJI_PICKER_WIDTH}px`,
+                  borderRadius: '10px',
+                  '& .EmojiPickerReact': {
+                    '--epr-horizontal-padding': '8px',
+                    '--epr-header-padding': '8px var(--epr-horizontal-padding)',
+                    '--epr-picker-border-radius': '10px',
+                    '--epr-category-navigation-button-size': '20px',
+                    '--epr-category-label-height': '0px',
+                    '--epr-category-label-padding': '0',
+                    '--epr-emoji-size': '24px',
+                    '--epr-emoji-padding': '4px',
+                  },
+                  '& .epr-body': {
+                    scrollbarWidth: 'none',
+                    msOverflowStyle: 'none',
+                  },
+                  '& .epr-body::-webkit-scrollbar': {
+                    display: 'none',
+                    width: 0,
+                    height: 0,
+                  },
+                  '& .epr-emoji-category-label': {
+                    display: 'none',
+                  },
+                  '& .epr-emoji-category-content': {
+                    marginTop: 0,
+                    marginLeft: 'auto',
+                    marginRight: 'auto',
+                    width: 'calc(100% - 16px)',
+                    gridTemplateColumns: 'repeat(auto-fit, var(--epr-emoji-fullsize))',
+                    justifyContent: 'center',
+                  },
+                  '& .epr-emoji-category + .epr-emoji-category .epr-emoji-category-content': {
+                    borderTop: '1px solid',
+                    borderColor: 'divider',
+                    marginTop: '6px',
+                    paddingTop: '6px',
+                  },
+                }}
+              >
+                {recentEmojiUnifieds.length > 0 ? (
+                  <BoxAny
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 0.5,
+                      width: '100%',
+                      maxWidth: '100%',
+                      boxSizing: 'border-box',
+                      px: '8px',
+                      py: 0.5,
+                      borderBottom: '1px solid',
+                      borderColor: 'divider',
+                      overflowX: 'auto',
+                      scrollbarWidth: 'none',
+                      msOverflowStyle: 'none',
+                      '&::-webkit-scrollbar': {
+                        display: 'none',
+                        width: 0,
+                        height: 0,
+                      },
+                    }}
+                  >
+                    {recentEmojiUnifieds.map((unified) => {
+                      const emojiData = emojiByUnified(unified);
+                      const emoji = emojiData ? String.fromCodePoint(...unified.split('-').map((code) => parseInt(code, 16))) : '';
+                      if (!emoji) return null;
+
+                      return (
+                        <IconButton
+                          key={unified}
+                          size="small"
+                          onClick={() => handleRecentEmojiClick(emoji, unified)}
+                          title={t('chat.emoji')}
+                          aria-label={t('chat.emoji')}
+                          sx={{
+                            flex: '0 0 auto',
+                            fontSize: 20,
+                            width: 30,
+                            height: 30,
+                          }}
+                        >
+                          <BoxAny component="span" sx={{ lineHeight: 1 }}>{emoji}</BoxAny>
+                        </IconButton>
+                      );
+                    })}
+                  </BoxAny>
+                ) : null}
+                <EmojiPicker
+                  onEmojiClick={handleEmojiClick}
+                  autoFocusSearch={false}
+                  searchDisabled
+                  suggestedEmojisMode={SuggestionMode.RECENT}
+                  lazyLoadEmojis
+                  skinTonesDisabled
+                  previewConfig={{ showPreview: false }}
+                  categories={[
+                    { category: Categories.SMILEYS_PEOPLE, name: 'Smileys & People' },
+                    { category: Categories.ANIMALS_NATURE, name: 'Animals & Nature' },
+                    { category: Categories.FOOD_DRINK, name: 'Food & Drink' },
+                    { category: Categories.TRAVEL_PLACES, name: 'Travel & Places' },
+                    { category: Categories.ACTIVITIES, name: 'Activities' },
+                    { category: Categories.OBJECTS, name: 'Objects' },
+                    { category: Categories.SYMBOLS, name: 'Symbols' },
+                    { category: Categories.FLAGS, name: 'Flags' },
+                  ]}
+                  width={EMOJI_PICKER_WIDTH}
+                  height={210}
+                />
+              </Paper>
+            </ClickAwayListener>
+          </Popper>
+        ) : null}
         {isCommandMode && commandSuggestions.length > 0 ? (
           <Popper
             open
@@ -517,6 +779,7 @@ const ChatInputPanel: React.FC<ChatInputPanelProps> = React.memo(({
           </Popper>
         ) : null}
         <IconButton
+          size="small"
           color="primary"
           onClick={async () => {
             const raw = messageText;
@@ -526,6 +789,7 @@ const ChatInputPanel: React.FC<ChatInputPanelProps> = React.memo(({
             if (!ok) setMessageText(raw);
           }}
           disabled={!messageText.trim() || sending || uploading || isRecordingVoice}
+          sx={{ p: 0.5 }}
         >
           <SendIcon />
         </IconButton>
@@ -1466,6 +1730,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
           sending={sending}
           uploading={uploading}
           isRecordingVoice={isRecordingVoice}
+          recordingSeconds={recordingSeconds}
           chatCommands={chatCommands}
           onSendMessage={sendMessage}
           onFileSelected={handleFileSelected}
@@ -1482,6 +1747,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
     sending,
     uploading,
     isRecordingVoice,
+    recordingSeconds,
     chatCommands,
     sendMessage,
     handleFileSelected,
@@ -1668,7 +1934,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
       {/* Input */}
       <BoxAny
         sx={{
-          p: 2,
+          pt: 2,
+          pb: 2,
+          pl: 0.75,
+          pr: 1,
           bgcolor: 'background.paper',
           borderTop: '1px solid',
           borderColor: 'divider',
