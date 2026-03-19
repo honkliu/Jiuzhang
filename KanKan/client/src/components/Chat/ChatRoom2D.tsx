@@ -190,11 +190,8 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
     align: 'left' | 'right' = 'left',
     extraSx?: Record<string, any>
   ) => {
-    const imageAttachments = (attachments || []).filter((attachment) => attachment.type === 'image');
-    const otherAttachments = (attachments || []).filter((attachment) => attachment.type !== 'image');
-    const hasImages = imageAttachments.length > 0;
-    const hasOtherAttachments = otherAttachments.length > 0;
-    const hasAttachments = hasImages || hasOtherAttachments;
+    const orderedAttachments = attachments || [];
+    const hasAttachments = orderedAttachments.length > 0;
     if (!text && !hasAttachments) return null;
 
     return (
@@ -204,6 +201,7 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
           width: bubbleW,
           maxWidth: overlapOffsetPx > 0 ? `calc(100% + ${overlapOffset})` : '100%',
           height: bubbleH,
+          minHeight: 0,
           pl: isMobile ? 1.5 : 2.5,
           pr: isMobile ? 2 : 3.5,
           py: isMobile ? 1 : 1.5,
@@ -298,21 +296,79 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
           </BoxAny>
         ) : null}
 
-        {hasOtherAttachments ? (
+        {hasAttachments ? (
           <BoxAny
             sx={{
               position: 'relative',
               zIndex: 1,
               flex: text ? '0 0 auto' : 1,
               minWidth: 0,
+              height: '100%',
+              boxSizing: 'border-box',
               display: 'flex',
               flexDirection: 'column',
+              alignItems: 'flex-end',
               justifyContent: 'flex-end',
               gap: 0.75,
-              pb: text ? 0.5 : 0,
+              pb: isMobile ? 1 : 1.25,
+              ml: 'auto',
+              overflow: 'hidden',
             }}
           >
-            {otherAttachments.map((attachment, index) => {
+            {orderedAttachments.map((attachment, index) => {
+              if (attachment.type === 'image') {
+                const orderedImages = orderedAttachments.filter((item) => item.type === 'image').map((item) => item.url);
+                const imageIndex = orderedImages.findIndex((url) => url === attachment.url);
+
+                return (
+                  <ImageHoverPreview
+                    key={`${attachment.type}-${attachment.url}-${index}`}
+                    src={attachment.url}
+                    alt="Chat media"
+                    openOnHover={isHoverCapable}
+                    openOnLongPress={!isHoverCapable}
+                    openOnTap={false}
+                  >
+                    {(previewProps) => (
+                      <BoxAny
+                        {...previewProps}
+                        component="img"
+                        src={attachment.url}
+                        alt="Chat media"
+                        onContextMenu={(event: React.MouseEvent<HTMLElement>) => {
+                          event.preventDefault();
+                        }}
+                        onClick={() => {
+                          setLightbox({
+                            images: orderedImages,
+                            index: imageIndex >= 0 ? imageIndex : 0,
+                            groupIndex: imageGroupIndexByUrl?.[attachment.url],
+                          });
+                        }}
+                        sx={{
+                          width: imgStripW,
+                          height: 'auto',
+                          maxHeight: isMobile ? 88 : 140,
+                          flexShrink: 0,
+                          alignSelf: 'flex-end',
+                          display: 'block',
+                          objectFit: 'contain',
+                          objectPosition: 'top center',
+                          borderRadius: 1,
+                          boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+                          cursor: 'pointer',
+                          transition: 'opacity 0.15s',
+                          '&:hover': { opacity: 0.85 },
+                          WebkitTouchCallout: 'none',
+                          WebkitUserSelect: 'none',
+                          userSelect: 'none',
+                        }}
+                      />
+                    )}
+                  </ImageHoverPreview>
+                );
+              }
+
               if (attachment.type === 'voice') {
                 return (
                   <VoiceMessageBubble
@@ -332,7 +388,7 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
                     component="video"
                     src={attachment.url}
                     controls
-                    sx={{ width: '100%', maxHeight: 180, borderRadius: 1, bgcolor: 'rgba(0,0,0,0.18)' }}
+                    sx={{ width: '100%', maxHeight: 180, borderRadius: 1, bgcolor: 'rgba(0,0,0,0.18)', alignSelf: 'flex-end', flexShrink: 0 }}
                   />
                 );
               }
@@ -349,6 +405,8 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
                     textDecoration: 'underline',
                     fontSize: '0.9rem',
                     wordBreak: 'break-all',
+                    alignSelf: 'flex-end',
+                    flexShrink: 0,
                   }}
                 >
                   {attachment.fileName || 'Download file'}
@@ -357,70 +415,6 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
             })}
           </BoxAny>
         ) : null}
-
-        {/* Image strip — 60px wide, newest at bottom, older images scroll off top */}
-        {hasImages && (
-          <BoxAny
-            sx={{
-              position: 'relative',
-              zIndex: 1,
-              width: imgStripW,
-              flexShrink: 0,
-              height: '100%',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'flex-end',
-              overflow: 'hidden',
-              gap: 0.5,
-              pl: text ? 0.5 : 0,
-              pr: 0.5,
-            }}
-          >
-            {imageAttachments.map((attachment, i) => (
-              <ImageHoverPreview
-                key={i}
-                src={attachment.url}
-                alt="Chat media"
-                openOnHover={isHoverCapable}
-                openOnLongPress={!isHoverCapable}
-                openOnTap={false}
-              >
-                {(previewProps) => (
-                  <BoxAny
-                    {...previewProps}
-                    component="img"
-                    src={attachment.url}
-                    alt="Chat media"
-                    onContextMenu={(event: React.MouseEvent<HTMLElement>) => {
-                      event.preventDefault();
-                    }}
-                    onClick={() => {
-                      setLightbox({
-                        images: imageAttachments.map((item) => item.url),
-                        index: i,
-                        groupIndex: imageGroupIndexByUrl?.[attachment.url],
-                      });
-                    }}
-                    sx={{
-                      width: '100%',
-                      flexShrink: 0,
-                      aspectRatio: 'auto',
-                      objectFit: 'contain',
-                      borderRadius: 1,
-                      boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
-                      cursor: 'pointer',
-                      transition: 'opacity 0.15s',
-                      '&:hover': { opacity: 0.85 },
-                      WebkitTouchCallout: 'none',
-                      WebkitUserSelect: 'none',
-                      userSelect: 'none',
-                    }}
-                  />
-                )}
-              </ImageHoverPreview>
-            ))}
-          </BoxAny>
-        )}
       </Paper>
     );
   };
@@ -431,6 +425,7 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
         ref={layoutRef}
         sx={{
           flexGrow: 1,
+          minHeight: 0,
           position: 'relative',
           overflow: 'hidden',
           display: 'grid',
@@ -470,6 +465,7 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
             gridColumn: 1,
             gridRow: 1,
             display: 'flex',
+            minHeight: 0,
             alignItems: 'flex-end',
             justifyContent: 'flex-start',
             position: 'relative',
@@ -499,6 +495,7 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
             gridColumn: 2,
             gridRow: 1,
             display: 'flex',
+            minHeight: 0,
             alignItems: 'flex-end',
             justifyContent: 'flex-end',
             position: 'relative',
@@ -516,6 +513,7 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
             gridColumn: 1,
             gridRow: 2,
             display: 'flex',
+            minHeight: 0,
             alignItems: 'flex-start',
             justifyContent: 'flex-start',
             position: 'relative',
@@ -533,6 +531,7 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
             gridColumn: 2,
             gridRow: 2,
             display: 'flex',
+            minHeight: 0,
             alignItems: 'flex-start',
             justifyContent: 'flex-end',
             position: 'relative',

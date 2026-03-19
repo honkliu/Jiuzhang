@@ -23,7 +23,7 @@ export const VoiceMessageBubble: React.FC<VoiceMessageBubbleProps> = ({ url, dur
   const [currentTime, setCurrentTime] = useState(0);
   const [actualDuration, setActualDuration] = useState(duration || 0);
   const bubbleDuration = actualDuration > 0 ? actualDuration : duration || 0;
-  const bubbleWidth = Math.min(isMobile ? 220 : 290, Math.max(isMobile ? 118 : 148, (isMobile ? 110 : 138) + bubbleDuration * 3));
+  const bubbleWidth = Math.min(isMobile ? 198 : 261, Math.max(isMobile ? 106 : 133, ((isMobile ? 110 : 138) + bubbleDuration * 3) * 0.9));
   const bubbleHeight = isMobile ? 32 : 34;
   const progressRatio = bubbleDuration > 0 ? Math.min(1, currentTime / bubbleDuration) : 0;
 
@@ -103,6 +103,7 @@ export const VoiceMessageBubble: React.FC<VoiceMessageBubbleProps> = ({ url, dur
         alignItems: 'center',
         gap: 0.75,
         alignSelf: align === 'right' ? 'flex-end' : 'flex-start',
+        flexShrink: 0,
         width: bubbleWidth,
         height: bubbleHeight,
         maxWidth: '100%',
