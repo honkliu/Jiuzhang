@@ -270,27 +270,26 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
         elevation={0}
         sx={{
           maxWidth: '76%',
-          px: message.messageType === 'image' || message.messageType === 'voice' ? 0 : 1.5,
-          py: message.messageType === 'image' || message.messageType === 'voice' ? 0 : 0.75,
+          px: message.messageType === 'image' ? 0 : 1.5,
+          py: message.messageType === 'image' ? 0 : 0.75,
           position: 'relative',
-          bgcolor: message.messageType === 'image' || message.messageType === 'voice'
+          bgcolor: message.messageType === 'image'
             ? 'transparent'
             : (isOwn ? '#07c160' : '#ffffff'),
-          color: isOwn ? '#ffffff' : 'text.primary',
-          borderRadius: message.messageType === 'image' || message.messageType === 'voice'
-            ? 0
-            : '5px',
+          color: 'text.primary',
+          borderRadius: message.messageType === 'image' ? 0 : '4px',
           ml: isOwn ? 'auto' : 0,
-          border: 'none',
-          boxShadow: message.messageType === 'image' || message.messageType === 'voice'
+          border: message.messageType === 'image'
             ? 'none'
-            : '0 1px 2px rgba(0,0,0,0.15)',
-          ...(message.messageType !== 'image' && message.messageType !== 'voice' ? {
+            : (isOwn ? 'none' : '1px solid #d9d9d9'),
+          boxShadow: message.messageType === 'image'
+            ? 'none'
+            : '0 1px 2px rgba(0,0,0,0.10)',
+          ...(message.messageType !== 'image' ? {
             '&::before': {
               content: '""',
               position: 'absolute',
               top: '12px',
-              transform: 'none',
               width: 0,
               height: 0,
               ...(isOwn ? {
@@ -299,12 +298,25 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
                 borderStyle: 'solid',
                 borderColor: 'transparent transparent transparent #07c160',
               } : {
-                left: '-5px',
+                left: '-6px',
+                borderWidth: '5px 6px 5px 0',
+                borderStyle: 'solid',
+                borderColor: 'transparent #d9d9d9 transparent transparent',
+              }),
+            },
+            ...(!isOwn ? {
+              '&::after': {
+                content: '""',
+                position: 'absolute',
+                top: '12px',
+                left: '-4px',
+                width: 0,
+                height: 0,
                 borderWidth: '5px 5px 5px 0',
                 borderStyle: 'solid',
                 borderColor: 'transparent #ffffff transparent transparent',
-              }),
-            },
+              },
+            } : {}),
           } : {}),
         }}
       >

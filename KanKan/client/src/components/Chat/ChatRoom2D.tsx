@@ -381,13 +381,25 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
 
             if (segment.type === 'voice' && segment.url) {
               return (
-                <VoiceMessageBubble
+                <BoxAny
                   key={`${segment.type}-${segment.url}-${index}`}
-                  url={segment.url}
-                  duration={segment.duration}
-                  align={align}
-                  isMobile={isMobile}
-                />
+                  sx={{
+                    alignSelf: 'flex-end',
+                    flexShrink: 0,
+                    display: 'inline-flex',
+                    bgcolor: align === 'right' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)',
+                    borderRadius: '4px',
+                    px: 1,
+                    py: 0.5,
+                  }}
+                >
+                  <VoiceMessageBubble
+                    url={segment.url}
+                    duration={segment.duration}
+                    align={align}
+                    isMobile={isMobile}
+                  />
+                </BoxAny>
               );
             }
 
