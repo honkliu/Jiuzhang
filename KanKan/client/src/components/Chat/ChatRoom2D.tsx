@@ -564,6 +564,82 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
             }}
           />
         </BoxAny>
+
+        {/* Two horizontal coil springs — cubic Bezier with horizontal tangents at every rail touch
+            so front/back arcs connect with G1 continuity (smooth, like a cosine wave helix) */}
+        {(['left', 'right'] as const).map((side) => {
+          const count = 10;
+          const springW = avatarSizePx * 0.90;  // spans 5%–95% of avatar
+          const loopW = springW / count;
+          const ry = isMobile ? 4 : 5;
+          const sw = 2;
+          const pad = avatarSizePx * 0.05;  // 5% offset from avatar edge
+          const svgW = springW + pad * 2;
+          const svgH = ry * 2 + 10;
+          const cy = svgH / 2;
+          const topY = cy - ry;
+          const botY = cy + ry;
+          const gridPx = isMobile ? 10 : 28;
+          const dx = 0.5 * loopW;  // horizontal half-step
+
+          // top touch-points 1,2,3…   bot touch-points A,B,C… (staggered by dx)
+          const topXs = Array.from({ length: count }, (_, i) => pad + i * loopW);
+          const botXs = Array.from({ length: count }, (_, i) => pad + (i + 0.5) * loopW);
+
+          const bend = loopW * 0.28; // horizontal control-point offset → horizontal tangents at rails
+          const ins = ry * 0.10;
+
+          // Cubic Bezier with horizontal tangents at both endpoints → G1 at every touch point
+          // Front: 1→A (top-left to bottom-right, bowing right-of-chord)
+          const fC = (tx: number, bx: number) =>
+            `M ${tx} ${topY} C ${tx + bend} ${topY} ${bx - bend} ${botY} ${bx} ${botY}`;
+          // Back: A→2 (bottom-left to top-right, same horizontal tangent at A and 2)
+          const bC = (bx: number, tx2: number) =>
+            `M ${bx} ${botY} C ${bx + bend} ${botY} ${tx2 - bend} ${topY} ${tx2} ${topY}`;
+          // Highlight: same front arc, inset slightly
+          const fHiC = (tx: number, bx: number) =>
+            `M ${tx} ${topY + ins} C ${tx + bend} ${topY + ins} ${bx - bend} ${botY - ins} ${bx} ${botY - ins}`;
+
+          return (
+            <BoxAny
+              key={side}
+              sx={{
+                position: 'absolute',
+                ...(side === 'left' ? { left: gridPx } : { right: gridPx }),
+                top: '50%',
+                transform: side === 'left' ? 'translateY(-50%)' : 'translateY(-50%) scaleX(-1)',
+                zIndex: 10,
+                pointerEvents: 'none',
+              }}
+            >
+              <svg
+                viewBox={`0 0 ${svgW} ${svgH}`}
+                width={svgW}
+                height={svgH}
+                style={{ display: 'block', overflow: 'visible' }}
+              >
+                {/* ── PASS 0: back arcs — 30% opacity solid ── */}
+                {Array.from({ length: count - 1 }, (_, i) => (
+                  <path key={`b-${i}`} d={bC(botXs[i], topXs[i + 1])}
+                    fill="none" stroke="rgba(160,160,160,0.30)" strokeWidth={2} strokeLinecap="round" />
+                ))}
+
+                {/* ── PASS 2: front arcs — bright gold ── */}
+                {topXs.map((tx, i) => (
+                  <path key={`f-${i}`} d={fC(tx, botXs[i])}
+                    fill="none" stroke="rgba(222,158,24,1.0)" strokeWidth={sw} strokeLinecap="round" />
+                ))}
+                {/* ── PASS 3: specular highlight ── */}
+                {topXs.map((tx, i) => (
+                  <path key={`fhi-${i}`} d={fHiC(tx, botXs[i])}
+                    fill="none" stroke="rgba(255,242,155,0.72)" strokeWidth={sw * 0.28} strokeLinecap="round" />
+                ))}
+
+
+              </svg>
+            </BoxAny>
+          );
+        })}
       </BoxAny>
 
       {lightbox && (
