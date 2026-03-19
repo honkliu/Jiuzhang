@@ -29,6 +29,9 @@ import {
   Edit as EditIcon,
   ViewInAr as ViewInArIcon,
   Forum as ForumIcon,
+  Mic as MicIcon,
+  StopCircle as StopCircleIcon,
+  Close as CloseIcon,
 } from '@mui/icons-material';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState, AppDispatch } from '@/store';
@@ -54,6 +57,41 @@ import { useLanguage } from '@/i18n/LanguageContext';
 
 // Work around TS2590 (“union type too complex”) from MUI Box typings in some TS versions.
 const BoxAny = Box as any;
+
+const MAX_VOICE_DURATION_SECONDS = 60;
+
+const formatVoiceTimer = (seconds: number) => {
+  const safeSeconds = Math.max(0, Math.min(MAX_VOICE_DURATION_SECONDS, seconds));
+  const mins = Math.floor(safeSeconds / 60);
+  const secs = safeSeconds % 60;
+  return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+};
+
+const getAudioExtension = (mimeType: string) => {
+  const normalized = mimeType.toLowerCase();
+  if (normalized.includes('webm')) return 'webm';
+  if (normalized.includes('ogg')) return 'ogg';
+  if (normalized.includes('wav')) return 'wav';
+  if (normalized.includes('mpeg') || normalized.includes('mp3')) return 'mp3';
+  if (normalized.includes('mp4') || normalized.includes('m4a') || normalized.includes('aac')) return 'm4a';
+  return 'webm';
+};
+
+const pickRecorderMimeType = () => {
+  if (typeof MediaRecorder === 'undefined' || typeof MediaRecorder.isTypeSupported !== 'function') {
+    return '';
+  }
+
+  const candidates = [
+    'audio/webm;codecs=opus',
+    'audio/ogg;codecs=opus',
+    'audio/webm',
+    'audio/ogg',
+    'audio/mp4',
+  ];
+
+  return candidates.find((type) => MediaRecorder.isTypeSupported(type)) ?? '';
+};
 
 const VirtualizedMessageList = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   (props, ref) => (
@@ -84,6 +122,13 @@ interface LightboxGroup {
   canEdit: boolean;
 }
 
+interface Chat2DAttachment {
+  type: 'image' | 'video' | 'voice' | 'file';
+  url: string;
+  duration?: number;
+  fileName?: string;
+}
+
 type ChatCommandId = '/w' | '/wa' | '/h' | '/b' | '/i' | '/r';
 
 interface ChatMessagesProps {
@@ -96,8 +141,8 @@ interface ChatMessagesProps {
   chatTypingUsers: Array<{ userId: string; userName: string }>;
   leftParticipant: { displayName: string; avatarUrl: string; gender?: string } | null;
   rightParticipant: { displayName: string; avatarUrl: string; gender?: string } | null;
-  left2D: { text: string; mediaUrls: string[] };
-  right2D: { text: string; mediaUrls: string[] };
+  left2D: { text: string; attachments: Chat2DAttachment[] };
+  right2D: { text: string; attachments: Chat2DAttachment[] };
   leftAvatar: string;
   rightAvatar: string;
   imageGroups: LightboxGroup[];
@@ -161,8 +206,8 @@ const ChatMessages: React.FC<ChatMessagesProps> = React.memo(({
         rightParticipant={rightParticipant}
         leftText={left2D.text}
         rightText={right2D.text}
-        leftMediaUrls={left2D.mediaUrls}
-        rightMediaUrls={right2D.mediaUrls}
+        leftAttachments={left2D.attachments}
+        rightAttachments={right2D.attachments}
         imageGroups={imageGroups}
         imageGroupIndexByUrl={imageGroupIndexByUrl}
       />
@@ -248,9 +293,14 @@ interface ChatInputPanelProps {
   activeChatId: string | null;
   sending: boolean;
   uploading: boolean;
+  isRecordingVoice: boolean;
+  recordingSeconds: number;
   chatCommands: Array<{ id: ChatCommandId; description: string; example: string }>;
   onSendMessage: (raw: string) => Promise<boolean>;
   onFileSelected: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onStartVoiceRecording: () => Promise<void>;
+  onStopVoiceRecording: () => void;
+  onCancelVoiceRecording: () => void;
   t: (key: string) => string;
 }
 
@@ -258,9 +308,14 @@ const ChatInputPanel: React.FC<ChatInputPanelProps> = React.memo(({
   activeChatId,
   sending,
   uploading,
+  isRecordingVoice,
+  recordingSeconds,
   chatCommands,
   onSendMessage,
   onFileSelected,
+  onStartVoiceRecording,
+  onStopVoiceRecording,
+  onCancelVoiceRecording,
   t,
 }) => {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -321,9 +376,19 @@ const ChatInputPanel: React.FC<ChatInputPanelProps> = React.memo(({
   }, [activeChatId]);
 
   const handlePickFile = useCallback(() => {
-    if (uploading || sending) return;
+    if (uploading || sending || isRecordingVoice) return;
     fileInputRef.current?.click();
-  }, [uploading, sending]);
+  }, [isRecordingVoice, uploading, sending]);
+
+  const handleVoiceButtonClick = useCallback(async () => {
+    if (isRecordingVoice) {
+      onStopVoiceRecording();
+      return;
+    }
+
+    if (uploading || sending) return;
+    await onStartVoiceRecording();
+  }, [isRecordingVoice, onStartVoiceRecording, onStopVoiceRecording, sending, uploading]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const nextValue = e.target.value;
@@ -366,10 +431,11 @@ const ChatInputPanel: React.FC<ChatInputPanelProps> = React.memo(({
         component="input"
         ref={fileInputRef}
         type="file"
+        accept="image/*,video/*,audio/*"
         title={t('chat.attach')}
         aria-label={t('chat.attach')}
         sx={{ display: 'none' }}
-        onChange={(event) => {
+        onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
           onFileSelected(event);
           if (fileInputRef.current) fileInputRef.current.value = '';
         }}
@@ -381,22 +447,47 @@ const ChatInputPanel: React.FC<ChatInputPanelProps> = React.memo(({
         <IconButton
           size="small"
           onClick={handlePickFile}
-          disabled={uploading || sending}
+          disabled={uploading || sending || isRecordingVoice}
           title={t('chat.attach')}
           aria-label={t('chat.attach')}
         >
           {uploading ? <CircularProgress size={18} /> : <AttachFileIcon />}
         </IconButton>
+        <IconButton
+          size="small"
+          color={isRecordingVoice ? 'error' : 'default'}
+          onClick={handleVoiceButtonClick}
+          disabled={uploading || sending}
+          title={isRecordingVoice ? t('chat.voice.stop') : t('chat.voice.record')}
+          aria-label={isRecordingVoice ? t('chat.voice.stop') : t('chat.voice.record')}
+        >
+          {isRecordingVoice ? <StopCircleIcon /> : <MicIcon />}
+        </IconButton>
+        {isRecordingVoice ? (
+          <IconButton
+            size="small"
+            onClick={onCancelVoiceRecording}
+            title={t('chat.voice.cancel')}
+            aria-label={t('chat.voice.cancel')}
+          >
+            <CloseIcon />
+          </IconButton>
+        ) : null}
         <TextField
           inputRef={inputRef}
           fullWidth
           multiline
           maxRows={4}
-          placeholder={t('chat.typeMessage')}
+          placeholder={
+            isRecordingVoice
+              ? `${t('chat.voice.recording')} ${formatVoiceTimer(recordingSeconds)} / ${formatVoiceTimer(MAX_VOICE_DURATION_SECONDS)}`
+              : t('chat.typeMessage')
+          }
           value={messageText}
           onChange={handleChange}
           onKeyPress={handleKeyPress}
           onKeyDown={handleKeyDown}
+          disabled={isRecordingVoice}
           size="small"
           sx={{
             '& .MuiOutlinedInput-root': {
@@ -448,7 +539,7 @@ const ChatInputPanel: React.FC<ChatInputPanelProps> = React.memo(({
             const ok = await onSendMessage(raw);
             if (!ok) setMessageText(raw);
           }}
-          disabled={!messageText.trim() || sending || uploading}
+          disabled={!messageText.trim() || sending || uploading || isRecordingVoice}
         >
           <SendIcon />
         </IconButton>
@@ -468,6 +559,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
   const isHoverCapable = useMediaQuery('(hover: hover) and (pointer: fine)');
   const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [isRecordingVoice, setIsRecordingVoice] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [isRoom3D, setIsRoom3D] = useState(false);
   const [isRoom2D, setIsRoom2D] = useState(false);
   const [otherAvatarImageId, setOtherAvatarImageId] = useState<string | null>(null);
@@ -475,6 +568,12 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRootHostRef = useRef<HTMLDivElement | null>(null);
   const inputRootRef = useRef<Root | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordingStreamRef = useRef<MediaStream | null>(null);
+  const recordingChunksRef = useRef<Blob[]>([]);
+  const recordingTimerRef = useRef<number | null>(null);
+  const recordingStartedAtRef = useRef<number>(0);
+  const recordingCancelledRef = useRef(false);
 
   const setInputHost = useCallback((node: HTMLDivElement | null) => {
     if (node === inputRootHostRef.current) return;
@@ -829,6 +928,155 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
     return 'file';
   };
 
+  const clearRecordingTimer = useCallback(() => {
+    if (recordingTimerRef.current) {
+      window.clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    }
+  }, []);
+
+  const releaseRecordingStream = useCallback(() => {
+    if (recordingStreamRef.current) {
+      recordingStreamRef.current.getTracks().forEach((track) => track.stop());
+      recordingStreamRef.current = null;
+    }
+  }, []);
+
+  const resetRecordingUi = useCallback(() => {
+    clearRecordingTimer();
+    setIsRecordingVoice(false);
+    setRecordingSeconds(0);
+  }, [clearRecordingTimer]);
+
+  const uploadRecordedVoice = useCallback(async (blob: Blob, durationSeconds: number) => {
+    if (!activeChat) return;
+
+    const mimeType = blob.type || 'audio/webm';
+    const extension = getAudioExtension(mimeType);
+    const fileName = `voice_${new Date().toISOString().replace(/[:.]/g, '-')}.${extension}`;
+    const file = new File([blob], fileName, { type: mimeType });
+
+    try {
+      setUploading(true);
+      const upload = await mediaService.upload(file);
+
+      const message = await chatService.sendMessage(activeChat.id, {
+        messageType: 'voice',
+        mediaUrl: upload.url,
+        duration: Math.max(1, Math.min(MAX_VOICE_DURATION_SECONDS, Math.round(durationSeconds))),
+        fileName: upload.fileName || file.name,
+        fileSize: String(upload.size ?? file.size),
+      });
+
+      dispatch(addMessage(message));
+    } catch (error: any) {
+      console.error('Failed to upload/send voice message:', error);
+      if (error?.response?.status === 403) {
+        addLocalInfoMessage(t('chat.notFriends'));
+      } else {
+        addLocalInfoMessage(t('chat.voice.sendFailed'));
+      }
+    } finally {
+      setUploading(false);
+    }
+  }, [activeChat, dispatch, t]);
+
+  const stopVoiceRecording = useCallback(() => {
+    const recorder = mediaRecorderRef.current;
+    if (!recorder || recorder.state === 'inactive') {
+      releaseRecordingStream();
+      resetRecordingUi();
+      return;
+    }
+
+    clearRecordingTimer();
+    recorder.stop();
+  }, [clearRecordingTimer, releaseRecordingStream, resetRecordingUi]);
+
+  const cancelVoiceRecording = useCallback(() => {
+    recordingCancelledRef.current = true;
+    stopVoiceRecording();
+  }, [stopVoiceRecording]);
+
+  const startVoiceRecording = useCallback(async () => {
+    if (!activeChat || sending || uploading || isRecordingVoice) {
+      return;
+    }
+
+    if (typeof window === 'undefined' || typeof MediaRecorder === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+      addLocalInfoMessage(t('chat.voice.unsupported'));
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mimeType = pickRecorderMimeType();
+      const recorder = mimeType
+        ? new MediaRecorder(stream, { mimeType })
+        : new MediaRecorder(stream);
+
+      recordingCancelledRef.current = false;
+      recordingStreamRef.current = stream;
+      mediaRecorderRef.current = recorder;
+      recordingChunksRef.current = [];
+      recordingStartedAtRef.current = Date.now();
+      setRecordingSeconds(0);
+      setIsRecordingVoice(true);
+
+      recorder.ondataavailable = (event: BlobEvent) => {
+        if (event.data.size > 0) {
+          recordingChunksRef.current.push(event.data);
+        }
+      };
+
+      recorder.onstop = async () => {
+        const durationSeconds = Math.max(
+          1,
+          Math.min(MAX_VOICE_DURATION_SECONDS, Math.round((Date.now() - recordingStartedAtRef.current) / 1000))
+        );
+        const chunks = recordingChunksRef.current;
+
+        mediaRecorderRef.current = null;
+        recordingChunksRef.current = [];
+        releaseRecordingStream();
+        resetRecordingUi();
+
+        if (recordingCancelledRef.current || chunks.length === 0) {
+          recordingCancelledRef.current = false;
+          return;
+        }
+
+        const recordedMimeType = recorder.mimeType || mimeType || 'audio/webm';
+        const blob = new Blob(chunks, { type: recordedMimeType });
+        await uploadRecordedVoice(blob, durationSeconds);
+      };
+
+      recorder.start();
+
+      recordingTimerRef.current = window.setInterval(() => {
+        const elapsed = Math.min(
+          MAX_VOICE_DURATION_SECONDS,
+          Math.floor((Date.now() - recordingStartedAtRef.current) / 1000)
+        );
+        setRecordingSeconds(elapsed);
+
+        if (elapsed >= MAX_VOICE_DURATION_SECONDS) {
+          stopVoiceRecording();
+        }
+      }, 250);
+    } catch (error: any) {
+      console.error('Failed to start voice recording:', error);
+      releaseRecordingStream();
+      resetRecordingUi();
+
+      if (error?.name === 'NotAllowedError' || error?.name === 'PermissionDeniedError') {
+        addLocalInfoMessage(t('chat.voice.permissionDenied'));
+      } else {
+        addLocalInfoMessage(t('chat.voice.unsupported'));
+      }
+    }
+  }, [activeChat, isRecordingVoice, releaseRecordingStream, resetRecordingUi, sending, stopVoiceRecording, t, uploadRecordedVoice, uploading]);
+
 
   const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -858,6 +1106,28 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
       setUploading(false);
     }
   };
+
+  useEffect(() => {
+    return () => {
+      recordingCancelledRef.current = true;
+      clearRecordingTimer();
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
+      }
+      releaseRecordingStream();
+    };
+  }, [clearRecordingTimer, releaseRecordingStream]);
+
+  useEffect(() => {
+    recordingCancelledRef.current = true;
+    clearRecordingTimer();
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    } else {
+      releaseRecordingStream();
+      resetRecordingUi();
+    }
+  }, [activeChat?.id, clearRecordingTimer, releaseRecordingStream, resetRecordingUi]);
 
   const isGroup = activeChat ? isRealGroupChat(activeChat, user?.id) : false;
 
@@ -954,23 +1224,34 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
   }, [chatMessages, user?.id]);
 
 
-  const getLatest2DContentFor = (senderId?: string, draftText?: string): { text: string; mediaUrls: string[] } => {
-    if (!senderId) return { text: draftText || '', mediaUrls: [] };
+  const getLatest2DContentFor = (senderId?: string, draftText?: string): { text: string; attachments: Chat2DAttachment[] } => {
+    if (!senderId) return { text: draftText || '', attachments: [] };
 
     const text = buildRollingTextFor(senderId, draftText);
 
-    // Collect all media URLs in chronological order (oldest first)
-    const mediaUrls: string[] = [];
+    const attachments: Chat2DAttachment[] = [];
     for (let i = 0; i < mergedMessages.length; i += 1) {
       const msg = mergedMessages[i];
       if (msg.senderId !== senderId) continue;
       if (msg.isDeleted) continue;
+      if (msg.messageType === 'text' || msg.messageType === 'system') continue;
       const content = (msg as any).content;
       const url = (msg as any).thumbnailUrl || (msg as any).mediaUrl || content?.thumbnailUrl || content?.mediaUrl || '';
-      if (url) mediaUrls.push(url);
+      if (!url) continue;
+      const messageType = msg.messageType;
+      if (messageType !== 'image' && messageType !== 'video' && messageType !== 'voice' && messageType !== 'file') {
+        continue;
+      }
+
+      attachments.push({
+        type: messageType,
+        url,
+        duration: 'duration' in msg ? msg.duration : undefined,
+        fileName: 'fileName' in msg ? msg.fileName : undefined,
+      });
     }
 
-    return { text, mediaUrls };
+    return { text, attachments };
   };
 
   type MoodKey = 'neutral' | 'smile' | 'angry' | 'sad' | 'surprised' | 'thinking' | 'happy' | 'crying' | 'excited' | 'flirty' | 'solo' | 'interact';
@@ -986,12 +1267,12 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
   const otherDraft = draftMessages.find((d) => d.senderId === otherParticipant?.userId)?.text;
   const otherDraftClean = otherDraft?.replace(/\[mood:[^\]]+\]/g, '').trim() || undefined;
   const left2D = useMemo(() => {
-    if (!isRoom2D) return { text: '', mediaUrls: [] };
+    if (!isRoom2D) return { text: '', attachments: [] };
     return getLatest2DContentFor(otherParticipant?.userId, otherDraftClean);
   }, [isRoom2D, otherParticipant?.userId, otherDraftClean, mergedMessages, chatMessages]);
 
   const right2D = useMemo(() => {
-    if (!isRoom2D) return { text: '', mediaUrls: [] };
+    if (!isRoom2D) return { text: '', attachments: [] };
     return getLatest2DContentFor(user?.id);
   }, [isRoom2D, user?.id, mergedMessages, chatMessages]);
   const leftMoodText = latestReceivedText;
@@ -1192,14 +1473,33 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
           activeChatId={activeChat.id}
           sending={sending}
           uploading={uploading}
+          isRecordingVoice={isRecordingVoice}
+          recordingSeconds={recordingSeconds}
           chatCommands={chatCommands}
           onSendMessage={sendMessage}
           onFileSelected={handleFileSelected}
+          onStartVoiceRecording={startVoiceRecording}
+          onStopVoiceRecording={stopVoiceRecording}
+          onCancelVoiceRecording={cancelVoiceRecording}
           t={t}
         />
       </ThemeProvider>
     );
-  }, [theme, activeChat?.id, sending, uploading, chatCommands, sendMessage, handleFileSelected, t]);
+  }, [
+    theme,
+    activeChat?.id,
+    sending,
+    uploading,
+    isRecordingVoice,
+    recordingSeconds,
+    chatCommands,
+    sendMessage,
+    handleFileSelected,
+    startVoiceRecording,
+    stopVoiceRecording,
+    cancelVoiceRecording,
+    t,
+  ]);
 
   if (!activeChat) {
     return (

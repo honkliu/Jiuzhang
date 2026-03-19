@@ -11,6 +11,7 @@ import { UserAvatar } from '@/components/Shared/UserAvatar';
 import { ImageHoverPreview } from '@/components/Shared/ImageHoverPreview';
 import { ImageLightbox } from '@/components/Shared/ImageLightbox';
 import { useSettings } from '@/settings/SettingsContext';
+import { VoiceMessageBubble } from '@/components/Chat/VoiceMessageBubble';
 
 // Work around TS2590 ("union type too complex") from MUI Box typings in some TS versions.
 const BoxAny = Box as any;
@@ -130,6 +131,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
   imageGroupIndex,
 }) => {
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isHoverCapable = useMediaQuery('(hover: hover) and (pointer: fine)');
   const { language, t } = useLanguage();
   const { formatTime: formatTimeWithZone } = useSettings();
@@ -268,18 +270,18 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
         elevation={0}
         sx={{
           maxWidth: '76%',
-          px: message.messageType === 'image' ? 0 : 2,
-          py: message.messageType === 'image' ? 0 : 1,
-          bgcolor: message.messageType === 'image' ? 'transparent' : (isOwn ? 'rgba(7, 193, 96, 0.9)' : 'rgba(255, 255, 255, 0.6)'),
+          px: message.messageType === 'image' || message.messageType === 'voice' ? 0 : 2,
+          py: message.messageType === 'image' || message.messageType === 'voice' ? 0 : 1,
+          bgcolor: message.messageType === 'image' || message.messageType === 'voice' ? 'transparent' : (isOwn ? 'rgba(7, 193, 96, 0.9)' : 'rgba(255, 255, 255, 0.6)'),
           color: isOwn ? 'primary.contrastText' : 'text.primary',
           borderRadius: '10px',
           borderTopLeftRadius: !isOwn && !showAvatar ? 4 : undefined,
           borderTopRightRadius: isOwn && !showAvatar ? 4 : undefined,
           ml: isOwn ? 'auto' : 0,
-          border: message.messageType === 'image' ? 'none' : '1px solid rgba(255,255,255,0.5)',
-          boxShadow: message.messageType === 'image' ? 'none' : '0 10px 30px rgba(15, 23, 42, 0.12)',
-          backdropFilter: message.messageType === 'image' ? 'none' : 'blur(12px) saturate(160%)',
-          WebkitBackdropFilter: message.messageType === 'image' ? 'none' : 'blur(12px) saturate(160%)',
+          border: message.messageType === 'image' || message.messageType === 'voice' ? 'none' : '1px solid rgba(255,255,255,0.5)',
+          boxShadow: message.messageType === 'image' || message.messageType === 'voice' ? 'none' : '0 10px 30px rgba(15, 23, 42, 0.12)',
+          backdropFilter: message.messageType === 'image' || message.messageType === 'voice' ? 'none' : 'blur(12px) saturate(160%)',
+          WebkitBackdropFilter: message.messageType === 'image' || message.messageType === 'voice' ? 'none' : 'blur(12px) saturate(160%)',
         }}
       >
         {/* Message content */}
@@ -383,7 +385,12 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
             sx={{ maxWidth: '100%', maxHeight: 300, borderRadius: 1 }}
           />
         ) : message.messageType === 'voice' ? (
-          <BoxAny component="audio" src={message.mediaUrl} controls />
+          <VoiceMessageBubble
+            url={message.mediaUrl || ''}
+            duration={message.duration}
+            align={isOwn ? 'right' : 'left'}
+            isMobile={isMobile}
+          />
         ) : message.messageType === 'file' ? (
           <Typography variant="body2">
             <a href={message.mediaUrl} target="_blank" rel="noreferrer">

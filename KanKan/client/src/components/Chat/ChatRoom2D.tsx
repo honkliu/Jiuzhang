@@ -7,6 +7,7 @@ import rehypeKatex from 'rehype-katex';
 import { UserAvatar } from '@/components/Shared/UserAvatar';
 import { ImageLightbox } from '@/components/Shared/ImageLightbox';
 import { ImageHoverPreview } from '@/components/Shared/ImageHoverPreview';
+import { VoiceMessageBubble } from '@/components/Chat/VoiceMessageBubble';
 
 // Work around TS2590 ("union type too complex") from MUI Box typings in some TS versions.
 const BoxAny = Box as any;
@@ -110,13 +111,20 @@ interface ParticipantInfo {
   gender?: string;
 }
 
+interface Chat2DAttachment {
+  type: 'image' | 'video' | 'voice' | 'file';
+  url: string;
+  duration?: number;
+  fileName?: string;
+}
+
 interface ChatRoom2DProps {
   leftParticipant: ParticipantInfo | null;
   rightParticipant: ParticipantInfo | null;
   leftText?: string;
   rightText?: string;
-  leftMediaUrls?: string[];
-  rightMediaUrls?: string[];
+  leftAttachments?: Chat2DAttachment[];
+  rightAttachments?: Chat2DAttachment[];
   imageGroups?: Array<{ sourceUrl: string; messageId: string; canEdit: boolean }>;
   imageGroupIndexByUrl?: Record<string, number>;
 }
@@ -126,8 +134,8 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
   rightParticipant,
   leftText,
   rightText,
-  leftMediaUrls,
-  rightMediaUrls,
+  leftAttachments,
+  rightAttachments,
   imageGroups,
   imageGroupIndexByUrl,
 }) => {
@@ -178,12 +186,17 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
 
   const renderBubble = (
     text?: string,
-    mediaUrls?: string[],
+    attachments?: Chat2DAttachment[],
     align: 'left' | 'right' = 'left',
     extraSx?: Record<string, any>
   ) => {
-    const hasMedia = mediaUrls && mediaUrls.length > 0;
-    if (!text && !hasMedia) return null;
+    const imageAttachments = (attachments || []).filter((attachment) => attachment.type === 'image');
+    const otherAttachments = (attachments || []).filter((attachment) => attachment.type !== 'image');
+    const hasImages = imageAttachments.length > 0;
+    const hasOtherAttachments = otherAttachments.length > 0;
+    const hasAttachments = hasImages || hasOtherAttachments;
+    if (!text && !hasAttachments) return null;
+
     return (
       <Paper
         elevation={0}
@@ -238,7 +251,7 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
         }}
       >
         {/* Text area — fills remaining width */}
-        {text && (
+        {text ? (
           <BoxAny
             sx={{
               position: 'relative',
@@ -246,6 +259,7 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
               flex: 1,
               height: `calc(100% - ${bubbleRowTrimPx}px)`,
               alignSelf: 'flex-end',
+              minWidth: 0,
               overflow: 'hidden',
               ...textStyle,
               '& p': { margin: 0 },
@@ -282,10 +296,70 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
               </ReactMarkdown>
             </BoxAny>
           </BoxAny>
-        )}
+        ) : null}
+
+        {hasOtherAttachments ? (
+          <BoxAny
+            sx={{
+              position: 'relative',
+              zIndex: 1,
+              flex: text ? '0 0 auto' : 1,
+              minWidth: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'flex-end',
+              gap: 0.75,
+              pb: text ? 0.5 : 0,
+            }}
+          >
+            {otherAttachments.map((attachment, index) => {
+              if (attachment.type === 'voice') {
+                return (
+                  <VoiceMessageBubble
+                    key={`${attachment.type}-${attachment.url}-${index}`}
+                    url={attachment.url}
+                    duration={attachment.duration}
+                    align={align}
+                    isMobile={isMobile}
+                  />
+                );
+              }
+
+              if (attachment.type === 'video') {
+                return (
+                  <BoxAny
+                    key={`${attachment.type}-${attachment.url}-${index}`}
+                    component="video"
+                    src={attachment.url}
+                    controls
+                    sx={{ width: '100%', maxHeight: 180, borderRadius: 1, bgcolor: 'rgba(0,0,0,0.18)' }}
+                  />
+                );
+              }
+
+              return (
+                <BoxAny
+                  key={`${attachment.type}-${attachment.url}-${index}`}
+                  component="a"
+                  href={attachment.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  sx={{
+                    color: 'inherit',
+                    textDecoration: 'underline',
+                    fontSize: '0.9rem',
+                    wordBreak: 'break-all',
+                  }}
+                >
+                  {attachment.fileName || 'Download file'}
+                </BoxAny>
+              );
+            })}
+          </BoxAny>
+        ) : null}
 
         {/* Image strip — 60px wide, newest at bottom, older images scroll off top */}
-        {hasMedia && (
+        {hasImages && (
           <BoxAny
             sx={{
               position: 'relative',
@@ -302,10 +376,10 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
               pr: 0.5,
             }}
           >
-            {mediaUrls.map((url, i) => (
+            {imageAttachments.map((attachment, i) => (
               <ImageHoverPreview
                 key={i}
-                src={url}
+                src={attachment.url}
                 alt="Chat media"
                 openOnHover={isHoverCapable}
                 openOnLongPress={!isHoverCapable}
@@ -315,16 +389,16 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
                   <BoxAny
                     {...previewProps}
                     component="img"
-                    src={url}
+                    src={attachment.url}
                     alt="Chat media"
                     onContextMenu={(event: React.MouseEvent<HTMLElement>) => {
                       event.preventDefault();
                     }}
                     onClick={() => {
                       setLightbox({
-                        images: mediaUrls,
+                        images: imageAttachments.map((item) => item.url),
                         index: i,
-                        groupIndex: imageGroupIndexByUrl?.[url],
+                        groupIndex: imageGroupIndexByUrl?.[attachment.url],
                       });
                     }}
                     sx={{
@@ -431,7 +505,7 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
             zIndex: 2,
           }}
         >
-          {renderBubble(rightText, rightMediaUrls, 'right', {
+          {renderBubble(rightText, rightAttachments, 'right', {
             ml: overlapOffsetPx > 0 ? `calc(-1 * ${overlapOffset})` : 0,
           })}
         </BoxAny>
@@ -448,7 +522,7 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
             zIndex: 2,
           }}
         >
-          {renderBubble(leftText, leftMediaUrls, 'left', {
+          {renderBubble(leftText, leftAttachments, 'left', {
             mr: overlapOffsetPx > 0 ? `calc(-1 * ${overlapOffset})` : 0,
           })}
         </BoxAny>
