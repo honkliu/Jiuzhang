@@ -60,13 +60,6 @@ const BoxAny = Box as any;
 
 const MAX_VOICE_DURATION_SECONDS = 60;
 
-const formatVoiceTimer = (seconds: number) => {
-  const safeSeconds = Math.max(0, Math.min(MAX_VOICE_DURATION_SECONDS, seconds));
-  const mins = Math.floor(safeSeconds / 60);
-  const secs = safeSeconds % 60;
-  return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-};
-
 const getAudioExtension = (mimeType: string) => {
   const normalized = mimeType.toLowerCase();
   if (normalized.includes('webm')) return 'webm';
@@ -122,9 +115,10 @@ interface LightboxGroup {
   canEdit: boolean;
 }
 
-interface Chat2DAttachment {
-  type: 'image' | 'video' | 'voice' | 'file';
-  url: string;
+interface Chat2DSegment {
+  type: 'text' | 'image' | 'video' | 'voice' | 'file';
+  text?: string;
+  url?: string;
   duration?: number;
   fileName?: string;
 }
@@ -141,8 +135,8 @@ interface ChatMessagesProps {
   chatTypingUsers: Array<{ userId: string; userName: string }>;
   leftParticipant: { displayName: string; avatarUrl: string; gender?: string } | null;
   rightParticipant: { displayName: string; avatarUrl: string; gender?: string } | null;
-  left2D: { text: string; attachments: Chat2DAttachment[] };
-  right2D: { text: string; attachments: Chat2DAttachment[] };
+  left2D: { segments: Chat2DSegment[] };
+  right2D: { segments: Chat2DSegment[] };
   leftAvatar: string;
   rightAvatar: string;
   imageGroups: LightboxGroup[];
@@ -204,10 +198,8 @@ const ChatMessages: React.FC<ChatMessagesProps> = React.memo(({
       <ChatRoom2D
         leftParticipant={leftParticipant}
         rightParticipant={rightParticipant}
-        leftText={left2D.text}
-        rightText={right2D.text}
-        leftAttachments={left2D.attachments}
-        rightAttachments={right2D.attachments}
+        leftSegments={left2D.segments}
+        rightSegments={right2D.segments}
         imageGroups={imageGroups}
         imageGroupIndexByUrl={imageGroupIndexByUrl}
       />
@@ -294,7 +286,6 @@ interface ChatInputPanelProps {
   sending: boolean;
   uploading: boolean;
   isRecordingVoice: boolean;
-  recordingSeconds: number;
   chatCommands: Array<{ id: ChatCommandId; description: string; example: string }>;
   onSendMessage: (raw: string) => Promise<boolean>;
   onFileSelected: (event: React.ChangeEvent<HTMLInputElement>) => void;
@@ -309,7 +300,6 @@ const ChatInputPanel: React.FC<ChatInputPanelProps> = React.memo(({
   sending,
   uploading,
   isRecordingVoice,
-  recordingSeconds,
   chatCommands,
   onSendMessage,
   onFileSelected,
@@ -478,11 +468,7 @@ const ChatInputPanel: React.FC<ChatInputPanelProps> = React.memo(({
           fullWidth
           multiline
           maxRows={4}
-          placeholder={
-            isRecordingVoice
-              ? `${t('chat.voice.recording')} ${formatVoiceTimer(recordingSeconds)} / ${formatVoiceTimer(MAX_VOICE_DURATION_SECONDS)}`
-              : t('chat.typeMessage')
-          }
+          placeholder={isRecordingVoice ? '' : t('chat.typeMessage')}
           value={messageText}
           onChange={handleChange}
           onKeyPress={handleKeyPress}
@@ -1174,26 +1160,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
     return map;
   }, [chatMessages]);
 
-  const buildRollingTextFor = (senderId?: string, draftText?: string) => {
-    if (!senderId) return '';
-    const prefixLines = (value: string) =>
-      value
-        .split('\n')
-        .map((line) => `\\> ${line}`)
-        .join('\n');
-
-    const parts = chatMessages
-      .filter((msg) => msg.senderId === senderId && msg.messageType === 'text' && !msg.isDeleted)
-      .map((msg) => prefixLines(msg.text || ''))
-      .filter((text) => text.length > 0);
-
-    if (draftText && draftText.trim().length > 0) {
-      parts.push(prefixLines(draftText));
-    }
-
-    return parts.join('\n');
-  };
-
   const getLatestRawTextFor = (senderId?: string) => {
     if (!senderId) return '';
     return latestRawTextBySenderId[senderId] || '';
@@ -1224,34 +1190,60 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
   }, [chatMessages, user?.id]);
 
 
-  const getLatest2DContentFor = (senderId?: string, draftText?: string): { text: string; attachments: Chat2DAttachment[] } => {
-    if (!senderId) return { text: draftText || '', attachments: [] };
+  const getLatest2DContentFor = (senderId?: string, draftText?: string): { segments: Chat2DSegment[] } => {
+    const prefixLines = (value: string) =>
+      value
+        .split('\n')
+        .map((line) => `\\> ${line}`)
+        .join('\n');
 
-    const text = buildRollingTextFor(senderId, draftText);
+    if (!senderId) {
+      return {
+        segments: draftText?.trim()
+          ? [{ type: 'text', text: prefixLines(draftText.trim()) }]
+          : [],
+      };
+    }
 
-    const attachments: Chat2DAttachment[] = [];
-    for (let i = 0; i < mergedMessages.length; i += 1) {
-      const msg = mergedMessages[i];
-      if (msg.senderId !== senderId) continue;
-      if (msg.isDeleted) continue;
-      if (msg.messageType === 'text' || msg.messageType === 'system') continue;
-      const content = (msg as any).content;
-      const url = (msg as any).thumbnailUrl || (msg as any).mediaUrl || content?.thumbnailUrl || content?.mediaUrl || '';
-      if (!url) continue;
-      const messageType = msg.messageType;
-      if (messageType !== 'image' && messageType !== 'video' && messageType !== 'voice' && messageType !== 'file') {
+    const segments: Chat2DSegment[] = [];
+
+    for (let i = 0; i < chatMessages.length; i += 1) {
+      const msg = chatMessages[i];
+      if (msg.senderId !== senderId || msg.isDeleted) continue;
+
+      if (msg.messageType === 'text') {
+        const text = (msg.text || '').trim();
+        if (text) {
+          segments.push({ type: 'text', text: prefixLines(text) });
+        }
         continue;
       }
 
-      attachments.push({
-        type: messageType,
+      if (msg.messageType === 'system') {
+        continue;
+      }
+
+      const content = (msg as any).content;
+      const url = (msg as any).thumbnailUrl || (msg as any).mediaUrl || content?.thumbnailUrl || content?.mediaUrl || '';
+      if (!url) continue;
+
+      if (msg.messageType !== 'image' && msg.messageType !== 'video' && msg.messageType !== 'voice' && msg.messageType !== 'file') {
+        continue;
+      }
+
+      segments.push({
+        type: msg.messageType,
         url,
         duration: 'duration' in msg ? msg.duration : undefined,
         fileName: 'fileName' in msg ? msg.fileName : undefined,
       });
     }
 
-    return { text, attachments };
+    if (draftText && draftText.trim().length > 0) {
+      segments.push({ type: 'text', text: prefixLines(draftText.trim()) });
+    }
+
+    return { segments };
   };
 
   type MoodKey = 'neutral' | 'smile' | 'angry' | 'sad' | 'surprised' | 'thinking' | 'happy' | 'crying' | 'excited' | 'flirty' | 'solo' | 'interact';
@@ -1267,12 +1259,12 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
   const otherDraft = draftMessages.find((d) => d.senderId === otherParticipant?.userId)?.text;
   const otherDraftClean = otherDraft?.replace(/\[mood:[^\]]+\]/g, '').trim() || undefined;
   const left2D = useMemo(() => {
-    if (!isRoom2D) return { text: '', attachments: [] };
+    if (!isRoom2D) return { segments: [] };
     return getLatest2DContentFor(otherParticipant?.userId, otherDraftClean);
   }, [isRoom2D, otherParticipant?.userId, otherDraftClean, mergedMessages, chatMessages]);
 
   const right2D = useMemo(() => {
-    if (!isRoom2D) return { text: '', attachments: [] };
+    if (!isRoom2D) return { segments: [] };
     return getLatest2DContentFor(user?.id);
   }, [isRoom2D, user?.id, mergedMessages, chatMessages]);
   const leftMoodText = latestReceivedText;
@@ -1474,7 +1466,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
           sending={sending}
           uploading={uploading}
           isRecordingVoice={isRecordingVoice}
-          recordingSeconds={recordingSeconds}
           chatCommands={chatCommands}
           onSendMessage={sendMessage}
           onFileSelected={handleFileSelected}
@@ -1491,7 +1482,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
     sending,
     uploading,
     isRecordingVoice,
-    recordingSeconds,
     chatCommands,
     sendMessage,
     handleFileSelected,

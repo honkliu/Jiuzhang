@@ -111,9 +111,10 @@ interface ParticipantInfo {
   gender?: string;
 }
 
-interface Chat2DAttachment {
-  type: 'image' | 'video' | 'voice' | 'file';
-  url: string;
+interface Chat2DSegment {
+  type: 'text' | 'image' | 'video' | 'voice' | 'file';
+  text?: string;
+  url?: string;
   duration?: number;
   fileName?: string;
 }
@@ -121,10 +122,8 @@ interface Chat2DAttachment {
 interface ChatRoom2DProps {
   leftParticipant: ParticipantInfo | null;
   rightParticipant: ParticipantInfo | null;
-  leftText?: string;
-  rightText?: string;
-  leftAttachments?: Chat2DAttachment[];
-  rightAttachments?: Chat2DAttachment[];
+  leftSegments?: Chat2DSegment[];
+  rightSegments?: Chat2DSegment[];
   imageGroups?: Array<{ sourceUrl: string; messageId: string; canEdit: boolean }>;
   imageGroupIndexByUrl?: Record<string, number>;
 }
@@ -132,15 +131,15 @@ interface ChatRoom2DProps {
 export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
   leftParticipant,
   rightParticipant,
-  leftText,
-  rightText,
-  leftAttachments,
-  rightAttachments,
+  leftSegments,
+  rightSegments,
   imageGroups,
   imageGroupIndexByUrl,
 }) => {
   const [lightbox, setLightbox] = useState<{ images: string[]; index: number; groupIndex?: number } | null>(null);
   const layoutRef = useRef<HTMLDivElement | null>(null);
+  const leftScrollRef = useRef<HTMLDivElement | null>(null);
+  const rightScrollRef = useRef<HTMLDivElement | null>(null);
   const [layoutWidth, setLayoutWidth] = useState<number>(0);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -157,6 +156,18 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
     return () => observer.disconnect();
   }, []);
 
+  useEffect(() => {
+    if (leftScrollRef.current) {
+      leftScrollRef.current.scrollTop = leftScrollRef.current.scrollHeight;
+    }
+  }, [leftSegments]);
+
+  useEffect(() => {
+    if (rightScrollRef.current) {
+      rightScrollRef.current.scrollTop = rightScrollRef.current.scrollHeight;
+    }
+  }, [rightSegments]);
+
   const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
   const baseWidth = layoutWidth || window.innerWidth;
   const columnWidth = baseWidth / 2;
@@ -164,9 +175,6 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
   // Keep bubble sizes consistent until narrow; cap at <= 2/3 view width.
   const bubbleTargetPx = Math.min(baseWidth * 0.66, 520);
   const bubbleW = `${bubbleTargetPx}px`;
-  const fontSizePx = isMobile ? 14.4 : 16;
-  const rowHeightPx = fontSizePx * 1.6;
-  const bubbleRowTrimPx = Math.round(rowHeightPx * 2);
   const bubbleH = 'calc(100% - 10px)';
   const avatarSizePx = (isMobile
     ? clamp(baseWidth * 0.2, 96, 150)
@@ -179,20 +187,21 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
 
   const textStyle = {
     whiteSpace: 'pre-wrap',
-    lineHeight: 1.6,
+    lineHeight: 1.45,
     fontSize: isMobile ? '0.9rem' : '1rem',
     fontFamily: "'STKaiti', 'KaiTi', 'STSong', 'SimSun', 'Noto Serif SC', serif",
   };
 
   const renderBubble = (
-    text?: string,
-    attachments?: Chat2DAttachment[],
+    segments?: Chat2DSegment[],
     align: 'left' | 'right' = 'left',
     extraSx?: Record<string, any>
   ) => {
-    const orderedAttachments = attachments || [];
-    const hasAttachments = orderedAttachments.length > 0;
-    if (!text && !hasAttachments) return null;
+    const orderedSegments = segments || [];
+    const hasSegments = orderedSegments.length > 0;
+    if (!hasSegments) return null;
+
+    const orderedImages = orderedSegments.filter((segment) => segment.type === 'image').map((segment) => segment.url || '');
 
     return (
       <Paper
@@ -215,7 +224,7 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
           overflowX: 'visible',
           overflowY: 'hidden',
           display: 'flex',
-          flexDirection: 'row',
+          flexDirection: 'column',
           justifyContent: 'flex-start',
           alignItems: 'stretch',
           backgroundImage:
@@ -248,156 +257,158 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
           ...extraSx,
         }}
       >
-        {/* Text area — fills remaining width */}
-        {text ? (
+        <BoxAny
+          ref={align === 'left' ? leftScrollRef : rightScrollRef}
+          sx={{
+            position: 'relative',
+            zIndex: 1,
+            flex: 1,
+            minWidth: 0,
+            minHeight: 0,
+            boxSizing: 'border-box',
+            overflowX: 'hidden',
+            overflowY: 'auto',
+            WebkitOverflowScrolling: 'touch',
+            overscrollBehavior: 'contain',
+            touchAction: 'pan-y',
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none',
+            '&::-webkit-scrollbar': {
+              display: 'none',
+            },
+          }}
+        >
           <BoxAny
             sx={{
-              position: 'relative',
-              zIndex: 1,
-              flex: 1,
-              height: `calc(100% - ${bubbleRowTrimPx}px)`,
-              alignSelf: 'flex-end',
-              minWidth: 0,
-              overflow: 'hidden',
-              ...textStyle,
-              '& p': { margin: 0 },
-              '& blockquote': {
-                margin: 0,
-                paddingLeft: '0.75em',
-                borderLeft: '2px solid rgba(116, 84, 50, 0.45)',
-                color: 'inherit',
-              },
-              '& .katex-display': {
-                margin: '0.5em 0',
-                overflowX: 'auto',
-                overflowY: 'hidden',
-              },
-              '& .katex': { fontSize: '1.05em' },
-              '& table': { width: '100%', borderCollapse: 'collapse', margin: '8px 0' },
-              '& th, & td': { border: '1px solid rgba(0,0,0,0.12)', padding: '4px 8px', textAlign: 'left' },
-              '& th': { backgroundColor: 'rgba(0,0,0,0.03)', fontWeight: 600 },
-              '& code': { backgroundColor: 'rgba(0,0,0,0.06)', padding: '2px 4px', borderRadius: '3px', fontFamily: 'monospace', fontSize: '0.9em' },
-              '& pre': { backgroundColor: 'rgba(0,0,0,0.06)', padding: '8px 12px', borderRadius: '4px', overflowX: 'auto', margin: '8px 0' },
-              '& pre code': { padding: 0, backgroundColor: 'transparent' },
-            }}
-          >
-            <BoxAny
-              sx={{
-                position: 'absolute',
-                left: 0,
-                right: 0,
-                bottom: 0,
-              }}
-            >
-              <ReactMarkdown remarkPlugins={remarkPlugins} rehypePlugins={rehypePlugins}>
-                {escapePipesInMathForGfm(text)}
-              </ReactMarkdown>
-            </BoxAny>
-          </BoxAny>
-        ) : null}
-
-        {hasAttachments ? (
-          <BoxAny
-            sx={{
-              position: 'relative',
-              zIndex: 1,
-              flex: text ? '0 0 auto' : 1,
-              minWidth: 0,
-              height: '100%',
+              minHeight: '100%',
               boxSizing: 'border-box',
               display: 'flex',
               flexDirection: 'column',
-              alignItems: 'flex-end',
+              alignItems: 'stretch',
               justifyContent: 'flex-end',
-              gap: 0.75,
+              gap: 0.55,
               pb: isMobile ? 1 : 1.25,
-              ml: 'auto',
-              overflow: 'hidden',
             }}
           >
-            {orderedAttachments.map((attachment, index) => {
-              if (attachment.type === 'image') {
-                const orderedImages = orderedAttachments.filter((item) => item.type === 'image').map((item) => item.url);
-                const imageIndex = orderedImages.findIndex((url) => url === attachment.url);
-
-                return (
-                  <ImageHoverPreview
-                    key={`${attachment.type}-${attachment.url}-${index}`}
-                    src={attachment.url}
-                    alt="Chat media"
-                    openOnHover={isHoverCapable}
-                    openOnLongPress={!isHoverCapable}
-                    openOnTap={false}
-                  >
-                    {(previewProps) => (
-                      <BoxAny
-                        {...previewProps}
-                        component="img"
-                        src={attachment.url}
-                        alt="Chat media"
-                        onContextMenu={(event: React.MouseEvent<HTMLElement>) => {
-                          event.preventDefault();
-                        }}
-                        onClick={() => {
-                          setLightbox({
-                            images: orderedImages,
-                            index: imageIndex >= 0 ? imageIndex : 0,
-                            groupIndex: imageGroupIndexByUrl?.[attachment.url],
-                          });
-                        }}
-                        sx={{
-                          width: imgStripW,
-                          height: 'auto',
-                          maxHeight: isMobile ? 88 : 140,
-                          flexShrink: 0,
-                          alignSelf: 'flex-end',
-                          display: 'block',
-                          objectFit: 'contain',
-                          objectPosition: 'top center',
-                          borderRadius: 1,
-                          boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
-                          cursor: 'pointer',
-                          transition: 'opacity 0.15s',
-                          '&:hover': { opacity: 0.85 },
-                          WebkitTouchCallout: 'none',
-                          WebkitUserSelect: 'none',
-                          userSelect: 'none',
-                        }}
-                      />
-                    )}
-                  </ImageHoverPreview>
-                );
-              }
-
-              if (attachment.type === 'voice') {
-                return (
-                  <VoiceMessageBubble
-                    key={`${attachment.type}-${attachment.url}-${index}`}
-                    url={attachment.url}
-                    duration={attachment.duration}
-                    align={align}
-                    isMobile={isMobile}
-                  />
-                );
-              }
-
-              if (attachment.type === 'video') {
-                return (
-                  <BoxAny
-                    key={`${attachment.type}-${attachment.url}-${index}`}
-                    component="video"
-                    src={attachment.url}
-                    controls
-                    sx={{ width: '100%', maxHeight: 180, borderRadius: 1, bgcolor: 'rgba(0,0,0,0.18)', alignSelf: 'flex-end', flexShrink: 0 }}
-                  />
-                );
-              }
-
+          {orderedSegments.map((segment, index) => {
+            if (segment.type === 'text') {
               return (
                 <BoxAny
-                  key={`${attachment.type}-${attachment.url}-${index}`}
+                  key={`text-${index}`}
+                  sx={{
+                    minWidth: 0,
+                    flexShrink: 0,
+                    ...textStyle,
+                    '& p': { margin: 0 },
+                    '& blockquote': {
+                      margin: 0,
+                      paddingLeft: '0.75em',
+                      borderLeft: '2px solid rgba(116, 84, 50, 0.45)',
+                      color: 'inherit',
+                    },
+                    '& .katex-display': {
+                      margin: '0.5em 0',
+                      overflowX: 'auto',
+                      overflowY: 'hidden',
+                    },
+                    '& .katex': { fontSize: '1.05em' },
+                    '& table': { width: '100%', borderCollapse: 'collapse', margin: '8px 0' },
+                    '& th, & td': { border: '1px solid rgba(0,0,0,0.12)', padding: '4px 8px', textAlign: 'left' },
+                    '& th': { backgroundColor: 'rgba(0,0,0,0.03)', fontWeight: 600 },
+                    '& code': { backgroundColor: 'rgba(0,0,0,0.06)', padding: '2px 4px', borderRadius: '3px', fontFamily: 'monospace', fontSize: '0.9em' },
+                    '& pre': { backgroundColor: 'rgba(0,0,0,0.06)', padding: '8px 12px', borderRadius: '4px', overflowX: 'auto', margin: '8px 0' },
+                    '& pre code': { padding: 0, backgroundColor: 'transparent' },
+                  }}
+                >
+                  <ReactMarkdown remarkPlugins={remarkPlugins} rehypePlugins={rehypePlugins}>
+                    {escapePipesInMathForGfm(segment.text || '')}
+                  </ReactMarkdown>
+                </BoxAny>
+              );
+            }
+
+            if (segment.type === 'image' && segment.url) {
+              const imageIndex = orderedImages.findIndex((url) => url === segment.url);
+
+              return (
+                <ImageHoverPreview
+                  key={`${segment.type}-${segment.url}-${index}`}
+                  src={segment.url}
+                  alt="Chat media"
+                  openOnHover={isHoverCapable}
+                  openOnLongPress={!isHoverCapable}
+                  openOnTap={false}
+                >
+                  {(previewProps) => (
+                    <BoxAny
+                      {...previewProps}
+                      component="img"
+                      src={segment.url}
+                      alt="Chat media"
+                      onContextMenu={(event: React.MouseEvent<HTMLElement>) => {
+                        event.preventDefault();
+                      }}
+                      onClick={() => {
+                        setLightbox({
+                          images: orderedImages,
+                          index: imageIndex >= 0 ? imageIndex : 0,
+                          groupIndex: imageGroupIndexByUrl?.[segment.url || ''],
+                        });
+                      }}
+                      sx={{
+                        width: imgStripW,
+                        height: 'auto',
+                        maxHeight: isMobile ? 88 : 140,
+                        flexShrink: 0,
+                        alignSelf: 'flex-end',
+                        display: 'block',
+                        objectFit: 'contain',
+                        objectPosition: 'top center',
+                        borderRadius: 1,
+                        boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+                        cursor: 'pointer',
+                        transition: 'opacity 0.15s',
+                        '&:hover': { opacity: 0.85 },
+                        WebkitTouchCallout: 'none',
+                        WebkitUserSelect: 'none',
+                        userSelect: 'none',
+                      }}
+                    />
+                  )}
+                </ImageHoverPreview>
+              );
+            }
+
+            if (segment.type === 'voice' && segment.url) {
+              return (
+                <VoiceMessageBubble
+                  key={`${segment.type}-${segment.url}-${index}`}
+                  url={segment.url}
+                  duration={segment.duration}
+                  align={align}
+                  isMobile={isMobile}
+                />
+              );
+            }
+
+            if (segment.type === 'video' && segment.url) {
+              return (
+                <BoxAny
+                  key={`${segment.type}-${segment.url}-${index}`}
+                  component="video"
+                  src={segment.url}
+                  controls
+                  sx={{ width: '100%', maxHeight: 180, borderRadius: 1, bgcolor: 'rgba(0,0,0,0.18)', alignSelf: 'flex-end', flexShrink: 0 }}
+                />
+              );
+            }
+
+            if (segment.url) {
+              return (
+                <BoxAny
+                  key={`${segment.type}-${segment.url}-${index}`}
                   component="a"
-                  href={attachment.url}
+                  href={segment.url}
                   target="_blank"
                   rel="noreferrer"
                   sx={{
@@ -409,12 +420,15 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
                     flexShrink: 0,
                   }}
                 >
-                  {attachment.fileName || 'Download file'}
+                  {segment.fileName || 'Download file'}
                 </BoxAny>
               );
-            })}
+            }
+
+            return null;
+          })}
           </BoxAny>
-        ) : null}
+        </BoxAny>
       </Paper>
     );
   };
@@ -502,7 +516,7 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
             zIndex: 2,
           }}
         >
-          {renderBubble(rightText, rightAttachments, 'right', {
+          {renderBubble(rightSegments, 'right', {
             ml: overlapOffsetPx > 0 ? `calc(-1 * ${overlapOffset})` : 0,
           })}
         </BoxAny>
@@ -520,7 +534,7 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
             zIndex: 2,
           }}
         >
-          {renderBubble(leftText, leftAttachments, 'left', {
+          {renderBubble(leftSegments, 'left', {
             mr: overlapOffsetPx > 0 ? `calc(-1 * ${overlapOffset})` : 0,
           })}
         </BoxAny>
