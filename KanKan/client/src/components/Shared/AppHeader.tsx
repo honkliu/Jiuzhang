@@ -41,8 +41,8 @@ const navItems = [
   { label: 'Contacts', path: '/contacts', adminOnly: false },
   { label: 'Pa', path: '/pa', adminOnly: false },
   { label: 'Profile', path: '/profile', adminOnly: false },
-  { label: '家谱', path: '/family', adminOnly: true },
-  { label: '验证码', path: '/admin', adminOnly: true },
+  { label: 'FamilyTree', path: '/family', adminOnly: true },
+  { label: 'admin.title', path: '/admin', adminOnly: true },
 ];
 
 const headerNavButtonSx = {
