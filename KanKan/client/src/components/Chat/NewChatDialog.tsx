@@ -145,9 +145,20 @@ export const NewChatDialog: React.FC<NewChatDialogProps> = ({ open, onClose }) =
     updatedAt: new Date().toISOString(),
   };
 
-  const listWithWa = baseUsers.some((u) => u.id === WA_USER_ID)
-    ? baseUsers
-    : [waUser, ...baseUsers];
+  const listWithWa = (() => {
+    const mapped = baseUsers.map((user) =>
+      user.id === WA_USER_ID
+        ? {
+            ...user,
+            displayName: t('Wa'),
+          }
+        : user
+    );
+
+    return mapped.some((u) => u.id === WA_USER_ID)
+      ? mapped
+      : [waUser, ...mapped];
+  })();
 
   const selectedDirectTarget = selectedUsers.length === 1 ? selectedUsers[0] : null;
   const canCreateDirect = !!selectedDirectTarget && isSelectable(selectedDirectTarget.id);
@@ -206,19 +217,25 @@ export const NewChatDialog: React.FC<NewChatDialogProps> = ({ open, onClose }) =
                 onClick={() => handleSelectUser(user)}
                 selected={selectedUsers.some((u) => u.id === user.id)}
                 disabled={!isSelectable(user.id)}
+                sx={{ py: 0.6, minHeight: 52 }}
               >
-                <ListItemAvatar>
-                  <UserAvatar src={user.avatarUrl} gender={user.gender} fallbackText={user.displayName} />
+                <ListItemAvatar sx={{ minWidth: 44 }}>
+                  <UserAvatar
+                    src={user.avatarUrl}
+                    gender={user.gender}
+                    fallbackText={user.displayName}
+                    sx={{ width: 36, height: 36 }}
+                  />
                 </ListItemAvatar>
                 <ListItemText
                   primary={user.displayName}
-                  secondary={
-                    user.id === WA_USER_ID
-                      ? t('chat.new.alwaysAvailable')
-                      : isFriend(user.id)
-                        ? (user.handle ? `@${user.handle} · ${t('contacts.friend')}` : t('contacts.friend'))
-                        : (user.handle ? `@${user.handle} · ${t('contacts.notFriend')}` : t('contacts.notFriend'))
-                  }
+                  primaryTypographyProps={{ noWrap: true }}
+                  secondary={user.id === WA_USER_ID ? t('chat.new.alwaysAvailable') : (user.bio || '')}
+                  secondaryTypographyProps={{
+                    noWrap: true,
+                    sx: { fontSize: '0.81rem', lineHeight: 1.2 },
+                    title: user.id === WA_USER_ID ? t('chat.new.alwaysAvailable') : (user.bio || ''),
+                  }}
                 />
               </ListItemButton>
             ))}

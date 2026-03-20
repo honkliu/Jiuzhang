@@ -95,11 +95,16 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
     return `${cleaned.slice(0, Math.max(0, maxLen - 1))}…`;
   };
 
+  const getLocalizedParticipantName = (userId?: string, displayName?: string) => {
+    return userId === WA_USER_ID ? t('Wa') : (displayName || '');
+  };
+
   const getLastMessagePreview = (chat: Chat) => {
     if (!chat.lastMessage) return t('chat.noMessagesShort');
-    const senderPrefix = chat.lastMessage.senderName === user?.displayName
+    const senderName = getLocalizedParticipantName(chat.lastMessage.senderId, chat.lastMessage.senderName);
+    const senderPrefix = chat.lastMessage.senderId === user?.id
       ? `${t('chat.you')}: `
-      : `${chat.lastMessage.senderName}: `;
+      : `${senderName}: `;
     return truncateText(`${senderPrefix}${chat.lastMessage.text || ''}`, 44);
   };
 
@@ -218,6 +223,10 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
             const realParticipants = getRealParticipants(chat.participants);
             const isWaOnlyChat = !isGroup && hasWa && realParticipants.length <= 1;
             const showUnread = chat.unreadCount > 0 && !isWaOnlyChat;
+            const directDisplayParticipant = isGroup ? undefined : getDirectDisplayParticipant(chat, user?.id);
+            const displayChatName = directDisplayParticipant?.userId === WA_USER_ID
+              ? t('Wa')
+              : chat.name;
 
             return (
             <ListItemButton
@@ -284,12 +293,12 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
                     />
                   ) : (
                     (() => {
-                      const m = getDirectDisplayParticipant(chat, user?.id);
+                      const m = directDisplayParticipant;
                       return (
                         <UserAvatar
                           src={m?.avatarUrl}
                           gender={m?.gender}
-                          fallbackText={m?.displayName || chat.name}
+                          fallbackText={getLocalizedParticipantName(m?.userId, m?.displayName) || displayChatName}
                           variant="rounded"
                           sx={{ width: 48, height: 48 }}
                         />
@@ -308,7 +317,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
                         noWrap
                         sx={{ minWidth: 0, flex: 1 }}
                       >
-                        {activeChat?.id === chat.id ? `${chat.name} *` : chat.name}
+                        {activeChat?.id === chat.id ? `${displayChatName} *` : displayChatName}
                       </Typography>
                     </BoxAny>
                     <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexShrink: 0, justifyContent: 'flex-end' }}>
@@ -385,7 +394,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
                           textOverflow: 'ellipsis',
                           whiteSpace: 'nowrap',
                         }}
-                        title={chat.lastMessage ? `${chat.lastMessage.senderName}: ${chat.lastMessage.text}` : undefined}
+                        title={chat.lastMessage ? `${getLocalizedParticipantName(chat.lastMessage.senderId, chat.lastMessage.senderName)}: ${chat.lastMessage.text}` : undefined}
                       >
                         {getLastMessagePreview(chat)}
                       </Typography>

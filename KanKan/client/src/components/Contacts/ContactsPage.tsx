@@ -16,11 +16,9 @@ import {
   useTheme,
 } from '@mui/material';
 import { useDispatch, useSelector } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
 import { AppDispatch, RootState } from '@/store';
 import { contactService, User, FriendRequest } from '@/services/contact.service';
 import { adminService } from '@/services/admin.service';
-import { createChat } from '@/store/chatSlice';
 import { AppHeader } from '@/components/Shared/AppHeader';
 import { UserAvatar } from '@/components/Shared/UserAvatar';
 import { useLanguage } from '@/i18n/LanguageContext';
@@ -31,7 +29,6 @@ const BoxAny = Box as any;
 
 export const ContactsPage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
-  const navigate = useNavigate();
   const { t } = useLanguage();
   const theme = useTheme();
   const isHoverCapable = useMediaQuery('(hover: hover) and (pointer: fine)');
@@ -61,14 +58,6 @@ export const ContactsPage: React.FC = () => {
     }
   };
 
-  const handleChatWithWa = async () => {
-    await dispatch(
-      createChat({ participantIds: [WA_USER_ID], chatType: 'direct' })
-    ).unwrap();
-
-    navigate('/chats');
-  };
-
   useEffect(() => {
     loadUsers();
   }, []);
@@ -85,17 +74,6 @@ export const ContactsPage: React.FC = () => {
       }
     } else if (query.length === 0) {
       loadUsers();
-    }
-  };
-
-  const handleStartChat = async (userId: string) => {
-    const result = await dispatch(
-      createChat({ participantIds: [userId], chatType: 'direct' })
-    ).unwrap();
-
-    navigate('/chats');
-    if (result?.id) {
-      // Chat will be active after createChat resolves
     }
   };
 
@@ -182,22 +160,25 @@ export const ContactsPage: React.FC = () => {
     }
   };
 
-  const assistantUser =
+  const assistantSource =
     users.find((user) => user.id === WA_USER_ID) ??
     contacts.find((user) => user.id === WA_USER_ID) ??
-    requests.find((req) => req.fromUserId === WA_USER_ID)?.fromUser ??
-    {
-      id: WA_USER_ID,
-      handle: 'assistant_1003',
-      displayName: t('Wa'),
-      avatarUrl: '/zodiac/zodiac_01_r1c1.png',
-      gender: 'male',
-      bio: 'AI assistant',
-      isOnline: true,
-      lastSeen: new Date().toISOString(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    } satisfies User;
+    requests.find((req) => req.fromUserId === WA_USER_ID)?.fromUser;
+
+  const assistantUser = assistantSource
+    ? { ...assistantSource, displayName: t('Wa') }
+    : {
+        id: WA_USER_ID,
+        handle: 'assistant_1003',
+        displayName: t('Wa'),
+        avatarUrl: '/zodiac/zodiac_01_r1c1.png',
+        gender: 'male',
+        bio: 'AI assistant',
+        isOnline: true,
+        lastSeen: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      } satisfies User;
 
   const visibleContacts = contacts.filter((user) => user.id !== WA_USER_ID);
   const visibleRequests = requests.filter((req) => req.fromUserId !== WA_USER_ID);
@@ -304,16 +285,7 @@ export const ContactsPage: React.FC = () => {
               {t('contacts.system')}
             </Typography>
             <List sx={{ mb: 2 }}>
-              <ListItem
-                divider
-                secondaryAction={
-                  <BoxAny sx={{ display: 'flex', gap: 1 }}>
-                    <Button variant="contained" onClick={handleChatWithWa}>
-                      {t('contacts.chat')}
-                    </Button>
-                  </BoxAny>
-                }
-              >
+              <ListItem divider>
                 <ListItemAvatar>
                   <UserAvatar
                     src={assistantUser.avatarUrl}
@@ -349,9 +321,6 @@ export const ContactsPage: React.FC = () => {
                 {visibleContacts.map((user) => (
                   <ListItem key={user.id} divider secondaryAction={
                     <BoxAny sx={{ display: 'flex', gap: 1 }}>
-                      <Button variant="contained" onClick={() => handleStartChat(user.id)}>
-                        {t('contacts.chat')}
-                      </Button>
                       <Button
                         variant="outlined"
                         color="error"

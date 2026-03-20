@@ -1702,14 +1702,22 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
     ? getRealParticipants(activeChat.participants).length
     : 0;
 
+  const localizedDisplayParticipantName = displayParticipant?.userId === WA_USER_ID
+    ? t('Wa')
+    : displayParticipant?.displayName;
+
+  const activeChatTitle = displayParticipant?.userId === WA_USER_ID
+    ? t('Wa')
+    : activeChat?.name;
+
   const leftParticipant = useMemo(() => {
     if (!otherParticipant) return null;
     return {
-      displayName: otherParticipant.displayName,
+      displayName: otherParticipant.userId === WA_USER_ID ? t('Wa') : otherParticipant.displayName,
       avatarUrl: leftAvatar,
       gender: otherParticipant.gender,
     };
-  }, [otherParticipant, leftAvatar]);
+  }, [otherParticipant, leftAvatar, t]);
 
   const rightParticipant = useMemo(() => {
     if (!user) return null;
@@ -1821,7 +1829,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
               src={otherLiveAvatarUrl || displayParticipant?.avatarUrl || activeChat.avatar}
               gender={displayParticipant?.gender}
               sx={{ width: 40, height: 40, mr: 2 }}
-              fallbackText={displayParticipant?.displayName || activeChat.name}
+              fallbackText={localizedDisplayParticipantName || activeChatTitle || activeChat.name}
               variant="rounded"
               previewMode={isHoverCapable ? 'hover' : 'tap'}
               closePreviewOnClick
@@ -1829,7 +1837,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
           )}
           <BoxAny sx={{ flexGrow: 1, minWidth: 0, overflow: 'hidden' }}>
             <Typography variant="subtitle1" fontWeight="bold" noWrap>
-              {activeChat.name}
+              {activeChatTitle || activeChat.name}
             </Typography>
             <Typography variant="caption" color="text.secondary" noWrap>
               {chatTypingUsers.length > 0

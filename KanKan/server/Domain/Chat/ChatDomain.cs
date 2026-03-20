@@ -8,7 +8,7 @@ namespace KanKan.API.Domain.Chat;
 public static class ChatDomain
 {
     public const string AgentUserId = "user_ai_wa";
-    public const string AgentDisplayName = "Assistant";
+    public const string AgentDisplayName = "River";
 
     public static bool IsAgentUserId(string? userId) =>
         string.Equals(userId, AgentUserId, StringComparison.Ordinal);
