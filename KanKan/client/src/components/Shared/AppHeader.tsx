@@ -69,6 +69,74 @@ export const AppHeader: React.FC<AppHeaderProps> = () => {
   const notificationsOpen = Boolean(notificationsAnchorEl);
   const navOpen = Boolean(navAnchorEl);
   const avatarPickerOpen = Boolean(avatarAnchorEl);
+  const leftNavRef = React.useRef<HTMLDivElement | null>(null);
+  const titleRef = React.useRef<HTMLDivElement | null>(null);
+  const measureMoreButtonRef = React.useRef<HTMLButtonElement | null>(null);
+  const measureButtonRefs = React.useRef<Array<HTMLButtonElement | null>>([]);
+  const availableNavItems = navItems.filter((item) => {
+    if (item.path === '/family') return Boolean(user?.canViewFamilyTree);
+    return !item.adminOnly || user?.isAdmin;
+  });
+  const [compactVisibleCount, setCompactVisibleCount] = React.useState(0);
+
+  React.useLayoutEffect(() => {
+    const measure = () => {
+      const leftNavWidth = leftNavRef.current?.offsetWidth ?? 0;
+      const titleWidth = titleRef.current?.offsetWidth ?? 0;
+
+      if (leftNavWidth === 0) {
+        setCompactVisibleCount(0);
+        return;
+      }
+
+      const gapAfterTitle = 12;
+      const navAreaWidth = Math.max(0, leftNavWidth - titleWidth - gapAfterTitle);
+      const buttonGap = 4;
+      const moreButtonWidth = (measureMoreButtonRef.current?.offsetWidth ?? 32) + buttonGap;
+      const widths = availableNavItems.map((_, index) => {
+        const width = measureButtonRefs.current[index]?.offsetWidth ?? 0;
+        return width + buttonGap;
+      });
+
+      let used = 0;
+      let visibleCount = 0;
+
+      for (let index = 0; index < widths.length; index += 1) {
+        const remaining = widths.length - (index + 1);
+        const reserveForMore = remaining > 0 ? moreButtonWidth : 0;
+
+        if (used + widths[index] + reserveForMore > navAreaWidth) {
+          break;
+        }
+
+        used += widths[index];
+        visibleCount += 1;
+      }
+
+      setCompactVisibleCount(visibleCount);
+    };
+
+    measure();
+
+    const resizeObserver = typeof ResizeObserver !== 'undefined'
+      ? new ResizeObserver(() => measure())
+      : null;
+
+    if (resizeObserver) {
+      if (leftNavRef.current) resizeObserver.observe(leftNavRef.current);
+      if (titleRef.current) resizeObserver.observe(titleRef.current);
+    }
+
+    window.addEventListener('resize', measure);
+
+    return () => {
+      resizeObserver?.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, [availableNavItems, language]);
+
+  const compactVisibleNavItems = availableNavItems.slice(0, compactVisibleCount);
+  const compactOverflowNavItems = availableNavItems.slice(compactVisibleCount);
 
   // Poll unread count on page navigation and periodically
   React.useEffect(() => {
@@ -167,33 +235,39 @@ export const AppHeader: React.FC<AppHeaderProps> = () => {
   return (
     <AppBar position="fixed" color="default" elevation={0} sx={{ pt: 'env(safe-area-inset-top)' }}>
       <Toolbar sx={{ gap: 1.25, minHeight: { xs: 53, sm: 61 }, py: 0.25 }}>
-        <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1, flexGrow: 1, minWidth: 0 }}>
+        <BoxAny ref={leftNavRef} sx={{ display: 'flex', alignItems: 'center', gap: 1, flexGrow: 1, minWidth: 0 }}>
           <Typography
             variant="subtitle1"
             fontWeight="bold"
+            ref={titleRef}
             sx={{ mr: 0.5, whiteSpace: 'nowrap', fontSize: { xs: '0.95rem', sm: '1rem' } }}
           >
             {t('appName')}
           </Typography>
-          {isCompactNav && (
-            <IconButton onClick={handleOpenNav} title={t('nav.menu')} sx={{ p: 0.25 }}>
-              <ExpandMoreIcon sx={{ fontSize: '1.1rem' }} />
-            </IconButton>
-          )}
-          <BoxAny sx={{ display: { xs: 'none', md: 'flex' }, gap: 1, overflow: 'hidden' }}>
-            {navItems.filter(item => {
-              if (item.path === '/family') return Boolean(user?.canViewFamilyTree);
-              return !item.adminOnly || user?.isAdmin;
-            }).map((item) => (
+          <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: isCompactNav ? 0.5 : 1, minWidth: 0, overflow: 'hidden' }}>
+            {compactVisibleNavItems.map((item) => (
               <Button
                 key={item.path}
                 color={location.pathname.startsWith(item.path) ? 'primary' : 'inherit'}
+                size={isCompactNav ? 'small' : 'medium'}
                 onClick={() => navigate(item.path)}
+                sx={{
+                  minWidth: 'auto',
+                  px: isCompactNav ? { xs: 0.8, sm: 1.1 } : 1.5,
+                  py: isCompactNav ? 0.35 : 0.5,
+                  fontSize: isCompactNav ? { xs: '0.82rem', sm: '0.88rem' } : undefined,
+                  whiteSpace: 'nowrap',
+                }}
               >
                 {t(item.label)}
               </Button>
             ))}
           </BoxAny>
+          {compactOverflowNavItems.length > 0 && (
+            <IconButton onClick={handleOpenNav} title={t('nav.menu')} sx={{ p: 0.25 }}>
+              <ExpandMoreIcon sx={{ fontSize: '1.1rem' }} />
+            </IconButton>
+          )}
         </BoxAny>
 
         <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -283,10 +357,7 @@ export const AppHeader: React.FC<AppHeaderProps> = () => {
             },
           }}
         >
-          {navItems.filter(item => {
-            if (item.path === '/family') return Boolean(user?.canViewFamilyTree);
-            return !item.adminOnly || user?.isAdmin;
-          }).map((item) => (
+          {compactOverflowNavItems.map((item) => (
             <MenuItem
               key={item.path}
               selected={location.pathname.startsWith(item.path)}
@@ -299,6 +370,39 @@ export const AppHeader: React.FC<AppHeaderProps> = () => {
             </MenuItem>
           ))}
         </Menu>
+
+        <BoxAny
+          aria-hidden
+          sx={{
+            position: 'absolute',
+            visibility: 'hidden',
+            pointerEvents: 'none',
+            whiteSpace: 'nowrap',
+            height: 0,
+            overflow: 'hidden',
+          }}
+        >
+          {availableNavItems.map((item, index) => (
+            <Button
+              key={`measure-${item.path}`}
+              size={isCompactNav ? 'small' : 'medium'}
+              ref={(element: HTMLButtonElement | null) => {
+                measureButtonRefs.current[index] = element;
+              }}
+              sx={{
+                minWidth: 'auto',
+                px: isCompactNav ? { xs: 0.8, sm: 1.1 } : 1.5,
+                py: isCompactNav ? 0.35 : 0.5,
+                fontSize: isCompactNav ? { xs: '0.82rem', sm: '0.88rem' } : undefined,
+              }}
+            >
+              {t(item.label)}
+            </Button>
+          ))}
+          <IconButton ref={measureMoreButtonRef} sx={{ p: 0.25 }}>
+            <ExpandMoreIcon sx={{ fontSize: '1.1rem' }} />
+          </IconButton>
+        </BoxAny>
 
         <Menu
           anchorEl={notificationsAnchorEl}
