@@ -531,14 +531,14 @@ export const FamilyTreeCanvas = forwardRef<FamilyTreeCanvasHandle, Props>(
           p.name.split('').forEach(ch =>
             t.append('tspan').attr('class', 'name-char')
               .attr('x', xPos).attr('dy', '1.25em').attr('text-anchor', 'middle')
-              .attr('font-size', '14px').attr('font-family', '"Microsoft YaHei","PingFang SC",sans-serif')
+              .attr('font-size', '14px').attr('font-family', '"Noto Sans SC","PingFang SC","Source Han Sans SC",sans-serif')
               .attr('fill', COLORS.nameText).attr('font-weight', '500').text(ch)
           );
           if (hs) {
             const st = el.append('text').attr('y', BOX_Y_OFFSET + 14);
             p.spouses[0].name.split('').forEach(ch =>
               st.append('tspan').attr('x', 10).attr('dy', '1.25em').attr('text-anchor', 'middle')
-                .attr('font-size', '12px').attr('font-family', '"Microsoft YaHei","PingFang SC",sans-serif')
+                .attr('font-size', '12px').attr('font-family', '"Noto Sans SC","PingFang SC","Source Han Sans SC",sans-serif')
                 .attr('fill', COLORS.spouseText).text(ch)
             );
           }

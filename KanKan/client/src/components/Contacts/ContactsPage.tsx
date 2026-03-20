@@ -24,6 +24,7 @@ import { createChat } from '@/store/chatSlice';
 import { AppHeader } from '@/components/Shared/AppHeader';
 import { UserAvatar } from '@/components/Shared/UserAvatar';
 import { useLanguage } from '@/i18n/LanguageContext';
+import { WA_USER_ID } from '@/utils/chatParticipants';
 
 // Work around TS2590 (“union type too complex”) from MUI Box typings in some TS versions.
 const BoxAny = Box as any;
@@ -62,7 +63,7 @@ export const ContactsPage: React.FC = () => {
 
   const handleChatWithWa = async () => {
     await dispatch(
-      createChat({ participantIds: ['user_ai_wa'], chatType: 'direct' })
+      createChat({ participantIds: [WA_USER_ID], chatType: 'direct' })
     ).unwrap();
 
     navigate('/chats');
@@ -181,9 +182,28 @@ export const ContactsPage: React.FC = () => {
     }
   };
 
-  const isContact = (userId: string) => contacts.some((c) => c.id === userId);
+  const assistantUser =
+    users.find((user) => user.id === WA_USER_ID) ??
+    contacts.find((user) => user.id === WA_USER_ID) ??
+    requests.find((req) => req.fromUserId === WA_USER_ID)?.fromUser ??
+    {
+      id: WA_USER_ID,
+      handle: 'assistant_1003',
+      displayName: t('Wa'),
+      avatarUrl: '/zodiac/zodiac_01_r1c1.png',
+      gender: 'male',
+      bio: 'AI assistant',
+      isOnline: true,
+      lastSeen: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    } satisfies User;
+
+  const visibleContacts = contacts.filter((user) => user.id !== WA_USER_ID);
+  const visibleRequests = requests.filter((req) => req.fromUserId !== WA_USER_ID);
+  const isContact = (userId: string) => visibleContacts.some((c) => c.id === userId);
   const otherUsers = users.filter(
-    (user) => user.id !== currentUserId && !isContact(user.id)
+    (user) => user.id !== currentUserId && user.id !== WA_USER_ID && !isContact(user.id)
   );
 
   return (
@@ -193,12 +213,6 @@ export const ContactsPage: React.FC = () => {
         <Typography variant="h5" fontWeight="bold" gutterBottom>
           {t('contacts.title')}
         </Typography>
-
-        <BoxAny sx={{ mb: 2 }}>
-          <Button variant="contained" onClick={handleChatWithWa}>
-            {t('Wa')}
-          </Button>
-        </BoxAny>
 
         <TextField
           fullWidth
@@ -217,13 +231,13 @@ export const ContactsPage: React.FC = () => {
             <Typography variant="subtitle1" fontWeight="bold" sx={{ mb: 1 }}>
               {t('contacts.friendRequests')}
             </Typography>
-            {requests.length === 0 ? (
+            {visibleRequests.length === 0 ? (
               <Typography color="text.secondary" sx={{ mb: 2 }}>
                 {t('contacts.noRequests')}
               </Typography>
             ) : (
               <List sx={{ mb: 2 }}>
-                {requests.map((req) => (
+                {visibleRequests.map((req) => (
                   <ListItem
                     key={req.id}
                     divider
@@ -287,15 +301,52 @@ export const ContactsPage: React.FC = () => {
             <Divider sx={{ my: 2 }} />
 
             <Typography variant="subtitle1" fontWeight="bold" sx={{ mb: 1 }}>
+              {t('contacts.system')}
+            </Typography>
+            <List sx={{ mb: 2 }}>
+              <ListItem
+                divider
+                secondaryAction={
+                  <BoxAny sx={{ display: 'flex', gap: 1 }}>
+                    <Button variant="contained" onClick={handleChatWithWa}>
+                      {t('contacts.chat')}
+                    </Button>
+                  </BoxAny>
+                }
+              >
+                <ListItemAvatar>
+                  <UserAvatar
+                    src={assistantUser.avatarUrl}
+                    gender={assistantUser.gender}
+                    fallbackText={assistantUser.displayName}
+                    previewMode={isHoverCapable ? 'hover' : 'tap'}
+                    closePreviewOnClick
+                  />
+                </ListItemAvatar>
+                <ListItemText
+                  primary={
+                    <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Typography fontWeight="bold">{assistantUser.displayName}</Typography>
+                      <Chip size="small" color="info" label={t('chat.new.alwaysAvailable')} />
+                    </BoxAny>
+                  }
+                  secondary={assistantUser.bio || assistantUser.domain || assistantUser.handle}
+                />
+              </ListItem>
+            </List>
+
+            <Divider sx={{ my: 2 }} />
+
+            <Typography variant="subtitle1" fontWeight="bold" sx={{ mb: 1 }}>
               {t('contacts.contacts')}
             </Typography>
-            {contacts.length === 0 ? (
+            {visibleContacts.length === 0 ? (
               <Typography color="text.secondary" sx={{ mb: 2 }}>
                 {t('contacts.noContacts')}
               </Typography>
             ) : (
               <List sx={{ mb: 2 }}>
-                {contacts.map((user) => (
+                {visibleContacts.map((user) => (
                   <ListItem key={user.id} divider secondaryAction={
                     <BoxAny sx={{ display: 'flex', gap: 1 }}>
                       <Button variant="contained" onClick={() => handleStartChat(user.id)}>

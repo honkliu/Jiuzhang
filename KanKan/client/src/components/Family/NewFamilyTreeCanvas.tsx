@@ -618,7 +618,7 @@ export const NewFamilyTreeCanvas = forwardRef<NewFamilyTreeCanvasHandle, Props>(
         nt.append('tspan').attr('class', 'name-char')
           .attr('x', nx).attr('dy', '1.25em').attr('text-anchor', 'middle')
           .attr('font-size', '14px')
-          .attr('font-family', '"Microsoft YaHei","PingFang SC",sans-serif')
+          .attr('font-family', '"Noto Sans SC","PingFang SC","Source Han Sans SC",sans-serif')
           .attr('fill', C.name).attr('font-weight', '500').text(ch);
 
       if (hs) {
@@ -626,7 +626,7 @@ export const NewFamilyTreeCanvas = forwardRef<NewFamilyTreeCanvasHandle, Props>(
         for (const ch of p.spouses[0].name)
           st.append('tspan').attr('x', 10).attr('dy', '1.25em').attr('text-anchor', 'middle')
             .attr('font-size', '12px')
-            .attr('font-family', '"Microsoft YaHei","PingFang SC",sans-serif')
+            .attr('font-family', '"Noto Sans SC","PingFang SC","Source Han Sans SC",sans-serif')
             .attr('fill', C.spouse).text(ch);
       }
 

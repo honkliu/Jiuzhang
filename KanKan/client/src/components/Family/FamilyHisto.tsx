@@ -788,7 +788,7 @@ export const FamilyHisto = forwardRef<FamilyHistoHandle, Props>((props, ref) => 
       .attr('y', BOX_Y_OFFSET + 12)
       .attr('text-anchor', 'middle')
       .attr('font-size', 14)
-      .attr('font-family', '"Microsoft YaHei", sans-serif')
+      .attr('font-family', '"Noto Sans SC", "PingFang SC", "Source Han Sans SC", sans-serif')
       .attr('fill', C.nameText)
       .attr('font-weight', 500);
     for (const ch of d.data.name) {
@@ -807,7 +807,7 @@ export const FamilyHisto = forwardRef<FamilyHistoHandle, Props>((props, ref) => 
         .attr('y', BOX_Y_OFFSET + 12)
         .attr('text-anchor', 'middle')
         .attr('font-size', 12)
-        .attr('font-family', '"Microsoft YaHei", sans-serif')
+        .attr('font-family', '"Noto Sans SC", "PingFang SC", "Source Han Sans SC", sans-serif')
         .attr('fill', C.spouseText);
       for (const ch of spouse.name) {
         spouseText.append('tspan')

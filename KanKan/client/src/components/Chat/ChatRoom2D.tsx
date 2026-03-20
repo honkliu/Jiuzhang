@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Box, Paper, useMediaQuery, useTheme } from '@mui/material';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -138,9 +138,12 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
 }) => {
   const [lightbox, setLightbox] = useState<{ images: string[]; index: number; groupIndex?: number } | null>(null);
   const layoutRef = useRef<HTMLDivElement | null>(null);
+  const leftAvatarRef = useRef<HTMLDivElement | null>(null);
+  const rightAvatarRef = useRef<HTMLDivElement | null>(null);
   const leftScrollRef = useRef<HTMLDivElement | null>(null);
   const rightScrollRef = useRef<HTMLDivElement | null>(null);
   const [layoutWidth, setLayoutWidth] = useState<number>(0);
+  const [springLeftOffsets, setSpringLeftOffsets] = useState({ left: 0, right: 0 });
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isHoverCapable = useMediaQuery('(hover: hover) and (pointer: fine)');
@@ -167,6 +170,47 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
       rightScrollRef.current.scrollTop = rightScrollRef.current.scrollHeight;
     }
   }, [rightSegments]);
+
+  useLayoutEffect(() => {
+    const measure = () => {
+      const layoutRect = layoutRef.current?.getBoundingClientRect();
+      const leftRect = leftAvatarRef.current?.getBoundingClientRect();
+      const rightRect = rightAvatarRef.current?.getBoundingClientRect();
+
+      if (!layoutRect || !leftRect || !rightRect) return;
+
+      setSpringLeftOffsets({
+        left: leftRect.left - layoutRect.left,
+        right: rightRect.left - layoutRect.left,
+      });
+    };
+
+    measure();
+
+    const observer = typeof ResizeObserver !== 'undefined'
+      ? new ResizeObserver(() => measure())
+      : null;
+
+    if (observer) {
+      if (layoutRef.current) observer.observe(layoutRef.current);
+      if (leftAvatarRef.current) observer.observe(leftAvatarRef.current);
+      if (rightAvatarRef.current) observer.observe(rightAvatarRef.current);
+    }
+
+    window.addEventListener('resize', measure);
+
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, [
+    layoutWidth,
+    isMobile,
+    leftParticipant?.avatarUrl,
+    leftParticipant?.displayName,
+    rightParticipant?.avatarUrl,
+    rightParticipant?.displayName,
+  ]);
 
   const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
   const baseWidth = layoutWidth || window.innerWidth;
@@ -482,21 +526,23 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
             zIndex: 1,
           }}
         >
-          <UserAvatar
-            src={leftParticipant?.avatarUrl || ''}
-            gender={leftParticipant?.gender}
-            fallbackText={leftParticipant?.displayName}
-            variant="rounded"
-            previewMode={isHoverCapable ? 'hover' : 'tap'}
-            closePreviewOnClick
-            sx={{
-              width: avatarSize,
-              height: avatarSize,
-              border: 'none',
-              bgcolor: 'transparent',
-              boxShadow: '0 18px 36px rgba(28, 18, 8, 0.35)',
-            }}
-          />
+          <BoxAny ref={leftAvatarRef} sx={{ display: 'inline-flex' }}>
+            <UserAvatar
+              src={leftParticipant?.avatarUrl || ''}
+              gender={leftParticipant?.gender}
+              fallbackText={leftParticipant?.displayName}
+              variant="rounded"
+              previewMode={isHoverCapable ? 'hover' : 'tap'}
+              closePreviewOnClick
+              sx={{
+                width: avatarSize,
+                height: avatarSize,
+                border: 'none',
+                bgcolor: 'transparent',
+                boxShadow: '0 18px 36px rgba(28, 18, 8, 0.35)',
+              }}
+            />
+          </BoxAny>
         </BoxAny>
 
         {/* BM (top-right bubble) */}
@@ -548,21 +594,23 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
             zIndex: 1,
           }}
         >
-          <UserAvatar
-            src={rightParticipant?.avatarUrl || ''}
-            gender={rightParticipant?.gender}
-            fallbackText={rightParticipant?.displayName}
-            variant="rounded"
-            previewMode={isHoverCapable ? 'hover' : 'tap'}
-            closePreviewOnClick
-            sx={{
-              width: avatarSize,
-              height: avatarSize,
-              border: 'none',
-              bgcolor: 'transparent',
-              boxShadow: '0 18px 36px rgba(16, 45, 40, 0.35)',
-            }}
-          />
+          <BoxAny ref={rightAvatarRef} sx={{ display: 'inline-flex' }}>
+            <UserAvatar
+              src={rightParticipant?.avatarUrl || ''}
+              gender={rightParticipant?.gender}
+              fallbackText={rightParticipant?.displayName}
+              variant="rounded"
+              previewMode={isHoverCapable ? 'hover' : 'tap'}
+              closePreviewOnClick
+              sx={{
+                width: avatarSize,
+                height: avatarSize,
+                border: 'none',
+                bgcolor: 'transparent',
+                boxShadow: '0 18px 36px rgba(16, 45, 40, 0.35)',
+              }}
+            />
+          </BoxAny>
         </BoxAny>
 
         {/* Two horizontal coil springs — cubic Bezier with horizontal tangents at every rail touch
@@ -579,35 +627,44 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
           const cy = svgH / 2;
           const topY = cy - ry;
           const botY = cy + ry;
-          const gridPx = isMobile ? 10 : 28;
-          const dx = 0.5 * loopW;  // horizontal half-step
+          const isLeftSide = side === 'left';
 
-          // top touch-points 1,2,3…   bot touch-points A,B,C… (staggered by dx)
-          const topXs = Array.from({ length: count }, (_, i) => pad + i * loopW);
-          const botXs = Array.from({ length: count }, (_, i) => pad + (i + 0.5) * loopW);
+          const topXs = Array.from({ length: count + 1 }, (_, i) =>
+            isLeftSide ? pad + i * loopW : svgW - pad - i * loopW
+          );
+          const botXs = Array.from({ length: count }, (_, i) =>
+            isLeftSide ? pad + (i + 0.5) * loopW : svgW - pad - (i + 0.5) * loopW
+          );
 
           const bend = loopW * 0.28; // horizontal control-point offset → horizontal tangents at rails
           const ins = ry * 0.10;
 
           // Cubic Bezier with horizontal tangents at both endpoints → G1 at every touch point
-          // Front: 1→A (top-left to bottom-right, bowing right-of-chord)
-          const fC = (tx: number, bx: number) =>
-            `M ${tx} ${topY} C ${tx + bend} ${topY} ${bx - bend} ${botY} ${bx} ${botY}`;
-          // Back: A→2 (bottom-left to top-right, same horizontal tangent at A and 2)
-          const bC = (bx: number, tx2: number) =>
-            `M ${bx} ${botY} C ${bx + bend} ${botY} ${tx2 - bend} ${topY} ${tx2} ${topY}`;
+          const controlDirection = (startX: number, endX: number) => (endX >= startX ? 1 : -1);
+          // Front: top rail → bottom rail.
+          const fC = (tx: number, bx: number) => {
+            const direction = controlDirection(tx, bx);
+            return `M ${tx} ${topY} C ${tx + bend * direction} ${topY} ${bx - bend * direction} ${botY} ${bx} ${botY}`;
+          };
+          // Back: bottom rail → next top rail.
+          const bC = (bx: number, tx2: number) => {
+            const direction = controlDirection(bx, tx2);
+            return `M ${bx} ${botY} C ${bx + bend * direction} ${botY} ${tx2 - bend * direction} ${topY} ${tx2} ${topY}`;
+          };
           // Highlight: same front arc, inset slightly
-          const fHiC = (tx: number, bx: number) =>
-            `M ${tx} ${topY + ins} C ${tx + bend} ${topY + ins} ${bx - bend} ${botY - ins} ${bx} ${botY - ins}`;
+          const fHiC = (tx: number, bx: number) => {
+            const direction = controlDirection(tx, bx);
+            return `M ${tx} ${topY + ins} C ${tx + bend * direction} ${topY + ins} ${bx - bend * direction} ${botY - ins} ${bx} ${botY - ins}`;
+          };
 
           return (
             <BoxAny
               key={side}
               sx={{
                 position: 'absolute',
-                ...(side === 'left' ? { left: gridPx } : { right: gridPx }),
+                left: isLeftSide ? springLeftOffsets.left : springLeftOffsets.right,
                 top: '50%',
-                transform: side === 'left' ? 'translateY(-50%)' : 'translateY(-50%) scaleX(-1)',
+                transform: 'translateY(-50%)',
                 zIndex: 10,
                 pointerEvents: 'none',
               }}
@@ -619,18 +676,18 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
                 style={{ display: 'block', overflow: 'visible' }}
               >
                 {/* ── PASS 0: back arcs — 30% opacity solid ── */}
-                {Array.from({ length: count - 1 }, (_, i) => (
+                {Array.from({ length: count }, (_, i) => (
                   <path key={`b-${i}`} d={bC(botXs[i], topXs[i + 1])}
                     fill="none" stroke="rgba(160,160,160,0.30)" strokeWidth={2} strokeLinecap="round" />
                 ))}
 
                 {/* ── PASS 2: front arcs — bright gold ── */}
-                {topXs.map((tx, i) => (
+                {topXs.slice(0, count).map((tx, i) => (
                   <path key={`f-${i}`} d={fC(tx, botXs[i])}
                     fill="none" stroke="rgba(222,158,24,1.0)" strokeWidth={sw} strokeLinecap="round" />
                 ))}
                 {/* ── PASS 3: specular highlight ── */}
-                {topXs.map((tx, i) => (
+                {topXs.slice(0, count).map((tx, i) => (
                   <path key={`fhi-${i}`} d={fHiC(tx, botXs[i])}
                     fill="none" stroke="rgba(255,242,155,0.72)" strokeWidth={sw * 0.28} strokeLinecap="round" />
                 ))}

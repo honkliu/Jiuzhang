@@ -8,7 +8,7 @@ namespace KanKan.API.Domain.Chat;
 public static class ChatDomain
 {
     public const string AgentUserId = "user_ai_wa";
-    public const string AgentDisplayName = "Wa";
+    public const string AgentDisplayName = "Assistant";
 
     public static bool IsAgentUserId(string? userId) =>
         string.Equals(userId, AgentUserId, StringComparison.Ordinal);
@@ -28,7 +28,7 @@ public static class ChatDomain
         var otherReal = OtherRealParticipants(chat, currentUserId).FirstOrDefault();
         if (otherReal != null) return otherReal;
 
-        // Else prefer Wa.
+        // Else prefer the assistant agent.
         var wa = chat.Participants.FirstOrDefault(p => IsAgentUserId(p.UserId) && p.UserId != currentUserId);
         if (wa != null) return wa;
 

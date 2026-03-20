@@ -11,7 +11,7 @@
   height: 100%;
   display: block;
   background: #eef2f6;
-  font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+  font-family: "Noto Sans SC", "PingFang SC", "Source Han Sans SC", sans-serif;
   text-rendering: geometricPrecision;
   shape-rendering: crispEdges;
 }
@@ -36,7 +36,7 @@
 .family-strip-text {
   writing-mode: vertical-rl;
   text-orientation: upright;
-  font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+  font-family: "Noto Sans SC", "PingFang SC", "Source Han Sans SC", sans-serif;
   font-weight: 600;
   fill: #475569;
   letter-spacing: 2px;

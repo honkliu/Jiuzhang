@@ -38,14 +38,15 @@ const theme = createTheme({
   },
   typography: {
     fontFamily: [
+      '"Noto Sans SC"',
       '-apple-system',
       'BlinkMacSystemFont',
       '"Segoe UI"',
-      '"Microsoft YaHei"',
       '"PingFang SC"',
-      '"Noto Sans CJK SC"',
       '"Source Han Sans SC"',
+      '"Noto Sans CJK SC"',
       '"Hiragino Sans GB"',
+      '"Microsoft YaHei"',
       '"WenQuanYi Micro Hei"',
       '"Heiti SC"',
       '"SimHei"',

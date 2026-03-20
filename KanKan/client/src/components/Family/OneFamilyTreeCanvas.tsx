@@ -600,7 +600,7 @@ export const OneFamilyTreeCanvas = forwardRef<OneFamilyTreeCanvasHandle, Props>(
           .attr('x', nameX).attr('dy', '1.25em')
           .attr('text-anchor', 'middle')
           .attr('font-size', '14px')
-          .attr('font-family', '"Microsoft YaHei","PingFang SC",sans-serif')
+          .attr('font-family', '"Noto Sans SC","PingFang SC","Source Han Sans SC",sans-serif')
           .attr('fill', PALETTE.name).attr('font-weight', '500').text(ch);
       }
 
@@ -611,7 +611,7 @@ export const OneFamilyTreeCanvas = forwardRef<OneFamilyTreeCanvasHandle, Props>(
             .attr('x', 10).attr('dy', '1.25em')
             .attr('text-anchor', 'middle')
             .attr('font-size', '12px')
-            .attr('font-family', '"Microsoft YaHei","PingFang SC",sans-serif')
+            .attr('font-family', '"Noto Sans SC","PingFang SC","Source Han Sans SC",sans-serif')
             .attr('fill', PALETTE.spouse).text(ch);
         }
       }

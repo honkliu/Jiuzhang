@@ -133,7 +133,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isHoverCapable = useMediaQuery('(hover: hover) and (pointer: fine)');
-  const { language, t } = useLanguage();
+  const { t } = useLanguage();
   const { formatTime: formatTimeWithZone } = useSettings();
   const isAgent = message.senderId === 'user_ai_wa';
   const isDraft = message.id.startsWith('draft_');
@@ -260,7 +260,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
         )}
         {showAvatar && (
           <Typography variant="caption" sx={{ display: 'block', mt: 0.5 }}>
-            {language === 'zh' && message.senderName === 'Wa' ? t('Wa') : message.senderName}
+            {isAgent ? t('Wa') : message.senderName}
           </Typography>
         )}
       </BoxAny>
