@@ -45,6 +45,22 @@ const navItems = [
   { label: '验证码', path: '/admin', adminOnly: true },
 ];
 
+const headerNavButtonSx = {
+  minWidth: 'auto',
+  px: { xs: 0.8, sm: 1.1 },
+  py: { xs: 0.35, md: 0.5 },
+  fontSize: { xs: '0.82rem', sm: '0.88rem', md: '0.92rem' },
+  whiteSpace: 'nowrap',
+  borderRadius: 2,
+  boxShadow: 'none',
+  border: 'none',
+  background: 'transparent',
+  '&:hover': {
+    boxShadow: 'none',
+    background: 'rgba(15, 23, 42, 0.06)',
+  },
+};
+
 interface AppHeaderProps {
   onToggleSidebar?: () => void;
   sidebarOpen?: boolean;
@@ -252,11 +268,12 @@ export const AppHeader: React.FC<AppHeaderProps> = () => {
                 size={isCompactNav ? 'small' : 'medium'}
                 onClick={() => navigate(item.path)}
                 sx={{
-                  minWidth: 'auto',
-                  px: isCompactNav ? { xs: 0.8, sm: 1.1 } : 1.5,
-                  py: isCompactNav ? 0.35 : 0.5,
-                  fontSize: isCompactNav ? { xs: '0.82rem', sm: '0.88rem' } : undefined,
-                  whiteSpace: 'nowrap',
+                  ...headerNavButtonSx,
+                  px: isCompactNav ? headerNavButtonSx.px : 1.5,
+                  py: isCompactNav ? headerNavButtonSx.py : 0.5,
+                  fontSize: isCompactNav ? headerNavButtonSx.fontSize : '0.92rem',
+                  color: location.pathname.startsWith(item.path) ? 'primary.main' : 'text.primary',
+                  fontWeight: location.pathname.startsWith(item.path) ? 700 : 500,
                 }}
               >
                 {t(item.label)}
@@ -390,10 +407,10 @@ export const AppHeader: React.FC<AppHeaderProps> = () => {
                 measureButtonRefs.current[index] = element;
               }}
               sx={{
-                minWidth: 'auto',
-                px: isCompactNav ? { xs: 0.8, sm: 1.1 } : 1.5,
-                py: isCompactNav ? 0.35 : 0.5,
-                fontSize: isCompactNav ? { xs: '0.82rem', sm: '0.88rem' } : undefined,
+                ...headerNavButtonSx,
+                px: isCompactNav ? headerNavButtonSx.px : 1.5,
+                py: isCompactNav ? headerNavButtonSx.py : 0.5,
+                fontSize: isCompactNav ? headerNavButtonSx.fontSize : '0.92rem',
               }}
             >
               {t(item.label)}
