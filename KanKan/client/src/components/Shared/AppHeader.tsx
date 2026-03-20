@@ -61,6 +61,13 @@ const headerNavButtonSx = {
   },
 };
 
+const headerNavMenuItemSx = {
+  fontSize: { xs: '0.82rem', sm: '0.88rem', md: '0.92rem' },
+  fontWeight: 500,
+  minHeight: 'auto',
+  py: { xs: 0.7, sm: 0.8 },
+};
+
 interface AppHeaderProps {
   onToggleSidebar?: () => void;
   sidebarOpen?: boolean;
@@ -378,6 +385,11 @@ export const AppHeader: React.FC<AppHeaderProps> = () => {
             <MenuItem
               key={item.path}
               selected={location.pathname.startsWith(item.path)}
+              sx={{
+                ...headerNavMenuItemSx,
+                color: location.pathname.startsWith(item.path) ? 'primary.main' : 'text.primary',
+                fontWeight: location.pathname.startsWith(item.path) ? 700 : 500,
+              }}
               onClick={() => {
                 handleCloseNav();
                 navigate(item.path);
