@@ -100,7 +100,7 @@ export const InviteCodesPage: React.FC = () => {
                     codes.map((c, index) => (
                       <TableRow key={`${c.email}-${index}`}>
                         <TableCell>{c.email}</TableCell>
-                        <TableCell sx={{ fontFamily: 'monospace', fontWeight: 700, fontSize: '1.1rem' }}>
+                        <TableCell sx={{ fontFamily: '"Noto Sans SC", "PingFang SC", "Source Han Sans SC", sans-serif', fontWeight: 700, fontSize: '1.1rem' }}>
                           {c.code}
                         </TableCell>
                         <TableCell>

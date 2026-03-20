@@ -41,7 +41,7 @@ const LoadingOverlay: React.FC = () => (
         p: '8px 10px',
         bgcolor: 'rgba(0,0,0,0.55)',
         color: '#fff',
-        fontFamily: 'monospace',
+        fontFamily: '"Noto Sans SC", "PingFang SC", "Source Han Sans SC", sans-serif',
         fontSize: 12,
         borderRadius: 1,
       }}

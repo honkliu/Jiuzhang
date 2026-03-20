@@ -1469,7 +1469,7 @@ export const FamilyHisto = forwardRef<FamilyHistoHandle, Props>((props, ref) => 
           <div style={{
             background: 'rgba(30,41,59,0.75)', color: '#e2e8f0',
             borderRadius: 6, padding: '6px 18px',
-            fontSize: 13, fontFamily: 'sans-serif',
+            fontSize: 13, fontFamily: '"Noto Sans SC", "PingFang SC", "Source Han Sans SC", sans-serif',
           }}>
             家谱绘制中
           </div>
