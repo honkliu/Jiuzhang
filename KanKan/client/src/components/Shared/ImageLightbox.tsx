@@ -1181,10 +1181,10 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
                         width: thumbnailStripButtonSize,
                         height: thumbnailStripButtonSize,
                         color: 'white',
-                        bgcolor: 'rgba(255,255,255,0.1)',
-                        border: '1px solid rgba(255,255,255,0.14)',
-                        opacity: !canToggleToEdits && thumbnailMode !== 'edits' ? 0.45 : 1,
-                        '&:hover': { bgcolor: 'rgba(255,255,255,0.18)' },
+                        bgcolor: 'rgba(211, 47, 47, 0.95)',
+                        border: '1px solid rgba(255,255,255,0.18)',
+                        opacity: !canToggleToEdits && thumbnailMode !== 'edits' ? 0.55 : 1,
+                        '&:hover': { bgcolor: 'rgba(198, 40, 40, 1)' },
                       }}
                     >
                       <KeyboardArrowDownIcon
