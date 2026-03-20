@@ -30,6 +30,11 @@ select {
   font: inherit;
 }
 
+input[type='password'] {
+  font-family: 'Segoe UI', Roboto, Arial, sans-serif;
+  letter-spacing: normal;
+}
+
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
