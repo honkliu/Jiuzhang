@@ -38,9 +38,9 @@ const BoxAny = Box as any;
 
 const navItems = [
   { label: 'Chats', path: '/chats', adminOnly: false },
-  { label: 'Contacts', path: '/contacts', adminOnly: false },
   { label: 'Pa', path: '/pa', adminOnly: false },
   { label: 'Profile', path: '/profile', adminOnly: false },
+  { label: 'Contacts', path: '/contacts', adminOnly: false },
   { label: 'FamilyTree', path: '/family', adminOnly: true },
   { label: 'admin.title', path: '/admin', adminOnly: true },
 ];

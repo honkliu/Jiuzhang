@@ -251,7 +251,7 @@ const translations: Record<Language, Record<string, string>> = {
     Chats: '聊天',
     Contacts: '联系人',
     Pa: '啪',
-    Profile: '我的',
+    Profile: '我',
     FamilyTree: '家谱',
     Wa: '洛',
     'nav.notifications': '通知',
