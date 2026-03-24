@@ -10,6 +10,8 @@ import {
   Stack,
   ToggleButton,
   ToggleButtonGroup,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppHeader } from '@/components/Shared/AppHeader';
@@ -33,6 +35,8 @@ const roundedTextFieldSx = {
 
 export const ProfilePage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { user } = useSelector((state: RootState) => state.auth);
   const [displayName, setDisplayName] = useState(user?.displayName || '');
   const [bio, setBio] = useState(user?.bio || '');
@@ -47,6 +51,12 @@ export const ProfilePage: React.FC = () => {
   const [newPassword, setNewPassword] = useState('');
   const [passwordSaving, setPasswordSaving] = useState(false);
   const { t } = useLanguage();
+  const pickerTileSize = isMobile ? 52 : 56;
+  const pickerGapPx = parseFloat(theme.spacing(0.5));
+  const pickerGridHeight = pickerTileSize * 3 + 16;
+  const pickerFooterHeight = 40;
+  const pickerTotalHeight = pickerGridHeight + pickerFooterHeight;
+  const avatarDisplaySize = pickerTileSize * 3 + pickerGapPx * 2;
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -145,22 +155,25 @@ export const ProfilePage: React.FC = () => {
               }}
             >
               <Stack
-                spacing={1.5}
+                spacing={0}
                 alignItems={{ xs: 'center', sm: 'flex-start' }}
-                sx={{ flex: '0 0 160px' }}
+                justifyContent="space-between"
+                sx={{
+                  flex: `0 0 ${avatarDisplaySize}px`,
+                  height: `${pickerTotalHeight}px`,
+                }}
               >
-                <Typography variant="h5" fontWeight="bold" sx={{ alignSelf: { xs: 'stretch', sm: 'flex-start' } }}>
-                  {t('profile.title')}
-                </Typography>
                 <UserAvatar
                   src={avatarUrl}
                   gender={gender}
                   variant="rounded"
-                  sx={{ width: 128, height: 128 }}
+                  sx={{ width: avatarDisplaySize, height: avatarDisplaySize }}
                 />
                 <AvatarUpload
                   currentAvatarUrl={avatarUrl}
                   showPreview={false}
+                  size="small"
+                  variant="outlined"
                   onUploadSuccess={async (newAvatarImageId, imageUrl) => {
                     setAvatarImageId(newAvatarImageId);
                     setAvatarUrl(imageUrl);
@@ -169,7 +182,7 @@ export const ProfilePage: React.FC = () => {
                 />
               </Stack>
 
-              <BoxAny sx={{ flex: '0 0 auto', maxWidth: '100%' }}>
+              <BoxAny sx={{ flex: '1 1 auto', maxWidth: '100%', minWidth: 0, display: 'flex', justifyContent: 'flex-end' }}>
                 <ZodiacAvatarPicker
                   disabled={saving}
                   value={avatarImageId ?? undefined}

@@ -10,12 +10,16 @@ interface AvatarUploadProps {
   onUploadSuccess?: (avatarImageId: string, imageUrl: string) => void;
   currentAvatarUrl?: string;
   showPreview?: boolean;
+  size?: 'small' | 'medium' | 'large';
+  variant?: 'text' | 'outlined' | 'contained';
 }
 
 export const AvatarUpload: React.FC<AvatarUploadProps> = ({
   onUploadSuccess,
   currentAvatarUrl,
   showPreview = true,
+  size = 'medium',
+  variant = 'contained',
 }) => {
   const { t } = useLanguage();
   const BoxAny = Box as any;
@@ -104,10 +108,12 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
       />
 
       <Button
-        variant="contained"
+        variant={variant}
+        size={size}
         startIcon={uploading ? <CircularProgress size={20} color="inherit" /> : <UploadIcon />}
         onClick={() => fileInputRef.current?.click()}
         disabled={uploading}
+        sx={size === 'small' ? { height: 32, minHeight: 32, px: 1.5, whiteSpace: 'nowrap' } : undefined}
       >
         {uploading ? t('profile.uploadingAvatar') : t('profile.uploadAvatar')}
       </Button>

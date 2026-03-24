@@ -151,11 +151,7 @@ export const ZodiacAvatarPicker: React.FC<ZodiacAvatarPickerProps> = ({
   const pagedAvatars = useMemo(() => avatars, [avatars]);
 
   return (
-    <BoxAny>
-      <Typography variant="subtitle2" sx={{ mb: 1 }}>
-        {t('profile.zodiacTitle')}
-      </Typography>
-
+    <BoxAny sx={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
       <BoxAny
         sx={{
           width: 'fit-content',
@@ -167,7 +163,7 @@ export const ZodiacAvatarPicker: React.FC<ZodiacAvatarPickerProps> = ({
           sx={{
             display: 'grid',
             gridTemplateColumns: `repeat(4, ${tileSize}px)`,
-            gap: 1,
+            gap: 0.5,
             alignItems: 'center',
             justifyContent: 'flex-start',
           }}
@@ -185,7 +181,7 @@ export const ZodiacAvatarPicker: React.FC<ZodiacAvatarPickerProps> = ({
         </BoxAny>
       </BoxAny>
 
-      <BoxAny sx={{ display: 'flex', gap: 1, mt: 1, minHeight: 32, alignItems: 'center' }}>
+      <BoxAny sx={{ display: 'flex', gap: 1, mt: 1, minHeight: 32, alignItems: 'center', justifyContent: 'flex-end' }}>
         {totalPages > 1 ? (
           <>
             <Button
@@ -193,6 +189,7 @@ export const ZodiacAvatarPicker: React.FC<ZodiacAvatarPickerProps> = ({
               variant="outlined"
               disabled={disabled || loading || page <= 0}
               onClick={() => setPage((current) => Math.max(0, current - 1))}
+              sx={{ height: 32, minHeight: 32, px: 1.5, whiteSpace: 'nowrap' }}
             >
               {t('common.prev')}
             </Button>
@@ -201,6 +198,7 @@ export const ZodiacAvatarPicker: React.FC<ZodiacAvatarPickerProps> = ({
               variant="outlined"
               disabled={disabled || loading || page >= totalPages - 1}
               onClick={() => setPage((current) => Math.min(totalPages - 1, current + 1))}
+              sx={{ height: 32, minHeight: 32, px: 1.5, whiteSpace: 'nowrap' }}
             >
               {t('common.next')}
             </Button>
