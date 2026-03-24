@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import {
   Box,
   Button,
-  Chip,
   Container,
   Table,
   TableBody,
@@ -22,6 +21,11 @@ import { useSelector } from 'react-redux';
 import { Navigate } from 'react-router-dom';
 
 const BoxAny = Box as any;
+const statusTextColorMap = {
+  warning: '#ed6c02',
+  success: '#2e7d32',
+  default: '#64748b',
+} as const;
 
 export const InviteCodesPage: React.FC = () => {
   const user = useSelector((state: any) => state.auth?.user);
@@ -97,15 +101,25 @@ export const InviteCodesPage: React.FC = () => {
               <CircularProgress />
             </BoxAny>
           ) : (
-            <TableContainer component={Paper} variant="outlined">
+            <TableContainer
+              component={Paper}
+              variant="outlined"
+              sx={{
+                scrollbarWidth: 'none',
+                msOverflowStyle: 'none',
+                '&::-webkit-scrollbar': {
+                  display: 'none',
+                },
+              }}
+            >
               <Table size="small">
                 <TableHead>
                   <TableRow>
-                    <TableCell>{t('admin.type')}</TableCell>
+                    <TableCell sx={{ whiteSpace: 'nowrap' }}>{t('admin.type')}</TableCell>
                     <TableCell>{t('admin.email')}</TableCell>
-                    <TableCell>{t('admin.code')}</TableCell>
-                    <TableCell>{t('admin.status')}</TableCell>
-                    <TableCell>{t('admin.date')}</TableCell>
+                    <TableCell sx={{ whiteSpace: 'nowrap' }}>{t('admin.code')}</TableCell>
+                    <TableCell sx={{ whiteSpace: 'nowrap' }}>{t('admin.status')}</TableCell>
+                    <TableCell sx={{ whiteSpace: 'nowrap' }}>{t('admin.date')}</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -118,20 +132,23 @@ export const InviteCodesPage: React.FC = () => {
                   ) : (
                     codes.map((c, index) => (
                       <TableRow key={`${c.email}-${index}`}>
-                        <TableCell>{getPurposeLabel(c.purpose)}</TableCell>
+                        <TableCell sx={{ whiteSpace: 'nowrap' }}>{getPurposeLabel(c.purpose)}</TableCell>
                         <TableCell>{c.email}</TableCell>
-                        <TableCell sx={{ fontFamily: '"Noto Sans SC", "PingFang SC", "Source Han Sans SC", sans-serif', fontWeight: 700, fontSize: '1.1rem' }}>
+                        <TableCell sx={{ whiteSpace: 'nowrap', fontFamily: '"Noto Sans SC", "PingFang SC", "Source Han Sans SC", sans-serif', fontWeight: 700, fontSize: '1.1rem' }}>
                           {c.code}
                         </TableCell>
-                        <TableCell>
-                          <Chip
-                            label={getStatusLabel(c.status)}
-                            color={getStatusColor(c.status)}
-                            size="small"
-                            variant="outlined"
-                          />
+                        <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              color: statusTextColorMap[getStatusColor(c.status)],
+                              fontWeight: 600,
+                            }}
+                          >
+                            {getStatusLabel(c.status)}
+                          </Typography>
                         </TableCell>
-                        <TableCell sx={{ color: 'text.secondary', fontSize: '0.85rem' }}>
+                        <TableCell sx={{ whiteSpace: 'nowrap', color: 'text.secondary', fontSize: '0.85rem' }}>
                           {formatDate(c.createdAt)}
                         </TableCell>
                       </TableRow>

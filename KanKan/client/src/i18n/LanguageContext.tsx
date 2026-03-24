@@ -498,7 +498,7 @@ const translations: Record<Language, Record<string, string>> = {
     'admin.empty': '暂无验证申请',
     'admin.pending': '待注册',
     'admin.registration': '注册',
-    'admin.passwordReset': '重置密码',
+    'admin.passwordReset': '重置',
     'admin.registered': '已注册',
     'admin.reset': '已重置',
     'admin.expired': '已过期',
