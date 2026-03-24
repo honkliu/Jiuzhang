@@ -23,7 +23,7 @@ public class InMemoryAuthService : IAuthService
     private readonly ILogger<InMemoryAuthService> _logger;
 
     // In-memory storage for verification codes
-    private static readonly Dictionary<string, (string Code, string Purpose, DateTime ExpiresAt, DateTime CreatedAt)> _verificationCodes = new();
+    private static readonly Dictionary<string, (string Email, string Code, string Purpose, DateTime ExpiresAt, DateTime CreatedAt)> _verificationCodes = new();
     private static readonly object _lock = new();
 
     public InMemoryAuthService(
@@ -41,27 +41,46 @@ public class InMemoryAuthService : IAuthService
         return await _userRepository.GetByEmailAsync(email);
     }
 
+    public Task<string?> GetActiveVerificationCodeAsync(string email, string purpose)
+    {
+        lock (_lock)
+        {
+            var key = BuildVerificationKey(email, purpose);
+            if (_verificationCodes.TryGetValue(key, out var stored) && stored.ExpiresAt > DateTime.UtcNow)
+            {
+                return Task.FromResult<string?>(stored.Code);
+            }
+
+            return Task.FromResult<string?>(null);
+        }
+    }
+
     public Task CreateVerificationCodeAsync(string email, string code, string purpose, int ttlMinutes = 10)
     {
         lock (_lock)
         {
-            var key = email.ToLower();
-            _verificationCodes[key] = (code, purpose, DateTime.UtcNow.AddMinutes(ttlMinutes), DateTime.UtcNow);
+            var key = BuildVerificationKey(email, purpose);
+            _verificationCodes[key] = (email.ToLower(), code, purpose, DateTime.UtcNow.AddMinutes(ttlMinutes), DateTime.UtcNow);
             _logger.LogInformation("Verification code created for {Email}: {Code}", email, code);
         }
         return Task.CompletedTask;
     }
 
-    public Task<bool> VerifyCodeAsync(string email, string code)
+    public Task<bool> VerifyCodeAsync(string email, string code, string purpose)
     {
         lock (_lock)
         {
-            var key = email.ToLower();
-            if (_verificationCodes.TryGetValue(key, out var stored))
+            var entry = _verificationCodes.FirstOrDefault(kv =>
+                string.Equals(kv.Value.Email, email.ToLower(), StringComparison.OrdinalIgnoreCase) &&
+                kv.Value.Code == code &&
+                kv.Value.Purpose == purpose);
+
+            if (!string.IsNullOrEmpty(entry.Key))
             {
-                if (stored.Code == code && stored.ExpiresAt > DateTime.UtcNow)
+                var stored = entry.Value;
+                if (stored.ExpiresAt > DateTime.UtcNow)
                 {
-                    _verificationCodes.Remove(key);
+                    _verificationCodes.Remove(entry.Key);
                     return Task.FromResult(true);
                 }
             }
@@ -69,16 +88,28 @@ public class InMemoryAuthService : IAuthService
         }
     }
 
-    public Task<List<(string Email, string Code, DateTime CreatedAt, string Status)>> GetAllInviteCodesAsync()
+    public Task<List<(string Email, string Code, string Purpose, DateTime CreatedAt, string Status)>> GetAllInviteCodesAsync()
     {
         lock (_lock)
         {
+            var now = DateTime.UtcNow;
             var results = _verificationCodes
-                .Where(kv => kv.Value.Purpose == "registration")
-                .Select(kv => (kv.Key, kv.Value.Code, kv.Value.CreatedAt, "pending" as string))
+                .Select(kv => (
+                    kv.Value.Email,
+                    kv.Value.Code,
+                    kv.Value.Purpose,
+                    kv.Value.CreatedAt,
+                    kv.Value.ExpiresAt > now ? "pending" as string : "expired" as string
+                ))
+                .OrderByDescending(kv => kv.CreatedAt)
                 .ToList();
             return Task.FromResult(results);
         }
+    }
+
+    private static string BuildVerificationKey(string email, string purpose)
+    {
+        return $"{purpose}:{email.ToLower()}";
     }
 
     public async Task<UserEntity> CreateUserAsync(CreateUserDto dto)

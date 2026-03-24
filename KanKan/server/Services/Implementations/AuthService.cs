@@ -45,6 +45,20 @@ public class AuthService : IAuthService
         return await _userRepository.GetByEmailAsync(email);
     }
 
+    public async Task<string?> GetActiveVerificationCodeAsync(string email, string purpose)
+    {
+        var filter = Builders<EmailVerification>.Filter.And(
+            Builders<EmailVerification>.Filter.Eq(v => v.Email, email.ToLower()),
+            Builders<EmailVerification>.Filter.Eq(v => v.Purpose, purpose),
+            Builders<EmailVerification>.Filter.Eq(v => v.IsUsed, false),
+            Builders<EmailVerification>.Filter.Gt(v => v.ExpiresAt, DateTime.UtcNow)
+        );
+
+        var sort = Builders<EmailVerification>.Sort.Descending(v => v.CreatedAt);
+        var verification = await _verificationCollection.Find(filter).Sort(sort).FirstOrDefaultAsync();
+        return verification?.VerificationCode;
+    }
+
     public async Task CreateVerificationCodeAsync(string email, string code, string purpose, int ttlMinutes = 10)
     {
         var verification = new EmailVerification
@@ -62,11 +76,12 @@ public class AuthService : IAuthService
         await _verificationCollection.InsertOneAsync(verification);
     }
 
-    public async Task<bool> VerifyCodeAsync(string email, string code)
+    public async Task<bool> VerifyCodeAsync(string email, string code, string purpose)
     {
         var filter = Builders<EmailVerification>.Filter.And(
             Builders<EmailVerification>.Filter.Eq(v => v.Email, email.ToLower()),
             Builders<EmailVerification>.Filter.Eq(v => v.VerificationCode, code),
+            Builders<EmailVerification>.Filter.Eq(v => v.Purpose, purpose),
             Builders<EmailVerification>.Filter.Eq(v => v.IsUsed, false),
             Builders<EmailVerification>.Filter.Gt(v => v.ExpiresAt, DateTime.UtcNow)
         );
@@ -84,12 +99,29 @@ public class AuthService : IAuthService
         return true;
     }
 
-    public async Task<List<(string Email, string Code, DateTime CreatedAt, string Status)>> GetAllInviteCodesAsync()
+    public async Task<List<(string Email, string Code, string Purpose, DateTime CreatedAt, string Status)>> GetAllInviteCodesAsync()
     {
-        var filter = Builders<EmailVerification>.Filter.Eq(v => v.Purpose, "registration");
         var sort = Builders<EmailVerification>.Sort.Descending(v => v.CreatedAt);
-        var results = await _verificationCollection.Find(filter).Sort(sort).ToListAsync();
-        return results.Select(v => (v.Email, v.VerificationCode, v.CreatedAt, v.IsUsed ? "registered" : "pending")).ToList();
+        var results = await _verificationCollection.Find(Builders<EmailVerification>.Filter.Empty).Sort(sort).ToListAsync();
+        var now = DateTime.UtcNow;
+        var latestActiveIds = results
+            .Where(v => !v.IsUsed && v.ExpiresAt > now)
+            .GroupBy(v => new { Email = v.Email.ToLower(), v.Purpose })
+            .ToDictionary(group => (group.Key.Email, group.Key.Purpose), group => group.First().Id);
+
+        return results.Select(v => (
+            v.Email,
+            v.VerificationCode,
+            v.Purpose,
+            v.CreatedAt,
+            v.IsUsed
+                ? (v.Purpose == "password_reset" ? "reset" : "registered")
+                : v.ExpiresAt <= now
+                    ? "expired"
+                    : latestActiveIds.TryGetValue((v.Email.ToLower(), v.Purpose), out var latestId) && latestId == v.Id
+                        ? "pending"
+                        : "superseded"
+        )).ToList();
     }
 
     public async Task<UserEntity> CreateUserAsync(CreateUserDto dto)

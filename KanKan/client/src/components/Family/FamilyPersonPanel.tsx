@@ -140,6 +140,35 @@ function formatGender(gender?: string) {
   return '男';
 }
 
+function formatDisplayName(name: string) {
+  const trimmed = name.trim();
+  if (/^[\u4e00-\u9fff]{2}$/.test(trimmed)) {
+    return `${trimmed[0]}　${trimmed[1]}`;
+  }
+
+  return trimmed;
+}
+
+function toChineseOrdinal(value: number) {
+  const digits = ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
+
+  if (value <= 0) return '';
+  if (value < 10) return digits[value];
+  if (value === 10) return '十';
+  if (value < 20) return `十${digits[value - 10]}`;
+
+  const tens = Math.floor(value / 10);
+  const ones = value % 10;
+  return `${digits[tens]}十${ones === 0 ? '' : digits[ones]}`;
+}
+
+function toParentOrderLabel(position: number) {
+  if (position <= 0) return '';
+  if (position === 1) return '长';
+  if (position === 2) return '次';
+  return toChineseOrdinal(position);
+}
+
 function getGenderColor(gender?: string) {
   if (gender === 'female') {
     return { background: '#fce7f3', border: '#f472b6', text: '#ec4899' };
@@ -829,6 +858,36 @@ export const FamilyPersonPanel: React.FC<Props> = ({
     return rightSortOrder - leftSortOrder;
   });
   const spouses = person.spouses;
+  const relationColumns = [
+    {
+      key: 'parents',
+      title: '父母',
+      items: parents.map((parent, index) => ({
+        id: parent.id,
+        label: formatDisplayName(parent.name),
+        suffix: toParentOrderLabel(index + 1),
+      })),
+    },
+    {
+      key: 'spouses',
+      title: '配偶',
+      items: spouses.map((spouse, index) => ({
+        id: spouse.id,
+        label: formatDisplayName(spouse.name),
+        suffix: toParentOrderLabel(index + 1),
+      })),
+    },
+    {
+      key: 'children',
+      title: '子女',
+      items: orderedChildren.map((child, index) => ({
+        id: child.id,
+        label: formatDisplayName(child.name),
+        suffix: toParentOrderLabel(index + 1),
+      })),
+    },
+  ] as const;
+  const relationRowCount = relationColumns.reduce((maxCount, column) => Math.max(maxCount, column.items.length), 0);
   const relationshipEditing = Boolean(canEdit && editing);
   const coverImage = editorState.photos[0]?.url || person.avatarUrl;
   const photoUrls = (person.photos ?? []).map(photo => photo.url);
@@ -950,6 +1009,7 @@ export const FamilyPersonPanel: React.FC<Props> = ({
     if (!tree) return;
 
     const trimmedName = editorState.name.trim();
+    const pendingSpouseName = spouseDialog.open ? spouseDialog.name.trim() : '';
     if (!trimmedName) {
       setPanelError('姓名不能为空。');
       return;
@@ -969,6 +1029,9 @@ export const FamilyPersonPanel: React.FC<Props> = ({
     setPanelError(null);
     setPanelInfo(null);
     setPendingChildrenError(null);
+    if (spouseDialog.open) {
+      setSpouseDialog(current => ({ ...current, error: null }));
+    }
 
     try {
       const birthDate = buildStoredFamilyDate(editorState.birthDate, '生辰');
@@ -988,11 +1051,17 @@ export const FamilyPersonPanel: React.FC<Props> = ({
       });
 
       await savePendingChildren(parsedPendingChildren);
+      if (pendingSpouseName) {
+        await createSpouseRelationship(pendingSpouseName, spouseDialog.gender);
+      }
 
       await onRefresh(person.id);
       setEditing(false);
       setPendingChildren([]);
       setPendingChildrenError(null);
+      if (pendingSpouseName) {
+        setSpouseDialog({ open: false, name: '', gender: 'female', rank: '1', saving: false, error: null });
+      }
       setPanelInfo('人物信息已更新。');
     } catch (error) {
       setPanelError(error instanceof Error ? error.message : '保存人物信息失败。');
@@ -1039,6 +1108,24 @@ export const FamilyPersonPanel: React.FC<Props> = ({
     setSpouseDialog({ open: false, name: '', gender: 'female', rank: '1', saving: false, error: null });
   };
 
+  const createSpouseRelationship = async (name: string, gender: GenderValue) => {
+    if (!tree) return;
+
+    const created = await familyService.addPerson(tree.id, {
+      name,
+      gender,
+      generation: person.generation,
+    });
+
+    await familyService.addRelationship(tree.id, {
+      type: 'spouse',
+      fromId: person.id,
+      toId: created.id,
+      unionType: 'married',
+      sortOrder: 0,
+    });
+  };
+
   const handleAddSpouse = async () => {
     if (!tree) return;
 
@@ -1052,19 +1139,7 @@ export const FamilyPersonPanel: React.FC<Props> = ({
     setPanelError(null);
 
     try {
-      const created = await familyService.addPerson(tree.id, {
-        name,
-        gender: spouseDialog.gender,
-        generation: person.generation,
-      });
-
-      await familyService.addRelationship(tree.id, {
-        type: 'spouse',
-        fromId: person.id,
-        toId: created.id,
-        unionType: 'married',
-        sortOrder: 0,
-      });
+      await createSpouseRelationship(name, spouseDialog.gender);
 
       setSpouseDialog({ open: false, name: '', gender: 'female', rank: '1', saving: false, error: null });
       await onRefresh(person.id);
@@ -1259,7 +1334,7 @@ export const FamilyPersonPanel: React.FC<Props> = ({
                     wordBreak: 'break-word',
                   }}
                 >
-                  {person.name}
+                  {formatDisplayName(person.name)}
                 </Typography>
                 <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap', mt: 0.25 }}>
                   <Chip
@@ -1304,21 +1379,21 @@ export const FamilyPersonPanel: React.FC<Props> = ({
           <Divider />
           <BoxAny sx={{ pl: 2, pr: 3, py: 1.25, display: 'grid', gap: 1.1 }}>
             {person.birthDate && (
-              <BoxAny sx={{ display: 'grid', gridTemplateColumns: '32px minmax(0, 1fr)', columnGap: 0.5, alignItems: 'center' }}>
-                <Typography variant="caption" color="text.secondary" sx={{ fontSize: 12, lineHeight: 1.2, color: '#166534', fontWeight: 600 }}>
+              <BoxAny sx={{ display: 'grid', gridTemplateColumns: '32px minmax(0, 1fr)', columnGap: 0.5, alignItems: 'baseline' }}>
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: 12, lineHeight: 1.35, color: '#166534', fontWeight: 600 }}>
                   生辰
                 </Typography>
-                <Typography variant="body2" sx={{ minWidth: 0, fontSize: 13, color: '#475569' }}>
+                <Typography variant="body2" sx={{ minWidth: 0, fontSize: 13, color: '#475569', lineHeight: 1.35 }}>
                   {formatDate(person.birthDate)}
                 </Typography>
               </BoxAny>
             )}
             {person.deathDate && (
-              <BoxAny sx={{ display: 'grid', gridTemplateColumns: '32px minmax(0, 1fr)', columnGap: 0.5, alignItems: 'center' }}>
-                <Typography variant="caption" color="text.secondary" sx={{ fontSize: 12, lineHeight: 1.2, color: '#166534', fontWeight: 600 }}>
+              <BoxAny sx={{ display: 'grid', gridTemplateColumns: '32px minmax(0, 1fr)', columnGap: 0.5, alignItems: 'baseline' }}>
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: 12, lineHeight: 1.35, color: '#166534', fontWeight: 600 }}>
                   忌日
                 </Typography>
-                <Typography variant="body2" sx={{ minWidth: 0, fontSize: 13, color: '#475569' }}>
+                <Typography variant="body2" sx={{ minWidth: 0, fontSize: 13, color: '#475569', lineHeight: 1.35 }}>
                   {formatDate(person.deathDate)}
                 </Typography>
               </BoxAny>
@@ -1367,35 +1442,62 @@ export const FamilyPersonPanel: React.FC<Props> = ({
       <BoxAny sx={{ pl: 2, pr: 3, py: 1.25 }}>
         {!editing && (
           <BoxAny sx={{ mb: 0.9 }}>
-            <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1, pr: 0.5 }}>
-              <Typography variant="caption" color="text.secondary" sx={{ fontSize: 11 }}>父母</Typography>
-            </BoxAny>
-            <BoxAny sx={{ mt: 0.5, borderTop: '1px solid rgba(15,23,42,0.08)', borderBottom: '1px solid rgba(15,23,42,0.08)' }}>
-              {parents.length > 0 ? parents.map((parent, index) => (
+            <BoxAny
+              sx={{
+                mt: 0.5,
+                borderTop: '1px solid rgba(15,23,42,0.08)',
+                borderBottom: '1px solid rgba(15,23,42,0.08)',
+              }}
+            >
+              <BoxAny
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                  columnGap: 1.5,
+                  py: 0.75,
+                  borderBottom: relationRowCount > 0 ? '1px solid rgba(15,23,42,0.08)' : 'none',
+                }}
+              >
+                {relationColumns.map(column => (
+                  <Typography key={column.key} variant="caption" color="text.secondary" sx={{ fontSize: 11 }}>
+                    {column.title}
+                  </Typography>
+                ))}
+              </BoxAny>
+
+              {relationRowCount > 0 ? Array.from({ length: relationRowCount }, (_, rowIndex) => (
                 <BoxAny
-                  key={parent.id}
+                  key={`relation-row-${rowIndex}`}
                   sx={{
                     display: 'grid',
-                    gridTemplateColumns: 'minmax(0, 1fr) 32px 24px',
-                    gap: 1,
-                    alignItems: 'center',
+                    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                    columnGap: 1.5,
                     py: 0.75,
-                    borderBottom: index === parents.length - 1 ? 'none' : '1px solid rgba(15,23,42,0.08)',
+                    borderBottom: rowIndex === relationRowCount - 1 ? 'none' : '1px solid rgba(15,23,42,0.08)',
                   }}
                 >
-                  <Link
-                    component="button"
-                    variant="body2"
-                    underline="hover"
-                    onClick={() => onNavigate(parent.id)}
-                    sx={{ justifySelf: 'start', textAlign: 'left', fontSize: 13 }}
-                  >
-                    {parent.name}
-                  </Link>
-                  <Typography variant="body2" sx={{ fontSize: 13, color: '#475569' }}>
-                    {formatGender(parent.gender)}
-                  </Typography>
-                  <BoxAny />
+                  {relationColumns.map(column => {
+                    const value = column.items[rowIndex];
+                    return value ? (
+                      <Link
+                        key={`${column.key}-${rowIndex}`}
+                        component="button"
+                        variant="body2"
+                        underline="hover"
+                        onClick={() => onNavigate(value.id)}
+                        sx={{ justifySelf: 'start', textAlign: 'left', fontSize: 13, minWidth: 0, wordBreak: 'break-word' }}
+                      >
+                        {value.label}
+                        {value.suffix ? (
+                          <BoxAny component="span" sx={{ fontSize: 11, color: '#94a3b8', ml: 0.5 }}>
+                            {value.suffix}
+                          </BoxAny>
+                        ) : null}
+                      </Link>
+                    ) : (
+                      <BoxAny key={`${column.key}-${rowIndex}`} />
+                    );
+                  })}
                 </BoxAny>
               )) : (
                 <Typography variant="body2" color="text.secondary" sx={{ fontSize: 12, fontStyle: 'italic', py: 0.9 }}>
@@ -1406,7 +1508,7 @@ export const FamilyPersonPanel: React.FC<Props> = ({
           </BoxAny>
         )}
 
-        {(editing || spouses.length > 0) && (
+        {editing && (
           <BoxAny sx={{ mb: 0.9 }}>
           <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1, pr: 0.5 }}>
             <Typography variant="caption" color="text.secondary" sx={{ fontSize: 11 }}>配偶</Typography>
@@ -1426,7 +1528,7 @@ export const FamilyPersonPanel: React.FC<Props> = ({
                 key={spouse.id}
                 sx={{
                   display: 'grid',
-                  gridTemplateColumns: relationshipEditing ? 'minmax(0, 1fr) 32px 32px' : 'minmax(0, 1fr) 32px',
+                  gridTemplateColumns: relationshipEditing ? 'minmax(0, 1fr) 32px 24px 32px' : 'minmax(0, 1fr) 32px 24px',
                   gap: 1,
                   alignItems: 'center',
                   py: 0.75,
@@ -1445,20 +1547,25 @@ export const FamilyPersonPanel: React.FC<Props> = ({
                 <Typography variant="body2" sx={{ fontSize: 13, color: '#475569' }}>
                   {formatGender(spouse.gender)}
                 </Typography>
+                <BoxAny />
                 {relationshipEditing && (
                   <IconButton size="small" onClick={() => handleDeleteSpouse(spouse.id)} sx={{ width: 24, height: 24, justifySelf: 'end' }}>
                     <DeleteOutlineIcon fontSize="small" />
                   </IconButton>
                 )}
               </BoxAny>
-            )) : null}
+            )) : !spouseDialog.open ? (
+              <Typography variant="body2" color="text.secondary" sx={{ fontSize: 12, fontStyle: 'italic', py: 0.9 }}>
+                暂无记录
+              </Typography>
+            ) : null}
             {relationshipEditing && spouseDialog.open && (
               <BoxAny
                 sx={{
                   py: 0.75,
                   borderBottom: '1px solid rgba(15,23,42,0.08)',
                   display: 'grid',
-                  gridTemplateColumns: 'minmax(0, 1fr) 32px 32px',
+                  gridTemplateColumns: 'minmax(0, 1fr) 32px 24px 32px',
                   gap: 1,
                   alignItems: 'center',
                 }}
@@ -1488,6 +1595,7 @@ export const FamilyPersonPanel: React.FC<Props> = ({
                   <MenuItem value="female">女</MenuItem>
                   <MenuItem value="unknown">未知</MenuItem>
                 </Select>
+                <BoxAny />
                 <IconButton size="small" onClick={closeSpouseDialog} disabled={spouseDialog.saving} sx={{ width: 24, height: 24, justifySelf: 'end' }}>
                   <DeleteOutlineIcon fontSize="small" />
                 </IconButton>
@@ -1498,7 +1606,7 @@ export const FamilyPersonPanel: React.FC<Props> = ({
           </BoxAny>
         )}
 
-        {(editing || children.length > 0 || pendingChildren.length > 0) && (
+        {(editing || pendingChildren.length > 0) && (
           <BoxAny>
           <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1, pr: 0.5 }}>
             <Typography variant="caption" color="text.secondary" sx={{ fontSize: 11 }}>

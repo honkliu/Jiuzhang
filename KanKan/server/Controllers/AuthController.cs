@@ -62,41 +62,13 @@ public class AuthController : ControllerBase
             if (existingUser != null)
                 return BadRequest(new { message = "Email already registered" });
 
-            // Check if an invite code already exists for this email; if not, generate one
-            var existing = await _authService.GetAllInviteCodesAsync();
             var emailLower = request.Email.Trim().ToLower();
-            if (!existing.Any(c => c.Email == emailLower && c.Status == "pending"))
+            var existingCode = await _authService.GetActiveVerificationCodeAsync(emailLower, "registration");
+            if (string.IsNullOrEmpty(existingCode))
             {
-                var code = Random.Shared.Next(1000, 10000).ToString();
+                var code = GenerateVerificationCode();
                 await _authService.CreateVerificationCodeAsync(emailLower, code, "registration", 5256000);
-
-                // Notify admin users about new registration request
-                var adminEmails = _configuration.GetSection("AdminEmails").Get<string[]>() ?? Array.Empty<string>();
-                foreach (var adminEmail in adminEmails)
-                {
-                    var admin = await _authService.GetUserByEmailAsync(adminEmail);
-                    if (admin == null) continue;
-                    if (!CanAdminAccessEmail(admin, emailLower)) continue;
-
-                    var regNotif = new Notification
-                    {
-                        Id = $"notif_reg_{admin.Id}_{emailLower}_{DateTime.UtcNow.Ticks}",
-                        UserId = admin.Id,
-                        Category = "registration",
-                        EntityId = emailLower,
-                        Title = emailLower,
-                        Body = "requested to register",
-                        IsRead = false,
-                        CreatedAt = DateTime.UtcNow,
-                        Ttl = 60 * 60 * 24 * 30
-                    };
-                    await _notificationRepository.CreateAsync(regNotif);
-                    await _hubContext.Clients.User(admin.Id).SendAsync("NotificationCreated", new NotificationDto
-                    {
-                        Id = regNotif.Id, Category = regNotif.Category, Title = regNotif.Title,
-                        Body = regNotif.Body, IsRead = false, CreatedAt = regNotif.CreatedAt
-                    });
-                }
+                await NotifyAdminsAboutPendingActionAsync(emailLower, "registration", "requested to register", "reg");
             }
 
             return Ok(new
@@ -119,7 +91,8 @@ public class AuthController : ControllerBase
         {
             var isValid = await _authService.VerifyCodeAsync(
                 request.Email,
-                request.Code?.Trim() ?? "");
+                request.Code?.Trim() ?? "",
+                "registration");
 
             if (!isValid)
                 return BadRequest(new { message = "Invalid or expired verification code" });
@@ -273,27 +246,29 @@ public class AuthController : ControllerBase
     {
         try
         {
-            var user = await _authService.GetUserByEmailAsync(request.Email);
+            var normalizedEmail = request.Email.Trim().ToLower();
+            var user = await _authService.GetUserByEmailAsync(normalizedEmail);
 
-            // Don't reveal if email exists or not (security best practice)
+            // Don't reveal if email exists or not.
             if (user == null)
-                return Ok(new { message = "If email exists, reset code has been sent" });
+                return Ok(new { message = "Verification step ready", email = request.Email });
 
-            // Generate reset code
-            var resetCode = GenerateVerificationCode();
+            var existingCode = await _authService.GetActiveVerificationCodeAsync(normalizedEmail, "password_reset");
+            if (string.IsNullOrEmpty(existingCode))
+            {
+                var resetCode = GenerateVerificationCode();
 
-            await _authService.CreateVerificationCodeAsync(
-                request.Email,
-                resetCode,
-                "password_reset"
-            );
+                await _authService.CreateVerificationCodeAsync(
+                    normalizedEmail,
+                    resetCode,
+                    "password_reset",
+                    5256000
+                );
 
-            await _emailService.SendPasswordResetEmailAsync(
-                request.Email,
-                resetCode
-            );
+                await NotifyAdminsAboutPendingActionAsync(normalizedEmail, "password_reset", "requested password reset", "pwdreset");
+            }
 
-            return Ok(new { message = "If email exists, reset code has been sent" });
+            return Ok(new { message = "Verification step ready", email = request.Email });
         }
         catch (Exception ex)
         {
@@ -307,15 +282,18 @@ public class AuthController : ControllerBase
     {
         try
         {
+            var normalizedEmail = request.Email.Trim().ToLower();
+
             var isValid = await _authService.VerifyCodeAsync(
-                request.Email,
-                request.Code
+                normalizedEmail,
+                request.Code?.Trim() ?? "",
+                "password_reset"
             );
 
             if (!isValid)
                 return BadRequest(new { message = "Invalid or expired reset code" });
 
-            await _authService.ResetPasswordAsync(request.Email, request.NewPassword);
+            await _authService.ResetPasswordAsync(normalizedEmail, request.NewPassword);
 
             return Ok(new { message = "Password reset successfully" });
         }
@@ -326,10 +304,77 @@ public class AuthController : ControllerBase
         }
     }
 
+    [Authorize]
+    [HttpPost("change-password")]
+    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
+    {
+        try
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(userId))
+                return Unauthorized(new { message = "Unauthorized" });
+
+            var currentUser = await _userRepository.GetByIdAsync(userId);
+            if (currentUser == null)
+                return Unauthorized(new { message = "Unauthorized" });
+
+            var validUser = await _authService.ValidateCredentialsAsync(currentUser.Email, request.CurrentPassword);
+            if (validUser == null)
+                return BadRequest(new { message = "Current password is incorrect" });
+
+            if (string.Equals(request.CurrentPassword, request.NewPassword, StringComparison.Ordinal))
+                return BadRequest(new { message = "New password must be different" });
+
+            await _authService.ResetPasswordAsync(currentUser.Email, request.NewPassword);
+            return Ok(new { message = "Password changed successfully" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Change password failed");
+            return StatusCode(500, new { message = "Change password failed" });
+        }
+    }
+
     // Helper methods
     private string GenerateVerificationCode()
     {
-        return "123456";
+        return Random.Shared.Next(1000, 10000).ToString();
+    }
+
+    private async Task NotifyAdminsAboutPendingActionAsync(string email, string category, string body, string notificationPrefix)
+    {
+        var adminEmails = _configuration.GetSection("AdminEmails").Get<string[]>() ?? Array.Empty<string>();
+
+        foreach (var adminEmail in adminEmails)
+        {
+            var admin = await _authService.GetUserByEmailAsync(adminEmail);
+            if (admin == null) continue;
+            if (!CanAdminAccessEmail(admin, email)) continue;
+
+            var notification = new Notification
+            {
+                Id = $"notif_{notificationPrefix}_{admin.Id}_{email}_{DateTime.UtcNow.Ticks}",
+                UserId = admin.Id,
+                Category = category,
+                EntityId = email,
+                Title = email,
+                Body = body,
+                IsRead = false,
+                CreatedAt = DateTime.UtcNow,
+                Ttl = 60 * 60 * 24 * 30
+            };
+
+            await _notificationRepository.CreateAsync(notification);
+            await _hubContext.Clients.User(admin.Id).SendAsync("NotificationCreated", new NotificationDto
+            {
+                Id = notification.Id,
+                Category = notification.Category,
+                Title = notification.Title,
+                Body = notification.Body,
+                IsRead = false,
+                CreatedAt = notification.CreatedAt
+            });
+        }
     }
 
     private bool IsValidEmail(string email)

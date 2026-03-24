@@ -22,8 +22,8 @@ class AdminService {
     return response.data;
   }
 
-  async getInviteCodes(): Promise<{ email: string; code: string; createdAt: string; status: string }[]> {
-    const response = await apiClient.get<{ email: string; code: string; createdAt: string; status: string }[]>('/admin/invite-codes');
+  async getInviteCodes(): Promise<{ email: string; code: string; purpose: string; createdAt: string; status: string }[]> {
+    const response = await apiClient.get<{ email: string; code: string; purpose: string; createdAt: string; status: string }[]>('/admin/invite-codes');
     return response.data;
   }
 }

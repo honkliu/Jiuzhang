@@ -192,7 +192,7 @@ public class AdminController : ControllerBase
         var filtered = scope.IsGlobal
             ? codes
             : codes.Where(c => DomainRules.CanAccess(scope.Domain, DomainRules.GetDomain(c.Email))).ToList();
-        return Ok(filtered.Select(c => new { email = c.Email, code = c.Code, createdAt = c.CreatedAt, status = c.Status }));
+        return Ok(filtered.Select(c => new { email = c.Email, code = c.Code, purpose = c.Purpose, createdAt = c.CreatedAt, status = c.Status }));
     }
 
     private static string ResolveDomain(User user)

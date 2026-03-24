@@ -26,7 +26,7 @@ const BoxAny = Box as any;
 export const InviteCodesPage: React.FC = () => {
   const user = useSelector((state: any) => state.auth?.user);
   const { t } = useLanguage();
-  const [codes, setCodes] = useState<{ email: string; code: string; createdAt: string; status: string }[]>([]);
+  const [codes, setCodes] = useState<{ email: string; code: string; purpose: string; createdAt: string; status: string }[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -58,6 +58,24 @@ export const InviteCodesPage: React.FC = () => {
     }
   };
 
+  const getPurposeLabel = (purpose: string) => {
+    return purpose === 'password_reset' ? t('admin.passwordReset') : t('admin.registration');
+  };
+
+  const getStatusLabel = (status: string) => {
+    if (status === 'registered') return t('admin.registered');
+    if (status === 'reset') return t('admin.reset');
+    if (status === 'expired') return t('admin.expired');
+    if (status === 'superseded') return t('admin.superseded');
+    return t('admin.pending');
+  };
+
+  const getStatusColor = (status: string): 'success' | 'warning' | 'default' => {
+    if (status === 'pending') return 'warning';
+    if (status === 'registered' || status === 'reset') return 'success';
+    return 'default';
+  };
+
   return (
     <BoxAny sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <AppHeader />
@@ -83,6 +101,7 @@ export const InviteCodesPage: React.FC = () => {
               <Table size="small">
                 <TableHead>
                   <TableRow>
+                    <TableCell>{t('admin.type')}</TableCell>
                     <TableCell>{t('admin.email')}</TableCell>
                     <TableCell>{t('admin.code')}</TableCell>
                     <TableCell>{t('admin.status')}</TableCell>
@@ -92,21 +111,22 @@ export const InviteCodesPage: React.FC = () => {
                 <TableBody>
                   {codes.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={4} align="center" sx={{ color: 'text.secondary', py: 3 }}>
+                      <TableCell colSpan={5} align="center" sx={{ color: 'text.secondary', py: 3 }}>
                         {t('admin.empty')}
                       </TableCell>
                     </TableRow>
                   ) : (
                     codes.map((c, index) => (
                       <TableRow key={`${c.email}-${index}`}>
+                        <TableCell>{getPurposeLabel(c.purpose)}</TableCell>
                         <TableCell>{c.email}</TableCell>
                         <TableCell sx={{ fontFamily: '"Noto Sans SC", "PingFang SC", "Source Han Sans SC", sans-serif', fontWeight: 700, fontSize: '1.1rem' }}>
                           {c.code}
                         </TableCell>
                         <TableCell>
                           <Chip
-                            label={c.status === 'registered' ? t('admin.registered') : t('admin.pending')}
-                            color={c.status === 'registered' ? 'success' : 'warning'}
+                            label={getStatusLabel(c.status)}
+                            color={getStatusColor(c.status)}
                             size="small"
                             variant="outlined"
                           />

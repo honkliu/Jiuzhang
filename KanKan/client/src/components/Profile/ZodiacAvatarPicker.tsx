@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Box, Typography, Button, CircularProgress, useMediaQuery, useTheme } from '@mui/material';
+import { Box, Typography, Button, useMediaQuery, useTheme } from '@mui/material';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { avatarService, type SelectableAvatar } from '@/services/avatar.service';
 import { ImageHoverPreview } from '@/components/Shared/ImageHoverPreview';
@@ -113,6 +113,8 @@ export const ZodiacAvatarPicker: React.FC<ZodiacAvatarPickerProps> = ({
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const tileSize = isMobile ? 64 : 56;
+  const gridWidth = tileSize * 4 + 24;
+  const gridHeight = tileSize * 3 + 16;
   const [avatars, setAvatars] = useState<SelectableAvatar[]>([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(0);
@@ -154,53 +156,57 @@ export const ZodiacAvatarPicker: React.FC<ZodiacAvatarPickerProps> = ({
         {t('profile.zodiacTitle')}
       </Typography>
 
-      {loading ? (
-        <BoxAny sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
-          <CircularProgress size={20} />
-        </BoxAny>
-      ) : null}
-
       <BoxAny
         sx={{
-          display: 'grid',
-          gridTemplateColumns: `repeat(4, ${tileSize}px)`,
-          gap: 1,
-          alignItems: 'center',
-          justifyContent: 'flex-start',
+          width: `${gridWidth}px`,
+          minWidth: `${gridWidth}px`,
+          minHeight: `${gridHeight}px`,
         }}
       >
-        {pagedAvatars.map((avatar) => (
-          <AvatarOptionTile
-            key={avatar.avatarImageId}
-            avatar={avatar}
-            value={value}
-            disabled={disabled}
-            size={tileSize}
-            onSelect={onChange}
-          />
-        ))}
+        <BoxAny
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: `repeat(4, ${tileSize}px)`,
+            gap: 1,
+            alignItems: 'center',
+            justifyContent: 'flex-start',
+          }}
+        >
+          {pagedAvatars.map((avatar) => (
+            <AvatarOptionTile
+              key={avatar.avatarImageId}
+              avatar={avatar}
+              value={value}
+              disabled={disabled || loading}
+              size={tileSize}
+              onSelect={onChange}
+            />
+          ))}
+        </BoxAny>
       </BoxAny>
 
-      {totalPages > 1 ? (
-        <BoxAny sx={{ display: 'flex', gap: 1, mt: 1 }}>
-          <Button
-            size="small"
-            variant="outlined"
-            disabled={disabled || page <= 0}
-            onClick={() => setPage((current) => Math.max(0, current - 1))}
-          >
-            {t('common.prev')}
-          </Button>
-          <Button
-            size="small"
-            variant="outlined"
-            disabled={disabled || page >= totalPages - 1}
-            onClick={() => setPage((current) => Math.min(totalPages - 1, current + 1))}
-          >
-            {t('common.next')}
-          </Button>
-        </BoxAny>
-      ) : null}
+      <BoxAny sx={{ display: 'flex', gap: 1, mt: 1, minHeight: 32, alignItems: 'center' }}>
+        {totalPages > 1 ? (
+          <>
+            <Button
+              size="small"
+              variant="outlined"
+              disabled={disabled || loading || page <= 0}
+              onClick={() => setPage((current) => Math.max(0, current - 1))}
+            >
+              {t('common.prev')}
+            </Button>
+            <Button
+              size="small"
+              variant="outlined"
+              disabled={disabled || loading || page >= totalPages - 1}
+              onClick={() => setPage((current) => Math.min(totalPages - 1, current + 1))}
+            >
+              {t('common.next')}
+            </Button>
+          </>
+        ) : null}
+      </BoxAny>
     </BoxAny>
   );
 };

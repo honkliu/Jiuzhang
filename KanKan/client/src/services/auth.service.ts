@@ -6,6 +6,7 @@ import type {
   AuthResponse,
   ForgotPasswordRequest,
   ResetPasswordRequest,
+  ChangePasswordRequest,
   User,
   ApiError,
 } from '@/types';
@@ -99,6 +100,23 @@ class AuthService {
     }
   }
 
+  async changePassword(data: ChangePasswordRequest): Promise<{ message: string }> {
+    try {
+      const token = this.getAccessToken();
+      const response = await axios.post(
+        `${API_URL}/auth/change-password`,
+        data,
+        {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+          withCredentials: true,
+        }
+      );
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
   getCurrentUser(): User | null {
     const userStr = localStorage.getItem('user');
     return userStr ? JSON.parse(userStr) : null;
@@ -126,10 +144,16 @@ class AuthService {
     if (axios.isAxiosError(error)) {
       const axiosError = error as AxiosError<ApiError>;
       if (axiosError.response) {
+        const responseData = axiosError.response.data as ApiError & { title?: string; detail?: string };
+        const validationMessage = responseData?.errors
+          ? Object.entries(responseData.errors)
+              .flatMap(([field, messages]) => messages.map((message) => `${field}: ${message}`))
+              .join(' ')
+          : '';
         return {
-          message: axiosError.response.data.message || 'An error occurred',
+          message: validationMessage || responseData?.message || responseData?.detail || responseData?.title || 'An error occurred',
           statusCode: axiosError.response.status,
-          errors: axiosError.response.data.errors,
+          errors: responseData?.errors,
         };
       }
     }

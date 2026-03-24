@@ -5,6 +5,7 @@ import {
   Button,
   Typography,
   Container,
+  Box,
   Paper,
   Alert,
   CircularProgress,
@@ -51,7 +52,7 @@ export const ForgotPassword: React.FC = () => {
     setError('');
     setInfo('');
 
-    if (code.length !== 6) {
+    if (!code.trim()) {
       setError(t('auth.forgot.codeRequired'));
       return;
     }
@@ -86,7 +87,7 @@ export const ForgotPassword: React.FC = () => {
 
   return (
     <Container component="main" maxWidth="sm">
-      <div style={{ marginTop: 64, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      <Box sx={{ marginTop: 8, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         <Paper elevation={3} sx={{ p: 4, width: '100%' }}>
           <Typography component="h1" variant="h4" align="center" gutterBottom>
             {t('auth.forgot.title')}
@@ -140,14 +141,14 @@ export const ForgotPassword: React.FC = () => {
                 {loading ? <CircularProgress size={24} /> : t('auth.forgot.send')}
               </Button>
 
-              <div style={{ textAlign: 'center', marginTop: 16 }}>
+              <Box sx={{ textAlign: 'center', mt: 2 }}>
                 <Typography variant="body2" color="text.secondary">
                   {t('auth.forgot.remembered')}{' '}
                   <Link to="/login" style={{ color: '#1976d2', textDecoration: 'none' }}>
                     {t('auth.login.signIn')}
                   </Link>
                 </Typography>
-              </div>
+              </Box>
             </form>
           ) : (
             <form onSubmit={handleResetPassword}>
@@ -164,8 +165,8 @@ export const ForgotPassword: React.FC = () => {
                 name="code"
                 autoFocus
                 value={code}
-                onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
-                inputProps={{ maxLength: 6, pattern: '[0-9]*' }}
+                onChange={(e) => setCode(e.target.value.replace(/\s+/g, ''))}
+                inputProps={{ maxLength: 64 }}
                 disabled={loading}
               />
 
@@ -219,7 +220,7 @@ export const ForgotPassword: React.FC = () => {
             </form>
           )}
         </Paper>
-      </div>
+      </Box>
     </Container>
   );
 };
