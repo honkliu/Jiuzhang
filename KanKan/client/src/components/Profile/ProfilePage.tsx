@@ -25,6 +25,11 @@ import { authService } from '@/services/auth.service';
 
 // Work around TS2590 (“union type too complex”) from MUI Box typings in some TS versions.
 const BoxAny = Box as any;
+const roundedTextFieldSx = {
+  '& .MuiOutlinedInput-root': {
+    borderRadius: '5px',
+  },
+};
 
 export const ProfilePage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -131,15 +136,20 @@ export const ProfilePage: React.FC = () => {
           <>
             <BoxAny
               sx={{
-                display: 'grid',
-                gridTemplateColumns: { xs: '1fr', md: '160px minmax(0, 1fr)' },
-                gap: { xs: 2, md: 3 },
+                display: 'flex',
+                flexWrap: 'wrap',
+                columnGap: 3,
+                rowGap: 2,
                 alignItems: 'start',
                 mb: 3,
               }}
             >
-              <Stack spacing={1.5} alignItems={{ xs: 'center', md: 'flex-start' }}>
-                <Typography variant="h5" fontWeight="bold" sx={{ alignSelf: { xs: 'stretch', md: 'flex-start' } }}>
+              <Stack
+                spacing={1.5}
+                alignItems={{ xs: 'center', sm: 'flex-start' }}
+                sx={{ flex: '0 0 160px' }}
+              >
+                <Typography variant="h5" fontWeight="bold" sx={{ alignSelf: { xs: 'stretch', sm: 'flex-start' } }}>
                   {t('profile.title')}
                 </Typography>
                 <UserAvatar
@@ -159,7 +169,7 @@ export const ProfilePage: React.FC = () => {
                 />
               </Stack>
 
-              <BoxAny>
+              <BoxAny sx={{ flex: '0 0 auto', maxWidth: '100%' }}>
                 <ZodiacAvatarPicker
                   disabled={saving}
                   value={avatarImageId ?? undefined}
@@ -185,13 +195,13 @@ export const ProfilePage: React.FC = () => {
               onChange={(e) => setBio(e.target.value)}
               multiline
               minRows={3}
-              sx={{ mb: 2 }}
+              sx={{ ...roundedTextFieldSx, mb: 2 }}
             />
 
             <BoxAny
               sx={{
-                display: 'grid',
-                gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) auto auto' },
+                display: 'flex',
+                flexWrap: 'nowrap',
                 gap: 1.5,
                 alignItems: 'center',
                 mb: 1,
@@ -203,6 +213,7 @@ export const ProfilePage: React.FC = () => {
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
                 size="small"
+                sx={{ ...roundedTextFieldSx, flex: '1 1 auto', minWidth: 0 }}
               />
 
               <ToggleButtonGroup
@@ -213,7 +224,7 @@ export const ProfilePage: React.FC = () => {
                 }}
                 size="small"
                 sx={{
-                  justifySelf: { xs: 'stretch', md: 'start' },
+                  flex: '0 0 auto',
                   '& .MuiToggleButton-root': {
                     minWidth: 56,
                     px: 2,
@@ -230,9 +241,12 @@ export const ProfilePage: React.FC = () => {
                 onClick={handleSave}
                 disabled={saving}
                 sx={{
-                  minWidth: { xs: '100%', md: 128 },
+                  flex: '0 0 auto',
+                  width: 112,
+                  minWidth: 112,
                   height: 40,
-                  justifySelf: { xs: 'stretch', md: 'end' },
+                  ml: 'auto',
+                  whiteSpace: 'nowrap',
                 }}
               >
                 {saving ? <CircularProgress size={24} /> : '保存'}
@@ -243,13 +257,13 @@ export const ProfilePage: React.FC = () => {
               <BoxAny
                 sx={{
                   display: 'flex',
+                  flexWrap: 'nowrap',
                   alignItems: 'center',
-                  justifyContent: 'space-between',
                   gap: 2,
                   mb: 2,
                 }}
               >
-                <Typography variant="h6">
+                <Typography variant="h6" sx={{ flex: '1 1 auto', minWidth: 0 }}>
                   {t('profile.changePassword')}
                 </Typography>
 
@@ -257,7 +271,7 @@ export const ProfilePage: React.FC = () => {
                   variant="outlined"
                   onClick={handleChangePassword}
                   disabled={passwordSaving}
-                  sx={{ minWidth: { xs: 96, md: 128 }, height: 40, flexShrink: 0 }}
+                  sx={{ width: 112, minWidth: 112, height: 40, flexShrink: 0, ml: 'auto', whiteSpace: 'nowrap' }}
                 >
                   {passwordSaving ? <CircularProgress size={24} /> : '修改'}
                 </Button>
@@ -265,8 +279,8 @@ export const ProfilePage: React.FC = () => {
 
               <BoxAny
                 sx={{
-                  display: 'grid',
-                  gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
+                  display: 'flex',
+                  flexWrap: 'nowrap',
                   gap: 1.5,
                   alignItems: 'start',
                 }}
@@ -278,6 +292,7 @@ export const ProfilePage: React.FC = () => {
                   label={t('profile.currentPassword')}
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
+                  sx={{ ...roundedTextFieldSx, flex: '1 1 0', minWidth: 0 }}
                 />
 
                 <TextField
@@ -288,6 +303,7 @@ export const ProfilePage: React.FC = () => {
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   helperText={t('auth.register.passwordHint')}
+                  sx={{ ...roundedTextFieldSx, flex: '1 1 0', minWidth: 0 }}
                 />
               </BoxAny>
             </BoxAny>

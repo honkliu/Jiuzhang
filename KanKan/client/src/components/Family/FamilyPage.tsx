@@ -452,11 +452,12 @@ export const FamilyPage: React.FC = () => {
             {/* Person detail panel — floating for tree mode */}
             {selectedPerson && !isMobile && (
               <BoxAny sx={{
-                width: 300, flexShrink: 0, overflow: 'hidden',
+                width: 324, flexShrink: 0, overflow: 'hidden',
+                borderRadius: '8px',
                 borderRight: '1px solid rgba(15,23,42,0.08)',
                 ...(viewMode === 'tree' ? {
                   position: 'absolute', left: 0, top: 0, bottom: 0, zIndex: 10,
-                  background: 'rgba(255,255,255,0.97)', backdropFilter: 'blur(8px)',
+                  background: '#fff',
                   boxShadow: '2px 0 12px rgba(0,0,0,0.08)',
                 } : {}),
               }}>
@@ -480,9 +481,11 @@ export const FamilyPage: React.FC = () => {
                 ModalProps={{ keepMounted: true }}
                 PaperProps={{
                   sx: {
-                    borderTopLeftRadius: 16,
-                    borderTopRightRadius: 16,
+                    borderTopLeftRadius: 8,
+                    borderTopRightRadius: 8,
                     maxHeight: '80vh',
+                    background: '#fff',
+                    backgroundImage: 'none',
                   },
                 }}
               >

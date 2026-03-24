@@ -39,6 +39,8 @@ const BoxAny = Box as any;
 const WEEKDAY_LABELS = ['日', '一', '二', '三', '四', '五', '六'];
 const editableSurfaceColor = 'rgba(8,145,178,0.08)';
 const editableSurfaceBorder = 'rgba(8,145,178,0.2)';
+const panelHeaderPaddingSx = { pl: 2.25, pr: 4 };
+const panelSectionPaddingSx = { pl: 2.25, pr: 4 };
 const roundedTextFieldSx = {
   '& .MuiOutlinedInput-root': {
     borderRadius: '5px',
@@ -1194,27 +1196,31 @@ export const FamilyPersonPanel: React.FC<Props> = ({
     <Paper
       elevation={3}
       sx={{
-        width: fullWidth ? '100%' : 320,
+        width: fullWidth ? '100%' : 346,
         height: '100%',
         overflowY: 'auto',
         overflowX: 'hidden',
-        scrollbarGutter: 'stable',
+        scrollbarWidth: 'none',
+        msOverflowStyle: 'none',
+        '&::-webkit-scrollbar': {
+          display: 'none',
+        },
         display: 'flex',
         flexDirection: 'column',
-        borderRadius: '5px',
+        borderRadius: '8px',
         p: 0,
       }}
     >
       <BoxAny sx={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        pl: 2, pr: 3, py: 1.25, background: 'rgba(15,23,42,0.02)',
+        ...panelHeaderPaddingSx, py: 1.25, background: 'rgba(15,23,42,0.02)',
       }}>
         <Typography variant="subtitle2" fontWeight="bold" color="text.secondary">人物详情</Typography>
         <IconButton size="small" onClick={onClose}><CloseIcon fontSize="small" /></IconButton>
       </BoxAny>
       <Divider />
 
-      <BoxAny sx={{ pl: 2, pr: 3, py: editing ? 1.1 : 1.5 }}>
+      <BoxAny sx={{ ...panelSectionPaddingSx, py: editing ? 1.1 : 1.5 }}>
         {panelError && <Alert severity="error" sx={{ mb: 1.25 }}>{panelError}</Alert>}
         {panelInfo && <Alert severity="success" sx={{ mb: 1.25 }}>{panelInfo}</Alert>}
 
@@ -1377,7 +1383,7 @@ export const FamilyPersonPanel: React.FC<Props> = ({
       {!editing && (person.birthDate || person.deathDate) && (
         <>
           <Divider />
-          <BoxAny sx={{ pl: 2, pr: 3, py: 1.25, display: 'grid', gap: 1.1 }}>
+          <BoxAny sx={{ ...panelSectionPaddingSx, py: 1.25, display: 'grid', gap: 1.1 }}>
             {person.birthDate && (
               <BoxAny sx={{ display: 'grid', gridTemplateColumns: '32px minmax(0, 1fr)', columnGap: 0.5, alignItems: 'baseline' }}>
                 <Typography variant="caption" color="text.secondary" sx={{ fontSize: 12, lineHeight: 1.35, color: '#166534', fontWeight: 600 }}>
@@ -1405,7 +1411,7 @@ export const FamilyPersonPanel: React.FC<Props> = ({
       {editing && (
         <>
           <Divider />
-          <BoxAny sx={{ pl: 2, pr: 3, py: 1.25, display: 'grid', gap: 1.1 }}>
+          <BoxAny sx={{ ...panelSectionPaddingSx, py: 1.25, display: 'grid', gap: 1.1 }}>
             <BoxAny sx={{ display: 'grid', gap: 1.1 }}>
               <FamilyDateEditor
                 label="生辰"
@@ -1439,14 +1445,12 @@ export const FamilyPersonPanel: React.FC<Props> = ({
       )}
 
       <Divider />
-      <BoxAny sx={{ pl: 2, pr: 3, py: 1.25 }}>
+      <BoxAny sx={{ ...panelSectionPaddingSx, pt: 1.25, pb: 0.4 }}>
         {!editing && (
-          <BoxAny sx={{ mb: 0.9 }}>
+          <BoxAny sx={{ mb: 0.2 }}>
             <BoxAny
               sx={{
-                mt: 0.5,
-                borderTop: '1px solid rgba(15,23,42,0.08)',
-                borderBottom: '1px solid rgba(15,23,42,0.08)',
+                mt: 0,
               }}
             >
               <BoxAny
@@ -1510,7 +1514,7 @@ export const FamilyPersonPanel: React.FC<Props> = ({
 
         {editing && (
           <BoxAny sx={{ mb: 0.9 }}>
-          <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1, pr: 0.5 }}>
+          <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1, pr: 1.25 }}>
             <Typography variant="caption" color="text.secondary" sx={{ fontSize: 11 }}>配偶</Typography>
             {relationshipEditing && (
               <Button
@@ -1608,7 +1612,7 @@ export const FamilyPersonPanel: React.FC<Props> = ({
 
         {(editing || pendingChildren.length > 0) && (
           <BoxAny>
-          <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1, pr: 0.5 }}>
+          <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1, pr: 1.25 }}>
             <Typography variant="caption" color="text.secondary" sx={{ fontSize: 11 }}>
               子女（{children.length}人）
             </Typography>
@@ -1621,7 +1625,7 @@ export const FamilyPersonPanel: React.FC<Props> = ({
               </Button>
             )}
           </BoxAny>
-          <BoxAny sx={{ mt: 0.5, borderTop: '1px solid rgba(15,23,42,0.08)', borderBottom: '1px solid rgba(15,23,42,0.08)' }}>
+          <BoxAny sx={{ mt: 0.5, borderTop: '1px solid rgba(15,23,42,0.08)' }}>
             {orderedChildren.length > 0 ? orderedChildren.map((child, index) => (
               <BoxAny
                 key={child.id}
@@ -1721,7 +1725,7 @@ export const FamilyPersonPanel: React.FC<Props> = ({
       {person.biography && !editing && (
         <>
           <Divider />
-          <BoxAny sx={{ pl: 2, pr: 3, py: 1.25 }}>
+          <BoxAny sx={{ ...panelSectionPaddingSx, pt: 0.6, pb: 1.25 }}>
             <Typography variant="caption" color="text.secondary" display="block" mb={0.5} sx={{ fontSize: 11 }}>
               生平
             </Typography>
@@ -1733,7 +1737,7 @@ export const FamilyPersonPanel: React.FC<Props> = ({
       {editing && (
         <>
           <Divider />
-          <BoxAny sx={{ pl: 2, pr: 3, py: 1.25 }}>
+          <BoxAny sx={{ ...panelSectionPaddingSx, py: 1.25 }}>
             <BoxAny sx={{ display: 'grid', gap: 0.5 }}>
               <Typography variant="caption" color="text.secondary" sx={{ fontSize: 11 }}>
                 生平
@@ -1770,9 +1774,9 @@ export const FamilyPersonPanel: React.FC<Props> = ({
       {editing && (
         <>
           <Divider />
-          <BoxAny sx={{ pl: 2, pr: 3, py: 1.25 }}>
+          <BoxAny sx={{ ...panelSectionPaddingSx, py: 1.25 }}>
             <BoxAny sx={{ mb: 0.9 }}>
-              <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1, pr: 0.5 }}>
+              <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1, pr: 1.25 }}>
                 <Typography variant="caption" color="text.secondary" sx={{ fontSize: 11 }}>
                   照片
                 </Typography>
@@ -1813,7 +1817,7 @@ export const FamilyPersonPanel: React.FC<Props> = ({
       {(person.photos?.length ?? 0) > 0 && !editing && (
         <>
           <Divider />
-          <BoxAny sx={{ pl: 2, pr: 3, py: 1.25 }}>
+          <BoxAny sx={{ ...panelSectionPaddingSx, py: 1.25 }}>
             <Typography variant="caption" color="text.secondary" display="block" mb={0.75} fontWeight="bold">
               照片
             </Typography>

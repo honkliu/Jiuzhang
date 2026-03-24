@@ -112,7 +112,7 @@ export const ZodiacAvatarPicker: React.FC<ZodiacAvatarPickerProps> = ({
   const { t } = useLanguage();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const tileSize = isMobile ? 64 : 56;
+  const tileSize = isMobile ? 52 : 56;
   const gridWidth = tileSize * 4 + 24;
   const gridHeight = tileSize * 3 + 16;
   const [avatars, setAvatars] = useState<SelectableAvatar[]>([]);
@@ -158,8 +158,8 @@ export const ZodiacAvatarPicker: React.FC<ZodiacAvatarPickerProps> = ({
 
       <BoxAny
         sx={{
-          width: `${gridWidth}px`,
-          minWidth: `${gridWidth}px`,
+          width: 'fit-content',
+          maxWidth: '100%',
           minHeight: `${gridHeight}px`,
         }}
       >
