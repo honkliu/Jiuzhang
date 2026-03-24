@@ -184,6 +184,11 @@ export const FamilyPage: React.FC = () => {
   const [createTreeError, setCreateTreeError] = useState<string | null>(null);
   const [creatingTree, setCreatingTree] = useState(false);
   const canvasRef = useRef<FamilyHistoHandle>(null);
+  const selectedPersonIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    selectedPersonIdRef.current = selectedPerson?.id ?? null;
+  }, [selectedPerson]);
 
   const selectedTree = trees.find(t => t.id === selectedTreeId) ?? null;
   const treeMaxDepth = useMemo(() => rootNode ? getTreeDepth(rootNode) : 0, [rootNode]);
@@ -225,24 +230,47 @@ export const FamilyPage: React.FC = () => {
     }
   }, [currentUser?.domain, createDialogOpen]);
 
+  const applyTreeData = useCallback((p: FamilyPersonDto[], r: FamilyRelationshipDto[], preferredPersonId?: string | null) => {
+    setPersons(p);
+    setRels(r);
+
+    const root = buildTree(p, r);
+    const nodes = root ? flattenTree(root) : [];
+
+    setRootNode(root);
+    setAllNodes(nodes);
+
+    const nextSelectedId = preferredPersonId === undefined ? selectedPersonIdRef.current : preferredPersonId;
+    setSelectedPerson(nextSelectedId ? nodes.find(n => n.id === nextSelectedId) ?? null : null);
+
+    if (focusPersonId && !nodes.some(n => n.id === focusPersonId)) {
+      setFocusPersonId(null);
+    }
+  }, [focusPersonId]);
+
+  const refreshCurrentTree = useCallback(async (preferredPersonId?: string | null) => {
+    if (!selectedTreeId) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const { persons: p, relationships: r } = await familyService.getTree(selectedTreeId);
+      applyTreeData(p, r, preferredPersonId);
+    } catch {
+      setError('Failed to load tree data');
+    } finally {
+      setLoading(false);
+    }
+  }, [applyTreeData, selectedTreeId]);
+
   // Load full tree when selection changes
   useEffect(() => {
     if (!selectedTreeId) return;
-    setLoading(true);
-    setError(null);
     setVisibleStartDepth(0);
     setFocusPersonId(null);
-    familyService.getTree(selectedTreeId)
-      .then(({ persons: p, relationships: r }) => {
-        setPersons(p);
-        setRels(r);
-        const root = buildTree(p, r);
-        setRootNode(root);
-        setAllNodes(root ? flattenTree(root) : []);
-      })
-      .catch(() => setError('Failed to load tree data'))
-      .finally(() => setLoading(false));
-  }, [selectedTreeId]);
+    void refreshCurrentTree(null);
+  }, [refreshCurrentTree, selectedTreeId]);
 
   const handleNodeClick = useCallback((node: FamilyNode) => {
     setSelectedPerson(node);
@@ -438,6 +466,8 @@ export const FamilyPage: React.FC = () => {
                   allPersons={allNodes}
                   onClose={() => setSelectedPerson(null)}
                   onNavigate={navigateToPerson}
+                  onRefresh={refreshCurrentTree}
+                  canEdit={Boolean(currentUser?.canEditFamilyTree)}
                 />
               </BoxAny>
             )}
@@ -462,6 +492,8 @@ export const FamilyPage: React.FC = () => {
                   allPersons={allNodes}
                   onClose={() => setSelectedPerson(null)}
                   onNavigate={navigateToPerson}
+                  onRefresh={refreshCurrentTree}
+                  canEdit={Boolean(currentUser?.canEditFamilyTree)}
                   fullWidth
                 />
               </Drawer>

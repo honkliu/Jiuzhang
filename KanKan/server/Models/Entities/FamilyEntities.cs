@@ -5,6 +5,8 @@ public class FamilyDate
     public int Year { get; set; }
     public int? Month { get; set; }
     public int? Day { get; set; }
+    public string? CalendarType { get; set; }
+    public bool? IsLeapMonth { get; set; }
 }
 
 public class FamilyPhoto
@@ -67,6 +69,7 @@ public class FamilyPerson
     public string? Occupation { get; set; }
     public string? Education { get; set; }
     public string? Biography { get; set; }
+    public string? BriefNote { get; set; }
     public List<FamilyExperience> Experiences { get; set; } = new();
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }

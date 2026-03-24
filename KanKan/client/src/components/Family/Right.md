@@ -34,7 +34,7 @@ NODE_STEP_MS = 50      // delay between each new node reveal (ms)
 ## 3. Tree Layout Algorithm
 
 ### 3.1 Coordinate System
-- X-axis: horizontal, grows rightward. Rightmost = eldest child (Chinese genealogy convention: 长子在右).
+- X-axis: horizontal, grows rightward. Rightmost = eldest child (Chinese genealogy convention: 长子在右). `sortOrder` is authored to preserve this rule.
 - Y-axis: vertical, grows downward. Each generation at `depth * LEVEL_HEIGHT`.
 
 ### 3.2 Layout Function: `layoutSubtree(node, leftEdge)`

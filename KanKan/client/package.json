@@ -22,6 +22,7 @@
     "emoji-picker-react": "^4.5.0",
     "formik": "^2.4.0",
     "katex": "^0.16.28",
+    "lunar-typescript": "^1.8.6",
     "markdown-it": "^14.1.1",
     "markdown-it-texmath": "^1.0.0",
     "react": "18.2.0",

@@ -83,8 +83,8 @@ Every field beyond `name` is optional. New fields can be added at any time; old 
   "gender": "male",
   "generation": 1,
 
-  "birthDate": { "year": 1944, "month": 3, "day": 12 },
-  "deathDate": { "year": 2021, "month": 11, "day": 5 },
+  "birthDate": { "year": 1944, "month": 3, "day": 12, "calendarType": "solar", "isLeapMonth": false },
+  "deathDate": { "year": 2021, "month": 11, "day": 5, "calendarType": "solar", "isLeapMonth": false },
   "birthPlace": "湖南省长沙市",
   "deathPlace": "湖南省长沙市",
   "isAlive": false,
@@ -97,6 +97,7 @@ Every field beyond `name` is optional. New fields can be added at any time; old 
   "occupation": "教师",
   "education": "大学本科",
   "biography": "一生从教三十年…",
+  "briefNote": "长房次子",
 
   "experiences": [
     { "id": "exp_<guid>", "type": "education", "title": "湖南师范大学", "description": "中文系", "startYear": 1963, "endYear": 1967 },
@@ -114,9 +115,9 @@ Every field beyond `name` is optional. New fields can be added at any time; old 
 | Group | Fields | Notes |
 | --- | --- | --- |
 | Identity | `name`, `aliases[]`, `gender`, `generation` | `aliases` covers 字, 号, maiden names; `generation` is the absolute 世 number |
-| Dates & places | `birthDate`, `deathDate`, `birthPlace`, `deathPlace`, `isAlive` | Structured partial dates: `{ year, month?, day? }` — year-only is common for old records |
+| Dates & places | `birthDate`, `deathDate`, `birthPlace`, `deathPlace`, `isAlive` | Structured partial dates: `{ year, month?, day?, calendarType?, isLeapMonth? }`; supports solar and lunar entry |
 | Media | `avatarUrl`, `photos[]` | Single display avatar + photo gallery; URLs stored from existing KanKan upload endpoint |
-| Profile | `occupation`, `education`, `biography` | Free-form text, shown in detail panel |
+| Profile | `occupation`, `education`, `biography`, `briefNote` | Free-form text plus a short note shown in detail panel |
 | Experiences | `experiences[]` | Chronological life events; `type`: `work`, `education`, `military`, `milestone`, `other` |
 
 #### `FamilyRelationships` — one document per relationship edge
@@ -293,6 +294,8 @@ interface FamilyDate {
   year: number;
   month?: number;
   day?: number;
+  calendarType?: 'solar' | 'lunar';
+  isLeapMonth?: boolean;
 }
 
 interface FamilyPhoto {
@@ -342,6 +345,7 @@ interface FamilyPersonDto {
   occupation?: string;
   education?: string;
   biography?: string;
+  briefNote?: string;
   experiences?: FamilyExperience[];
 }
 
@@ -449,6 +453,8 @@ function buildTree(
   return [...map.values()].find(n => !childIds.has(n.id)) ?? null;
 }
 ```
+
+Sibling order always follows `FamilyRelationship.sortOrder`, and the rightmost child is the eldest (`长子在右`). Birth dates are display metadata and must not override explicit relationship ordering.
 
 ---
 
@@ -686,7 +692,9 @@ src/components/Family/
 ```
 
 - **Edit mode**: toggled by ✏ button; all fields become inline MUI inputs.
-- **Relationship section** shows derived family links (parents, spouses, children) with their `parentRole`/`unionType` labels.
+- **Relationship section** shows derived family links (parents, spouses, children) and supports adding a spouse or a child inline.
+- **Child insertion** accepts a 排行 / `sortOrder` position and shifts later siblings automatically.
+- **Date editing** supports both 公历 and 农历 metadata.
 - **Photo upload** reuses `POST /media/upload`.
 
 ### 10.5 List View (FamilyListView)
@@ -915,7 +923,7 @@ UI flow: choose format → paste JSON text or upload `.json` file → preview su
 
 ### Phase 4 — Rich Profiles & Media
 
-- [ ] Photo upload in `FamilyPersonPanel` (reuse media endpoint).
+- [x] Photo upload in `FamilyPersonPanel` (reuse media endpoint).
 - [ ] Experience timeline editor (add / edit / delete / reorder).
 - [ ] Alias and 字辈 display in node and panel.
 

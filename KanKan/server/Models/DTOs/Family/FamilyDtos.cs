@@ -24,6 +24,8 @@ public class FamilyDateDto
     public int Year { get; set; }
     public int? Month { get; set; }
     public int? Day { get; set; }
+    public string? CalendarType { get; set; }
+    public bool? IsLeapMonth { get; set; }
 }
 
 public class FamilyPhotoDto
@@ -60,7 +62,10 @@ public class UpsertFamilyPersonRequest
     public string? Occupation { get; set; }
     public string? Education { get; set; }
     public string? Biography { get; set; }
+    public string? BriefNote { get; set; }
     public List<FamilyExperienceDto>? Experiences { get; set; }
+    public bool? ClearBirthDate { get; set; }
+    public bool? ClearDeathDate { get; set; }
 }
 
 public class CreateFamilyRelationshipRequest
@@ -137,6 +142,7 @@ public class FamilyPersonResponse
     public string? Occupation { get; set; }
     public string? Education { get; set; }
     public string? Biography { get; set; }
+    public string? BriefNote { get; set; }
     public List<FamilyExperienceDto> Experiences { get; set; } = new();
 }
 

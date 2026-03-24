@@ -163,8 +163,8 @@ public class FamilyController : ControllerBase
             Gender = req.Gender ?? "male",
             Generation = req.Generation ?? tree.RootGeneration,
             Aliases = req.Aliases ?? new List<string>(),
-            BirthDate = req.BirthDate == null ? null : new FamilyDate { Year = req.BirthDate.Year, Month = req.BirthDate.Month, Day = req.BirthDate.Day },
-            DeathDate = req.DeathDate == null ? null : new FamilyDate { Year = req.DeathDate.Year, Month = req.DeathDate.Month, Day = req.DeathDate.Day },
+            BirthDate = req.BirthDate == null ? null : new FamilyDate { Year = req.BirthDate.Year, Month = req.BirthDate.Month, Day = req.BirthDate.Day, CalendarType = req.BirthDate.CalendarType, IsLeapMonth = req.BirthDate.IsLeapMonth },
+            DeathDate = req.DeathDate == null ? null : new FamilyDate { Year = req.DeathDate.Year, Month = req.DeathDate.Month, Day = req.DeathDate.Day, CalendarType = req.DeathDate.CalendarType, IsLeapMonth = req.DeathDate.IsLeapMonth },
             BirthPlace = req.BirthPlace,
             DeathPlace = req.DeathPlace,
             IsAlive = req.IsAlive,
@@ -173,6 +173,7 @@ public class FamilyController : ControllerBase
             Occupation = req.Occupation,
             Education = req.Education,
             Biography = req.Biography,
+            BriefNote = req.BriefNote,
             Experiences = req.Experiences?.Select(e => new FamilyExperience { Id = e.Id, Type = e.Type, Title = e.Title, Description = e.Description, StartYear = e.StartYear, EndYear = e.EndYear }).ToList() ?? new()
         };
 
@@ -197,8 +198,10 @@ public class FamilyController : ControllerBase
         if (req.Gender != null) person.Gender = req.Gender;
         if (req.Generation.HasValue) person.Generation = req.Generation.Value;
         if (req.Aliases != null) person.Aliases = req.Aliases;
-        if (req.BirthDate != null) person.BirthDate = new FamilyDate { Year = req.BirthDate.Year, Month = req.BirthDate.Month, Day = req.BirthDate.Day };
-        if (req.DeathDate != null) person.DeathDate = new FamilyDate { Year = req.DeathDate.Year, Month = req.DeathDate.Month, Day = req.DeathDate.Day };
+        if (req.ClearBirthDate == true) person.BirthDate = null;
+        if (req.ClearDeathDate == true) person.DeathDate = null;
+        if (req.BirthDate != null) person.BirthDate = new FamilyDate { Year = req.BirthDate.Year, Month = req.BirthDate.Month, Day = req.BirthDate.Day, CalendarType = req.BirthDate.CalendarType, IsLeapMonth = req.BirthDate.IsLeapMonth };
+        if (req.DeathDate != null) person.DeathDate = new FamilyDate { Year = req.DeathDate.Year, Month = req.DeathDate.Month, Day = req.DeathDate.Day, CalendarType = req.DeathDate.CalendarType, IsLeapMonth = req.DeathDate.IsLeapMonth };
         if (req.BirthPlace != null) person.BirthPlace = req.BirthPlace;
         if (req.DeathPlace != null) person.DeathPlace = req.DeathPlace;
         if (req.IsAlive.HasValue) person.IsAlive = req.IsAlive;
@@ -207,6 +210,7 @@ public class FamilyController : ControllerBase
         if (req.Occupation != null) person.Occupation = req.Occupation;
         if (req.Education != null) person.Education = req.Education;
         if (req.Biography != null) person.Biography = req.Biography;
+        if (req.BriefNote != null) person.BriefNote = req.BriefNote;
         if (req.Experiences != null) person.Experiences = req.Experiences.Select(e => new FamilyExperience { Id = e.Id, Type = e.Type, Title = e.Title, Description = e.Description, StartYear = e.StartYear, EndYear = e.EndYear }).ToList();
 
         await _personRepo.UpdateAsync(person);
@@ -361,12 +365,12 @@ public class FamilyController : ControllerBase
     {
         Id = p.Id, TreeId = p.TreeId, Name = p.Name, Aliases = p.Aliases,
         Gender = p.Gender, Generation = p.Generation,
-        BirthDate = p.BirthDate == null ? null : new FamilyDateDto { Year = p.BirthDate.Year, Month = p.BirthDate.Month, Day = p.BirthDate.Day },
-        DeathDate = p.DeathDate == null ? null : new FamilyDateDto { Year = p.DeathDate.Year, Month = p.DeathDate.Month, Day = p.DeathDate.Day },
+        BirthDate = p.BirthDate == null ? null : new FamilyDateDto { Year = p.BirthDate.Year, Month = p.BirthDate.Month, Day = p.BirthDate.Day, CalendarType = p.BirthDate.CalendarType, IsLeapMonth = p.BirthDate.IsLeapMonth },
+        DeathDate = p.DeathDate == null ? null : new FamilyDateDto { Year = p.DeathDate.Year, Month = p.DeathDate.Month, Day = p.DeathDate.Day, CalendarType = p.DeathDate.CalendarType, IsLeapMonth = p.DeathDate.IsLeapMonth },
         BirthPlace = p.BirthPlace, DeathPlace = p.DeathPlace, IsAlive = p.IsAlive,
         AvatarUrl = p.AvatarUrl,
         Photos = p.Photos.Select(ph => new FamilyPhotoDto { Id = ph.Id, Url = ph.Url, Caption = ph.Caption, Year = ph.Year }).ToList(),
-        Occupation = p.Occupation, Education = p.Education, Biography = p.Biography,
+        Occupation = p.Occupation, Education = p.Education, Biography = p.Biography, BriefNote = p.BriefNote,
         Experiences = p.Experiences.Select(e => new FamilyExperienceDto { Id = e.Id, Type = e.Type, Title = e.Title, Description = e.Description, StartYear = e.StartYear, EndYear = e.EndYear }).ToList()
     };
 
@@ -394,8 +398,8 @@ public class FamilyController : ControllerBase
             Name = node.Name,
             Gender = NormalizeGender(node.Gender, "male"),
             Generation = generation,
-            BirthDate = node.BirthYear.HasValue ? new FamilyDate { Year = node.BirthYear.Value } : null,
-            DeathDate = node.DeathYear.HasValue ? new FamilyDate { Year = node.DeathYear.Value } : null,
+            BirthDate = node.BirthYear.HasValue ? new FamilyDate { Year = node.BirthYear.Value, CalendarType = "solar" } : null,
+            DeathDate = node.DeathYear.HasValue ? new FamilyDate { Year = node.DeathYear.Value, CalendarType = "solar" } : null,
             IsAlive = node.DeathYear.HasValue ? false : null
         };
         persons.Add(person);

@@ -4,6 +4,8 @@ export interface FamilyDate {
   year: number;
   month?: number;
   day?: number;
+  calendarType?: 'solar' | 'lunar';
+  isLeapMonth?: boolean;
 }
 
 export interface FamilyPhoto {
@@ -58,6 +60,7 @@ export interface FamilyPersonDto {
   occupation?: string;
   education?: string;
   biography?: string;
+  briefNote?: string;
   experiences?: FamilyExperience[];
 }
 
@@ -123,6 +126,11 @@ export interface FullTreeResponse {
   relationships: FamilyRelationshipDto[];
 }
 
+type UpsertFamilyPersonPayload = Partial<FamilyPersonDto> & {
+  clearBirthDate?: boolean;
+  clearDeathDate?: boolean;
+};
+
 export function buildTree(
   persons: FamilyPersonDto[],
   rels: FamilyRelationshipDto[]
@@ -137,6 +145,9 @@ export function buildTree(
     .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
   const spRels = rels.filter(r => r.type === 'spouse');
 
+  // sortOrder is interpreted as left-to-right display order, where the rightmost child is eldest.
+  // In other words: smaller sortOrder renders further left, larger sortOrder renders further right.
+
   for (const r of pcRels) {
     const parent = map.get(r.fromId), child = map.get(r.toId);
     if (parent && child) {
@@ -145,18 +156,6 @@ export function buildTree(
     }
   }
 
-  // Sort children: older (earlier birth year) on the right = later in array
-  // This matches Chinese genealogy convention: 长子在右
-  for (const node of map.values()) {
-    if (node.children.length > 1) {
-      node.children.sort((a, b) => {
-        const ya = a.birthDate?.year ?? 9999;
-        const yb = b.birthDate?.year ?? 9999;
-        // Younger first (left), older last (right)
-        return yb - ya;
-      });
-    }
-  }
   for (const r of spRels) {
     const a = map.get(r.fromId), b = map.get(r.toId);
     if (a && b) {
@@ -194,12 +193,12 @@ class FamilyService {
     return res.data;
   }
 
-  async addPerson(treeId: string, data: Partial<FamilyPersonDto>): Promise<FamilyPersonDto> {
+  async addPerson(treeId: string, data: UpsertFamilyPersonPayload): Promise<FamilyPersonDto> {
     const res = await apiClient.post<FamilyPersonDto>(`/family/${treeId}/persons`, data);
     return res.data;
   }
 
-  async updatePerson(treeId: string, personId: string, data: Partial<FamilyPersonDto>): Promise<FamilyPersonDto> {
+  async updatePerson(treeId: string, personId: string, data: UpsertFamilyPersonPayload): Promise<FamilyPersonDto> {
     const res = await apiClient.put<FamilyPersonDto>(`/family/${treeId}/persons/${personId}`, data);
     return res.data;
   }
