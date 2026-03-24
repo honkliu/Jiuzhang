@@ -82,7 +82,7 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
   };
 
   return (
-    <BoxAny sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+    <BoxAny sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: size === 'small' ? 1 : 2 }}>
       {showPreview && (
         <ImageHoverPreview src={previewUrl} alt="Avatar preview">
           {(previewProps) => (

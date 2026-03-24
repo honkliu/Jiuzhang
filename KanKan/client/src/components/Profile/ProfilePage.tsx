@@ -136,7 +136,7 @@ export const ProfilePage: React.FC = () => {
   return (
     <BoxAny sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
       <AppHeader />
-      <Container sx={{ py: 3, pt: 10 }} maxWidth="sm">
+      <Container sx={{ py: 3, pt: 10, px: { xs: 1.5, sm: 2 } }} maxWidth="sm">
 
         {loading ? (
           <BoxAny sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
@@ -148,8 +148,8 @@ export const ProfilePage: React.FC = () => {
               sx={{
                 display: 'flex',
                 flexWrap: 'wrap',
-                columnGap: 3,
-                rowGap: 2,
+                columnGap: { xs: 1.5, sm: 3 },
+                rowGap: { xs: 1.5, sm: 2 },
                 alignItems: 'start',
                 mb: 3,
               }}
