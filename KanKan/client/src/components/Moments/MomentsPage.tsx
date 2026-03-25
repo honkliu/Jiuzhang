@@ -6,7 +6,6 @@ import {
   TextField,
   Button,
   Card,
-  CardHeader,
   CardContent,
   CircularProgress,
   Alert,
@@ -27,14 +26,177 @@ import { UserProfilePopover } from '@/components/Shared/UserProfilePopover';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/store';
 import { useLanguage } from '@/i18n/LanguageContext';
-import { useSettings } from '@/settings/SettingsContext';
 
 // Work around TS2590 ("union type too complex") from MUI Box typings in some TS versions.
 const BoxAny = Box as any;
 
+const momentCardSx = {
+  borderRadius: 0,
+};
+
+const momentImageSx = {
+  height: 112,
+  width: 'auto',
+  maxWidth: '100%',
+  objectFit: 'cover',
+  borderRadius: 0,
+  border: '1px solid rgba(15, 23, 42, 0.12)',
+  cursor: 'pointer',
+  transition: 'opacity 0.15s',
+  '&:hover': { opacity: 0.85 },
+  WebkitTouchCallout: 'none',
+  WebkitUserSelect: 'none',
+  userSelect: 'none',
+};
+
+const momentAvatarSize = 44;
+const momentMetaRowHeight = 20;
+
+const momentContentSurfaceSx = {
+  borderRadius: '0px',
+  backgroundColor: 'rgba(15, 23, 42, 0.04)',
+};
+
+const composerActionButtonSx = {
+  minWidth: 96,
+  height: 36,
+  px: 2,
+};
+
+const momentFeedbackButtonSx = {
+  minHeight: 28,
+  px: 0.5,
+  py: 0.25,
+};
+
+const momentDeleteButtonSx = {
+  width: 24,
+  height: 24,
+  p: 0.25,
+};
+
+type MomentMediaGridProps = {
+  momentId: string;
+  mediaUrls: string[];
+  imageAlt: string;
+  isHoverCapable: boolean;
+  onOpenImage: (index: number) => void;
+  onRemoveImage?: (index: number) => void;
+};
+
+const MomentMediaGrid: React.FC<MomentMediaGridProps> = ({
+  momentId,
+  mediaUrls,
+  imageAlt,
+  isHoverCapable,
+  onOpenImage,
+  onRemoveImage,
+}) => {
+  if (!mediaUrls.length) return null;
+
+  return (
+    <BoxAny
+      sx={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: 0.5,
+        mt: 1,
+      }}
+    >
+      {mediaUrls.map((url, idx) => (
+        <BoxAny key={`${momentId}-${url}-${idx}`} sx={{ position: 'relative' }}>
+          <ImageHoverPreview
+            src={url}
+            alt={imageAlt}
+            openOnHover={isHoverCapable}
+            openOnLongPress={!isHoverCapable}
+            openOnTap={false}
+          >
+            {(previewProps) => (
+              <BoxAny
+                {...previewProps}
+                component="img"
+                src={url}
+                alt={imageAlt}
+                tabIndex={0}
+                onContextMenu={(event: React.MouseEvent<HTMLElement>) => {
+                  event.preventDefault();
+                }}
+                onClick={() => onOpenImage(idx)}
+                sx={momentImageSx}
+              />
+            )}
+          </ImageHoverPreview>
+          {onRemoveImage ? (
+            <IconButton
+              size="small"
+              aria-label={imageAlt}
+              onClick={(event) => {
+                event.stopPropagation();
+                onRemoveImage(idx);
+              }}
+              sx={{
+                position: 'absolute',
+                top: 4,
+                right: 4,
+                bgcolor: 'rgba(15, 23, 42, 0.65)',
+                color: 'white',
+                '&:hover': { bgcolor: 'rgba(15, 23, 42, 0.85)' },
+              }}
+            >
+              <CloseIcon fontSize="small" />
+            </IconButton>
+          ) : null}
+        </BoxAny>
+      ))}
+    </BoxAny>
+  );
+};
+
+type MomentCardLayoutProps = {
+  avatar: React.ReactNode;
+  meta: React.ReactNode;
+  action?: React.ReactNode;
+  children: React.ReactNode;
+};
+
+const MomentCardLayout: React.FC<MomentCardLayoutProps> = ({ avatar, meta, action, children }) => (
+  <BoxAny
+    sx={{
+      display: 'grid',
+      gridTemplateColumns: `${momentAvatarSize}px minmax(0, 1fr) auto`,
+      gridTemplateRows: `${momentMetaRowHeight}px auto`,
+      gridTemplateAreas: `
+        "avatar meta action"
+        "avatar body body"
+      `,
+      columnGap: 1.5,
+      rowGap: 0,
+      alignItems: 'start',
+    }}
+  >
+    <BoxAny sx={{ gridArea: 'avatar' }}>{avatar}</BoxAny>
+    <BoxAny sx={{ gridArea: 'meta', minWidth: 0, lineHeight: 1.2, alignSelf: 'start' }}>{meta}</BoxAny>
+    {action ? <BoxAny sx={{ gridArea: 'action', justifySelf: 'end' }}>{action}</BoxAny> : null}
+    <BoxAny sx={{ gridArea: 'body', minWidth: 0, mt: '4px' }}>{children}</BoxAny>
+  </BoxAny>
+);
+
+const formatMomentTimestamp = (value: string) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, '0');
+  const day = `${date.getDate()}`.padStart(2, '0');
+  const hours = `${date.getHours()}`.padStart(2, '0');
+  const minutes = `${date.getMinutes()}`.padStart(2, '0');
+
+  return `${year}/${month}/${day} ${hours}:${minutes}`;
+};
+
 export const MomentsPage: React.FC = () => {
   const { t } = useLanguage();
-  const { formatDateTime } = useSettings();
   const theme = useTheme();
   const isHoverCapable = useMediaQuery('(hover: hover) and (pointer: fine)');
   const { user } = useSelector((state: RootState) => state.auth);
@@ -84,6 +246,9 @@ export const MomentsPage: React.FC = () => {
   }, []);
 
   const friendIdSet = useMemo(() => new Set(contacts.map((contact) => contact.id)), [contacts]);
+  const draftMediaUrls = useMemo(() => pendingImages.map((item) => item.previewUrl), [pendingImages]);
+  const draftAuthorName = user?.displayName || user?.handle || '';
+  const draftTimestamp = formatMomentTimestamp(new Date().toISOString());
 
   const handlePost = async () => {
     if (!text.trim() && pendingImages.length === 0) return;
@@ -207,18 +372,35 @@ export const MomentsPage: React.FC = () => {
     <BoxAny sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
       <AppHeader />
       <Container sx={{ py: 3, pt: 10 }} maxWidth="md">
-        <Typography variant="h5" fontWeight="bold" gutterBottom>
-          {t('Pa')}
-        </Typography>
-
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
             {error}
           </Alert>
         )}
 
-        <Card sx={{ mb: 3 }}>
-          <CardContent>
+        <Card sx={{ mb: 3, ...momentCardSx }}>
+          <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
+            <MomentCardLayout
+              avatar={
+              <UserAvatar
+                src={user?.avatarUrl}
+                fallbackText={draftAuthorName}
+                previewMode={isHoverCapable ? 'hover' : 'tap'}
+                closePreviewOnClick
+                sx={{ width: momentAvatarSize, height: momentAvatarSize }}
+              />
+              }
+              meta={
+                <Typography variant="body2" noWrap sx={{ minWidth: 0 }}>
+                  <BoxAny component="span" sx={{ fontWeight: 600 }}>
+                    {draftAuthorName}
+                  </BoxAny>
+                  <BoxAny component="span" sx={{ color: 'text.secondary', fontSize: '0.75rem' }}>
+                    {` - ${draftTimestamp}`}
+                  </BoxAny>
+                </Typography>
+              }
+            >
             <BoxAny
               component="input"
               ref={fileInputRef}
@@ -230,79 +412,77 @@ export const MomentsPage: React.FC = () => {
               sx={{ display: 'none' }}
               onChange={handleFilesSelected}
             />
-            <TextField
-              fullWidth
-              label={t('moments.whatsOnMind')}
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              multiline
-              minRows={3}
-              sx={{ mb: 2 }}
+            <BoxAny
+              sx={{
+                mb: 1,
+                px: 0,
+                pt: 0,
+                pb: 0,
+                ...momentContentSurfaceSx,
+                transition: 'background-color 0.15s ease, box-shadow 0.15s ease',
+                '&:focus-within': {
+                  backgroundColor: 'rgba(15, 23, 42, 0.06)',
+                },
+              }}
+            >
+              <BoxAny
+                component="textarea"
+                value={text}
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setText(e.target.value)}
+                placeholder={t('moments.whatsOnMind')}
+                rows={3}
+                sx={{
+                  width: '100%',
+                  minHeight: 84,
+                  border: 'none',
+                  outline: 'none',
+                  resize: 'vertical',
+                  background: 'transparent',
+                  color: 'inherit',
+                  font: 'inherit',
+                  fontSize: theme.typography.body1.fontSize,
+                  lineHeight: theme.typography.body1.lineHeight,
+                  p: 0,
+                  m: 0,
+                  display: 'block',
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
+                  '&::placeholder': {
+                    color: theme.palette.text.secondary,
+                    opacity: 1,
+                  },
+                }}
+              />
+            </BoxAny>
+
+            <MomentMediaGrid
+              momentId="draft"
+              mediaUrls={draftMediaUrls}
+              imageAlt={t('moments.imagePreview')}
+              isHoverCapable={isHoverCapable}
+              onOpenImage={(index) => setLightbox({ images: draftMediaUrls, index })}
+              onRemoveImage={handleRemovePendingImage}
             />
-            <Stack direction="row" spacing={1} sx={{ mb: 2, flexWrap: 'wrap' }}>
-              <Button variant="outlined" onClick={handlePickImages} disabled={posting}>
+
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 1, flexWrap: 'wrap' }}>
+              <Button variant="contained" onClick={handlePickImages} disabled={posting} sx={composerActionButtonSx}>
                 {t('moments.addImages')}
               </Button>
-              {pendingImages.length > 0 ? (
-                <Typography variant="body2" color="text.secondary" sx={{ alignSelf: 'center' }}>
-                  {t('moments.imagesSelected')} {pendingImages.length}
-                </Typography>
-              ) : null}
               {pendingImages.length > 0 ? (
                 <Button variant="text" onClick={handleClearPendingImages} disabled={posting}>
                   {t('moments.clearImages')}
                 </Button>
               ) : null}
-            </Stack>
-            {pendingImages.length > 0 ? (
-              <BoxAny
-                sx={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(72px, 1fr))',
-                  gap: 1,
-                  mb: 2,
-                }}
+              <Button
+                variant="contained"
+                onClick={handlePost}
+                disabled={posting || (!text.trim() && pendingImages.length === 0)}
+                sx={composerActionButtonSx}
               >
-                {pendingImages.map((item, idx) => (
-                  <BoxAny
-                    key={`${item.previewUrl}-${idx}`}
-                    sx={{ position: 'relative' }}
-                  >
-                    <BoxAny
-                      component="img"
-                      src={item.previewUrl}
-                      alt={t('moments.imagePreview')}
-                      sx={{
-                        width: '100%',
-                        maxHeight: 200,
-                        objectFit: 'contain',
-                        borderRadius: 2,
-                        border: '1px solid rgba(15, 23, 42, 0.12)',
-                        display: 'block',
-                      }}
-                    />
-                    <IconButton
-                      size="small"
-                      aria-label={t('moments.removeImage')}
-                      onClick={() => handleRemovePendingImage(idx)}
-                      sx={{
-                        position: 'absolute',
-                        top: 4,
-                        right: 4,
-                        bgcolor: 'rgba(15, 23, 42, 0.65)',
-                        color: 'white',
-                        '&:hover': { bgcolor: 'rgba(15, 23, 42, 0.85)' },
-                      }}
-                    >
-                      <CloseIcon fontSize="small" />
-                    </IconButton>
-                  </BoxAny>
-                ))}
-              </BoxAny>
-            ) : null}
-            <Button variant="contained" onClick={handlePost} disabled={posting}>
-              {posting ? <CircularProgress size={24} /> : t('moments.post')}
-            </Button>
+                {posting ? <CircularProgress size={24} /> : t('moments.post')}
+              </Button>
+            </Stack>
+            </MomentCardLayout>
           </CardContent>
         </Card>
 
@@ -316,100 +496,76 @@ export const MomentsPage: React.FC = () => {
           moments.map((moment) => {
             const isLiked = moment.likes?.some((l) => l.userId === user?.id);
             return (
-            <Card key={moment.id} sx={{ mb: 2, borderRadius: 0, transform: 'scale(0.9)', transformOrigin: 'top center' }}>
-              <CardHeader
-                avatar={
+            <Card key={moment.id} sx={{ mb: 2, ...momentCardSx }}>
+              <CardContent sx={{ pt: 1.5, pb: 1, '&:last-child': { pb: 1 } }}>
+                <MomentCardLayout
+                  avatar={
                   <UserAvatar
                     src={moment.userAvatar}
                     fallbackText={moment.userName}
                     previewMode={isHoverCapable ? 'hover' : 'tap'}
                     closePreviewOnClick
+                    sx={{ width: momentAvatarSize, height: momentAvatarSize }}
                   />
-                }
-                title={
-                  <Typography
-                    component="span"
-                    variant="body1"
-                    fontWeight={600}
-                    sx={{ cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
-                    onClick={(e: React.MouseEvent<HTMLElement>) => setProfilePopover({ anchorEl: e.currentTarget, userId: moment.userId })}
-                  >
-                    {moment.userName}
-                  </Typography>
-                }
-                subheader={formatDateTime(moment.createdAt)}
-                action={
+                  }
+                  meta={
+                    <Typography variant="body2" noWrap sx={{ minWidth: 0 }}>
+                      <BoxAny
+                        component="span"
+                        sx={{ fontWeight: 600, cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
+                        onClick={(e: React.MouseEvent<HTMLElement>) => setProfilePopover({ anchorEl: e.currentTarget, userId: moment.userId })}
+                      >
+                        {moment.userName}
+                      </BoxAny>
+                      <BoxAny component="span" sx={{ color: 'text.secondary', fontSize: '0.75rem' }}>
+                        {` - ${formatMomentTimestamp(moment.createdAt)}`}
+                      </BoxAny>
+                    </Typography>
+                  }
+                  action={
                   moment.userId === user?.id ? (
                     <IconButton
                       aria-label={t('moments.delete')}
                       onClick={() => handleDelete(moment.id)}
                       disabled={actionLoading === moment.id}
                       size="small"
+                      sx={momentDeleteButtonSx}
                     >
-                      <DeleteIcon fontSize="small" />
+                      <DeleteIcon sx={{ fontSize: 16 }} />
                     </IconButton>
                   ) : null
-                }
-              />
-              <CardContent sx={{ pt: 0, '&:last-child': { pb: 1.5 } }}>
-                <Typography sx={{ mb: 1 }}>{moment.content?.text}</Typography>
-                {moment.content?.mediaUrls?.length ? (
-                  <BoxAny
-                    sx={{
-                      display: 'flex',
-                      flexWrap: 'wrap',
-                      gap: 0.5,
-                      mt: 1,
+                  }
+                >
+                <BoxAny
+                  sx={{
+                    mb: moment.content?.text || moment.content?.mediaUrls?.length ? 1 : 0,
+                    px: 0,
+                    pt: 0,
+                    pb: 0,
+                    ...momentContentSurfaceSx,
+                  }}
+                >
+                  {moment.content?.text ? (
+                    <Typography sx={{ mb: 1, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                      {moment.content.text}
+                    </Typography>
+                  ) : null}
+                  <MomentMediaGrid
+                    momentId={moment.id}
+                    mediaUrls={moment.content?.mediaUrls || []}
+                    imageAlt={t('moments.image')}
+                    isHoverCapable={isHoverCapable}
+                    onOpenImage={(idx) => {
+                      const urls = moment.content?.mediaUrls || [];
+                      setLightbox({
+                        images: urls,
+                        index: idx,
+                        groups: buildMomentGroups(moment, urls),
+                        groupIndex: idx,
+                      });
                     }}
-                  >
-                    {moment.content.mediaUrls.map((url: string, idx: number) => (
-                      <ImageHoverPreview
-                        key={`${moment.id}-${url}-${idx}`}
-                        src={url}
-                        alt={t('moments.image')}
-                        openOnHover={isHoverCapable}
-                        openOnLongPress={!isHoverCapable}
-                        openOnTap={false}
-                      >
-                        {(previewProps) => (
-                          <BoxAny
-                            {...previewProps}
-                            component="img"
-                            src={url}
-                            alt={t('moments.image')}
-                            tabIndex={0}
-                            onContextMenu={(event: React.MouseEvent<HTMLElement>) => {
-                              event.preventDefault();
-                            }}
-                            onClick={(event: React.MouseEvent<HTMLElement>) => {
-                              const urls = moment.content?.mediaUrls || [];
-                              setLightbox({
-                                images: urls,
-                                index: idx,
-                                groups: buildMomentGroups(moment, urls),
-                                groupIndex: idx,
-                              });
-                            }}
-                            sx={{
-                              height: 112,
-                              width: 'auto',
-                              maxWidth: '100%',
-                              objectFit: 'cover',
-                              borderRadius: 0,
-                              border: '1px solid rgba(15, 23, 42, 0.12)',
-                              cursor: 'pointer',
-                              transition: 'opacity 0.15s',
-                              '&:hover': { opacity: 0.85 },
-                              WebkitTouchCallout: 'none',
-                              WebkitUserSelect: 'none',
-                              userSelect: 'none',
-                            }}
-                          />
-                        )}
-                      </ImageHoverPreview>
-                    ))}
-                  </BoxAny>
-                ) : null}
+                  />
+                </BoxAny>
 
                 {/* Likes display */}
                 {moment.likes?.length > 0 && (
@@ -423,7 +579,7 @@ export const MomentsPage: React.FC = () => {
 
                 {/* Comments display */}
                 {moment.comments.length > 0 && (
-                  <BoxAny sx={{ mt: 0.5, bgcolor: 'rgba(0,0,0,0.02)', borderRadius: 1, px: 1, py: 0.5 }}>
+                  <BoxAny sx={{ mt: 0.5, bgcolor: 'rgba(0,0,0,0.02)', borderRadius: 0, px: 1, py: 0.5 }}>
                     {moment.comments.map((c) => (
                       <Typography key={c.id} variant="body2" sx={{ py: 0.25 }}>
                         <Typography
@@ -484,6 +640,7 @@ export const MomentsPage: React.FC = () => {
                     startIcon={isLiked ? <ThumbUpFilledIcon /> : <ThumbUpIcon />}
                     onClick={() => handleToggleLike(moment.id)}
                     disabled={actionLoading === moment.id}
+                    sx={momentFeedbackButtonSx}
                   >
                     {moment.likes?.length || 0}
                   </Button>
@@ -492,10 +649,12 @@ export const MomentsPage: React.FC = () => {
                     startIcon={<CommentIcon />}
                     onClick={() => setCommentOpenFor(commentOpenFor === moment.id ? null : moment.id)}
                     disabled={actionLoading === moment.id}
+                    sx={momentFeedbackButtonSx}
                   >
                     {moment.comments?.length || 0}
                   </Button>
                 </Stack>
+                </MomentCardLayout>
               </CardContent>
             </Card>
             );
