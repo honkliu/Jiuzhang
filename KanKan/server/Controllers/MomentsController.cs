@@ -296,7 +296,7 @@ public class MomentsController : ControllerBase
                 {
                     var likeNotif = new Notification
                     {
-                        Id = $"notif_like_{moment.UserId}_{moment.Id}_{userId}",
+                        Id = $"notif_like_{moment.UserId}_{moment.Id}_{userId}_{Guid.NewGuid():N}",
                         UserId = moment.UserId,
                         Category = "pa_like",
                         EntityId = moment.Id,
