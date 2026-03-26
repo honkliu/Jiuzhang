@@ -7,7 +7,6 @@
 html,
 body {
   margin: 0;
-  scrollbar-gutter: stable;
   overscroll-behavior: none;
   font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
     'Source Han Sans SC', 'Noto Sans CJK SC', 'Hiragino Sans GB', 'Microsoft YaHei',
@@ -43,6 +42,17 @@ code {
 #root {
   height: 100dvh;
   min-height: 0;
+}
+
+.chat-window-scroll-hidden {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.chat-window-scroll-hidden::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .glass-surface {

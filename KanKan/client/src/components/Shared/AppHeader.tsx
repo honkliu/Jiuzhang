@@ -37,7 +37,7 @@ import { useSettings } from '@/settings/SettingsContext';
 const BoxAny = Box as any;
 
 const navItems = [
-  { label: 'Chats', path: '/chats', adminOnly: false },
+  { label: 'appName', path: '/chats', adminOnly: false },
   { label: 'Pa', path: '/pa', adminOnly: false },
   { label: 'Profile', path: '/profile', adminOnly: false },
   { label: 'Contacts', path: '/contacts', adminOnly: false },
@@ -47,17 +47,18 @@ const navItems = [
 
 const headerNavButtonSx = {
   minWidth: 'auto',
-  px: { xs: 0.8, sm: 1.1 },
-  py: { xs: 0.35, md: 0.5 },
-  fontSize: { xs: '0.82rem', sm: '0.88rem', md: '0.92rem' },
+  px: { xs: 1, sm: 1.25 },
+  py: { xs: 0.45, md: 0.55 },
+  fontSize: { xs: '0.94rem', sm: '1.02rem', md: '1.07rem' },
   whiteSpace: 'nowrap',
   borderRadius: 2,
   boxShadow: 'none',
   border: 'none',
-  background: 'transparent',
+  background: 'rgba(15, 23, 42, 0.04)',
+  cursor: 'pointer',
   '&:hover': {
     boxShadow: 'none',
-    background: 'rgba(15, 23, 42, 0.06)',
+    background: 'rgba(15, 23, 42, 0.09)',
   },
 };
 
@@ -66,6 +67,12 @@ const headerNavMenuItemSx = {
   fontWeight: 500,
   minHeight: 'auto',
   py: { xs: 0.7, sm: 0.8 },
+};
+
+const headerUtilityButtonSx = {
+  width: 36,
+  height: 31,
+  minWidth: 36,
 };
 
 interface AppHeaderProps {
@@ -93,7 +100,6 @@ export const AppHeader: React.FC<AppHeaderProps> = () => {
   const navOpen = Boolean(navAnchorEl);
   const avatarPickerOpen = Boolean(avatarAnchorEl);
   const leftNavRef = React.useRef<HTMLDivElement | null>(null);
-  const titleRef = React.useRef<HTMLDivElement | null>(null);
   const measureMoreButtonRef = React.useRef<HTMLButtonElement | null>(null);
   const measureButtonRefs = React.useRef<Array<HTMLButtonElement | null>>([]);
   const availableNavItems = navItems.filter((item) => {
@@ -105,15 +111,13 @@ export const AppHeader: React.FC<AppHeaderProps> = () => {
   React.useLayoutEffect(() => {
     const measure = () => {
       const leftNavWidth = leftNavRef.current?.offsetWidth ?? 0;
-      const titleWidth = titleRef.current?.offsetWidth ?? 0;
 
       if (leftNavWidth === 0) {
         setCompactVisibleCount(0);
         return;
       }
 
-      const gapAfterTitle = 12;
-      const navAreaWidth = Math.max(0, leftNavWidth - titleWidth - gapAfterTitle);
+      const navAreaWidth = Math.max(0, leftNavWidth);
       const buttonGap = 4;
       const moreButtonWidth = (measureMoreButtonRef.current?.offsetWidth ?? 32) + buttonGap;
       const widths = availableNavItems.map((_, index) => {
@@ -147,7 +151,6 @@ export const AppHeader: React.FC<AppHeaderProps> = () => {
 
     if (resizeObserver) {
       if (leftNavRef.current) resizeObserver.observe(leftNavRef.current);
-      if (titleRef.current) resizeObserver.observe(titleRef.current);
     }
 
     window.addEventListener('resize', measure);
@@ -257,16 +260,8 @@ export const AppHeader: React.FC<AppHeaderProps> = () => {
 
   return (
     <AppBar position="fixed" color="default" elevation={0} sx={{ pt: 'env(safe-area-inset-top)' }}>
-      <Toolbar sx={{ gap: 1.25, minHeight: { xs: 53, sm: 61 }, py: 0.25 }}>
+      <Toolbar sx={{ gap: 1.25, minHeight: { xs: 53, sm: 61 }, py: 0.25, px: { xs: 1, sm: 1.5 } }}>
         <BoxAny ref={leftNavRef} sx={{ display: 'flex', alignItems: 'center', gap: 1, flexGrow: 1, minWidth: 0 }}>
-          <Typography
-            variant="subtitle1"
-            fontWeight="bold"
-            ref={titleRef}
-            sx={{ mr: 0.5, whiteSpace: 'nowrap', fontSize: { xs: '0.95rem', sm: '1rem' } }}
-          >
-            {t('appName')}
-          </Typography>
           <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: isCompactNav ? 0.5 : 1, minWidth: 0, overflow: 'hidden' }}>
             {compactVisibleNavItems.map((item) => (
               <Button
@@ -281,6 +276,15 @@ export const AppHeader: React.FC<AppHeaderProps> = () => {
                   fontSize: isCompactNav ? headerNavButtonSx.fontSize : '0.92rem',
                   color: location.pathname.startsWith(item.path) ? 'primary.main' : 'text.primary',
                   fontWeight: location.pathname.startsWith(item.path) ? 700 : 500,
+                  background: location.pathname.startsWith(item.path)
+                    ? 'rgba(25, 118, 210, 0.14)'
+                    : headerNavButtonSx.background,
+                  '&:hover': {
+                    ...headerNavButtonSx['&:hover'],
+                    background: location.pathname.startsWith(item.path)
+                      ? 'rgba(25, 118, 210, 0.2)'
+                      : 'rgba(15, 23, 42, 0.09)',
+                  },
                 }}
               >
                 {t(item.label)}
@@ -347,13 +351,13 @@ export const AppHeader: React.FC<AppHeaderProps> = () => {
             </BoxAny>
           </BoxAny>
 
-          <Button onClick={toggleLanguage} variant="outlined" size="small" sx={{ minWidth: 36, px: 0.75 }}>
-            {language === 'en' ? '中文' : 'EN'}
+          <Button onClick={toggleLanguage} variant="outlined" size="small" sx={{ ...headerUtilityButtonSx, px: 0.75 }}>
+            {language === 'en' ? '中' : 'EN'}
           </Button>
           <IconButton
             title={t('nav.notifications')}
             onClick={handleOpenNotifications}
-            sx={{ p: 0.6 }}
+            sx={{ ...headerUtilityButtonSx, p: 0 }}
           >
             <Badge
               color="error"
@@ -363,7 +367,7 @@ export const AppHeader: React.FC<AppHeaderProps> = () => {
               <NotificationsIcon sx={{ fontSize: '1.1rem' }} />
             </Badge>
           </IconButton>
-          <IconButton onClick={handleLogout} title={t('nav.logout')} sx={{ p: 0.6 }}>
+          <IconButton onClick={handleLogout} title={t('nav.logout')} sx={{ ...headerUtilityButtonSx, p: 0 }}>
             <LogoutIcon sx={{ fontSize: '1.1rem' }} />
           </IconButton>
         </BoxAny>

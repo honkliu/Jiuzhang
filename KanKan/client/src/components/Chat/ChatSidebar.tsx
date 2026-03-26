@@ -40,6 +40,13 @@ import { useLanguage } from '@/i18n/LanguageContext';
 // Work around TS2590 (“union type too complex”) from MUI Box typings in some TS versions.
 const BoxAny = Box as any;
 
+const sidebarHeaderActionButtonSx = {
+  width: 36,
+  height: 31,
+  minWidth: 36,
+  p: 0,
+};
+
 interface ChatSidebarProps {
   onNewChat: () => void;
   onCollapse?: () => void;
@@ -167,13 +174,13 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
           <Typography variant="subtitle1" fontWeight="bold">
             {t('chat.title')}
           </Typography>
-          <BoxAny>
+          <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
             {onCollapse && !isCompact && (
-              <IconButton onClick={onCollapse} title={t('nav.collapse')} size="small">
+              <IconButton onClick={onCollapse} title={t('nav.collapse')} size="small" sx={sidebarHeaderActionButtonSx}>
                 <KeyboardDoubleArrowLeftIcon />
               </IconButton>
             )}
-            <IconButton color="primary" onClick={onNewChat} title={t('nav.newChat')}>
+            <IconButton color="primary" onClick={onNewChat} title={t('nav.newChat')} sx={sidebarHeaderActionButtonSx}>
               <AddIcon />
             </IconButton>
           </BoxAny>
