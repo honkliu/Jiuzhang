@@ -508,11 +508,7 @@ export const ContactsPage: React.FC = () => {
                           {user.isDisabled && <Typography variant="caption" sx={{ color: 'warning.main', whiteSpace: 'nowrap' }}>{t('contacts.disabled')}</Typography>}
                         </BoxAny>
                       }
-                      secondary={
-                        user.domain
-                          ? `${user.domain} · ${t('contacts.notFriend')}`
-                          : t('contacts.notFriend')
-                      }
+                      secondary={user.domain || ''}
                       slotProps={{
                         primary: { sx: { my: 0 } },
                         secondary: { noWrap: true, sx: { fontSize: 12, lineHeight: 1.2 } },
