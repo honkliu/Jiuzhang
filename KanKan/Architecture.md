@@ -45,7 +45,7 @@
 - **Client Layer**: React-based web application with PWA capabilities
 - **API Layer**: .NET Core 8 RESTful API with SignalR for real-time communication
 - **Data Layer**: Azure Cosmos DB for scalable NoSQL storage
-- **Storage Layer**: Azure Blob Storage for media files
+- **Storage Layer**: Local file storage for media files and MongoDB for avatar binaries
 - **Infrastructure**: Azure cloud services with multi-region support
 
 ---

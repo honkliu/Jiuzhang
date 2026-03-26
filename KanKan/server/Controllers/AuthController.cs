@@ -423,12 +423,17 @@ public class AuthController : ControllerBase
 
     private void SetRefreshTokenCookie(string token)
     {
+        var refreshTokenExpirationDays = int.TryParse(
+            _configuration["Jwt:RefreshTokenExpirationDays"],
+            out var configuredDays
+        ) ? configuredDays : 7;
+
         var cookieOptions = new CookieOptions
         {
             HttpOnly = true,
             Secure = Request.IsHttps,
             SameSite = Request.IsHttps ? SameSiteMode.Strict : SameSiteMode.Lax,
-            Expires = DateTime.UtcNow.AddDays(7)
+            Expires = DateTime.UtcNow.AddDays(refreshTokenExpirationDays)
         };
         Response.Cookies.Append("refreshToken", token, cookieOptions);
     }

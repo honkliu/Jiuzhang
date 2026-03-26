@@ -242,7 +242,7 @@ Family documents belong to the **tree/clan as a whole**, not to any individual p
 
 **Key design decisions:**
 
-- `body` stores rich text (Markdown). For very large bodies (>500 KB) the text is stored in Azure Blob and `body` stores the URL — the same pattern as existing KanKan media.
+- `body` stores rich text (Markdown). For very large bodies (>500 KB) a separate document or file-backed storage path would be needed; current KanKan media storage uses API-managed local uploads, not Azure Blob.
 - `attachments[]` are arbitrary file URLs (images, PDFs, scans) — reuses the existing `POST /media/upload` endpoint.
 - `linkedPersonIds[]` optionally associates a document with specific people (e.g. a certificate that belongs to two persons). This is advisory — it only drives UI cross-links, not access control.
 - `generationFrom` / `generationTo` optionally scopes a document to a generation range (e.g. "this history covers generations 1–10"). Used for filtering in the Documents tab.
