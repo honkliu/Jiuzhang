@@ -341,6 +341,7 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
         open={open}
         anchorEl={anchorEl}
         onClose={() => closePreview(true)}
+        disableScrollLock
         disableAutoFocus
         disableEnforceFocus
         disableRestoreFocus
