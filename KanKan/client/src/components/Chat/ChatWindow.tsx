@@ -1850,69 +1850,71 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
             </Typography>
           </BoxAny>
 
-          {activeChat.chatType === 'group' && user?.id && activeChat.adminIds?.includes(user.id) && (
-            <IconButton edge="end" onClick={handleRenameGroup} title={t('chat.renameTitle')}>
-              <EditIcon />
-            </IconButton>
-          )}
+          <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexShrink: 0, ml: 1 }}>
+            {activeChat.chatType === 'group' && user?.id && activeChat.adminIds?.includes(user.id) && (
+              <IconButton edge="end" onClick={handleRenameGroup} title={t('chat.renameTitle')}>
+                <EditIcon />
+              </IconButton>
+            )}
 
-          {!isGroup && (
-            <Tooltip title={isRoom2D ? t('chat.exit2d') : t('chat.enter2d')}>
+            {!isGroup && (
+              <Tooltip title={isRoom2D ? t('chat.exit2d') : t('chat.enter2d')}>
+                <span>
+                  <IconButton
+                    edge="end"
+                    size="small"
+                    sx={{ p: 0.5, width: 36, height: 31 }}
+                    onClick={() => {
+                      if (!room2DStorageKey) return;
+                      setIsRoom2D((prev) => {
+                        const next = !prev;
+                        window.localStorage.setItem(room2DStorageKey, next ? '1' : '0');
+                        if (next) {
+                          setIsRoom3D(false);
+                          if (room3DStorageKey) {
+                            window.localStorage.setItem(room3DStorageKey, '0');
+                          }
+                        }
+                        return next;
+                      });
+                    }}
+                    color={isRoom2D ? 'primary' : 'default'}
+                    aria-label="toggle-2d"
+                  >
+                    <ForumIcon />
+                  </IconButton>
+                </span>
+              </Tooltip>
+            )}
+
+            <Tooltip title={isRoom3D ? t('chat.exit3d') : t('chat.enter3d')}>
               <span>
                 <IconButton
                   edge="end"
                   size="small"
-                  sx={{ p: 0.5 }}
+                  sx={{ p: 0.5, width: 36, height: 31 }}
                   onClick={() => {
-                    if (!room2DStorageKey) return;
-                    setIsRoom2D((prev) => {
+                    if (!room3DStorageKey) return;
+                    setIsRoom3D((prev) => {
                       const next = !prev;
-                      window.localStorage.setItem(room2DStorageKey, next ? '1' : '0');
+                      window.localStorage.setItem(room3DStorageKey, next ? '1' : '0');
                       if (next) {
-                        setIsRoom3D(false);
-                        if (room3DStorageKey) {
-                          window.localStorage.setItem(room3DStorageKey, '0');
+                        setIsRoom2D(false);
+                        if (room2DStorageKey) {
+                          window.localStorage.setItem(room2DStorageKey, '0');
                         }
                       }
                       return next;
                     });
                   }}
-                  color={isRoom2D ? 'primary' : 'default'}
-                  aria-label="toggle-2d"
+                  color={isRoom3D ? 'primary' : 'default'}
+                  aria-label={t('chat.toggle3d')}
                 >
-                  <ForumIcon />
+                  <ViewInArIcon />
                 </IconButton>
               </span>
             </Tooltip>
-          )}
-
-          <Tooltip title={isRoom3D ? t('chat.exit3d') : t('chat.enter3d')}>
-            <span>
-              <IconButton
-                edge="end"
-                size="small"
-                sx={{ p: 0.5 }}
-                onClick={() => {
-                  if (!room3DStorageKey) return;
-                  setIsRoom3D((prev) => {
-                    const next = !prev;
-                    window.localStorage.setItem(room3DStorageKey, next ? '1' : '0');
-                    if (next) {
-                      setIsRoom2D(false);
-                      if (room2DStorageKey) {
-                        window.localStorage.setItem(room2DStorageKey, '0');
-                      }
-                    }
-                    return next;
-                  });
-                }}
-                color={isRoom3D ? 'primary' : 'default'}
-                aria-label={t('chat.toggle3d')}
-              >
-                <ViewInArIcon />
-              </IconButton>
-            </span>
-          </Tooltip>
+          </BoxAny>
         </Toolbar>
       </AppBar>
 
