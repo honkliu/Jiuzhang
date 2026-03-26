@@ -316,16 +316,22 @@ export const EmotionAvatarGallery: React.FC<EmotionAvatarGalleryProps> = ({ user
       <BoxAny sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: '1px' }}>
         <Typography variant="h6">{t('avatar.emotionTitle')}</Typography>
         <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-          <IconButton
+          <Button
             size="small"
+            variant="outlined"
             aria-describedby={helpId}
             title={t('avatar.promptHelp')}
             onClick={(event) => setHelpAnchorEl(event.currentTarget)}
+            sx={{
+              minWidth: 31,
+              width: 31,
+              height: 31,
+              px: 0,
+              py: 0,
+            }}
           >
-            <Typography component="span" sx={{ fontWeight: 700 }}>
-              ..
-            </Typography>
-          </IconButton>
+            例
+          </Button>
           <Button
             size="small"
             variant="outlined"

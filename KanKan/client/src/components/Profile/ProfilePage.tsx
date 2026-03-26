@@ -156,7 +156,7 @@ export const ProfilePage: React.FC = () => {
             >
               <Stack
                 spacing={0}
-                alignItems={{ xs: 'center', sm: 'flex-start' }}
+                alignItems="flex-start"
                 justifyContent="space-between"
                 sx={{
                   flex: `0 0 ${avatarDisplaySize}px`,
@@ -195,7 +195,7 @@ export const ProfilePage: React.FC = () => {
               </BoxAny>
             </BoxAny>
 
-            <BoxAny sx={{ mt: 3, mb: 2 }}>
+            <BoxAny sx={{ mt: '14px', pt: '6px', mb: 2, borderTop: '1px solid', borderColor: 'divider' }}>
               {user?.id && avatarImageId && (
                 <EmotionAvatarGallery userId={user.id} avatarId={avatarImageId} />
               )}
@@ -266,7 +266,7 @@ export const ProfilePage: React.FC = () => {
               </Button>
             </BoxAny>
 
-            <BoxAny sx={{ mt: 4, pt: 3, borderTop: '1px solid', borderColor: 'divider' }}>
+            <BoxAny sx={{ mt: '14px', pt: '6px', borderTop: '1px solid', borderColor: 'divider' }}>
               <BoxAny
                 sx={{
                   display: 'flex',
