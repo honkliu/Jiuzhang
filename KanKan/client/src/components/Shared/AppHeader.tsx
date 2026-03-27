@@ -376,6 +376,7 @@ export const AppHeader: React.FC<AppHeaderProps> = () => {
           anchorEl={navAnchorEl}
           open={navOpen}
           onClose={handleCloseNav}
+          disableScrollLock
           transformOrigin={{ vertical: 'top', horizontal: 'right' }}
           anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
           PaperProps={{
@@ -441,6 +442,7 @@ export const AppHeader: React.FC<AppHeaderProps> = () => {
           anchorEl={notificationsAnchorEl}
           open={notificationsOpen}
           onClose={handleCloseNotifications}
+          disableScrollLock
           transformOrigin={{ vertical: 'top', horizontal: 'right' }}
           anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
           PaperProps={{

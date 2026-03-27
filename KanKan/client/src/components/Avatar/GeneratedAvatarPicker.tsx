@@ -10,6 +10,7 @@ import {
 } from '@mui/material';
 import { avatarService, type EmotionThumbnailResult } from '@/services/avatar.service';
 import { ImageHoverPreview } from '@/components/Shared/ImageHoverPreview';
+import { useLanguage } from '@/i18n/LanguageContext';
 
 // Work around TS2590 ("union type too complex") from MUI Box typings in some TS versions.
 const BoxAny = Box as any;
@@ -141,6 +142,7 @@ export const GeneratedAvatarPicker: React.FC<GeneratedAvatarPickerProps> = ({
   currentAvatarUrl,
   onSelect,
 }) => {
+  const { language } = useLanguage();
   const { loading, items } = useMoodPickerData(open, avatarImageId);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -204,11 +206,19 @@ export const GeneratedAvatarPicker: React.FC<GeneratedAvatarPickerProps> = ({
       open={open}
       anchorEl={anchorEl}
       onClose={onClose}
+      disableScrollLock
       anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       transformOrigin={{ vertical: 'top', horizontal: 'right' }}
       PaperProps={{
         sx: {
-          p: 2,
+          backgroundColor: '#f5f7fb',
+          backgroundImage: 'none',
+          border: '1px solid rgba(15, 23, 42, 0.08)',
+          boxShadow: '0 12px 32px rgba(15, 23, 42, 0.12)',
+          backdropFilter: 'none',
+          opacity: 1,
+          px: 1.25,
+          py: 1,
           width: popoverW,
           maxWidth: '90vw',
           display: 'flex',
@@ -218,8 +228,19 @@ export const GeneratedAvatarPicker: React.FC<GeneratedAvatarPickerProps> = ({
         },
       }}
     >
-      <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 1 }}>
-        A Little Moody
+      <Typography
+        variant="body2"
+        fontWeight={700}
+        sx={{
+          mb: 0.5,
+          lineHeight: 1.2,
+          letterSpacing: language === 'zh' ? 0 : '0.02em',
+          alignSelf: 'center',
+          textAlign: 'center',
+          color: 'text.secondary',
+        }}
+      >
+        {language === 'zh' ? '小心情' : 'A Little Moody'}
       </Typography>
 
       {loading ? (

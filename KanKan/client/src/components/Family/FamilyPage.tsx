@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   Box, Typography, CircularProgress, Alert, Select, MenuItem,
-  FormControl, Divider, Drawer, Button, Menu, Dialog,
+  FormControl, Divider, Drawer, Button, Dialog,
   DialogTitle, DialogContent, DialogActions,
   Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   TextField, Chip, Autocomplete, useMediaQuery, useTheme,
@@ -129,9 +129,17 @@ function parseZibeiPoem(input: string): string[] | undefined {
   return Array.from(normalized).filter(Boolean);
 }
 
-function flattenTree(node: FamilyNode, result: FamilyNode[] = []): FamilyNode[] {
+function flattenTree(
+  node: FamilyNode,
+  result: FamilyNode[] = [],
+  visited: Set<string> = new Set()
+): FamilyNode[] {
+  if (visited.has(node.id)) return result;
+
+  visited.add(node.id);
   result.push(node);
-  node.children.forEach(c => flattenTree(c, result));
+  node.children.forEach(child => flattenTree(child, result, visited));
+  node.spouses.forEach(spouse => flattenTree(spouse, result, visited));
   return result;
 }
 
@@ -173,7 +181,6 @@ export const FamilyPage: React.FC = () => {
   const [listSearch, setListSearch] = useState('');
   const [visibleStartDepth, setVisibleStartDepth] = useState(0);
   const [focusPersonId, setFocusPersonId] = useState<string | null>(null);
-  const [viewMenuEl, setViewMenuEl] = useState<null | HTMLElement>(null);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [createTreeName, setCreateTreeName] = useState('');
   const [createTreeSurname, setCreateTreeSurname] = useState('');
@@ -329,9 +336,22 @@ export const FamilyPage: React.FC = () => {
     }, 80);
   }, [allNodes, visibleStartDepth, treeMaxDepth, viewMode, pickCanvasRef]);
 
+  const openPersonDetails = useCallback((personId: string) => {
+    const node = allNodes.find(n => n.id === personId);
+    if (!node) return;
+    setSelectedPerson(node);
+  }, [allNodes]);
+
   const handleSearchSelect = useCallback((_: any, value: FamilyNode | null) => {
-    if (value) navigateToPerson(value.id);
-  }, [navigateToPerson]);
+    if (!value) return;
+
+    if (viewMode === 'tree') {
+      navigateToPerson(value.id);
+      return;
+    }
+
+    openPersonDetails(value.id);
+  }, [navigateToPerson, openPersonDetails, viewMode]);
 
   const handleOpenCreateDialog = useCallback(() => {
     setCreateTreeError(null);
@@ -399,8 +419,8 @@ export const FamilyPage: React.FC = () => {
   }, [createTreeDomain, createTreeName, createTreePoem, createTreeRootGeneration, createTreeSurname, createTreeText, loadTrees]);
 
   const filteredPersons = listSearch
-    ? persons.filter(p => p.name.includes(listSearch) || (p.aliases ?? []).some(a => a.includes(listSearch)))
-    : persons;
+    ? allNodes.filter(person => person.name.includes(listSearch) || (person.aliases ?? []).some(alias => alias.includes(listSearch)))
+    : allNodes;
 
   const byGeneration: Record<number, FamilyNode[]> = {};
   allNodes.forEach(n => {
@@ -411,7 +431,6 @@ export const FamilyPage: React.FC = () => {
 
   const canGoUp = visibleStartDepth > 0;
   const canGoDown = visibleStartDepth + MAX_VISIBLE_DEPTH <= treeMaxDepth;
-  const viewMenuOpen = Boolean(viewMenuEl);
   const viewLabel = viewMode === 'tree' ? '树形' : viewMode === 'list' ? '列表' : '世代';
 
   if (!currentUser?.canViewFamilyTree) {
@@ -571,7 +590,7 @@ export const FamilyPage: React.FC = () => {
                               key={p.id}
                               hover
                               sx={{ cursor: 'pointer', '&:hover': { bgcolor: 'rgba(42,175,71,0.04)' } }}
-                              onClick={() => navigateToPerson(p.id)}
+                              onClick={() => openPersonDetails(p.id)}
                             >
                               <TableCell>第{p.generation}世</TableCell>
                               <TableCell>
@@ -622,7 +641,7 @@ export const FamilyPage: React.FC = () => {
                           size="small"
                           variant="outlined"
                           clickable
-                          onClick={() => navigateToPerson(node.id)}
+                          onClick={() => openPersonDetails(node.id)}
                           sx={{
                             cursor: 'pointer',
                             background: 'rgba(255,255,255,0.8)',
@@ -669,10 +688,18 @@ export const FamilyPage: React.FC = () => {
               variant="outlined"
               onClick={handleOpenCreateDialog}
               sx={{
-                minHeight: 28,
+                minHeight: 36,
+                borderColor: 'rgba(15, 23, 42, 0.23)',
+                color: 'text.primary',
                 ...(isMobile ? { flexShrink: 0 } : {}),
-                px: 1,
-                fontSize: 11,
+                px: 1.5,
+                fontSize: 14,
+                lineHeight: 1.35,
+                textTransform: 'none',
+                '&:hover': {
+                  borderColor: 'rgba(15, 23, 42, 0.35)',
+                  backgroundColor: 'rgba(15, 23, 42, 0.03)',
+                },
               }}
             >
               新建家谱
@@ -693,8 +720,47 @@ export const FamilyPage: React.FC = () => {
               }
               onChange={handleSearchSelect}
               forcePopupIcon={!isMobile}
-              popupIcon={isMobile ? null : undefined}
+              popupIcon={isMobile ? null : <ExpandMoreIcon sx={{ fontSize: '1.25rem' }} />}
               disableClearable={isMobile}
+              ListboxProps={{
+                className: 'chat-window-scroll-hidden',
+                style: {
+                  maxHeight: isMobile ? 162 : 198,
+                  overflowY: 'auto',
+                  paddingTop: 0,
+                  paddingBottom: 0,
+                },
+              }}
+              PaperComponent={(paperProps) => (
+                <Paper
+                  {...paperProps}
+                  sx={{
+                    backgroundColor: '#f5f7fb',
+                    backgroundImage: 'none',
+                    border: '1px solid rgba(15, 23, 42, 0.08)',
+                    boxShadow: '0 12px 32px rgba(15, 23, 42, 0.12)',
+                    backdropFilter: 'none',
+                    opacity: 1,
+                    mt: 0.5,
+                    overflow: 'hidden',
+                  }}
+                />
+              )}
+              renderOption={(props, option) => (
+                <BoxAny
+                  component="li"
+                  {...props}
+                  sx={{
+                    fontSize: 14,
+                    lineHeight: 1.35,
+                    minHeight: 36,
+                    display: 'flex',
+                    alignItems: 'center',
+                  }}
+                >
+                  {`${option.name}（第${option.generation}世）`}
+                </BoxAny>
+              )}
               renderInput={(params) => (
                 <TextField
                   {...params}
@@ -706,7 +772,33 @@ export const FamilyPage: React.FC = () => {
                   }}
                 />
               )}
-              sx={isMobile ? { width: 120, flexShrink: 0 } : { width: 200 }}
+              sx={{
+                ...(isMobile ? { width: 120, flexShrink: 0 } : { width: 200 }),
+                '& .MuiOutlinedInput-root': {
+                  minHeight: 36,
+                  backgroundColor: '#fff',
+                  backgroundImage: 'none',
+                  borderRadius: 1,
+                  '& fieldset': {
+                    borderColor: 'rgba(15, 23, 42, 0.23)',
+                  },
+                  '&:hover fieldset': {
+                    borderColor: 'rgba(15, 23, 42, 0.35)',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: 'primary.main',
+                    borderWidth: 1,
+                  },
+                },
+                '& .MuiInputBase-input': {
+                  fontSize: 14,
+                  lineHeight: 1.35,
+                  py: 0.75,
+                },
+                '& .MuiAutocomplete-popupIndicator, & .MuiAutocomplete-clearIndicator': {
+                  color: 'text.primary',
+                },
+              }}
               clearOnBlur
               blurOnSelect
             />
@@ -717,43 +809,86 @@ export const FamilyPage: React.FC = () => {
             disabled={trees.length === 0}
           >
             <Select
+              IconComponent={ExpandMoreIcon}
               value={selectedTreeId ?? ''}
               onChange={e => setSelectedTreeId(e.target.value as string)}
+              sx={{
+                '& .MuiSelect-select': {
+                  fontSize: 14,
+                  lineHeight: 1.35,
+                },
+                '& .MuiSelect-icon': {
+                  fontSize: '1.25rem',
+                  color: 'text.primary',
+                },
+              }}
+              MenuProps={{
+                disableScrollLock: true,
+                PaperProps: {
+                  sx: {
+                    backgroundColor: '#f5f7fb',
+                    backgroundImage: 'none',
+                    border: '1px solid rgba(15, 23, 42, 0.08)',
+                    boxShadow: '0 12px 32px rgba(15, 23, 42, 0.12)',
+                    backdropFilter: 'none',
+                    opacity: 1,
+                  },
+                },
+              }}
             >
               {trees.map(t => (
-                <MenuItem key={t.id} value={t.id} sx={{ fontSize: 12 }}>
+                <MenuItem
+                  key={t.id}
+                  value={t.id}
+                  sx={{
+                    fontSize: 14,
+                    lineHeight: 1.35,
+                    minHeight: 36,
+                  }}
+                >
                   {t.name}
                 </MenuItem>
               ))}
             </Select>
           </FormControl>
 
-          <Button
+          <FormControl
             size="small"
-            variant="outlined"
-            onClick={(event) => setViewMenuEl(event.currentTarget)}
-            endIcon={<ExpandMoreIcon />}
-            sx={{
-              minHeight: 28,
-              ...(isMobile ? { flexShrink: 0 } : {}),
-              px: 1,
-              fontSize: 11,
-            }}
+            sx={isMobile ? { minWidth: 88, flexShrink: 0 } : { minWidth: 104 }}
           >
-            {viewLabel}
-          </Button>
-
-          <Menu
-            anchorEl={viewMenuEl}
-            open={viewMenuOpen}
-            onClose={() => setViewMenuEl(null)}
-            anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-            transformOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-          >
-            <MenuItem onClick={() => { setViewMode('tree'); setViewMenuEl(null); }}>树形</MenuItem>
-            <MenuItem onClick={() => { setViewMode('list'); setViewMenuEl(null); }}>列表</MenuItem>
-            <MenuItem onClick={() => { setViewMode('generation'); setViewMenuEl(null); }}>世代</MenuItem>
-          </Menu>
+            <Select
+              IconComponent={ExpandMoreIcon}
+              value={viewMode}
+              onChange={(e) => setViewMode(e.target.value as ViewMode)}
+              sx={{
+                '& .MuiSelect-select': {
+                  fontSize: 14,
+                  lineHeight: 1.35,
+                },
+                '& .MuiSelect-icon': {
+                  fontSize: '1.25rem',
+                  color: 'text.primary',
+                },
+              }}
+              MenuProps={{
+                disableScrollLock: true,
+                PaperProps: {
+                  sx: {
+                    backgroundColor: '#f5f7fb',
+                    backgroundImage: 'none',
+                    border: '1px solid rgba(15, 23, 42, 0.08)',
+                    boxShadow: '0 12px 32px rgba(15, 23, 42, 0.12)',
+                    backdropFilter: 'none',
+                    opacity: 1,
+                  },
+                },
+              }}
+            >
+              <MenuItem value="tree" sx={{ fontSize: 14, lineHeight: 1.35, minHeight: 36 }}>树形</MenuItem>
+              <MenuItem value="list" sx={{ fontSize: 14, lineHeight: 1.35, minHeight: 36 }}>列表</MenuItem>
+              <MenuItem value="generation" sx={{ fontSize: 14, lineHeight: 1.35, minHeight: 36 }}>世代</MenuItem>
+            </Select>
+          </FormControl>
 
           {selectedTree && (
             <Typography variant="caption" color="text.secondary" sx={{ ml: 0.5, whiteSpace: 'nowrap', flexShrink: 0, fontSize: 10 }}>
