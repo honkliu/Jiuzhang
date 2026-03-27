@@ -226,6 +226,7 @@ export const FamilyPage: React.FC = () => {
   const [createTreeText, setCreateTreeText] = useState(TEXT_IMPORT_EXAMPLE);
   const [createTreeError, setCreateTreeError] = useState<string | null>(null);
   const [creatingTree, setCreatingTree] = useState(false);
+  const [panelEditing, setPanelEditing] = useState(false);
   const canvasRef = useRef<FamilyHistoHandle>(null);
   const selectedPersonIdRef = useRef<string | null>(persistedStateRef.current?.selectedPersonId ?? null);
   const listViewRef = useRef<HTMLDivElement | null>(null);
@@ -623,6 +624,7 @@ export const FamilyPage: React.FC = () => {
                   onClose={() => selectPerson(null)}
                   onNavigate={handlePanelNavigate}
                   onRefresh={refreshCurrentTree}
+                  onEditingChange={setPanelEditing}
                   canEdit={Boolean(currentUser?.canEditFamilyTree)}
                 />
               </BoxAny>
@@ -632,7 +634,10 @@ export const FamilyPage: React.FC = () => {
               <Drawer
                 anchor="bottom"
                 open={Boolean(selectedPerson)}
-                onClose={() => selectPerson(null)}
+                onClose={() => {
+                  if (panelEditing) return;
+                  selectPerson(null);
+                }}
                 ModalProps={{ keepMounted: true }}
                 PaperProps={{
                   sx: {
@@ -651,6 +656,7 @@ export const FamilyPage: React.FC = () => {
                   onClose={() => selectPerson(null)}
                   onNavigate={handlePanelNavigate}
                   onRefresh={refreshCurrentTree}
+                  onEditingChange={setPanelEditing}
                   canEdit={Boolean(currentUser?.canEditFamilyTree)}
                   fullWidth
                 />
@@ -671,7 +677,11 @@ export const FamilyPage: React.FC = () => {
                     onNodeClick={handleNodeClick}
                     onNodeRightClick={handleNodeRightClick}
                     onExpandDepth={handleExpandDepth}
-                    onClearSelection={() => { selectPerson(null); setFocusPersonId(null); }}
+                    onClearSelection={() => {
+                      if (panelEditing) return;
+                      selectPerson(null);
+                      setFocusPersonId(null);
+                    }}
                     onShiftUp={() => {
                       canvasRef.current?.setShiftDirection(-1);
                       const pid = focusPersonId ?? selectedPerson?.id ?? null;

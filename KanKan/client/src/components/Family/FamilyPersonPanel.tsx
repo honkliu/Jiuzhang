@@ -136,6 +136,7 @@ interface Props {
   onClose: () => void;
   onNavigate: (personId: string) => void;
   onRefresh: (preferredPersonId?: string | null) => Promise<void>;
+  onEditingChange?: (editing: boolean) => void;
   canEdit?: boolean;
   fullWidth?: boolean;
 }
@@ -787,6 +788,7 @@ export const FamilyPersonPanel: React.FC<Props> = ({
   onClose,
   onNavigate,
   onRefresh,
+  onEditingChange,
   canEdit = false,
   fullWidth = false,
 }) => {
@@ -813,6 +815,10 @@ export const FamilyPersonPanel: React.FC<Props> = ({
   const editorRestoreRef = useRef<EditorState | null>(null);
   const preserveEditingAfterRefreshRef = useRef(false);
   const lastSavedEditorSnapshotRef = useRef('');
+
+  useEffect(() => {
+    onEditingChange?.(editing);
+  }, [editing, onEditingChange]);
 
   useEffect(() => {
     if (!person) {
