@@ -82,6 +82,10 @@ const compactRowSx = {
   px: 0,
   py: 0,
 };
+const compactGenderColumn = '1.35em';
+const compactRankColumn = '1ch';
+const compactDeleteColumn = '20px';
+const compactRelationGap = 0.45;
 
 type GenderValue = 'male' | 'female' | 'unknown';
 
@@ -140,6 +144,16 @@ function formatGender(gender?: string) {
   if (gender === 'female') return '女';
   if (gender === 'unknown') return '未知';
   return '男';
+}
+
+function toggleBinaryGender(gender?: string): GenderValue {
+  return gender === 'female' ? 'male' : 'female';
+}
+
+function cycleRank(value?: number | string) {
+  const current = typeof value === 'string' ? Number.parseInt(value, 10) : value ?? 1;
+  if (Number.isNaN(current) || current < 1 || current >= 9) return '1';
+  return String(current + 1);
 }
 
 function formatDisplayName(name: string) {
@@ -785,12 +799,14 @@ export const FamilyPersonPanel: React.FC<Props> = ({
   const [spouseDialog, setSpouseDialog] = useState<AddRelativeState>({
     open: false,
     name: '',
-    gender: 'female',
+    gender: 'male',
     rank: '1',
     saving: false,
     error: null,
   });
   const [pendingChildren, setPendingChildren] = useState<PendingChildDraft[]>([]);
+  const [relationGenderOverrides, setRelationGenderOverrides] = useState<Record<string, GenderValue>>({});
+  const [childRankOverrides, setChildRankOverrides] = useState<Record<string, string>>({});
   const [pendingChildrenError, setPendingChildrenError] = useState<string | null>(null);
   const [activePhotoIndex, setActivePhotoIndex] = useState<number | null>(null);
   const photoInputRef = useRef<HTMLInputElement | null>(null);
@@ -819,8 +835,10 @@ export const FamilyPersonPanel: React.FC<Props> = ({
     }
     setPanelError(null);
     setPanelInfo(null);
-    setSpouseDialog({ open: false, name: '', gender: 'female', rank: '1', saving: false, error: null });
+    setSpouseDialog({ open: false, name: '', gender: 'male', rank: '1', saving: false, error: null });
     setPendingChildren([]);
+    setRelationGenderOverrides({});
+    setChildRankOverrides({});
     setPendingChildrenError(null);
     setActivePhotoIndex(null);
   }, [person]);
@@ -860,6 +878,8 @@ export const FamilyPersonPanel: React.FC<Props> = ({
     return rightSortOrder - leftSortOrder;
   });
   const spouses = person.spouses;
+  const getRelationGender = (node: FamilyNode): GenderValue => relationGenderOverrides[node.id] ?? (node.gender === 'female' ? 'female' : 'male');
+  const getChildRank = (child: FamilyNode, fallbackIndex: number) => childRankOverrides[child.id] ?? String(fallbackIndex + 1);
   const relationColumns = [
     {
       key: 'parents',
@@ -891,6 +911,10 @@ export const FamilyPersonPanel: React.FC<Props> = ({
   ] as const;
   const relationRowCount = relationColumns.reduce((maxCount, column) => Math.max(maxCount, column.items.length), 0);
   const relationshipEditing = Boolean(canEdit && editing);
+  const spouseDraftVisible = relationshipEditing && spouseDialog.open;
+  const spouseRowCount = spouses.length + (spouseDraftVisible ? 1 : 0);
+  const childRowCount = orderedChildren.length + pendingChildren.length;
+  const editableRelationRowCount = Math.max(spouseRowCount, childRowCount, 1);
   const coverImage = editorState.photos[0]?.url || person.avatarUrl;
   const photoUrls = (person.photos ?? []).map(photo => photo.url);
   const photoGroups = (person.photos ?? []).map(photo => ({
@@ -912,7 +936,10 @@ export const FamilyPersonPanel: React.FC<Props> = ({
     setEditing(false);
     setPanelError(null);
     setPanelInfo(null);
+    setSpouseDialog({ open: false, name: '', gender: 'male', rank: '1', saving: false, error: null });
     setPendingChildren([]);
+    setRelationGenderOverrides({});
+    setChildRankOverrides({});
     setPendingChildrenError(null);
   };
 
@@ -947,14 +974,35 @@ export const FamilyPersonPanel: React.FC<Props> = ({
     return parsedPendingChildren;
   };
 
+  const validateChildRankOverrides = () => {
+    if (Object.keys(childRankOverrides).length === 0) return true;
+
+    const totalChildrenAfterSave = children.length + pendingChildren.length;
+    const parsedRanks = orderedChildren.map((child, index) => Number.parseInt(getChildRank(child, index), 10));
+
+    if (parsedRanks.some(rank => Number.isNaN(rank) || rank < 1 || rank > totalChildrenAfterSave)) {
+      setPendingChildrenError(`排行必须在 1 到 ${totalChildrenAfterSave} 之间。`);
+      return false;
+    }
+
+    const uniqueRanks = new Set(parsedRanks);
+    if (uniqueRanks.size !== parsedRanks.length) {
+      setPendingChildrenError('现有子女的排行不能重复。');
+      return false;
+    }
+
+    return true;
+  };
+
   const savePendingChildren = async (parsedPendingChildren: ParsedPendingChildDraft[]) => {
-    if (!tree || parsedPendingChildren.length === 0) return;
+    if (!tree) return;
 
     type FinalChildEntry =
       | {
         kind: 'existing';
         child: FamilyNode;
         relationship: FamilyNode['parentRels'][number] | undefined;
+        parsedRank: number;
       }
       | {
         kind: 'pending';
@@ -965,17 +1013,27 @@ export const FamilyPersonPanel: React.FC<Props> = ({
       kind: 'existing' as const,
       child,
       relationship: child.parentRels.find(rel => rel.type === 'parent-child' && rel.fromId === person.id),
+      parsedRank: Number.parseInt(childRankOverrides[child.id] ?? String((child.parentRels.find(rel => rel.type === 'parent-child' && rel.fromId === person.id)?.sortOrder ?? 0) + 1), 10),
     }));
-    const finalEntries: FinalChildEntry[] = [...existingEntries];
+    const finalEntries: FinalChildEntry[] = [];
 
-    parsedPendingChildren
-      .sort((left, right) => left.parsedRank - right.parsedRank)
-      .forEach(draft => {
-        finalEntries.splice(draft.parsedRank - 1, 0, {
-          kind: 'pending' as const,
-          draft,
-        });
-      });
+    const totalChildrenAfterSave = existingEntries.length + parsedPendingChildren.length;
+    const existingParsedRanks = existingEntries.map(entry => entry.parsedRank);
+    if (existingParsedRanks.some(rank => Number.isNaN(rank) || rank < 1 || rank > totalChildrenAfterSave)) {
+      throw new Error(`排行必须在 1 到 ${totalChildrenAfterSave} 之间。`);
+    }
+    const combinedRanks = [...existingParsedRanks, ...parsedPendingChildren.map(entry => entry.parsedRank)];
+    if (new Set(combinedRanks).size !== combinedRanks.length) {
+      throw new Error('子女排行不能重复。');
+    }
+
+    [...existingEntries, ...parsedPendingChildren.map(draft => ({ kind: 'pending' as const, draft }))]
+      .sort((left, right) => {
+        const leftRank = left.kind === 'existing' ? left.parsedRank : left.draft.parsedRank;
+        const rightRank = right.kind === 'existing' ? right.parsedRank : right.draft.parsedRank;
+        return leftRank - rightRank;
+      })
+      .forEach(entry => finalEntries.push(entry));
 
     const finalCount = finalEntries.length;
 
@@ -1026,6 +1084,9 @@ export const FamilyPersonPanel: React.FC<Props> = ({
     if (parsedPendingChildren === null) {
       return;
     }
+    if (!validateChildRankOverrides()) {
+      return;
+    }
 
     setSaving(true);
     setPanelError(null);
@@ -1052,6 +1113,14 @@ export const FamilyPersonPanel: React.FC<Props> = ({
         photos: editorState.photos,
       });
 
+      const relationGenderUpdates = [...spouses, ...orderedChildren]
+        .filter(node => relationGenderOverrides[node.id] && relationGenderOverrides[node.id] !== node.gender)
+        .map(node => familyService.updatePerson(tree.id, node.id, { gender: relationGenderOverrides[node.id] }));
+
+      if (relationGenderUpdates.length > 0) {
+        await Promise.all(relationGenderUpdates);
+      }
+
       await savePendingChildren(parsedPendingChildren);
       if (pendingSpouseName) {
         await createSpouseRelationship(pendingSpouseName, spouseDialog.gender);
@@ -1060,9 +1129,11 @@ export const FamilyPersonPanel: React.FC<Props> = ({
       await onRefresh(person.id);
       setEditing(false);
       setPendingChildren([]);
+      setRelationGenderOverrides({});
+      setChildRankOverrides({});
       setPendingChildrenError(null);
       if (pendingSpouseName) {
-        setSpouseDialog({ open: false, name: '', gender: 'female', rank: '1', saving: false, error: null });
+        setSpouseDialog({ open: false, name: '', gender: 'male', rank: '1', saving: false, error: null });
       }
       setPanelInfo('人物信息已更新。');
     } catch (error) {
@@ -1107,7 +1178,7 @@ export const FamilyPersonPanel: React.FC<Props> = ({
 
   const closeSpouseDialog = () => {
     if (spouseDialog.saving) return;
-    setSpouseDialog({ open: false, name: '', gender: 'female', rank: '1', saving: false, error: null });
+    setSpouseDialog({ open: false, name: '', gender: 'male', rank: '1', saving: false, error: null });
   };
 
   const createSpouseRelationship = async (name: string, gender: GenderValue) => {
@@ -1143,7 +1214,7 @@ export const FamilyPersonPanel: React.FC<Props> = ({
     try {
       await createSpouseRelationship(name, spouseDialog.gender);
 
-      setSpouseDialog({ open: false, name: '', gender: 'female', rank: '1', saving: false, error: null });
+      setSpouseDialog({ open: false, name: '', gender: 'male', rank: '1', saving: false, error: null });
       await onRefresh(person.id);
       setPanelInfo('已添加配偶。');
     } catch {
@@ -1513,211 +1584,245 @@ export const FamilyPersonPanel: React.FC<Props> = ({
         )}
 
         {editing && (
-          <BoxAny sx={{ mb: 0.9 }}>
-          <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1, pr: 1.25 }}>
-            <Typography variant="caption" color="text.secondary" sx={{ fontSize: 11 }}>配偶</Typography>
-            {relationshipEditing && (
-              <Button
-                size="small"
-                onClick={() => setSpouseDialog(current => current.open ? current : { ...current, open: true, error: null })}
-                sx={{ ml: 'auto', flexShrink: 0, minWidth: 36, px: 1, fontSize: 20, lineHeight: 1, fontWeight: 500 }}
-              >
-                +
-              </Button>
-            )}
-          </BoxAny>
-          <BoxAny sx={{ mt: 0.5, borderTop: '1px solid rgba(15,23,42,0.08)', borderBottom: '1px solid rgba(15,23,42,0.08)' }}>
-            {spouses.length > 0 ? spouses.map((spouse, index) => (
-              <BoxAny
-                key={spouse.id}
-                sx={{
-                  display: 'grid',
-                  gridTemplateColumns: relationshipEditing ? 'minmax(0, 1fr) 32px 24px 32px' : 'minmax(0, 1fr) 32px 24px',
-                  gap: 1,
-                  alignItems: 'center',
-                  py: 0.75,
-                  borderBottom: index === spouses.length - 1 && !spouseDialog.open ? 'none' : '1px solid rgba(15,23,42,0.08)',
-                }}
-              >
-                <Link
-                  component="button"
-                  variant="body2"
-                  underline="hover"
-                  onClick={() => onNavigate(spouse.id)}
-                  sx={{ justifySelf: 'start', textAlign: 'left', fontSize: 13 }}
-                >
-                  {spouse.name}
-                </Link>
-                <Typography variant="body2" sx={{ fontSize: 13, color: '#475569' }}>
-                  {formatGender(spouse.gender)}
-                </Typography>
-                <BoxAny />
-                {relationshipEditing && (
-                  <IconButton size="small" onClick={() => handleDeleteSpouse(spouse.id)} sx={{ width: 24, height: 24, justifySelf: 'end' }}>
-                    <DeleteOutlineIcon fontSize="small" />
-                  </IconButton>
-                )}
-              </BoxAny>
-            )) : !spouseDialog.open ? (
-              <Typography variant="body2" color="text.secondary" sx={{ fontSize: 12, fontStyle: 'italic', py: 0.9 }}>
-                暂无记录
-              </Typography>
-            ) : null}
-            {relationshipEditing && spouseDialog.open && (
-              <BoxAny
-                sx={{
-                  py: 0.75,
-                  borderBottom: '1px solid rgba(15,23,42,0.08)',
-                  display: 'grid',
-                  gridTemplateColumns: 'minmax(0, 1fr) 32px 24px 32px',
-                  gap: 1,
-                  alignItems: 'center',
-                }}
-              >
-                <InputBase
-                  placeholder="xxx"
-                  value={spouseDialog.name}
-                  onChange={event => setSpouseDialog(current => ({ ...current, name: event.target.value }))}
-                  onKeyDown={(event: React.KeyboardEvent<HTMLInputElement>) => {
-                    if (event.key === 'Enter') {
-                      event.preventDefault();
-                      void handleAddSpouse();
-                    }
-                  }}
-                  fullWidth
-                  sx={{ ...inlineRowInputSx, width: '100%' }}
-                />
-                <Select
-                  variant="standard"
-                  value={spouseDialog.gender}
-                  onChange={event => setSpouseDialog(current => ({ ...current, gender: event.target.value as GenderValue }))}
-                  disableUnderline
-                  input={<InputBase sx={{ ...inlineRowInputSx, minWidth: 0 }} />}
-                  sx={{ minWidth: 0, fontSize: 13, color: '#475569' }}
-                >
-                  <MenuItem value="male">男</MenuItem>
-                  <MenuItem value="female">女</MenuItem>
-                  <MenuItem value="unknown">未知</MenuItem>
-                </Select>
-                <BoxAny />
-                <IconButton size="small" onClick={closeSpouseDialog} disabled={spouseDialog.saving} sx={{ width: 24, height: 24, justifySelf: 'end' }}>
-                  <DeleteOutlineIcon fontSize="small" />
-                </IconButton>
-              </BoxAny>
-            )}
-          </BoxAny>
-          {spouseDialog.error && <Alert severity="error" sx={{ mt: 0.75 }}>{spouseDialog.error}</Alert>}
-          </BoxAny>
-        )}
-
-        {(editing || pendingChildren.length > 0) && (
-          <BoxAny>
-          <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1, pr: 1.25 }}>
-            <Typography variant="caption" color="text.secondary" sx={{ fontSize: 11 }}>
-              子女（{children.length}人）
-            </Typography>
-            {relationshipEditing && (
-              <Button size="small" onClick={() => {
-                setPendingChildren(current => [...current, createPendingChildDraft(String(children.length + current.length + 1))]);
-                setPendingChildrenError(null);
-              }} sx={{ ml: 'auto', flexShrink: 0, minWidth: 36, px: 1, fontSize: 20, lineHeight: 1, fontWeight: 500 }}>
-                +
-              </Button>
-            )}
-          </BoxAny>
-          <BoxAny sx={{ mt: 0.5, borderTop: '1px solid rgba(15,23,42,0.08)' }}>
-            {orderedChildren.length > 0 ? orderedChildren.map((child, index) => (
-              <BoxAny
-                key={child.id}
-                sx={{
-                  display: 'grid',
-                  gridTemplateColumns: relationshipEditing ? 'minmax(0, 1fr) 32px 24px 32px' : 'minmax(0, 1fr) 32px 24px',
-                  gap: 1,
-                  alignItems: 'center',
-                  py: 0.75,
-                  borderBottom: index === orderedChildren.length - 1 && pendingChildren.length === 0 ? 'none' : '1px solid rgba(15,23,42,0.08)',
-                }}
-              >
-                <Link
-                  component="button"
-                  variant="body2"
-                  underline="hover"
-                  onClick={() => onNavigate(child.id)}
-                  sx={{ justifySelf: 'start', textAlign: 'left', fontSize: 13 }}
-                >
-                  {child.name}
-                </Link>
-                <Typography variant="body2" sx={{ fontSize: 13, color: '#475569' }}>
-                  {formatGender(child.gender)}
-                </Typography>
-                <Typography variant="body2" sx={{ fontSize: 13, color: '#475569', textAlign: 'right' }}>
-                  {index + 1}
+          <BoxAny sx={{ mb: 0.2 }}>
+            <BoxAny
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                columnGap: 1.75,
+                py: 0.75,
+                borderBottom: editableRelationRowCount > 0 ? '1px solid rgba(15,23,42,0.08)' : 'none',
+              }}
+            >
+              <BoxAny sx={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: 11 }}>
+                  配偶
                 </Typography>
                 {relationshipEditing && (
-                  <IconButton size="small" onClick={() => handleDeleteChild(child.id)} sx={{ width: 24, height: 24, justifySelf: 'end' }}>
-                    <DeleteOutlineIcon fontSize="small" />
-                  </IconButton>
+                  <Button
+                    size="small"
+                    onClick={() => setSpouseDialog(current => current.open ? current : { ...current, open: true, error: null, gender: 'male' })}
+                    sx={{ ml: 'auto', flexShrink: 0, minWidth: 30, px: 0.5, fontSize: 18, lineHeight: 1, fontWeight: 500 }}
+                  >
+                    +
+                  </Button>
                 )}
               </BoxAny>
-            )) : pendingChildren.length === 0 ? (
-              <Typography variant="body2" color="text.secondary" sx={{ fontSize: 12, fontStyle: 'italic', py: 0.9 }}>
-                暂无记录
-              </Typography>
-            ) : null}
 
-            {relationshipEditing && pendingChildren.map((draft, index) => (
-              <BoxAny
-                key={draft.id}
-                sx={{
-                  py: 0.75,
-                  borderBottom: index === pendingChildren.length - 1 ? 'none' : '1px solid rgba(15,23,42,0.08)',
-                  display: 'grid',
-                  gridTemplateColumns: 'minmax(0, 1fr) 32px 24px 32px',
-                  gap: 1,
-                  alignItems: 'center',
-                }}
-              >
-                <InputBase
-                  placeholder="xxx"
-                  value={draft.name}
-                  onChange={event => {
-                    setPendingChildren(current => current.map(item => item.id === draft.id ? { ...item, name: event.target.value } : item));
-                    setPendingChildrenError(null);
-                  }}
-                  fullWidth
-                  sx={inlineRowInputSx}
-                />
-                <Select
-                  variant="standard"
-                  value={draft.gender}
-                  onChange={event => {
-                    setPendingChildren(current => current.map(item => item.id === draft.id ? { ...item, gender: event.target.value as GenderValue } : item));
-                    setPendingChildrenError(null);
-                  }}
-                  disableUnderline
-                  input={<InputBase sx={{ ...inlineRowInputSx, minWidth: 0 }} />}
-                  sx={{ fontSize: 13, color: '#475569' }}
-                >
-                  <MenuItem value="male">男</MenuItem>
-                  <MenuItem value="female">女</MenuItem>
-                </Select>
-                <InputBase
-                  type="text"
-                  value={draft.rank}
-                  onChange={event => {
-                    setPendingChildren(current => current.map(item => item.id === draft.id ? { ...item, rank: event.target.value.replace(/[^\d]/g, '') } : item));
-                    setPendingChildrenError(null);
-                  }}
-                  inputProps={{ inputMode: 'numeric', pattern: '[0-9]*', style: { textAlign: 'right' } }}
-                  sx={{ ...inlineRowInputSx, textAlign: 'right' }}
-                />
-                <IconButton size="small" onClick={() => setPendingChildren(current => current.filter(item => item.id !== draft.id))} sx={{ width: 24, height: 24, justifySelf: 'end' }}>
-                  <DeleteOutlineIcon fontSize="small" />
-                </IconButton>
+              <BoxAny sx={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: 11 }}>
+                  子女（{children.length}人）
+                </Typography>
+                {relationshipEditing && (
+                  <Button
+                    size="small"
+                    onClick={() => {
+                      setPendingChildren(current => [...current, createPendingChildDraft(String(children.length + current.length + 1))]);
+                      setPendingChildrenError(null);
+                    }}
+                    sx={{ ml: 'auto', flexShrink: 0, minWidth: 30, px: 0.5, fontSize: 18, lineHeight: 1, fontWeight: 500 }}
+                  >
+                    +
+                  </Button>
+                )}
               </BoxAny>
-            ))}
+            </BoxAny>
+
+            {Array.from({ length: editableRelationRowCount }, (_, rowIndex) => {
+              const spouse = rowIndex < spouses.length ? spouses[rowIndex] : null;
+              const isSpouseDraftRow = spouseDraftVisible && rowIndex === spouses.length;
+              const child = rowIndex < orderedChildren.length ? orderedChildren[rowIndex] : null;
+              const childDraftIndex = rowIndex - orderedChildren.length;
+              const childDraft = childDraftIndex >= 0 ? pendingChildren[childDraftIndex] ?? null : null;
+
+              return (
+                <BoxAny
+                  key={`editable-relation-row-${rowIndex}`}
+                  sx={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                    columnGap: 1.75,
+                    py: 0.75,
+                    alignItems: 'start',
+                    borderBottom: rowIndex === editableRelationRowCount - 1 ? 'none' : '1px solid rgba(15,23,42,0.08)',
+                  }}
+                >
+                  <BoxAny sx={{ minWidth: 0 }}>
+                    {spouse ? (
+                      <BoxAny
+                        sx={{
+                          display: 'grid',
+                          gridTemplateColumns: relationshipEditing
+                            ? `minmax(0, 1fr) ${compactGenderColumn} ${compactDeleteColumn}`
+                            : `minmax(0, 1fr) ${compactGenderColumn}`,
+                          gap: compactRelationGap,
+                          alignItems: 'center',
+                        }}
+                      >
+                        <Link
+                          component="button"
+                          variant="body2"
+                          underline="hover"
+                          onClick={() => onNavigate(spouse.id)}
+                          sx={{ justifySelf: 'start', textAlign: 'left', fontSize: 13, minWidth: 0, wordBreak: 'break-word' }}
+                        >
+                          {formatDisplayName(spouse.name)}
+                        </Link>
+                        <Button
+                          size="small"
+                          variant="text"
+                          onClick={() => setRelationGenderOverrides(current => ({ ...current, [spouse.id]: toggleBinaryGender(getRelationGender(spouse)) }))}
+                          sx={{ minWidth: compactGenderColumn, width: compactGenderColumn, px: 0, py: 0, fontSize: 13, color: '#475569', justifySelf: 'center' }}
+                        >
+                          {formatGender(getRelationGender(spouse))}
+                        </Button>
+                        {relationshipEditing ? (
+                          <IconButton size="small" onClick={() => handleDeleteSpouse(spouse.id)} sx={{ width: 24, height: 24, justifySelf: 'end' }}>
+                            <DeleteOutlineIcon fontSize="small" />
+                          </IconButton>
+                        ) : null}
+                      </BoxAny>
+                    ) : isSpouseDraftRow ? (
+                      <BoxAny
+                        sx={{
+                          display: 'grid',
+                          gridTemplateColumns: `minmax(0, 1fr) ${compactGenderColumn} ${compactDeleteColumn}`,
+                          gap: compactRelationGap,
+                          alignItems: 'center',
+                        }}
+                      >
+                        <InputBase
+                          placeholder="xxx"
+                          value={spouseDialog.name}
+                          onChange={event => setSpouseDialog(current => ({ ...current, name: event.target.value }))}
+                          onKeyDown={(event: React.KeyboardEvent<HTMLInputElement>) => {
+                            if (event.key === 'Enter') {
+                              event.preventDefault();
+                              void handleAddSpouse();
+                            }
+                          }}
+                          fullWidth
+                          sx={{ ...inlineRowInputSx, width: '100%' }}
+                        />
+                        <Button
+                          size="small"
+                          variant="text"
+                          onClick={() => setSpouseDialog(current => ({ ...current, gender: toggleBinaryGender(current.gender) }))}
+                          sx={{ minWidth: compactGenderColumn, width: compactGenderColumn, px: 0, py: 0, fontSize: 13, color: '#475569', justifySelf: 'center' }}
+                        >
+                          {formatGender(spouseDialog.gender)}
+                        </Button>
+                        <IconButton size="small" onClick={closeSpouseDialog} disabled={spouseDialog.saving} sx={{ width: 24, height: 24, justifySelf: 'end' }}>
+                          <DeleteOutlineIcon fontSize="small" />
+                        </IconButton>
+                      </BoxAny>
+                    ) : spouseRowCount === 0 && rowIndex === 0 ? (
+                      <Typography variant="body2" color="text.secondary" sx={{ fontSize: 12, fontStyle: 'italic' }}>
+                        暂无记录
+                      </Typography>
+                    ) : null}
+                  </BoxAny>
+
+                  <BoxAny sx={{ minWidth: 0 }}>
+                    {child ? (
+                      <BoxAny
+                        sx={{
+                          display: 'grid',
+                          gridTemplateColumns: relationshipEditing
+                            ? `minmax(0, 1fr) ${compactGenderColumn} ${compactRankColumn} ${compactDeleteColumn}`
+                            : `minmax(0, 1fr) ${compactGenderColumn} ${compactRankColumn}`,
+                          gap: compactRelationGap,
+                          alignItems: 'center',
+                        }}
+                      >
+                        <Link
+                          component="button"
+                          variant="body2"
+                          underline="hover"
+                          onClick={() => onNavigate(child.id)}
+                          sx={{ justifySelf: 'start', textAlign: 'left', fontSize: 13, minWidth: 0, wordBreak: 'break-word' }}
+                        >
+                          {formatDisplayName(child.name)}
+                        </Link>
+                        <Button
+                          size="small"
+                          variant="text"
+                          onClick={() => setRelationGenderOverrides(current => ({ ...current, [child.id]: toggleBinaryGender(getRelationGender(child)) }))}
+                          sx={{ minWidth: compactGenderColumn, width: compactGenderColumn, px: 0, py: 0, fontSize: 13, color: '#475569', justifySelf: 'center' }}
+                        >
+                          {formatGender(getRelationGender(child))}
+                        </Button>
+                        <Button
+                          size="small"
+                          variant="text"
+                          onClick={() => setChildRankOverrides(current => ({ ...current, [child.id]: cycleRank(getChildRank(child, rowIndex)) }))}
+                          sx={{ minWidth: compactRankColumn, width: compactRankColumn, px: 0, py: 0, fontSize: 13, color: '#475569', textAlign: 'right', justifySelf: 'end', fontVariantNumeric: 'tabular-nums' }}
+                        >
+                          {getChildRank(child, rowIndex)}
+                        </Button>
+                        {relationshipEditing ? (
+                          <IconButton size="small" onClick={() => handleDeleteChild(child.id)} sx={{ width: 24, height: 24, justifySelf: 'end' }}>
+                            <DeleteOutlineIcon fontSize="small" />
+                          </IconButton>
+                        ) : null}
+                      </BoxAny>
+                    ) : childDraft ? (
+                      <BoxAny
+                        sx={{
+                          display: 'grid',
+                          gridTemplateColumns: `minmax(0, 1fr) ${compactGenderColumn} ${compactRankColumn} ${compactDeleteColumn}`,
+                          gap: compactRelationGap,
+                          alignItems: 'center',
+                        }}
+                      >
+                        <InputBase
+                          placeholder="xxx"
+                          value={childDraft.name}
+                          onChange={event => {
+                            setPendingChildren(current => current.map(item => item.id === childDraft.id ? { ...item, name: event.target.value } : item));
+                            setPendingChildrenError(null);
+                          }}
+                          fullWidth
+                          sx={inlineRowInputSx}
+                        />
+                        <Button
+                          size="small"
+                          variant="text"
+                          onClick={() => {
+                            setPendingChildren(current => current.map(item => item.id === childDraft.id ? { ...item, gender: toggleBinaryGender(item.gender) } : item));
+                            setPendingChildrenError(null);
+                          }}
+                          sx={{ minWidth: compactGenderColumn, width: compactGenderColumn, px: 0, py: 0, fontSize: 13, color: '#475569', justifySelf: 'center' }}
+                        >
+                          {formatGender(childDraft.gender)}
+                        </Button>
+                        <Button
+                          size="small"
+                          variant="text"
+                          onClick={() => {
+                            setPendingChildren(current => current.map(item => item.id === childDraft.id ? { ...item, rank: cycleRank(item.rank) } : item));
+                            setPendingChildrenError(null);
+                          }}
+                          sx={{ minWidth: compactRankColumn, width: compactRankColumn, px: 0, py: 0, fontSize: 13, color: '#475569', textAlign: 'right', justifySelf: 'end', fontVariantNumeric: 'tabular-nums' }}
+                        >
+                          {childDraft.rank}
+                        </Button>
+                        <IconButton size="small" onClick={() => setPendingChildren(current => current.filter(item => item.id !== childDraft.id))} sx={{ width: 24, height: 24, justifySelf: 'end' }}>
+                          <DeleteOutlineIcon fontSize="small" />
+                        </IconButton>
+                      </BoxAny>
+                    ) : childRowCount === 0 && rowIndex === 0 ? (
+                      <Typography variant="body2" color="text.secondary" sx={{ fontSize: 12, fontStyle: 'italic' }}>
+                        暂无记录
+                      </Typography>
+                    ) : null}
+                  </BoxAny>
+                </BoxAny>
+              );
+            })}
+
+            {spouseDialog.error && <Alert severity="error" sx={{ mt: 0.75 }}>{spouseDialog.error}</Alert>}
             {pendingChildrenError && <Alert severity="error" sx={{ mt: 0.75 }}>{pendingChildrenError}</Alert>}
-          </BoxAny>
           </BoxAny>
         )}
       </BoxAny>
