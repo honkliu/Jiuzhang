@@ -192,10 +192,30 @@ export const FamilyPage: React.FC = () => {
   const [creatingTree, setCreatingTree] = useState(false);
   const canvasRef = useRef<FamilyHistoHandle>(null);
   const selectedPersonIdRef = useRef<string | null>(null);
+  const listViewRef = useRef<HTMLDivElement | null>(null);
+  const generationViewRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     selectedPersonIdRef.current = selectedPerson?.id ?? null;
   }, [selectedPerson]);
+
+  useEffect(() => {
+    const selectedId = selectedPerson?.id;
+    if (!selectedId) return;
+
+    const activeContainer = viewMode === 'list'
+      ? listViewRef.current
+      : viewMode === 'generation'
+        ? generationViewRef.current
+        : null;
+
+    if (!activeContainer) return;
+
+    const target = activeContainer.querySelector<HTMLElement>(`[data-person-id="${selectedId}"]`);
+    if (!target) return;
+
+    target.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }, [selectedPerson?.id, viewMode]);
 
   const selectedTree = trees.find(t => t.id === selectedTreeId) ?? null;
   const treeMaxDepth = useMemo(() => rootNode ? getTreeDepth(rootNode) : 0, [rootNode]);
@@ -353,6 +373,15 @@ export const FamilyPage: React.FC = () => {
     openPersonDetails(value.id);
   }, [navigateToPerson, openPersonDetails, viewMode]);
 
+  const handlePanelNavigate = useCallback((personId: string) => {
+    if (viewMode === 'tree') {
+      navigateToPerson(personId);
+      return;
+    }
+
+    openPersonDetails(personId);
+  }, [navigateToPerson, openPersonDetails, viewMode]);
+
   const handleOpenCreateDialog = useCallback(() => {
     setCreateTreeError(null);
     setCreateDialogOpen(true);
@@ -485,7 +514,7 @@ export const FamilyPage: React.FC = () => {
                   tree={selectedTree}
                   allPersons={allNodes}
                   onClose={() => setSelectedPerson(null)}
-                  onNavigate={navigateToPerson}
+                  onNavigate={handlePanelNavigate}
                   onRefresh={refreshCurrentTree}
                   canEdit={Boolean(currentUser?.canEditFamilyTree)}
                 />
@@ -513,7 +542,7 @@ export const FamilyPage: React.FC = () => {
                   tree={selectedTree}
                   allPersons={allNodes}
                   onClose={() => setSelectedPerson(null)}
-                  onNavigate={navigateToPerson}
+                  onNavigate={handlePanelNavigate}
                   onRefresh={refreshCurrentTree}
                   canEdit={Boolean(currentUser?.canEditFamilyTree)}
                   fullWidth
@@ -560,7 +589,7 @@ export const FamilyPage: React.FC = () => {
             )}
 
             {viewMode === 'list' && (
-              <BoxAny sx={{ flex: 1, overflow: 'auto', p: 2, pb: isMobile ? 10 : 2 }}>
+              <BoxAny ref={listViewRef} sx={{ flex: 1, overflow: 'auto', p: 2, pb: isMobile ? 10 : 2 }}>
                 <TextField
                   size="small"
                   placeholder="搜索姓名或别名…"
@@ -589,7 +618,16 @@ export const FamilyPage: React.FC = () => {
                             <TableRow
                               key={p.id}
                               hover
-                              sx={{ cursor: 'pointer', '&:hover': { bgcolor: 'rgba(42,175,71,0.04)' } }}
+                              data-person-id={p.id}
+                              selected={selectedPerson?.id === p.id}
+                              sx={{
+                                cursor: 'pointer',
+                                bgcolor: selectedPerson?.id === p.id ? 'rgba(42,175,71,0.10)' : undefined,
+                                '&:hover': { bgcolor: selectedPerson?.id === p.id ? 'rgba(42,175,71,0.14)' : 'rgba(42,175,71,0.04)' },
+                                '& .MuiTableCell-root': {
+                                  fontWeight: selectedPerson?.id === p.id ? 600 : undefined,
+                                },
+                              }}
                               onClick={() => openPersonDetails(p.id)}
                             >
                               <TableCell>第{p.generation}世</TableCell>
@@ -616,7 +654,7 @@ export const FamilyPage: React.FC = () => {
             )}
 
             {viewMode === 'generation' && (
-              <BoxAny sx={{ flex: 1, overflow: 'auto', p: 2, pb: isMobile ? 10 : 2 }}>
+              <BoxAny ref={generationViewRef} sx={{ flex: 1, overflow: 'auto', p: 2, pb: isMobile ? 10 : 2 }}>
                 {generations.map(gen => (
                   <BoxAny key={gen} sx={{ mb: 2 }}>
                     <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.75 }}>
@@ -629,6 +667,7 @@ export const FamilyPage: React.FC = () => {
                       {byGeneration[gen].map(node => (
                         <Chip
                           key={node.id}
+                          data-person-id={node.id}
                           label={
                             <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                               <BoxAny sx={{
@@ -644,8 +683,13 @@ export const FamilyPage: React.FC = () => {
                           onClick={() => openPersonDetails(node.id)}
                           sx={{
                             cursor: 'pointer',
-                            background: 'rgba(255,255,255,0.8)',
-                            '&:hover': { borderColor: 'rgb(42,175,71)', bgcolor: 'rgba(42,175,71,0.04)' },
+                            background: selectedPerson?.id === node.id ? 'rgba(42,175,71,0.10)' : 'rgba(255,255,255,0.8)',
+                            borderColor: selectedPerson?.id === node.id ? 'rgb(42,175,71)' : undefined,
+                            color: selectedPerson?.id === node.id ? 'rgb(22,101,52)' : undefined,
+                            '&:hover': {
+                              borderColor: 'rgb(42,175,71)',
+                              bgcolor: selectedPerson?.id === node.id ? 'rgba(42,175,71,0.14)' : 'rgba(42,175,71,0.04)',
+                            },
                           }}
                         />
                       ))}
