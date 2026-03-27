@@ -12,6 +12,7 @@ const LEVEL_HEIGHT = STUB_LEN + TYPICAL_BOX_H + STUB_LEN + 32; // 150
 const BOX_Y_OFFSET = 0;
 const GEN_STRIP_W = 34;
 const NODE_STEP_MS = 10;
+const CLEAR_SUPPRESS_MS = 1500;
 
 // ─── Colors (Right.md §13) ───
 const C = {
@@ -57,6 +58,7 @@ interface LayoutNode {
 export interface FamilyHistoHandle {
   centerOnPerson: (personId: string) => void;
   setPendingHighlight: (personId: string) => void;
+  highlightPerson: (personId: string) => void;
   setShiftDirection: (dir: number) => void;
 }
 
@@ -327,6 +329,7 @@ export const FamilyHisto = forwardRef<FamilyHistoHandle, Props>((props, ref) => 
   onShiftUpRef.current = onShiftUp;
   const onShiftDownRef = useRef(onShiftDown);
   onShiftDownRef.current = onShiftDown;
+  const suppressClearUntilRef = useRef(0);
 
   const updateRightmostVisible = useCallback((svg: SVGSVGElement, t: d3.ZoomTransform) => {
     const nodes = allFlatRef.current;
@@ -366,6 +369,7 @@ export const FamilyHisto = forwardRef<FamilyHistoHandle, Props>((props, ref) => 
   // ─── Imperative handle (Right.md §11.3) ───
   useImperativeHandle(ref, () => ({
     centerOnPerson(personId: string) {
+      suppressClearUntilRef.current = Date.now() + CLEAR_SUPPRESS_MS;
       requestAnimationFrame(() => {
         const svg = svgRef.current;
         if (!svg || !zoomRef.current) return;
@@ -383,7 +387,15 @@ export const FamilyHisto = forwardRef<FamilyHistoHandle, Props>((props, ref) => 
       });
     },
     setPendingHighlight(personId: string) {
+      suppressClearUntilRef.current = Date.now() + CLEAR_SUPPRESS_MS;
       pendingHighlightRef.current = personId;
+    },
+    highlightPerson(personId: string) {
+      suppressClearUntilRef.current = Date.now() + CLEAR_SUPPRESS_MS;
+      pendingHighlightRef.current = personId;
+      const branch = collectFullBranch(personId);
+      highlightSetRef.current = branch;
+      applyHighlight(branch);
     },
     setShiftDirection(dir: number) {
       shiftDirRef.current = dir;
@@ -841,13 +853,6 @@ export const FamilyHisto = forwardRef<FamilyHistoHandle, Props>((props, ref) => 
       .text('▼')
       .on('click', (event) => {
         event.stopPropagation();
-        // Step 1: highlight this node's branch
-        const hSet = collectFullBranch(d.id);
-        highlightSetRef.current = hSet;
-        applyHighlight(hSet);
-        onNodeClickRef.current(d.data);
-        // Step 2: set shift direction then trigger expand (same as strip ▼)
-        shiftDirRef.current = 1;
         onExpandDepth(d.id);
       });
   }
@@ -1294,7 +1299,9 @@ export const FamilyHisto = forwardRef<FamilyHistoHandle, Props>((props, ref) => 
       d3.select(svg).on('dblclick.zoom', null);
 
       // Clear selection on SVG background click (set once)
-      d3.select(svg).on('click.clear', () => {
+      d3.select(svg).on('click.clear', (event: MouseEvent) => {
+        if (Date.now() < suppressClearUntilRef.current) return;
+        if (event.target !== svg) return;
         highlightSetRef.current = new Set();
         applyHighlight(new Set());
         onClearSelectionRef.current();

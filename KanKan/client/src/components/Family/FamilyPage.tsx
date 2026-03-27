@@ -26,7 +26,16 @@ const BoxAny = Box as any;
 
 type ViewMode = 'tree' | 'list' | 'generation';
 
+interface FamilyPagePersistedState {
+  selectedTreeId: string | null;
+  viewMode: ViewMode;
+  selectedPersonId: string | null;
+  focusPersonId: string | null;
+  visibleStartDepth: number;
+}
+
 const MAX_VISIBLE_DEPTH = 3;
+const FAMILY_PAGE_STATE_KEY = 'kankan.familyPageState';
 
 const TEXT_IMPORT_EXAMPLE = [
   '张三，男，李某，女，1980，',
@@ -148,6 +157,32 @@ function getTreeDepth(node: FamilyNode): number {
   return 1 + Math.max(...node.children.map(getTreeDepth));
 }
 
+function readFamilyPageState(): FamilyPagePersistedState | null {
+  if (typeof window === 'undefined') return null;
+
+  try {
+    const raw = window.sessionStorage.getItem(FAMILY_PAGE_STATE_KEY);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw) as Partial<FamilyPagePersistedState>;
+    const viewMode = parsed.viewMode;
+    return {
+      selectedTreeId: typeof parsed.selectedTreeId === 'string' ? parsed.selectedTreeId : null,
+      viewMode: viewMode === 'tree' || viewMode === 'list' || viewMode === 'generation' ? viewMode : 'tree',
+      selectedPersonId: typeof parsed.selectedPersonId === 'string' ? parsed.selectedPersonId : null,
+      focusPersonId: typeof parsed.focusPersonId === 'string' ? parsed.focusPersonId : null,
+      visibleStartDepth: typeof parsed.visibleStartDepth === 'number' ? parsed.visibleStartDepth : 0,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function writeFamilyPageState(state: FamilyPagePersistedState) {
+  if (typeof window === 'undefined') return;
+  window.sessionStorage.setItem(FAMILY_PAGE_STATE_KEY, JSON.stringify(state));
+}
+
 // Get 0-based depth of a person in the tree (depth from root)
 function getPersonTreeDepth(personId: string, allNodes: FamilyNode[]): number {
   const node = allNodes.find(n => n.id === personId);
@@ -167,20 +202,21 @@ export const FamilyPage: React.FC = () => {
   const currentUser = useSelector((state: RootState) => state.auth.user);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const persistedStateRef = useRef<FamilyPagePersistedState | null>(readFamilyPageState());
   const [trees, setTrees] = useState<FamilyTreeDto[]>([]);
-  const [selectedTreeId, setSelectedTreeId] = useState<string | null>(null);
+  const [selectedTreeId, setSelectedTreeId] = useState<string | null>(persistedStateRef.current?.selectedTreeId ?? null);
   const [persons, setPersons] = useState<FamilyPersonDto[]>([]);
   const [, setRels] = useState<FamilyRelationshipDto[]>([]);
   const [rootNode, setRootNode] = useState<FamilyNode | null>(null);
   const [allNodes, setAllNodes] = useState<FamilyNode[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<ViewMode>('tree');
+  const [viewMode, setViewMode] = useState<ViewMode>(persistedStateRef.current?.viewMode ?? 'tree');
   const [selectedPerson, setSelectedPerson] = useState<FamilyNode | null>(null);
   const [contextMenu, setContextMenu] = useState<{ node: FamilyNode; x: number; y: number } | null>(null);
   const [listSearch, setListSearch] = useState('');
-  const [visibleStartDepth, setVisibleStartDepth] = useState(0);
-  const [focusPersonId, setFocusPersonId] = useState<string | null>(null);
+  const [visibleStartDepth, setVisibleStartDepth] = useState(persistedStateRef.current?.visibleStartDepth ?? 0);
+  const [focusPersonId, setFocusPersonId] = useState<string | null>(persistedStateRef.current?.focusPersonId ?? null);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [createTreeName, setCreateTreeName] = useState('');
   const [createTreeSurname, setCreateTreeSurname] = useState('');
@@ -191,13 +227,17 @@ export const FamilyPage: React.FC = () => {
   const [createTreeError, setCreateTreeError] = useState<string | null>(null);
   const [creatingTree, setCreatingTree] = useState(false);
   const canvasRef = useRef<FamilyHistoHandle>(null);
-  const selectedPersonIdRef = useRef<string | null>(null);
+  const selectedPersonIdRef = useRef<string | null>(persistedStateRef.current?.selectedPersonId ?? null);
   const listViewRef = useRef<HTMLDivElement | null>(null);
   const generationViewRef = useRef<HTMLDivElement | null>(null);
+  const didHydrateTreeStateRef = useRef(false);
+  const initialRestorePendingRef = useRef(Boolean(persistedStateRef.current?.selectedTreeId));
+  const restoreTreeSelectionRef = useRef(false);
 
-  useEffect(() => {
-    selectedPersonIdRef.current = selectedPerson?.id ?? null;
-  }, [selectedPerson]);
+  const selectPerson = useCallback((person: FamilyNode | null) => {
+    selectedPersonIdRef.current = person?.id ?? null;
+    setSelectedPerson(person);
+  }, []);
 
   useEffect(() => {
     const selectedId = selectedPerson?.id;
@@ -216,6 +256,41 @@ export const FamilyPage: React.FC = () => {
 
     target.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   }, [selectedPerson?.id, viewMode]);
+
+  useEffect(() => {
+    if (selectedPerson || allNodes.length === 0 || !selectedPersonIdRef.current) return;
+
+    const restoredPerson = allNodes.find(node => node.id === selectedPersonIdRef.current);
+    if (restoredPerson) {
+      restoreTreeSelectionRef.current = true;
+      selectPerson(restoredPerson);
+    }
+  }, [allNodes, selectedPerson, selectPerson]);
+
+  useEffect(() => {
+    if (viewMode !== 'tree' || loading || !restoreTreeSelectionRef.current) return;
+
+    const personId = focusPersonId ?? selectedPerson?.id;
+    if (!personId || !canvasRef.current) return;
+
+    restoreTreeSelectionRef.current = false;
+    canvasRef.current.setPendingHighlight(personId);
+    const timer = window.setTimeout(() => {
+      canvasRef.current?.centerOnPerson(personId);
+    }, 80);
+
+    return () => window.clearTimeout(timer);
+  }, [viewMode, loading, focusPersonId, selectedPerson?.id, visibleStartDepth]);
+
+  useEffect(() => {
+    writeFamilyPageState({
+      selectedTreeId,
+      viewMode,
+      selectedPersonId: selectedPersonIdRef.current,
+      focusPersonId,
+      visibleStartDepth,
+    });
+  }, [selectedTreeId, viewMode, focusPersonId, visibleStartDepth, selectedPerson?.id]);
 
   const selectedTree = trees.find(t => t.id === selectedTreeId) ?? null;
   const treeMaxDepth = useMemo(() => rootNode ? getTreeDepth(rootNode) : 0, [rootNode]);
@@ -246,7 +321,14 @@ export const FamilyPage: React.FC = () => {
     familyService.listTrees()
       .then(list => {
         setTrees(list);
-        if (list.length > 0) setSelectedTreeId(list[0].id);
+        if (list.length > 0) {
+          setSelectedTreeId(current => {
+            if (current && list.some(tree => tree.id === current)) {
+              return current;
+            }
+            return list[0].id;
+          });
+        }
       })
       .catch(() => setError('Failed to load trees'));
   }, []);
@@ -268,12 +350,18 @@ export const FamilyPage: React.FC = () => {
     setAllNodes(nodes);
 
     const nextSelectedId = preferredPersonId === undefined ? selectedPersonIdRef.current : preferredPersonId;
-    setSelectedPerson(nextSelectedId ? nodes.find(n => n.id === nextSelectedId) ?? null : null);
+    selectPerson(nextSelectedId ? nodes.find(n => n.id === nextSelectedId) ?? null : null);
 
-    if (focusPersonId && !nodes.some(n => n.id === focusPersonId)) {
-      setFocusPersonId(null);
+    setFocusPersonId(currentFocusId => (
+      currentFocusId && !nodes.some(node => node.id === currentFocusId)
+        ? null
+        : currentFocusId
+    ));
+
+    if (persistedStateRef.current?.selectedTreeId === selectedTreeId) {
+      initialRestorePendingRef.current = false;
     }
-  }, [focusPersonId]);
+  }, [selectPerson, selectedTreeId]);
 
   const refreshCurrentTree = useCallback(async (preferredPersonId?: string | null) => {
     if (!selectedTreeId) return;
@@ -294,19 +382,34 @@ export const FamilyPage: React.FC = () => {
   // Load full tree when selection changes
   useEffect(() => {
     if (!selectedTreeId) return;
+
+    const persistedState = persistedStateRef.current;
+    const shouldHydrate =
+      initialRestorePendingRef.current &&
+      persistedState?.selectedTreeId === selectedTreeId;
+
+    didHydrateTreeStateRef.current = true;
+
+    if (shouldHydrate) {
+      restoreTreeSelectionRef.current = true;
+      void refreshCurrentTree(persistedState?.selectedPersonId ?? null);
+      return;
+    }
+
     setVisibleStartDepth(0);
     setFocusPersonId(null);
     void refreshCurrentTree(null);
   }, [refreshCurrentTree, selectedTreeId]);
 
   const handleNodeClick = useCallback((node: FamilyNode) => {
-    setSelectedPerson(node);
+    selectPerson(node);
     setFocusPersonId(null);
-  }, []);
+  }, [selectPerson]);
 
   const handleNodeRightClick = useCallback((node: FamilyNode, x: number, y: number) => {
     if (isMobile) {
-      setSelectedPerson(node);
+      selectPerson(node);
+      setFocusPersonId(null);
       return;
     }
 
@@ -317,7 +420,7 @@ export const FamilyPage: React.FC = () => {
     const clampedX = Math.min(x, viewportW - menuW - 8);
     const clampedY = Math.min(y, viewportH - menuH - 8);
     setContextMenu({ node, x: Math.max(8, clampedX), y: Math.max(8, clampedY) });
-  }, [isMobile]);
+  }, [isMobile, selectPerson]);
 
   const handleCloseContextMenu = useCallback(() => setContextMenu(null), []);
 
@@ -340,8 +443,12 @@ export const FamilyPage: React.FC = () => {
   const navigateToPerson = useCallback((personId: string) => {
     const node = allNodes.find(n => n.id === personId);
     if (!node) return;
-    setSelectedPerson(node);
+    selectPerson(node);
+    setFocusPersonId(null);
     setViewMode('tree');
+
+    const activeRef = pickCanvasRef();
+    activeRef.current?.highlightPerson(personId);
 
     // Auto-adjust depth window so the person is visible
     const personDepth = getPersonTreeDepth(personId, allNodes);
@@ -351,16 +458,16 @@ export const FamilyPage: React.FC = () => {
     }
 
     setTimeout(() => {
-      const activeRef = pickCanvasRef();
       activeRef.current?.centerOnPerson(personId);
     }, 80);
-  }, [allNodes, visibleStartDepth, treeMaxDepth, viewMode, pickCanvasRef]);
+  }, [allNodes, visibleStartDepth, treeMaxDepth, viewMode, pickCanvasRef, selectPerson]);
 
   const openPersonDetails = useCallback((personId: string) => {
     const node = allNodes.find(n => n.id === personId);
     if (!node) return;
-    setSelectedPerson(node);
-  }, [allNodes]);
+    selectPerson(node);
+    setFocusPersonId(null);
+  }, [allNodes, selectPerson]);
 
   const handleSearchSelect = useCallback((_: any, value: FamilyNode | null) => {
     if (!value) return;
@@ -513,7 +620,7 @@ export const FamilyPage: React.FC = () => {
                   person={selectedPerson}
                   tree={selectedTree}
                   allPersons={allNodes}
-                  onClose={() => setSelectedPerson(null)}
+                  onClose={() => selectPerson(null)}
                   onNavigate={handlePanelNavigate}
                   onRefresh={refreshCurrentTree}
                   canEdit={Boolean(currentUser?.canEditFamilyTree)}
@@ -525,7 +632,7 @@ export const FamilyPage: React.FC = () => {
               <Drawer
                 anchor="bottom"
                 open={Boolean(selectedPerson)}
-                onClose={() => setSelectedPerson(null)}
+                onClose={() => selectPerson(null)}
                 ModalProps={{ keepMounted: true }}
                 PaperProps={{
                   sx: {
@@ -541,7 +648,7 @@ export const FamilyPage: React.FC = () => {
                   person={selectedPerson}
                   tree={selectedTree}
                   allPersons={allNodes}
-                  onClose={() => setSelectedPerson(null)}
+                  onClose={() => selectPerson(null)}
                   onNavigate={handlePanelNavigate}
                   onRefresh={refreshCurrentTree}
                   canEdit={Boolean(currentUser?.canEditFamilyTree)}
@@ -564,7 +671,7 @@ export const FamilyPage: React.FC = () => {
                     onNodeClick={handleNodeClick}
                     onNodeRightClick={handleNodeRightClick}
                     onExpandDepth={handleExpandDepth}
-                    onClearSelection={() => { setSelectedPerson(null); setFocusPersonId(null); }}
+                    onClearSelection={() => { selectPerson(null); setFocusPersonId(null); }}
                     onShiftUp={() => {
                       canvasRef.current?.setShiftDirection(-1);
                       const pid = focusPersonId ?? selectedPerson?.id ?? null;
@@ -947,9 +1054,9 @@ export const FamilyPage: React.FC = () => {
           x={contextMenu.x}
           y={contextMenu.y}
           onClose={handleCloseContextMenu}
-          onView={() => setSelectedPerson(contextMenu.node)}
+          onView={() => selectPerson(contextMenu.node)}
           onHighlightAncestors={() => {
-            setSelectedPerson(contextMenu.node);
+            selectPerson(contextMenu.node);
           }}
         />
       )}
