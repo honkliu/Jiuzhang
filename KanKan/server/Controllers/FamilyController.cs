@@ -154,11 +154,17 @@ public class FamilyController : ControllerBase
         if (tree == null) return NotFound();
         if (!FamilyAccessPolicy.CanEditTreeDomain(_configuration, user, tree.Domain)) return Forbid();
 
+        var personId = $"fperson_{Guid.NewGuid():N}";
+        var linkValidation = await ValidateLinkedPersonAsync(user, treeId, req.LinkedTreeId, req.LinkedPersonId, req.ClearLinkedPerson == true, personId);
+        if (linkValidation != null) return linkValidation;
+
         var person = new FamilyPerson
         {
-            Id = $"fperson_{Guid.NewGuid():N}",
+            Id = personId,
             TreeId = treeId,
             Domain = tree.Domain,
+            LinkedTreeId = req.ClearLinkedPerson == true ? null : req.LinkedTreeId,
+            LinkedPersonId = req.ClearLinkedPerson == true ? null : req.LinkedPersonId,
             Name = req.Name ?? string.Empty,
             Gender = req.Gender ?? "male",
             Generation = req.Generation ?? tree.RootGeneration,
@@ -178,6 +184,7 @@ public class FamilyController : ControllerBase
         };
 
         await _personRepo.CreateAsync(person);
+        await SyncMutualLinkedPersonAsync(person, null, null);
         return Ok(ToPersonResponse(person));
     }
 
@@ -194,10 +201,32 @@ public class FamilyController : ControllerBase
         var tree = await _treeRepo.GetByIdAsync(treeId);
         if (tree == null || !FamilyAccessPolicy.CanEditTreeDomain(_configuration, user, tree.Domain)) return Forbid();
 
+        var previousLinkedTreeId = person.LinkedTreeId;
+        var previousLinkedPersonId = person.LinkedPersonId;
+
+        var shouldValidateLink = req.ClearLinkedPerson == true || req.LinkedTreeId != null || req.LinkedPersonId != null;
+        if (shouldValidateLink)
+        {
+            var nextLinkedTreeId = req.ClearLinkedPerson == true ? null : req.LinkedTreeId ?? person.LinkedTreeId;
+            var nextLinkedPersonId = req.ClearLinkedPerson == true ? null : req.LinkedPersonId ?? person.LinkedPersonId;
+            var linkValidation = await ValidateLinkedPersonAsync(user, treeId, nextLinkedTreeId, nextLinkedPersonId, req.ClearLinkedPerson == true, personId);
+            if (linkValidation != null) return linkValidation;
+        }
+
         if (req.Name != null) person.Name = req.Name;
         if (req.Gender != null) person.Gender = req.Gender;
         if (req.Generation.HasValue) person.Generation = req.Generation.Value;
         if (req.Aliases != null) person.Aliases = req.Aliases;
+        if (req.ClearLinkedPerson == true)
+        {
+            person.LinkedTreeId = null;
+            person.LinkedPersonId = null;
+        }
+        else
+        {
+            if (req.LinkedTreeId != null) person.LinkedTreeId = req.LinkedTreeId;
+            if (req.LinkedPersonId != null) person.LinkedPersonId = req.LinkedPersonId;
+        }
         if (req.ClearBirthDate == true) person.BirthDate = null;
         if (req.ClearDeathDate == true) person.DeathDate = null;
         if (req.BirthDate != null) person.BirthDate = new FamilyDate { Year = req.BirthDate.Year, Month = req.BirthDate.Month, Day = req.BirthDate.Day, CalendarType = req.BirthDate.CalendarType, IsLeapMonth = req.BirthDate.IsLeapMonth };
@@ -214,6 +243,7 @@ public class FamilyController : ControllerBase
         if (req.Experiences != null) person.Experiences = req.Experiences.Select(e => new FamilyExperience { Id = e.Id, Type = e.Type, Title = e.Title, Description = e.Description, StartYear = e.StartYear, EndYear = e.EndYear }).ToList();
 
         await _personRepo.UpdateAsync(person);
+        await SyncMutualLinkedPersonAsync(person, previousLinkedTreeId, previousLinkedPersonId);
         return Ok(ToPersonResponse(person));
     }
 
@@ -230,6 +260,7 @@ public class FamilyController : ControllerBase
         var tree = await _treeRepo.GetByIdAsync(treeId);
         if (tree == null || !FamilyAccessPolicy.CanEditTreeDomain(_configuration, user, tree.Domain)) return Forbid();
 
+        await ClearReverseLinkedPersonAsync(person, person.LinkedTreeId, person.LinkedPersonId);
         await _relRepo.DeleteByPersonIdAsync(personId);
         await _personRepo.DeleteAsync(personId);
         return Ok(new { message = "Person deleted" });
@@ -363,7 +394,7 @@ public class FamilyController : ControllerBase
 
     private static FamilyPersonResponse ToPersonResponse(FamilyPerson p) => new()
     {
-        Id = p.Id, TreeId = p.TreeId, Name = p.Name, Aliases = p.Aliases,
+        Id = p.Id, TreeId = p.TreeId, LinkedTreeId = p.LinkedTreeId, LinkedPersonId = p.LinkedPersonId, Name = p.Name, Aliases = p.Aliases,
         Gender = p.Gender, Generation = p.Generation,
         BirthDate = p.BirthDate == null ? null : new FamilyDateDto { Year = p.BirthDate.Year, Month = p.BirthDate.Month, Day = p.BirthDate.Day, CalendarType = p.BirthDate.CalendarType, IsLeapMonth = p.BirthDate.IsLeapMonth },
         DeathDate = p.DeathDate == null ? null : new FamilyDateDto { Year = p.DeathDate.Year, Month = p.DeathDate.Month, Day = p.DeathDate.Day, CalendarType = p.DeathDate.CalendarType, IsLeapMonth = p.DeathDate.IsLeapMonth },
@@ -380,6 +411,105 @@ public class FamilyController : ControllerBase
         ParentRole = r.ParentRole, ChildStatus = r.ChildStatus, SortOrder = r.SortOrder,
         UnionType = r.UnionType, StartYear = r.StartYear, EndYear = r.EndYear, Notes = r.Notes
     };
+
+    private async Task<IActionResult?> ValidateLinkedPersonAsync(User user, string currentTreeId, string? linkedTreeId, string? linkedPersonId, bool clearLinkedPerson, string? currentPersonId = null)
+    {
+        if (clearLinkedPerson) return null;
+
+        var hasLinkedTreeId = !string.IsNullOrWhiteSpace(linkedTreeId);
+        var hasLinkedPersonId = !string.IsNullOrWhiteSpace(linkedPersonId);
+
+        if (!hasLinkedTreeId && !hasLinkedPersonId) return null;
+        if (!hasLinkedTreeId || !hasLinkedPersonId)
+        {
+            return BadRequest(new { message = "linkedTreeId and linkedPersonId must both be provided." });
+        }
+
+        if (string.Equals(currentTreeId, linkedTreeId, StringComparison.Ordinal)
+            && string.Equals(currentPersonId, linkedPersonId, StringComparison.Ordinal))
+        {
+            return BadRequest(new { message = "A person cannot link to itself." });
+        }
+
+        var linkedTree = await _treeRepo.GetByIdAsync(linkedTreeId!);
+        if (linkedTree == null)
+        {
+            return BadRequest(new { message = "Linked tree was not found." });
+        }
+        if (!FamilyAccessPolicy.CanEditTreeDomain(_configuration, user, linkedTree.Domain))
+        {
+            return Forbid();
+        }
+
+        var linkedPerson = await _personRepo.GetByIdAsync(linkedPersonId!);
+        if (linkedPerson == null || !string.Equals(linkedPerson.TreeId, linkedTreeId, StringComparison.Ordinal))
+        {
+            return BadRequest(new { message = "Linked person was not found in the selected tree." });
+        }
+
+        var linkedPersonAlreadyPointsElsewhere =
+            !string.IsNullOrWhiteSpace(linkedPerson.LinkedTreeId)
+            || !string.IsNullOrWhiteSpace(linkedPerson.LinkedPersonId);
+
+        if (linkedPersonAlreadyPointsElsewhere
+            && (!string.Equals(linkedPerson.LinkedTreeId, currentTreeId, StringComparison.Ordinal)
+                || !string.Equals(linkedPerson.LinkedPersonId, currentPersonId, StringComparison.Ordinal)))
+        {
+            return BadRequest(new { message = "The linked person is already connected to a different person." });
+        }
+
+        return null;
+    }
+
+    private async Task SyncMutualLinkedPersonAsync(FamilyPerson person, string? previousLinkedTreeId, string? previousLinkedPersonId)
+    {
+        await ClearReverseLinkedPersonAsync(person, previousLinkedTreeId, previousLinkedPersonId);
+
+        if (string.IsNullOrWhiteSpace(person.LinkedTreeId) || string.IsNullOrWhiteSpace(person.LinkedPersonId))
+        {
+            return;
+        }
+
+        var linkedPerson = await _personRepo.GetByIdAsync(person.LinkedPersonId);
+        if (linkedPerson == null || !string.Equals(linkedPerson.TreeId, person.LinkedTreeId, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        if (string.Equals(linkedPerson.LinkedTreeId, person.TreeId, StringComparison.Ordinal)
+            && string.Equals(linkedPerson.LinkedPersonId, person.Id, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        linkedPerson.LinkedTreeId = person.TreeId;
+        linkedPerson.LinkedPersonId = person.Id;
+        await _personRepo.UpdateAsync(linkedPerson);
+    }
+
+    private async Task ClearReverseLinkedPersonAsync(FamilyPerson person, string? linkedTreeId, string? linkedPersonId)
+    {
+        if (string.IsNullOrWhiteSpace(linkedTreeId) || string.IsNullOrWhiteSpace(linkedPersonId))
+        {
+            return;
+        }
+
+        var linkedPerson = await _personRepo.GetByIdAsync(linkedPersonId);
+        if (linkedPerson == null || !string.Equals(linkedPerson.TreeId, linkedTreeId, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        if (!string.Equals(linkedPerson.LinkedTreeId, person.TreeId, StringComparison.Ordinal)
+            || !string.Equals(linkedPerson.LinkedPersonId, person.Id, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        linkedPerson.LinkedTreeId = null;
+        linkedPerson.LinkedPersonId = null;
+        await _personRepo.UpdateAsync(linkedPerson);
+    }
 
     private static void WalkImport(
         NestedPersonImport node,

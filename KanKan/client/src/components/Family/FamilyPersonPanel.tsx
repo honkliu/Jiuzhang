@@ -31,6 +31,8 @@ import {
   type FamilyDate,
   type FamilyNode,
   type FamilyPhoto,
+  type FamilyPersonDto,
+  type FamilyRelationshipDto,
   type FamilyTreeDto,
 } from '@/services/family.service';
 import { Lunar, Solar } from 'lunar-typescript';
@@ -72,6 +74,68 @@ const inlineRowInputSx = {
   '&:focus-within': {
     boxShadow: 'inset 0 0 0 1px #0891b2',
     backgroundColor: 'rgba(8,145,178,0.1)',
+  },
+};
+const linkSelectSurfaceColor = '#eef9fc';
+const linkSelectSurfaceHoverColor = '#e0f4f8';
+const linkSelectSurfaceBorder = '#b7dce6';
+const linkSelectMenuProps = {
+  PaperProps: {
+    sx: {
+      background: '#f8fcfd',
+      backgroundImage: 'none',
+      border: '1px solid #cfe3ea',
+      boxShadow: '0 10px 24px rgba(15,23,42,0.12)',
+      '& .MuiMenuItem-root': {
+        fontSize: 13,
+        color: '#0f172a',
+      },
+      '& .MuiMenuItem-root.Mui-selected': {
+        backgroundColor: 'rgba(8,145,178,0.12)',
+      },
+      '& .MuiMenuItem-root.Mui-selected:hover': {
+        backgroundColor: 'rgba(8,145,178,0.18)',
+      },
+    },
+  },
+} as const;
+const inlineRowSelectSx = {
+  width: '100%',
+  borderRadius: '5px',
+  backgroundColor: linkSelectSurfaceColor,
+  boxShadow: `inset 0 0 0 1px ${linkSelectSurfaceBorder}`,
+  transition: 'background-color 120ms ease, box-shadow 120ms ease',
+  '& .MuiSelect-select': {
+    px: 0.6,
+    py: 0.55,
+    fontSize: 13,
+    color: '#0f172a',
+    opacity: 1,
+  },
+  '& .MuiSelect-icon': {
+    color: '#475569',
+    opacity: 1,
+  },
+  '& .MuiInputBase-input': {
+    color: '#0f172a',
+    opacity: 1,
+  },
+  '&:hover': {
+    backgroundColor: linkSelectSurfaceHoverColor,
+  },
+  '&.Mui-focused': {
+    boxShadow: 'inset 0 0 0 1px #0891b2',
+    backgroundColor: '#d8f0f5',
+  },
+};
+const linkSelectInputSx = {
+  ...inlineRowInputSx,
+  width: '100%',
+  backgroundColor: linkSelectSurfaceColor,
+  boxShadow: `inset 0 0 0 1px ${linkSelectSurfaceBorder}`,
+  '&:focus-within': {
+    boxShadow: 'inset 0 0 0 1px #0891b2',
+    backgroundColor: '#d8f0f5',
   },
 };
 const compactRowSx = {
@@ -124,6 +188,8 @@ interface EditableFamilyDate {
 interface EditorState {
   name: string;
   gender: GenderValue;
+  linkedTreeId: string;
+  linkedPersonId: string;
   briefNote: string;
   biography: string;
   isDeceased: boolean;
@@ -159,6 +225,7 @@ interface Props {
   allPersons: FamilyNode[];
   onClose: () => void;
   onNavigate: (personId: string) => void;
+  onOpenLinkedPerson?: (treeId: string, personId: string) => void;
   onRefresh: (preferredPersonId?: string | null) => Promise<void>;
   onEditingChange?: (editing: boolean) => void;
   canEdit?: boolean;
@@ -220,6 +287,161 @@ function getGenderColor(gender?: string) {
   return { background: '#dbeafe', border: '#60a5fa', text: '#2563eb' };
 }
 
+function normalizeComparableText(value?: string) {
+  return value?.trim() ?? '';
+}
+
+function areDatesEqual(left?: FamilyDate, right?: FamilyDate) {
+  if (!left && !right) return true;
+  if (!left || !right) return false;
+
+  return left.year === right.year
+    && left.month === right.month
+    && left.day === right.day
+    && (left.calendarType ?? 'solar') === (right.calendarType ?? 'solar')
+    && Boolean(left.isLeapMonth) === Boolean(right.isLeapMonth);
+}
+
+function hydrateFamilyNodes(persons: FamilyPersonDto[], rels: FamilyRelationshipDto[]) {
+  const map = new Map(persons.map(candidate => [
+    candidate.id,
+    { ...candidate, children: [], spouses: [], parentRels: [], spouseRels: [] } as FamilyNode,
+  ]));
+
+  const parentChildRels = rels
+    .filter(rel => rel.type === 'parent-child')
+    .sort((left, right) => (left.sortOrder ?? 0) - (right.sortOrder ?? 0));
+
+  for (const rel of parentChildRels) {
+    const parent = map.get(rel.fromId);
+    const child = map.get(rel.toId);
+    if (!parent || !child) continue;
+    parent.children.push(child);
+    child.parentRels.push(rel);
+  }
+
+  for (const rel of rels.filter(candidate => candidate.type === 'spouse')) {
+    const left = map.get(rel.fromId);
+    const right = map.get(rel.toId);
+    if (!left || !right) continue;
+    left.spouses.push(right);
+    right.spouses.push(left);
+    left.spouseRels.push(rel);
+    right.spouseRels.push(rel);
+  }
+
+  return [...map.values()];
+}
+
+function getOrderedChildren(person: FamilyNode) {
+  return [...person.children].sort((left, right) => {
+    const leftSortOrder = left.parentRels.find(rel => rel.type === 'parent-child' && rel.fromId === person.id)?.sortOrder ?? 0;
+    const rightSortOrder = right.parentRels.find(rel => rel.type === 'parent-child' && rel.fromId === person.id)?.sortOrder ?? 0;
+    return rightSortOrder - leftSortOrder;
+  });
+}
+
+function shouldIncludeSpouseChildren(person: FamilyNode) {
+  return person.spouses.length > 0;
+}
+
+function getDisplayChildren(person: FamilyNode) {
+  const byId = new Map<string, FamilyNode>();
+  const includeSpouseChildren = shouldIncludeSpouseChildren(person);
+
+  for (const child of person.children) {
+    byId.set(child.id, child);
+  }
+
+  if (includeSpouseChildren) {
+    for (const spouse of person.spouses) {
+      for (const child of spouse.children) {
+        if (!byId.has(child.id)) {
+          byId.set(child.id, child);
+        }
+      }
+    }
+  }
+
+  return [...byId.values()].sort((left, right) => {
+    const getSortOrder = (child: FamilyNode) => {
+      const directSortOrder = child.parentRels.find(rel => rel.type === 'parent-child' && rel.fromId === person.id)?.sortOrder;
+      if (typeof directSortOrder === 'number') {
+        return directSortOrder;
+      }
+
+      for (const spouse of person.spouses) {
+        const spouseSortOrder = child.parentRels.find(rel => rel.type === 'parent-child' && rel.fromId === spouse.id)?.sortOrder;
+        if (typeof spouseSortOrder === 'number') {
+          return spouseSortOrder;
+        }
+      }
+
+      return 0;
+    };
+
+    return getSortOrder(right) - getSortOrder(left);
+  });
+}
+
+function getRelationColumns(person: FamilyNode, allPersons: FamilyNode[]) {
+  const resolveParents = (target: FamilyNode) => target.parentRels
+    .map(rel => allPersons.find(candidate => candidate.id === rel.fromId))
+    .filter(Boolean) as FamilyNode[];
+
+  const directParents = resolveParents(person);
+  const parentSeeds = directParents.length > 0
+    ? directParents
+    : person.spouses.flatMap(spouse => resolveParents(spouse));
+  const parents = (() => {
+    const byId = new Map<string, FamilyNode>();
+
+    for (const parent of parentSeeds) {
+      byId.set(parent.id, parent);
+    }
+
+    for (const parent of parentSeeds) {
+      for (const spouse of parent.spouses) {
+        if (spouse.id !== person.id && !byId.has(spouse.id)) {
+          byId.set(spouse.id, spouse);
+        }
+      }
+    }
+
+    return [...byId.values()];
+  })();
+
+  return [
+    {
+      key: 'parents',
+      title: '父母',
+      items: parents.map((parent, index) => ({
+        id: parent.id,
+        label: formatDisplayName(parent.name),
+        suffix: toParentOrderLabel(index + 1),
+      })),
+    },
+    {
+      key: 'spouses',
+      title: '配偶',
+      items: person.spouses.map((spouse, index) => ({
+        id: spouse.id,
+        label: formatDisplayName(spouse.name),
+        suffix: toParentOrderLabel(index + 1),
+      })),
+    },
+    {
+      key: 'children',
+      title: '子女',
+      items: getDisplayChildren(person).map((child, index) => ({
+        id: child.id,
+        label: formatDisplayName(child.name),
+        suffix: toParentOrderLabel(index + 1),
+      })),
+    },
+  ] as const;
+}
+
 function formatDate(date?: FamilyDate) {
   if (!date) return '';
 
@@ -271,6 +493,8 @@ function toEditorState(person: FamilyNode): EditorState {
   return {
     name: person.name,
     gender: (person.gender as GenderValue) ?? 'unknown',
+    linkedTreeId: person.linkedTreeId ?? '',
+    linkedPersonId: person.linkedPersonId ?? '',
     briefNote: person.briefNote ?? '',
     biography: person.biography ?? '',
     isDeceased: person.isAlive === false || Boolean(person.deathDate),
@@ -811,6 +1035,7 @@ export const FamilyPersonPanel: React.FC<Props> = ({
   allPersons,
   onClose,
   onNavigate,
+  onOpenLinkedPerson,
   onRefresh,
   onEditingChange,
   canEdit = false,
@@ -819,6 +1044,14 @@ export const FamilyPersonPanel: React.FC<Props> = ({
   const [editing, setEditing] = useState(false);
   const [editorState, setEditorState] = useState<EditorState | null>(null);
   const [saving, setSaving] = useState(false);
+  const [availableTrees, setAvailableTrees] = useState<FamilyTreeDto[]>([]);
+  const [availableTreesLoaded, setAvailableTreesLoaded] = useState(false);
+  const [linkablePersons, setLinkablePersons] = useState<FamilyPersonDto[]>([]);
+  const [loadingLinkablePersons, setLoadingLinkablePersons] = useState(false);
+  const [linkedTreeSelectorError, setLinkedTreeSelectorError] = useState<string | null>(null);
+  const [linkedViewLoading, setLinkedViewLoading] = useState(false);
+  const [linkedViewError, setLinkedViewError] = useState<string | null>(null);
+  const [linkedViewState, setLinkedViewState] = useState<{ tree: FamilyTreeDto; person: FamilyNode; persons: FamilyNode[] } | null>(null);
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
   const [panelError, setPanelError] = useState<string | null>(null);
   const [panelInfo, setPanelInfo] = useState<string | null>(null);
@@ -848,6 +1081,10 @@ export const FamilyPersonPanel: React.FC<Props> = ({
     if (!person) {
       setEditorState(null);
       setEditing(false);
+      setLinkablePersons([]);
+      setLinkedTreeSelectorError(null);
+      setLinkedViewError(null);
+      setLinkedViewState(null);
       return;
     }
 
@@ -873,6 +1110,117 @@ export const FamilyPersonPanel: React.FC<Props> = ({
     setActivePhotoIndex(null);
   }, [person]);
 
+  useEffect(() => {
+    if (availableTreesLoaded || (!editing && !person?.linkedTreeId)) return;
+
+    let cancelled = false;
+    void familyService.listTrees()
+      .then(trees => {
+        if (cancelled) return;
+        setAvailableTrees(trees);
+        setAvailableTreesLoaded(true);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setLinkedTreeSelectorError('加载谱系列表失败。');
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [availableTreesLoaded, editing, person?.linkedTreeId]);
+
+  useEffect(() => {
+    if (!editing || !editorState?.linkedTreeId) {
+      setLinkablePersons([]);
+      setLoadingLinkablePersons(false);
+      return;
+    }
+
+    let cancelled = false;
+    setLoadingLinkablePersons(true);
+    setLinkedTreeSelectorError(null);
+
+    void familyService.getTree(editorState.linkedTreeId)
+      .then(response => {
+        if (cancelled) return;
+        setLinkablePersons(response.persons);
+
+        const currentLinkedPersonId = editorState.linkedPersonId;
+        if (currentLinkedPersonId && response.persons.some(candidate => candidate.id === currentLinkedPersonId)) {
+          return;
+        }
+
+        const currentName = editorState.name.trim();
+        if (!currentName) {
+          return;
+        }
+
+        const sameNameCandidate = response.persons.find(candidate => candidate.name.trim() === currentName);
+        if (!sameNameCandidate) {
+          return;
+        }
+
+        setEditorState(current => current && current.linkedTreeId === response.tree.id
+          ? { ...current, linkedPersonId: sameNameCandidate.id }
+          : current);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setLinkablePersons([]);
+        setLinkedTreeSelectorError('加载关联人物失败。');
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoadingLinkablePersons(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [editing, editorState?.linkedPersonId, editorState?.linkedTreeId, editorState?.name]);
+
+  useEffect(() => {
+    if (!person?.linkedTreeId || !person.linkedPersonId) {
+      setLinkedViewState(null);
+      setLinkedViewError(null);
+      setLinkedViewLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setLinkedViewLoading(true);
+    setLinkedViewError(null);
+
+    void familyService.getTree(person.linkedTreeId)
+      .then(response => {
+        if (cancelled) return;
+        const linkedNodes = hydrateFamilyNodes(response.persons, response.relationships);
+        const linkedPerson = linkedNodes.find(candidate => candidate.id === person.linkedPersonId);
+        if (!linkedPerson) {
+          setLinkedViewState(null);
+          setLinkedViewError('已关联的人物在目标谱系中不存在。');
+          return;
+        }
+        setLinkedViewState({ tree: response.tree, person: linkedPerson, persons: linkedNodes });
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setLinkedViewState(null);
+        setLinkedViewError('加载关联谱系失败。');
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLinkedViewLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [person?.linkedPersonId, person?.linkedTreeId]);
+
   const briefNoteUnits = countBriefNoteUnits(editorState?.briefNote ?? '');
 
   if (!person || !editorState) return null;
@@ -881,65 +1229,16 @@ export const FamilyPersonPanel: React.FC<Props> = ({
   const poem = tree?.zibeiPoem ?? [];
   const zibeiChar = poem[person.generation - rootGen] ?? '';
   const colorSet = getGenderColor(person.gender);
-  const directParents = person.parentRels
-    .map(rel => allPersons.find(candidate => candidate.id === rel.fromId))
-    .filter(Boolean) as FamilyNode[];
-  const parents = (() => {
-    const byId = new Map<string, FamilyNode>();
-
-    for (const parent of directParents) {
-      byId.set(parent.id, parent);
-    }
-
-    for (const parent of directParents) {
-      for (const spouse of parent.spouses) {
-        if (spouse.id !== person.id && !byId.has(spouse.id)) {
-          byId.set(spouse.id, spouse);
-        }
-      }
-    }
-
-    return [...byId.values()];
-  })();
   const children = person.children;
-  const orderedChildren = [...children].sort((left, right) => {
-    const leftSortOrder = left.parentRels.find(rel => rel.type === 'parent-child' && rel.fromId === person.id)?.sortOrder ?? 0;
-    const rightSortOrder = right.parentRels.find(rel => rel.type === 'parent-child' && rel.fromId === person.id)?.sortOrder ?? 0;
-    return rightSortOrder - leftSortOrder;
-  });
+  const orderedChildren = getOrderedChildren(person);
   const spouses = person.spouses;
   const getRelationGender = (node: FamilyNode): GenderValue => relationGenderOverrides[node.id] ?? (node.gender === 'female' ? 'female' : 'male');
   const getChildRank = (child: FamilyNode, fallbackIndex: number) => childRankOverrides[child.id] ?? String(fallbackIndex + 1);
-  const relationColumns = [
-    {
-      key: 'parents',
-      title: '父母',
-      items: parents.map((parent, index) => ({
-        id: parent.id,
-        label: formatDisplayName(parent.name),
-        suffix: toParentOrderLabel(index + 1),
-      })),
-    },
-    {
-      key: 'spouses',
-      title: '配偶',
-      items: spouses.map((spouse, index) => ({
-        id: spouse.id,
-        label: formatDisplayName(spouse.name),
-        suffix: toParentOrderLabel(index + 1),
-      })),
-    },
-    {
-      key: 'children',
-      title: '子女',
-      items: orderedChildren.map((child, index) => ({
-        id: child.id,
-        label: formatDisplayName(child.name),
-        suffix: toParentOrderLabel(index + 1),
-      })),
-    },
-  ] as const;
+  const relationColumns = getRelationColumns(person, allPersons);
   const relationRowCount = relationColumns.reduce((maxCount, column) => Math.max(maxCount, column.items.length), 0);
+  const linkedRelationColumns = linkedViewState ? getRelationColumns(linkedViewState.person, linkedViewState.persons) : [];
+  const linkedRelationRowCount = linkedRelationColumns.reduce((maxCount, column) => Math.max(maxCount, column.items.length), 0);
+  const availableLinkedTrees = availableTrees.filter(candidate => candidate.id !== tree?.id);
   const relationshipEditing = Boolean(canEdit && editing);
   const spouseDraftVisible = relationshipEditing && spouseDialog.open;
   const spouseRowCount = spouses.length + (spouseDraftVisible ? 1 : 0);
@@ -1100,8 +1399,15 @@ export const FamilyPersonPanel: React.FC<Props> = ({
 
     const trimmedName = editorState.name.trim();
     const pendingSpouseName = spouseDialog.open ? spouseDialog.name.trim() : '';
+    const linkedTreeId = editorState.linkedTreeId.trim();
+    const linkedPersonId = editorState.linkedPersonId.trim();
     if (!trimmedName) {
       setPanelError('姓名不能为空。');
+      return;
+    }
+
+    if ((linkedTreeId && !linkedPersonId) || (!linkedTreeId && linkedPersonId)) {
+      setPanelError('请选择完整的关联谱系人物。');
       return;
     }
 
@@ -1133,6 +1439,9 @@ export const FamilyPersonPanel: React.FC<Props> = ({
       await familyService.updatePerson(tree.id, person.id, {
         name: trimmedName,
         gender: editorState.gender,
+        linkedTreeId: linkedTreeId || undefined,
+        linkedPersonId: linkedPersonId || undefined,
+        clearLinkedPerson: !linkedTreeId && !linkedPersonId && Boolean(person.linkedTreeId || person.linkedPersonId),
         briefNote: editorState.briefNote.trim(),
         biography: editorState.biography.trim(),
         isAlive: editorState.isDeceased ? false : true,
@@ -1366,7 +1675,7 @@ export const FamilyPersonPanel: React.FC<Props> = ({
             {editing ? (
               <BoxAny sx={{ display: 'grid', gap: 0.55 }}>
                 <BoxAny sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-                  <BoxAny sx={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.5fr) 48px', gap: 1, alignItems: 'center', flex: 1, minWidth: 0 }}>
+                  <BoxAny sx={{ display: 'grid', gridTemplateColumns: `minmax(0, 1.5fr) ${compactGenderColumn}`, gap: 1, alignItems: 'center', flex: 1, minWidth: 0 }}>
                     <InputBase
                       placeholder="姓名"
                       value={editorState.name}
@@ -1374,18 +1683,14 @@ export const FamilyPersonPanel: React.FC<Props> = ({
                       fullWidth
                       sx={{ ...inlineRowInputSx, width: '100%', fontSize: 18, fontWeight: 700 }}
                     />
-                    <Select
-                      variant="standard"
-                      value={editorState.gender}
-                      onChange={event => setEditorState(current => current ? { ...current, gender: event.target.value as GenderValue } : current)}
-                      disableUnderline
-                      input={<InputBase sx={{ ...inlineRowInputSx, minWidth: 0 }} />}
-                      sx={{ minWidth: 0, fontSize: 13, color: '#475569' }}
+                    <Button
+                      size="small"
+                      variant="text"
+                      onClick={() => setEditorState(current => current ? { ...current, gender: toggleBinaryGender(current.gender) } : current)}
+                      sx={{ ...compactToggleButtonSx, minWidth: compactGenderColumn, width: compactGenderColumn, fontSize: 13, justifySelf: 'center' }}
                     >
-                      <MenuItem value="male">男</MenuItem>
-                      <MenuItem value="female">女</MenuItem>
-                      <MenuItem value="unknown">未知</MenuItem>
-                    </Select>
+                      {formatGender(editorState.gender)}
+                    </Button>
                   </BoxAny>
                 </BoxAny>
                 <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
@@ -1541,6 +1846,67 @@ export const FamilyPersonPanel: React.FC<Props> = ({
                 </Button>
               </BoxAny>
             </BoxAny>
+          </BoxAny>
+        </>
+      )}
+
+      {editing && (
+        <>
+          <Divider />
+          <BoxAny sx={{ ...panelSectionPaddingSx, py: 1.25, display: 'grid', gap: 0.9 }}>
+            <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography variant="caption" color="text.secondary" sx={{ fontSize: 11 }}>
+                关联谱系
+              </Typography>
+              {(editorState.linkedTreeId || editorState.linkedPersonId) && (
+                <Button
+                  size="small"
+                  onClick={() => setEditorState(current => current ? { ...current, linkedTreeId: '', linkedPersonId: '' } : current)}
+                  sx={{ ml: 'auto', minWidth: 44, px: 0.75, fontSize: 12, lineHeight: 1.1 }}
+                >
+                  清除
+                </Button>
+              )}
+            </BoxAny>
+            <Select
+              value={editorState.linkedTreeId}
+              onChange={event => setEditorState(current => current ? { ...current, linkedTreeId: event.target.value, linkedPersonId: '' } : current)}
+              displayEmpty
+              MenuProps={linkSelectMenuProps}
+              renderValue={selected => {
+                if (!selected) return '选择家谱';
+                return availableLinkedTrees.find(candidate => candidate.id === selected)?.name ?? '选择家谱';
+              }}
+              input={<InputBase sx={linkSelectInputSx} />}
+              size="small"
+              sx={inlineRowSelectSx}
+            >
+              {availableLinkedTrees.map(candidate => (
+                <MenuItem key={candidate.id} value={candidate.id}>{candidate.name}</MenuItem>
+              ))}
+            </Select>
+            {editorState.linkedTreeId && (
+              <Select
+                value={editorState.linkedPersonId}
+                onChange={event => setEditorState(current => current ? { ...current, linkedPersonId: event.target.value } : current)}
+                displayEmpty
+                disabled={loadingLinkablePersons}
+                MenuProps={linkSelectMenuProps}
+                renderValue={selected => {
+                  if (!selected) return '选择人物';
+                  return linkablePersons.find(candidate => candidate.id === selected)?.name ?? '选择人物';
+                }}
+                input={<InputBase sx={linkSelectInputSx} />}
+                size="small"
+                sx={inlineRowSelectSx}
+              >
+                <MenuItem value="">选择人物</MenuItem>
+                {linkablePersons.map(candidate => (
+                  <MenuItem key={candidate.id} value={candidate.id}>{candidate.name}</MenuItem>
+                ))}
+              </Select>
+            )}
+            {linkedTreeSelectorError && <Alert severity="error">{linkedTreeSelectorError}</Alert>}
           </BoxAny>
         </>
       )}
@@ -1856,6 +2222,142 @@ export const FamilyPersonPanel: React.FC<Props> = ({
           </BoxAny>
         )}
       </BoxAny>
+
+      {!editing && (linkedViewLoading || linkedViewError || linkedViewState) && (
+        <>
+          <Divider />
+          <BoxAny sx={{ ...panelSectionPaddingSx, py: 1.25, display: 'grid', gap: 0.9 }}>
+            {linkedViewLoading && (
+              <Typography variant="body2" color="text.secondary" sx={{ fontSize: 12 }}>
+                正在加载关联谱系…
+              </Typography>
+            )}
+            {linkedViewError && <Alert severity="error">{linkedViewError}</Alert>}
+            {linkedViewState && (
+              <BoxAny
+                sx={{
+                  display: 'grid',
+                  gap: 0.95,
+                  p: 1.1,
+                  borderRadius: '8px',
+                  border: '1px solid rgba(15,23,42,0.08)',
+                  background: 'linear-gradient(180deg, rgba(248,250,252,0.98) 0%, rgba(241,245,249,0.9) 100%)',
+                  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.75)',
+                }}
+              >
+                <BoxAny sx={{ display: 'grid', gridTemplateColumns: '40px minmax(0, 1fr)', columnGap: 0.75, alignItems: 'start' }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: 11, color: '#166534', fontWeight: 600 }}>
+                    另谱
+                  </Typography>
+                  <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 0.6, flexWrap: 'wrap', minWidth: 0 }}>
+                    <Link
+                      component="button"
+                      variant="body2"
+                      underline="hover"
+                      onClick={() => onOpenLinkedPerson?.(linkedViewState.tree.id, linkedViewState.person.id)}
+                      sx={{ justifySelf: 'start', textAlign: 'left', fontSize: 13, minWidth: 0, wordBreak: 'break-word', color: 'rgb(42,175,71)' }}
+                    >
+                      {linkedViewState.person.name}
+                    </Link>
+                    <Typography
+                      component={onOpenLinkedPerson ? 'button' : 'span'}
+                      onClick={onOpenLinkedPerson
+                        ? () => onOpenLinkedPerson(linkedViewState.tree.id, linkedViewState.person.id)
+                        : undefined}
+                      sx={{
+                        px: 0.85,
+                        py: 0.35,
+                        border: 'none',
+                        borderRadius: 0,
+                        backgroundColor: '#d9eef2',
+                        boxShadow: '0 4px 10px rgba(15,23,42,0.10)',
+                        fontSize: 12.5,
+                        lineHeight: 1.2,
+                        fontWeight: 600,
+                        color: '#0f766e',
+                        cursor: onOpenLinkedPerson ? 'pointer' : 'default',
+                        transition: 'background-color 120ms ease, color 120ms ease, box-shadow 120ms ease, transform 120ms ease',
+                        '&:hover': onOpenLinkedPerson ? { backgroundColor: '#c9e5ea', color: '#115e59', boxShadow: '0 6px 14px rgba(15,23,42,0.14)', transform: 'translateY(-1px)' } : undefined,
+                      }}
+                    >
+                      {linkedViewState.tree.name}
+                    </Typography>
+                  </BoxAny>
+                </BoxAny>
+
+                {linkedViewState.person.briefNote && (
+                  <BoxAny sx={{ display: 'grid', gridTemplateColumns: '40px minmax(0, 1fr)', columnGap: 0.75, alignItems: 'start' }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: 11, color: '#166534', fontWeight: 600 }}>
+                      简注
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontSize: 12.5, color: '#475569', lineHeight: 1.45 }}>
+                      {linkedViewState.person.briefNote}
+                    </Typography>
+                  </BoxAny>
+                )}
+
+                <BoxAny sx={{ borderTop: '1px solid rgba(15,23,42,0.08)', pt: 0.9 }}>
+                  <BoxAny
+                    sx={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                      columnGap: 1.5,
+                      py: 0.75,
+                      borderBottom: linkedRelationRowCount > 0 ? '1px solid rgba(15,23,42,0.08)' : 'none',
+                    }}
+                  >
+                    {linkedRelationColumns.map(column => (
+                      <Typography key={column.key} variant="caption" color="text.secondary" sx={{ fontSize: 11 }}>
+                        {column.title}
+                      </Typography>
+                    ))}
+                  </BoxAny>
+
+                  {linkedRelationRowCount > 0 ? Array.from({ length: linkedRelationRowCount }, (_, rowIndex) => (
+                    <BoxAny
+                      key={`linked-relation-row-${rowIndex}`}
+                      sx={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                        columnGap: 1.5,
+                        py: 0.75,
+                        borderBottom: rowIndex === linkedRelationRowCount - 1 ? 'none' : '1px solid rgba(15,23,42,0.08)',
+                      }}
+                    >
+                      {linkedRelationColumns.map(column => {
+                        const value = column.items[rowIndex];
+                        return value ? (
+                          <Link
+                            key={`${column.key}-${rowIndex}`}
+                            component="button"
+                            variant="body2"
+                            underline="hover"
+                            onClick={() => onOpenLinkedPerson?.(linkedViewState.tree.id, value.id)}
+                            sx={{ justifySelf: 'start', textAlign: 'left', fontSize: 13, minWidth: 0, wordBreak: 'break-word', color: 'rgb(42,175,71)' }}
+                          >
+                            {value.label}
+                            {value.suffix ? (
+                              <BoxAny component="span" sx={{ fontSize: 11, color: '#94a3b8', ml: 0.5 }}>
+                                {value.suffix}
+                              </BoxAny>
+                            ) : null}
+                          </Link>
+                        ) : (
+                          <BoxAny key={`${column.key}-${rowIndex}`} />
+                        );
+                      })}
+                    </BoxAny>
+                  )) : (
+                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: 12, fontStyle: 'italic', py: 0.9 }}>
+                      暂无记录
+                    </Typography>
+                  )}
+                </BoxAny>
+              </BoxAny>
+            )}
+          </BoxAny>
+        </>
+      )}
 
       {person.biography && !editing && (
         <>

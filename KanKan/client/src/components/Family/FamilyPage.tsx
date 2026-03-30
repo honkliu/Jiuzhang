@@ -234,6 +234,7 @@ export const FamilyPage: React.FC = () => {
   const didHydrateTreeStateRef = useRef(false);
   const initialRestorePendingRef = useRef(Boolean(persistedStateRef.current?.selectedTreeId));
   const restoreTreeSelectionRef = useRef(false);
+  const pendingTreeNavigationPersonIdRef = useRef<string | null | undefined>(undefined);
 
   const selectPerson = useCallback((person: FamilyNode | null) => {
     selectedPersonIdRef.current = person?.id ?? null;
@@ -385,11 +386,19 @@ export const FamilyPage: React.FC = () => {
     if (!selectedTreeId) return;
 
     const persistedState = persistedStateRef.current;
+    const pendingTreeNavigationPersonId = pendingTreeNavigationPersonIdRef.current;
     const shouldHydrate =
       initialRestorePendingRef.current &&
       persistedState?.selectedTreeId === selectedTreeId;
 
     didHydrateTreeStateRef.current = true;
+
+    if (pendingTreeNavigationPersonId !== undefined) {
+      pendingTreeNavigationPersonIdRef.current = undefined;
+      restoreTreeSelectionRef.current = true;
+      void refreshCurrentTree(pendingTreeNavigationPersonId);
+      return;
+    }
 
     if (shouldHydrate) {
       restoreTreeSelectionRef.current = true;
@@ -489,6 +498,17 @@ export const FamilyPage: React.FC = () => {
 
     openPersonDetails(personId);
   }, [navigateToPerson, openPersonDetails, viewMode]);
+
+  const handleOpenLinkedPerson = useCallback((treeId: string, personId: string) => {
+    if (!treeId || !personId) return;
+
+    pendingTreeNavigationPersonIdRef.current = personId;
+    selectedPersonIdRef.current = personId;
+    restoreTreeSelectionRef.current = true;
+    setFocusPersonId(personId);
+    setViewMode('tree');
+    setSelectedTreeId(treeId);
+  }, []);
 
   const handleOpenCreateDialog = useCallback(() => {
     setCreateTreeError(null);
@@ -623,6 +643,7 @@ export const FamilyPage: React.FC = () => {
                   allPersons={allNodes}
                   onClose={() => selectPerson(null)}
                   onNavigate={handlePanelNavigate}
+                  onOpenLinkedPerson={handleOpenLinkedPerson}
                   onRefresh={refreshCurrentTree}
                   onEditingChange={setPanelEditing}
                   canEdit={Boolean(currentUser?.canEditFamilyTree)}
@@ -655,6 +676,7 @@ export const FamilyPage: React.FC = () => {
                   allPersons={allNodes}
                   onClose={() => selectPerson(null)}
                   onNavigate={handlePanelNavigate}
+                  onOpenLinkedPerson={handleOpenLinkedPerson}
                   onRefresh={refreshCurrentTree}
                   onEditingChange={setPanelEditing}
                   canEdit={Boolean(currentUser?.canEditFamilyTree)}

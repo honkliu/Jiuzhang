@@ -259,14 +259,25 @@ function alignRight(allNodes: LayoutNode[], fullMaxX: number) {
   }
 }
 
+function getNameColumnXPositions(node: FamilyNode) {
+  const columnCount = 1 + node.spouses.length;
+  if (columnCount === 1) {
+    return [0];
+  }
+
+  const gap = 20;
+  const start = -((columnCount - 1) * gap) / 2;
+  return Array.from({ length: columnCount }, (_, index) => start + index * gap);
+}
+
 /** Compute box dimensions for a person */
 function boxDims(node: FamilyNode): { w: number; h: number } {
-  const hasSpouse = node.spouses.length > 0;
+  const columnCount = 1 + node.spouses.length;
   const nameLen = node.name.length;
-  const spouseLen = hasSpouse ? Math.max(...node.spouses.map(s => s.name.length)) : 0;
+  const spouseLen = node.spouses.length > 0 ? Math.max(...node.spouses.map(s => s.name.length)) : 0;
   const effectiveNameRows = Math.max(nameLen, spouseLen, 3);
   const h = effectiveNameRows * 18 + 24;
-  const w = hasSpouse ? 42 : 26;
+  const w = columnCount === 1 ? 26 : 22 + (columnCount - 1) * 20;
   return { w, h };
 }
 
@@ -762,7 +773,8 @@ export const FamilyHisto = forwardRef<FamilyHistoHandle, Props>((props, ref) => 
   // ─── Append node visual content (Right.md §12.1) ───
   function appendNodeContent(g: d3.Selection<SVGGElement, any, any, any>, d: LayoutNode) {
     const { w, h } = boxDims(d.data);
-    const hasSpouse = d.data.spouses.length > 0;
+    const nameColumns = getNameColumnXPositions(d.data);
+    const primaryNameX = nameColumns[0] ?? 0;
 
     // Box
     g.append('rect')
@@ -793,10 +805,9 @@ export const FamilyHisto = forwardRef<FamilyHistoHandle, Props>((props, ref) => 
     }
 
     // Primary name (vertical)
-    const nameX = hasSpouse ? -10 : 0;
     const nameText = g.append('text')
       .attr('class', 'name-text')
-      .attr('x', nameX)
+      .attr('x', primaryNameX)
       .attr('y', BOX_Y_OFFSET + 12)
       .attr('text-anchor', 'middle')
       .attr('font-size', 14)
@@ -806,16 +817,16 @@ export const FamilyHisto = forwardRef<FamilyHistoHandle, Props>((props, ref) => 
     for (const ch of d.data.name) {
       nameText.append('tspan')
         .attr('class', 'name-char')
-        .attr('x', nameX)
+        .attr('x', primaryNameX)
         .attr('dy', '1.25em')
         .text(ch);
     }
 
-    // Spouse name (vertical)
-    if (hasSpouse) {
-      const spouse = d.data.spouses[0];
+    // Spouse names (vertical)
+    d.data.spouses.forEach((spouse, index) => {
+      const spouseNameX = nameColumns[index + 1] ?? primaryNameX;
       const spouseText = g.append('text')
-        .attr('x', 10)
+        .attr('x', spouseNameX)
         .attr('y', BOX_Y_OFFSET + 12)
         .attr('text-anchor', 'middle')
         .attr('font-size', 12)
@@ -823,11 +834,11 @@ export const FamilyHisto = forwardRef<FamilyHistoHandle, Props>((props, ref) => 
         .attr('fill', C.spouseText);
       for (const ch of spouse.name) {
         spouseText.append('tspan')
-          .attr('x', 10)
+          .attr('x', spouseNameX)
           .attr('dy', '1.25em')
           .text(ch);
       }
-    }
+    });
 
     // Expand stub
     if (d.hasHiddenChildren) {

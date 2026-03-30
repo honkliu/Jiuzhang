@@ -52,6 +52,9 @@ public class UpsertFamilyPersonRequest
     public List<string>? Aliases { get; set; }
     public string? Gender { get; set; }
     public int? Generation { get; set; }
+    public string? LinkedTreeId { get; set; }
+    public string? LinkedPersonId { get; set; }
+    public bool? ClearLinkedPerson { get; set; }
     public FamilyDateDto? BirthDate { get; set; }
     public FamilyDateDto? DeathDate { get; set; }
     public string? BirthPlace { get; set; }
@@ -128,6 +131,8 @@ public class FamilyPersonResponse
 {
     public string Id { get; set; } = string.Empty;
     public string TreeId { get; set; } = string.Empty;
+    public string? LinkedTreeId { get; set; }
+    public string? LinkedPersonId { get; set; }
     public string Name { get; set; } = string.Empty;
     public List<string> Aliases { get; set; } = new();
     public string Gender { get; set; } = "male";

@@ -46,6 +46,8 @@ export interface FamilyTreeDto {
 export interface FamilyPersonDto {
   id: string;
   treeId: string;
+  linkedTreeId?: string;
+  linkedPersonId?: string;
   name: string;
   aliases?: string[];
   gender?: 'male' | 'female' | 'unknown';
@@ -127,6 +129,7 @@ export interface FullTreeResponse {
 }
 
 type UpsertFamilyPersonPayload = Partial<FamilyPersonDto> & {
+  clearLinkedPerson?: boolean;
   clearBirthDate?: boolean;
   clearDeathDate?: boolean;
 };
