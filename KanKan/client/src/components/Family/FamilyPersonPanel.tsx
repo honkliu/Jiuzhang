@@ -86,6 +86,30 @@ const compactGenderColumn = '1.35em';
 const compactRankColumn = '1ch';
 const compactDeleteColumn = '20px';
 const compactRelationGap = 0.45;
+const compactToggleButtonSx = {
+  px: 0,
+  py: 0,
+  minHeight: '1.25rem',
+  lineHeight: 1,
+  borderRadius: '4px',
+  border: 'none',
+  backgroundColor: 'rgba(220,38,38,0.12)',
+  color: '#b91c1c',
+  boxShadow: 'inset 0 -1px 0 rgba(185,28,28,0.12)',
+  fontWeight: 500,
+  textTransform: 'none',
+  cursor: 'pointer',
+  transition: 'background-color 120ms ease, color 120ms ease, box-shadow 120ms ease',
+  '&:hover': {
+    backgroundColor: 'rgba(220,38,38,0.18)',
+    color: '#991b1b',
+    boxShadow: 'inset 0 -1px 0 rgba(153,27,27,0.18)',
+  },
+  '&:focus-visible': {
+    outline: '2px solid rgba(220,38,38,0.18)',
+    outlineOffset: '1px',
+  },
+};
 
 type GenderValue = 'male' | 'female' | 'unknown';
 
@@ -1678,7 +1702,7 @@ export const FamilyPersonPanel: React.FC<Props> = ({
                           size="small"
                           variant="text"
                           onClick={() => setRelationGenderOverrides(current => ({ ...current, [spouse.id]: toggleBinaryGender(getRelationGender(spouse)) }))}
-                          sx={{ minWidth: compactGenderColumn, width: compactGenderColumn, px: 0, py: 0, fontSize: 13, color: '#475569', justifySelf: 'center' }}
+                          sx={{ ...compactToggleButtonSx, minWidth: compactGenderColumn, width: compactGenderColumn, fontSize: 13, justifySelf: 'center' }}
                         >
                           {formatGender(getRelationGender(spouse))}
                         </Button>
@@ -1714,7 +1738,7 @@ export const FamilyPersonPanel: React.FC<Props> = ({
                           size="small"
                           variant="text"
                           onClick={() => setSpouseDialog(current => ({ ...current, gender: toggleBinaryGender(current.gender) }))}
-                          sx={{ minWidth: compactGenderColumn, width: compactGenderColumn, px: 0, py: 0, fontSize: 13, color: '#475569', justifySelf: 'center' }}
+                          sx={{ ...compactToggleButtonSx, minWidth: compactGenderColumn, width: compactGenderColumn, fontSize: 13, justifySelf: 'center' }}
                         >
                           {formatGender(spouseDialog.gender)}
                         </Button>
@@ -1754,7 +1778,7 @@ export const FamilyPersonPanel: React.FC<Props> = ({
                           size="small"
                           variant="text"
                           onClick={() => setRelationGenderOverrides(current => ({ ...current, [child.id]: toggleBinaryGender(getRelationGender(child)) }))}
-                          sx={{ minWidth: compactGenderColumn, width: compactGenderColumn, px: 0, py: 0, fontSize: 13, color: '#475569', justifySelf: 'center' }}
+                          sx={{ ...compactToggleButtonSx, minWidth: compactGenderColumn, width: compactGenderColumn, fontSize: 13, justifySelf: 'center' }}
                         >
                           {formatGender(getRelationGender(child))}
                         </Button>
@@ -1762,7 +1786,7 @@ export const FamilyPersonPanel: React.FC<Props> = ({
                           size="small"
                           variant="text"
                           onClick={() => setChildRankOverrides(current => ({ ...current, [child.id]: cycleRank(getChildRank(child, rowIndex)) }))}
-                          sx={{ minWidth: compactRankColumn, width: compactRankColumn, px: 0, py: 0, fontSize: 13, color: '#475569', textAlign: 'right', justifySelf: 'end', fontVariantNumeric: 'tabular-nums' }}
+                          sx={{ ...compactToggleButtonSx, minWidth: compactRankColumn, width: compactRankColumn, fontSize: 13, textAlign: 'right', justifySelf: 'end', fontVariantNumeric: 'tabular-nums' }}
                         >
                           {getChildRank(child, rowIndex)}
                         </Button>
@@ -1798,7 +1822,7 @@ export const FamilyPersonPanel: React.FC<Props> = ({
                             setPendingChildren(current => current.map(item => item.id === childDraft.id ? { ...item, gender: toggleBinaryGender(item.gender) } : item));
                             setPendingChildrenError(null);
                           }}
-                          sx={{ minWidth: compactGenderColumn, width: compactGenderColumn, px: 0, py: 0, fontSize: 13, color: '#475569', justifySelf: 'center' }}
+                          sx={{ ...compactToggleButtonSx, minWidth: compactGenderColumn, width: compactGenderColumn, fontSize: 13, justifySelf: 'center' }}
                         >
                           {formatGender(childDraft.gender)}
                         </Button>
@@ -1809,7 +1833,7 @@ export const FamilyPersonPanel: React.FC<Props> = ({
                             setPendingChildren(current => current.map(item => item.id === childDraft.id ? { ...item, rank: cycleRank(item.rank) } : item));
                             setPendingChildrenError(null);
                           }}
-                          sx={{ minWidth: compactRankColumn, width: compactRankColumn, px: 0, py: 0, fontSize: 13, color: '#475569', textAlign: 'right', justifySelf: 'end', fontVariantNumeric: 'tabular-nums' }}
+                          sx={{ ...compactToggleButtonSx, minWidth: compactRankColumn, width: compactRankColumn, fontSize: 13, textAlign: 'right', justifySelf: 'end', fontVariantNumeric: 'tabular-nums' }}
                         >
                           {childDraft.rank}
                         </Button>
