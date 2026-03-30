@@ -41,8 +41,8 @@ const BoxAny = Box as any;
 const WEEKDAY_LABELS = ['日', '一', '二', '三', '四', '五', '六'];
 const editableSurfaceColor = 'rgba(8,145,178,0.08)';
 const editableSurfaceBorder = 'rgba(8,145,178,0.2)';
-const panelHeaderPaddingSx = { pl: 2.25, pr: 4 };
-const panelSectionPaddingSx = { pl: 2.25, pr: 4 };
+const panelHeaderPaddingSx = { pl: 2.25, pr: 3 };
+const panelSectionPaddingSx = { pl: 2.25, pr: 3 };
 const roundedTextFieldSx = {
   '& .MuiOutlinedInput-root': {
     borderRadius: '5px',
@@ -150,6 +150,23 @@ const compactGenderColumn = '1.35em';
 const compactRankColumn = '1ch';
 const compactDeleteColumn = '20px';
 const compactRelationGap = 0.45;
+const relationTableBackground = [
+  'linear-gradient(90deg,',
+  'rgba(34,197,94,0.08) 0%,',
+  'rgba(34,197,94,0.08) 33.333%,',
+  'rgba(15,23,42,0.06) 33.333%,',
+  'rgba(15,23,42,0.06) 66.666%,',
+  'rgba(34,197,94,0.08) 66.666%,',
+  'rgba(34,197,94,0.08) 100%)',
+].join(' ');
+const relationTableSurfaceSx = {
+  mb: 0.2,
+  px: 0.8,
+  py: 0.3,
+  borderRadius: '8px',
+  backgroundImage: relationTableBackground,
+  boxShadow: 'inset 0 0 0 1px rgba(15,23,42,0.05)',
+};
 const compactToggleButtonSx = {
   px: 0,
   py: 0,
@@ -214,9 +231,19 @@ interface PendingChildDraft {
   rank: string;
 }
 
+interface PendingParentDraft {
+  id: string;
+  name: string;
+  gender: GenderValue;
+}
+
 interface ParsedPendingChildDraft extends PendingChildDraft {
   trimmedName: string;
   parsedRank: number;
+}
+
+interface ParsedPendingParentDraft extends PendingParentDraft {
+  trimmedName: string;
 }
 
 interface Props {
@@ -743,6 +770,18 @@ function createPendingChildDraft(rank: string): PendingChildDraft {
   };
 }
 
+function createPendingParentDraft(): PendingParentDraft {
+  const randomId = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+    ? crypto.randomUUID()
+    : `${Date.now()}_${Math.round(Math.random() * 100000)}`;
+
+  return {
+    id: `pending_parent_${randomId}`,
+    name: '',
+    gender: 'male',
+  };
+}
+
 function serializeEditorState(state: EditorState) {
   return JSON.stringify(state);
 }
@@ -1063,9 +1102,11 @@ export const FamilyPersonPanel: React.FC<Props> = ({
     saving: false,
     error: null,
   });
+  const [pendingParents, setPendingParents] = useState<PendingParentDraft[]>([]);
   const [pendingChildren, setPendingChildren] = useState<PendingChildDraft[]>([]);
   const [relationGenderOverrides, setRelationGenderOverrides] = useState<Record<string, GenderValue>>({});
   const [childRankOverrides, setChildRankOverrides] = useState<Record<string, string>>({});
+  const [pendingParentsError, setPendingParentsError] = useState<string | null>(null);
   const [pendingChildrenError, setPendingChildrenError] = useState<string | null>(null);
   const [activePhotoIndex, setActivePhotoIndex] = useState<number | null>(null);
   const photoInputRef = useRef<HTMLInputElement | null>(null);
@@ -1103,9 +1144,11 @@ export const FamilyPersonPanel: React.FC<Props> = ({
     setPanelError(null);
     setPanelInfo(null);
     setSpouseDialog({ open: false, name: '', gender: 'male', rank: '1', saving: false, error: null });
+    setPendingParents([]);
     setPendingChildren([]);
     setRelationGenderOverrides({});
     setChildRankOverrides({});
+    setPendingParentsError(null);
     setPendingChildrenError(null);
     setActivePhotoIndex(null);
   }, [person]);
@@ -1229,6 +1272,9 @@ export const FamilyPersonPanel: React.FC<Props> = ({
   const poem = tree?.zibeiPoem ?? [];
   const zibeiChar = poem[person.generation - rootGen] ?? '';
   const colorSet = getGenderColor(person.gender);
+  const directParents = person.parentRels
+    .map(rel => allPersons.find(candidate => candidate.id === rel.fromId))
+    .filter(Boolean) as FamilyNode[];
   const children = person.children;
   const orderedChildren = getOrderedChildren(person);
   const spouses = person.spouses;
@@ -1240,10 +1286,11 @@ export const FamilyPersonPanel: React.FC<Props> = ({
   const linkedRelationRowCount = linkedRelationColumns.reduce((maxCount, column) => Math.max(maxCount, column.items.length), 0);
   const availableLinkedTrees = availableTrees.filter(candidate => candidate.id !== tree?.id);
   const relationshipEditing = Boolean(canEdit && editing);
+  const parentRowCount = directParents.length + pendingParents.length;
   const spouseDraftVisible = relationshipEditing && spouseDialog.open;
   const spouseRowCount = spouses.length + (spouseDraftVisible ? 1 : 0);
   const childRowCount = orderedChildren.length + pendingChildren.length;
-  const editableRelationRowCount = Math.max(spouseRowCount, childRowCount, 1);
+  const editableRelationRowCount = Math.max(parentRowCount, spouseRowCount, childRowCount, 1);
   const coverImage = editorState.photos[0]?.url || person.avatarUrl;
   const photoUrls = (person.photos ?? []).map(photo => photo.url);
   const photoGroups = (person.photos ?? []).map(photo => ({
@@ -1266,9 +1313,11 @@ export const FamilyPersonPanel: React.FC<Props> = ({
     setPanelError(null);
     setPanelInfo(null);
     setSpouseDialog({ open: false, name: '', gender: 'male', rank: '1', saving: false, error: null });
+    setPendingParents([]);
     setPendingChildren([]);
     setRelationGenderOverrides({});
     setChildRankOverrides({});
+    setPendingParentsError(null);
     setPendingChildrenError(null);
   };
 
@@ -1301,6 +1350,20 @@ export const FamilyPersonPanel: React.FC<Props> = ({
     }
 
     return parsedPendingChildren;
+  };
+
+  const parsePendingParents = (): ParsedPendingParentDraft[] | null => {
+    const parsedPendingParents = pendingParents.map(draft => ({
+      ...draft,
+      trimmedName: draft.name.trim(),
+    }));
+
+    if (parsedPendingParents.some(draft => !draft.trimmedName)) {
+      setPendingParentsError('请输入父母姓名。');
+      return null;
+    }
+
+    return parsedPendingParents;
   };
 
   const validateChildRankOverrides = () => {
@@ -1394,6 +1457,56 @@ export const FamilyPersonPanel: React.FC<Props> = ({
     }
   };
 
+  const ensureSpouseRelationship = async (leftId: string, rightId: string) => {
+    if (!tree || leftId === rightId) return;
+
+    const hasExistingRelationship = allPersons.some(candidate => candidate.id === leftId && candidate.spouseRels.some(rel =>
+      rel.type === 'spouse'
+      && ((rel.fromId === leftId && rel.toId === rightId) || (rel.fromId === rightId && rel.toId === leftId))
+    ));
+
+    if (hasExistingRelationship) {
+      return;
+    }
+
+    await familyService.addRelationship(tree.id, {
+      type: 'spouse',
+      fromId: leftId,
+      toId: rightId,
+      unionType: 'married',
+      sortOrder: 0,
+    });
+  };
+
+  const savePendingParents = async (parsedPendingParents: ParsedPendingParentDraft[]) => {
+    if (!tree || parsedPendingParents.length === 0) return;
+
+    const parentIds = [...directParents.map(parent => parent.id)];
+
+    for (const entry of parsedPendingParents) {
+      const created = await familyService.addPerson(tree.id, {
+        name: entry.trimmedName,
+        gender: entry.gender,
+        generation: person.generation - 1,
+      });
+
+      await familyService.addRelationship(tree.id, {
+        type: 'parent-child',
+        fromId: created.id,
+        toId: person.id,
+        parentRole: entry.gender === 'female' ? 'mother' : entry.gender === 'male' ? 'father' : undefined,
+        childStatus: 'biological',
+        sortOrder: 0,
+      });
+
+      if (parentIds.length === 1) {
+        await ensureSpouseRelationship(parentIds[0], created.id);
+      }
+
+      parentIds.push(created.id);
+    }
+  };
+
   const handleSave = async () => {
     if (!tree) return;
 
@@ -1416,6 +1529,11 @@ export const FamilyPersonPanel: React.FC<Props> = ({
       return;
     }
 
+    const parsedPendingParents = parsePendingParents();
+    if (parsedPendingParents === null) {
+      return;
+    }
+
     const parsedPendingChildren = parsePendingChildren();
     if (parsedPendingChildren === null) {
       return;
@@ -1427,6 +1545,7 @@ export const FamilyPersonPanel: React.FC<Props> = ({
     setSaving(true);
     setPanelError(null);
     setPanelInfo(null);
+    setPendingParentsError(null);
     setPendingChildrenError(null);
     if (spouseDialog.open) {
       setSpouseDialog(current => ({ ...current, error: null }));
@@ -1452,7 +1571,7 @@ export const FamilyPersonPanel: React.FC<Props> = ({
         photos: editorState.photos,
       });
 
-      const relationGenderUpdates = [...spouses, ...orderedChildren]
+      const relationGenderUpdates = [...directParents, ...spouses, ...orderedChildren]
         .filter(node => relationGenderOverrides[node.id] && relationGenderOverrides[node.id] !== node.gender)
         .map(node => familyService.updatePerson(tree.id, node.id, { gender: relationGenderOverrides[node.id] }));
 
@@ -1460,6 +1579,7 @@ export const FamilyPersonPanel: React.FC<Props> = ({
         await Promise.all(relationGenderUpdates);
       }
 
+      await savePendingParents(parsedPendingParents);
       await savePendingChildren(parsedPendingChildren);
       if (pendingSpouseName) {
         await createSpouseRelationship(pendingSpouseName, spouseDialog.gender);
@@ -1467,9 +1587,11 @@ export const FamilyPersonPanel: React.FC<Props> = ({
 
       await onRefresh(person.id);
       setEditing(false);
+      setPendingParents([]);
       setPendingChildren([]);
       setRelationGenderOverrides({});
       setChildRankOverrides({});
+      setPendingParentsError(null);
       setPendingChildrenError(null);
       if (pendingSpouseName) {
         setSpouseDialog({ open: false, name: '', gender: 'male', rank: '1', saving: false, error: null });
@@ -1602,11 +1724,33 @@ export const FamilyPersonPanel: React.FC<Props> = ({
     }
   };
 
+  const handleDeleteParent = async (parentId: string) => {
+    if (!tree) return;
+
+    const relationship = person.parentRels.find(rel => rel.type === 'parent-child' && rel.fromId === parentId);
+
+    if (!relationship) {
+      setPanelError('未找到父母关系，无法删除。');
+      return;
+    }
+
+    setPanelError(null);
+    setPanelInfo(null);
+
+    try {
+      await familyService.deleteRelationship(tree.id, relationship.id);
+      await onRefresh(person.id);
+      setPanelInfo('已删除父母关系。');
+    } catch {
+      setPanelError('删除父母失败。');
+    }
+  };
+
   return (
     <Paper
       elevation={3}
       sx={{
-        width: fullWidth ? '100%' : 346,
+        width: fullWidth ? '100%' : 404,
         height: '100%',
         overflowY: 'auto',
         overflowX: 'hidden',
@@ -1914,7 +2058,7 @@ export const FamilyPersonPanel: React.FC<Props> = ({
       <Divider />
       <BoxAny sx={{ ...panelSectionPaddingSx, pt: 1.25, pb: 0.4 }}>
         {!editing && (
-          <BoxAny sx={{ mb: 0.2 }}>
+          <BoxAny sx={relationTableSurfaceSx}>
             <BoxAny
               sx={{
                 mt: 0,
@@ -1924,7 +2068,7 @@ export const FamilyPersonPanel: React.FC<Props> = ({
                 sx={{
                   display: 'grid',
                   gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-                  columnGap: 1.5,
+                  columnGap: 1.1,
                   py: 0.75,
                   borderBottom: relationRowCount > 0 ? '1px solid rgba(15,23,42,0.08)' : 'none',
                 }}
@@ -1942,7 +2086,7 @@ export const FamilyPersonPanel: React.FC<Props> = ({
                   sx={{
                     display: 'grid',
                     gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-                    columnGap: 1.5,
+                    columnGap: 1.1,
                     py: 0.75,
                     borderBottom: rowIndex === relationRowCount - 1 ? 'none' : '1px solid rgba(15,23,42,0.08)',
                   }}
@@ -1980,16 +2124,34 @@ export const FamilyPersonPanel: React.FC<Props> = ({
         )}
 
         {editing && (
-          <BoxAny sx={{ mb: 0.2 }}>
+          <BoxAny sx={relationTableSurfaceSx}>
             <BoxAny
               sx={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-                columnGap: 1.75,
+                gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                columnGap: 1.1,
                 py: 0.75,
                 borderBottom: editableRelationRowCount > 0 ? '1px solid rgba(15,23,42,0.08)' : 'none',
               }}
             >
+              <BoxAny sx={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: 11 }}>
+                  父母
+                </Typography>
+                {relationshipEditing && (
+                  <Button
+                    size="small"
+                    onClick={() => {
+                      setPendingParents(current => [...current, createPendingParentDraft()]);
+                      setPendingParentsError(null);
+                    }}
+                    sx={{ ml: 'auto', flexShrink: 0, minWidth: 30, px: 0.5, fontSize: 18, lineHeight: 1, fontWeight: 500 }}
+                  >
+                    +
+                  </Button>
+                )}
+              </BoxAny>
+
               <BoxAny sx={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
                 <Typography variant="caption" color="text.secondary" sx={{ fontSize: 11 }}>
                   配偶
@@ -2007,7 +2169,7 @@ export const FamilyPersonPanel: React.FC<Props> = ({
 
               <BoxAny sx={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
                 <Typography variant="caption" color="text.secondary" sx={{ fontSize: 11 }}>
-                  子女（{children.length}人）
+                  子女
                 </Typography>
                 {relationshipEditing && (
                   <Button
@@ -2027,6 +2189,9 @@ export const FamilyPersonPanel: React.FC<Props> = ({
             {Array.from({ length: editableRelationRowCount }, (_, rowIndex) => {
               const spouse = rowIndex < spouses.length ? spouses[rowIndex] : null;
               const isSpouseDraftRow = spouseDraftVisible && rowIndex === spouses.length;
+              const parent = rowIndex < directParents.length ? directParents[rowIndex] : null;
+              const parentDraftIndex = rowIndex - directParents.length;
+              const parentDraft = parentDraftIndex >= 0 ? pendingParents[parentDraftIndex] ?? null : null;
               const child = rowIndex < orderedChildren.length ? orderedChildren[rowIndex] : null;
               const childDraftIndex = rowIndex - orderedChildren.length;
               const childDraft = childDraftIndex >= 0 ? pendingChildren[childDraftIndex] ?? null : null;
@@ -2036,13 +2201,89 @@ export const FamilyPersonPanel: React.FC<Props> = ({
                   key={`editable-relation-row-${rowIndex}`}
                   sx={{
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-                    columnGap: 1.75,
+                    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                    columnGap: 1.1,
                     py: 0.75,
                     alignItems: 'start',
                     borderBottom: rowIndex === editableRelationRowCount - 1 ? 'none' : '1px solid rgba(15,23,42,0.08)',
                   }}
                 >
+                  <BoxAny sx={{ minWidth: 0 }}>
+                    {parent ? (
+                      <BoxAny
+                        sx={{
+                          display: 'grid',
+                          gridTemplateColumns: relationshipEditing
+                            ? `minmax(0, 1fr) ${compactGenderColumn} ${compactDeleteColumn}`
+                            : `minmax(0, 1fr) ${compactGenderColumn}`,
+                          gap: compactRelationGap,
+                          alignItems: 'center',
+                        }}
+                      >
+                        <Link
+                          component="button"
+                          variant="body2"
+                          underline="hover"
+                          onClick={() => onNavigate(parent.id)}
+                          sx={{ justifySelf: 'start', textAlign: 'left', fontSize: 13, minWidth: 0, wordBreak: 'break-word' }}
+                        >
+                          {formatDisplayName(parent.name)}
+                        </Link>
+                        <Button
+                          size="small"
+                          variant="text"
+                          onClick={() => setRelationGenderOverrides(current => ({ ...current, [parent.id]: toggleBinaryGender(getRelationGender(parent)) }))}
+                          sx={{ ...compactToggleButtonSx, minWidth: compactGenderColumn, width: compactGenderColumn, fontSize: 13, justifySelf: 'center' }}
+                        >
+                          {formatGender(getRelationGender(parent))}
+                        </Button>
+                        {relationshipEditing ? (
+                          <IconButton size="small" onClick={() => handleDeleteParent(parent.id)} sx={{ width: 24, height: 24, justifySelf: 'end' }}>
+                            <DeleteOutlineIcon fontSize="small" />
+                          </IconButton>
+                        ) : null}
+                      </BoxAny>
+                    ) : parentDraft ? (
+                      <BoxAny
+                        sx={{
+                          display: 'grid',
+                          gridTemplateColumns: `minmax(0, 1fr) ${compactGenderColumn} ${compactDeleteColumn}`,
+                          gap: compactRelationGap,
+                          alignItems: 'center',
+                        }}
+                      >
+                        <InputBase
+                          placeholder="xxx"
+                          value={parentDraft.name}
+                          onChange={event => {
+                            setPendingParents(current => current.map(item => item.id === parentDraft.id ? { ...item, name: event.target.value } : item));
+                            setPendingParentsError(null);
+                          }}
+                          fullWidth
+                          sx={inlineRowInputSx}
+                        />
+                        <Button
+                          size="small"
+                          variant="text"
+                          onClick={() => {
+                            setPendingParents(current => current.map(item => item.id === parentDraft.id ? { ...item, gender: toggleBinaryGender(item.gender) } : item));
+                            setPendingParentsError(null);
+                          }}
+                          sx={{ ...compactToggleButtonSx, minWidth: compactGenderColumn, width: compactGenderColumn, fontSize: 13, justifySelf: 'center' }}
+                        >
+                          {formatGender(parentDraft.gender)}
+                        </Button>
+                        <IconButton size="small" onClick={() => setPendingParents(current => current.filter(item => item.id !== parentDraft.id))} sx={{ width: 24, height: 24, justifySelf: 'end' }}>
+                          <DeleteOutlineIcon fontSize="small" />
+                        </IconButton>
+                      </BoxAny>
+                    ) : parentRowCount === 0 && rowIndex === 0 ? (
+                      <Typography variant="body2" color="text.secondary" sx={{ fontSize: 12, fontStyle: 'italic' }}>
+                        暂无记录
+                      </Typography>
+                    ) : null}
+                  </BoxAny>
+
                   <BoxAny sx={{ minWidth: 0 }}>
                     {spouse ? (
                       <BoxAny
@@ -2217,6 +2458,7 @@ export const FamilyPersonPanel: React.FC<Props> = ({
               );
             })}
 
+            {pendingParentsError && <Alert severity="error" sx={{ mt: 0.75 }}>{pendingParentsError}</Alert>}
             {spouseDialog.error && <Alert severity="error" sx={{ mt: 0.75 }}>{spouseDialog.error}</Alert>}
             {pendingChildrenError && <Alert severity="error" sx={{ mt: 0.75 }}>{pendingChildrenError}</Alert>}
           </BoxAny>
@@ -2297,11 +2539,12 @@ export const FamilyPersonPanel: React.FC<Props> = ({
                 )}
 
                 <BoxAny sx={{ borderTop: '1px solid rgba(15,23,42,0.08)', pt: 0.9 }}>
+                  <BoxAny sx={relationTableSurfaceSx}>
                   <BoxAny
                     sx={{
                       display: 'grid',
                       gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-                      columnGap: 1.5,
+                      columnGap: 1.1,
                       py: 0.75,
                       borderBottom: linkedRelationRowCount > 0 ? '1px solid rgba(15,23,42,0.08)' : 'none',
                     }}
@@ -2319,7 +2562,7 @@ export const FamilyPersonPanel: React.FC<Props> = ({
                       sx={{
                         display: 'grid',
                         gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-                        columnGap: 1.5,
+                        columnGap: 1.1,
                         py: 0.75,
                         borderBottom: rowIndex === linkedRelationRowCount - 1 ? 'none' : '1px solid rgba(15,23,42,0.08)',
                       }}
@@ -2352,6 +2595,7 @@ export const FamilyPersonPanel: React.FC<Props> = ({
                       暂无记录
                     </Typography>
                   )}
+                  </BoxAny>
                 </BoxAny>
               </BoxAny>
             )}

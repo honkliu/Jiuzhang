@@ -628,7 +628,7 @@ export const FamilyPage: React.FC = () => {
             {/* Person detail panel — floating for tree mode */}
             {selectedPerson && !isMobile && (
               <BoxAny sx={{
-                width: 324, flexShrink: 0, overflow: 'hidden',
+                width: 404, flexShrink: 0, overflow: 'hidden',
                 borderRadius: '8px',
                 borderRight: '1px solid rgba(15,23,42,0.08)',
                 ...(viewMode === 'tree' ? {
