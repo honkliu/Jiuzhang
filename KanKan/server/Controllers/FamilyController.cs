@@ -285,8 +285,12 @@ public class FamilyController : ControllerBase
             Type = req.Type,
             FromId = req.FromId,
             ToId = req.ToId,
-            ParentRole = req.ParentRole,
-            ChildStatus = req.ChildStatus,
+            ParentRole = NormalizeOptionalString(req.ParentRole),
+            ChildStatus = NormalizeOptionalString(req.ChildStatus),
+            LineageType = NormalizeOptionalString(req.LineageType),
+            DisplayTag = NormalizeOptionalString(req.DisplayTag),
+            SourceParentId = NormalizeOptionalString(req.SourceParentId),
+            SourceChildRank = req.SourceChildRank.HasValue && req.SourceChildRank.Value > 0 ? req.SourceChildRank.Value : null,
             SortOrder = req.SortOrder,
             UnionType = req.UnionType,
             StartYear = req.StartYear,
@@ -309,6 +313,12 @@ public class FamilyController : ControllerBase
         if (rel == null || rel.TreeId != treeId) return NotFound();
         if (!FamilyAccessPolicy.CanEditTreeDomain(_configuration, user, rel.Domain)) return Forbid();
 
+        if (req.ParentRole != null) rel.ParentRole = NormalizeOptionalString(req.ParentRole);
+        if (req.ChildStatus != null) rel.ChildStatus = NormalizeOptionalString(req.ChildStatus);
+        if (req.LineageType != null) rel.LineageType = NormalizeOptionalString(req.LineageType);
+        if (req.DisplayTag != null) rel.DisplayTag = NormalizeOptionalString(req.DisplayTag);
+        if (req.SourceParentId != null) rel.SourceParentId = NormalizeOptionalString(req.SourceParentId);
+        if (req.SourceChildRank.HasValue) rel.SourceChildRank = req.SourceChildRank.Value > 0 ? req.SourceChildRank.Value : null;
         if (req.SortOrder.HasValue) rel.SortOrder = req.SortOrder.Value;
         if (req.Notes != null) rel.Notes = req.Notes;
 
@@ -408,7 +418,8 @@ public class FamilyController : ControllerBase
     private static FamilyRelationshipResponse ToRelResponse(FamilyRelationship r) => new()
     {
         Id = r.Id, Type = r.Type, FromId = r.FromId, ToId = r.ToId,
-        ParentRole = r.ParentRole, ChildStatus = r.ChildStatus, SortOrder = r.SortOrder,
+        ParentRole = r.ParentRole, ChildStatus = r.ChildStatus, LineageType = r.LineageType,
+        DisplayTag = r.DisplayTag, SourceParentId = r.SourceParentId, SourceChildRank = r.SourceChildRank, SortOrder = r.SortOrder,
         UnionType = r.UnionType, StartYear = r.StartYear, EndYear = r.EndYear, Notes = r.Notes
     };
 
@@ -591,5 +602,12 @@ public class FamilyController : ControllerBase
             "未知" or "unknown" => "unknown",
             _ => fallback
         };
+    }
+
+    private static string? NormalizeOptionalString(string? value)
+    {
+        if (value == null) return null;
+        var trimmed = value.Trim();
+        return string.IsNullOrWhiteSpace(trimmed) ? null : trimmed;
     }
 }

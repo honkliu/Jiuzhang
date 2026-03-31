@@ -21,6 +21,7 @@ import {
   Typography,
 } from '@mui/material';
 import {
+  Check as CheckIcon,
   Close as CloseIcon,
   DeleteOutline as DeleteOutlineIcon,
 } from '@mui/icons-material';
@@ -167,6 +168,32 @@ const relationTableSurfaceSx = {
   backgroundImage: relationTableBackground,
   boxShadow: 'inset 0 0 0 1px rgba(15,23,42,0.05)',
 };
+
+function buildRelationTableBackground(columnCount: number) {
+  if (columnCount <= 1) {
+    return 'rgba(34,197,94,0.08)';
+  }
+
+  const segments = Array.from({ length: columnCount }, (_, index) => {
+    const start = (index * 100) / columnCount;
+    const end = ((index + 1) * 100) / columnCount;
+    const color = index % 2 === 0 ? 'rgba(34,197,94,0.08)' : 'rgba(15,23,42,0.06)';
+    return `${color} ${start}%, ${color} ${end}%`;
+  });
+
+  return `linear-gradient(90deg, ${segments.join(', ')})`;
+}
+
+function getRelationTableSurfaceSx(columnCount: number) {
+  return {
+    ...relationTableSurfaceSx,
+    backgroundImage: buildRelationTableBackground(columnCount),
+  };
+}
+
+function getRelationGridColumns(columnCount: number) {
+  return `repeat(${Math.max(columnCount, 1)}, minmax(0, 1fr))`;
+}
 const compactToggleButtonSx = {
   px: 0,
   py: 0,
@@ -246,6 +273,14 @@ interface ParsedPendingParentDraft extends PendingParentDraft {
   trimmedName: string;
 }
 
+interface RelationLineageDraft {
+  displayTag: string;
+  lineageType: string;
+  sourceParentId: string;
+  sourceChildRank: string;
+  adoptiveParentId: string;
+}
+
 interface Props {
   person: FamilyNode | null;
   tree: FamilyTreeDto | null;
@@ -312,21 +347,6 @@ function getGenderColor(gender?: string) {
     return { background: '#f1f5f9', border: '#94a3b8', text: '#475569' };
   }
   return { background: '#dbeafe', border: '#60a5fa', text: '#2563eb' };
-}
-
-function normalizeComparableText(value?: string) {
-  return value?.trim() ?? '';
-}
-
-function areDatesEqual(left?: FamilyDate, right?: FamilyDate) {
-  if (!left && !right) return true;
-  if (!left || !right) return false;
-
-  return left.year === right.year
-    && left.month === right.month
-    && left.day === right.day
-    && (left.calendarType ?? 'solar') === (right.calendarType ?? 'solar')
-    && Boolean(left.isLeapMonth) === Boolean(right.isLeapMonth);
 }
 
 function hydrateFamilyNodes(persons: FamilyPersonDto[], rels: FamilyRelationshipDto[]) {
@@ -411,16 +431,56 @@ function getDisplayChildren(person: FamilyNode) {
   });
 }
 
+function buildRelationAnnotation(rel: FamilyNode['parentRels'][number] | undefined) {
+  if (!rel) return '';
+
+  const parts: string[] = [];
+  if (rel.displayTag?.trim()) {
+    parts.push(rel.displayTag.trim());
+  } else if (rel.lineageType === 'adoptive') {
+    parts.push('继');
+  }
+
+  if (rel.notes?.trim()) {
+    parts.push(rel.notes.trim());
+  }
+
+  return parts.join(' · ');
+}
+
+function toRelationLineageDraft(rel: FamilyNode['parentRels'][number]): RelationLineageDraft {
+  return {
+    displayTag: rel.displayTag?.trim() ?? '',
+    lineageType: rel.lineageType?.trim() ?? '',
+    sourceParentId: rel.sourceParentId?.trim() ?? '',
+    sourceChildRank: rel.sourceChildRank ? String(rel.sourceChildRank) : '',
+    adoptiveParentId: '',
+  };
+}
+
+function isAdoptiveLineageRelationship(rel: FamilyNode['parentRels'][number] | undefined) {
+  if (!rel) return false;
+  return rel.displayTag?.trim() === '继子' || rel.lineageType?.trim() === 'adoptive';
+}
+
+function getBrotherCandidates(person: FamilyNode, allPersons: FamilyNode[]) {
+  const parentIds = new Set(person.parentRels.map(rel => rel.fromId));
+  if (parentIds.size === 0) return [] as FamilyNode[];
+
+  return allPersons.filter(candidate => {
+    if (candidate.id === person.id) return false;
+    if (candidate.gender === 'female') return false;
+    return candidate.parentRels.some(rel => parentIds.has(rel.fromId));
+  });
+}
+
 function getRelationColumns(person: FamilyNode, allPersons: FamilyNode[]) {
-  const resolveParents = (target: FamilyNode) => target.parentRels
+  const resolveParents = (target: FamilyNode, predicate: (rel: FamilyNode['parentRels'][number]) => boolean) => target.parentRels
+    .filter(predicate)
     .map(rel => allPersons.find(candidate => candidate.id === rel.fromId))
     .filter(Boolean) as FamilyNode[];
 
-  const directParents = resolveParents(person);
-  const parentSeeds = directParents.length > 0
-    ? directParents
-    : person.spouses.flatMap(spouse => resolveParents(spouse));
-  const parents = (() => {
+  const expandParents = (parentSeeds: FamilyNode[]) => {
     const byId = new Map<string, FamilyNode>();
 
     for (const parent of parentSeeds) {
@@ -436,7 +496,27 @@ function getRelationColumns(person: FamilyNode, allPersons: FamilyNode[]) {
     }
 
     return [...byId.values()];
+  };
+
+  const biologicalParentSeeds = (() => {
+    const direct = resolveParents(person, rel => !isAdoptiveLineageRelationship(rel));
+    return direct.length > 0
+      ? direct
+      : person.spouses.flatMap(spouse => resolveParents(spouse, rel => !isAdoptiveLineageRelationship(rel)));
   })();
+
+  const adoptiveParentSeeds = (() => {
+    const direct = resolveParents(person, rel => isAdoptiveLineageRelationship(rel));
+    return direct.length > 0
+      ? direct
+      : person.spouses.flatMap(spouse => resolveParents(spouse, rel => isAdoptiveLineageRelationship(rel)));
+  })();
+
+  const adoptiveParents = expandParents(adoptiveParentSeeds);
+  const biologicalParents = expandParents(biologicalParentSeeds);
+  const parents = adoptiveParents.length > 0 ? adoptiveParents : biologicalParents;
+
+  const parentRelationById = new Map(person.parentRels.map(rel => [rel.fromId, rel]));
 
   return [
     {
@@ -446,6 +526,7 @@ function getRelationColumns(person: FamilyNode, allPersons: FamilyNode[]) {
         id: parent.id,
         label: formatDisplayName(parent.name),
         suffix: toParentOrderLabel(index + 1),
+        annotation: buildRelationAnnotation(parentRelationById.get(parent.id)),
       })),
     },
     {
@@ -455,6 +536,7 @@ function getRelationColumns(person: FamilyNode, allPersons: FamilyNode[]) {
         id: spouse.id,
         label: formatDisplayName(spouse.name),
         suffix: toParentOrderLabel(index + 1),
+        annotation: '',
       })),
     },
     {
@@ -464,9 +546,39 @@ function getRelationColumns(person: FamilyNode, allPersons: FamilyNode[]) {
         id: child.id,
         label: formatDisplayName(child.name),
         suffix: toParentOrderLabel(index + 1),
+        annotation: buildRelationAnnotation(child.parentRels.find(rel => rel.type === 'parent-child' && rel.fromId === person.id)),
       })),
     },
   ] as const;
+}
+
+function getBiologicalParentItems(person: FamilyNode, allPersons: FamilyNode[]) {
+  const biologicalParentSeeds = person.parentRels
+    .filter(rel => !isAdoptiveLineageRelationship(rel))
+    .map(rel => allPersons.find(candidate => candidate.id === rel.fromId))
+    .filter(Boolean) as FamilyNode[];
+
+  const byId = new Map<string, FamilyNode>();
+  for (const parent of biologicalParentSeeds) {
+    byId.set(parent.id, parent);
+  }
+
+  for (const parent of biologicalParentSeeds) {
+    for (const spouse of parent.spouses) {
+      if (spouse.id !== person.id && !byId.has(spouse.id)) {
+        byId.set(spouse.id, spouse);
+      }
+    }
+  }
+
+  const parentRelationById = new Map(person.parentRels.map(rel => [rel.fromId, rel]));
+
+  return [...byId.values()].map((parent, index) => ({
+    id: parent.id,
+    label: formatDisplayName(parent.name),
+    suffix: toParentOrderLabel(index + 1),
+    annotation: buildRelationAnnotation(parentRelationById.get(parent.id)),
+  }));
 }
 
 function formatDate(date?: FamilyDate) {
@@ -1104,6 +1216,7 @@ export const FamilyPersonPanel: React.FC<Props> = ({
   });
   const [pendingParents, setPendingParents] = useState<PendingParentDraft[]>([]);
   const [pendingChildren, setPendingChildren] = useState<PendingChildDraft[]>([]);
+  const [relationLineageDrafts, setRelationLineageDrafts] = useState<Record<string, RelationLineageDraft>>({});
   const [relationGenderOverrides, setRelationGenderOverrides] = useState<Record<string, GenderValue>>({});
   const [childRankOverrides, setChildRankOverrides] = useState<Record<string, string>>({});
   const [pendingParentsError, setPendingParentsError] = useState<string | null>(null);
@@ -1146,6 +1259,7 @@ export const FamilyPersonPanel: React.FC<Props> = ({
     setSpouseDialog({ open: false, name: '', gender: 'male', rank: '1', saving: false, error: null });
     setPendingParents([]);
     setPendingChildren([]);
+    setRelationLineageDrafts({});
     setRelationGenderOverrides({});
     setChildRankOverrides({});
     setPendingParentsError(null);
@@ -1281,11 +1395,69 @@ export const FamilyPersonPanel: React.FC<Props> = ({
   const getRelationGender = (node: FamilyNode): GenderValue => relationGenderOverrides[node.id] ?? (node.gender === 'female' ? 'female' : 'male');
   const getChildRank = (child: FamilyNode, fallbackIndex: number) => childRankOverrides[child.id] ?? String(fallbackIndex + 1);
   const relationColumns = getRelationColumns(person, allPersons);
+  const biologicalParentItems = getBiologicalParentItems(person, allPersons);
+  const hasAdoptiveParentRelations = person.parentRels.some(rel => isAdoptiveLineageRelationship(rel));
   const relationRowCount = relationColumns.reduce((maxCount, column) => Math.max(maxCount, column.items.length), 0);
   const linkedRelationColumns = linkedViewState ? getRelationColumns(linkedViewState.person, linkedViewState.persons) : [];
+  const linkedBiologicalParentItems = linkedViewState ? getBiologicalParentItems(linkedViewState.person, linkedViewState.persons) : [];
+  const linkedHasAdoptiveParentRelations = linkedViewState ? linkedViewState.person.parentRels.some(rel => isAdoptiveLineageRelationship(rel)) : false;
   const linkedRelationRowCount = linkedRelationColumns.reduce((maxCount, column) => Math.max(maxCount, column.items.length), 0);
+  const relationGridColumns = getRelationGridColumns(relationColumns.length);
+  const linkedRelationGridColumns = getRelationGridColumns(linkedRelationColumns.length);
   const availableLinkedTrees = availableTrees.filter(candidate => candidate.id !== tree?.id);
   const relationshipEditing = Boolean(canEdit && editing);
+  const editableParentRelationshipsRaw = directParents
+    .map(parent => ({
+      relationship: person.parentRels.find(rel => rel.type === 'parent-child' && rel.fromId === parent.id),
+      counterpart: parent,
+      kind: 'parent' as const,
+    }))
+    .filter((entry): entry is { relationship: FamilyNode['parentRels'][number]; counterpart: FamilyNode; kind: 'parent' } => Boolean(entry.relationship) && !isAdoptiveLineageRelationship(entry.relationship));
+  const editableParentRelationships = (() => {
+    if (editableParentRelationshipsRaw.length <= 1) return editableParentRelationshipsRaw;
+    const fatherSideEntries = editableParentRelationshipsRaw.filter(entry => entry.counterpart.gender !== 'female');
+    if (fatherSideEntries.length > 0) {
+      return [fatherSideEntries[0]];
+    }
+    return [editableParentRelationshipsRaw[0]];
+  })();
+  const editableLineageRelationships = editableParentRelationships;
+  const getLineageParticipants = (entry: typeof editableLineageRelationships[number]) => {
+    const biologicalParent = entry.counterpart;
+    const childNode = person;
+    return { biologicalParent, childNode };
+  };
+  const getPairedAdoptiveRelation = (entry: typeof editableLineageRelationships[number]) => {
+    const { biologicalParent, childNode } = getLineageParticipants(entry);
+    return childNode.parentRels.find(rel => rel.id !== entry.relationship.id
+      && rel.type === 'parent-child'
+      && rel.fromId !== biologicalParent.id
+      && (isAdoptiveLineageRelationship(rel) || rel.sourceParentId === biologicalParent.id));
+  };
+  const getOriginalRelationLineageDraft = (entry: typeof editableLineageRelationships[number]) => {
+    const original = toRelationLineageDraft(entry.relationship);
+    const pairedAdoptiveRelation = getPairedAdoptiveRelation(entry);
+    return {
+      ...original,
+      adoptiveParentId: pairedAdoptiveRelation?.fromId ?? '',
+    };
+  };
+  const getRelationLineageDraft = (entry: typeof editableLineageRelationships[number]) => ({
+    ...getOriginalRelationLineageDraft(entry),
+    ...(relationLineageDrafts[entry.relationship.id] ?? {}),
+  });
+  const getAdoptiveBrotherOptions = (entry: typeof editableLineageRelationships[number]) => {
+    const { biologicalParent } = getLineageParticipants(entry);
+    const options = getBrotherCandidates(biologicalParent, allPersons);
+    const selectedTargetId = (relationLineageDrafts[entry.relationship.id]?.adoptiveParentId ?? getPairedAdoptiveRelation(entry)?.fromId ?? '').trim();
+    if (selectedTargetId && !options.some(candidate => candidate.id === selectedTargetId)) {
+      const selectedTarget = allPersons.find(candidate => candidate.id === selectedTargetId);
+      if (selectedTarget) {
+        return [...options, selectedTarget];
+      }
+    }
+    return options;
+  };
   const parentRowCount = directParents.length + pendingParents.length;
   const spouseDraftVisible = relationshipEditing && spouseDialog.open;
   const spouseRowCount = spouses.length + (spouseDraftVisible ? 1 : 0);
@@ -1315,6 +1487,7 @@ export const FamilyPersonPanel: React.FC<Props> = ({
     setSpouseDialog({ open: false, name: '', gender: 'male', rank: '1', saving: false, error: null });
     setPendingParents([]);
     setPendingChildren([]);
+    setRelationLineageDrafts({});
     setRelationGenderOverrides({});
     setChildRankOverrides({});
     setPendingParentsError(null);
@@ -1507,6 +1680,81 @@ export const FamilyPersonPanel: React.FC<Props> = ({
     }
   };
 
+  const saveRelationLineageDrafts = async () => {
+    if (!tree || editableLineageRelationships.length === 0) return;
+
+    for (const entry of editableLineageRelationships) {
+      const original = getOriginalRelationLineageDraft(entry);
+      const draft = getRelationLineageDraft(entry);
+      const displayTag = draft.displayTag.trim();
+      const lineageType = displayTag === '出继' ? 'biological' : '';
+      const adoptiveParentId = displayTag === '出继' ? draft.adoptiveParentId.trim() : '';
+      const { biologicalParent, childNode } = getLineageParticipants(entry);
+      const brotherOptions = getAdoptiveBrotherOptions(entry);
+      const pairedAdoptiveRelation = getPairedAdoptiveRelation(entry);
+      const hasChanged = displayTag !== original.displayTag
+        || lineageType !== original.lineageType
+        || adoptiveParentId !== original.adoptiveParentId;
+
+      if (displayTag === '出继') {
+        if (!adoptiveParentId) {
+          throw new Error(`请为${childNode.name}选择承继伯叔。`);
+        }
+        if (!brotherOptions.some(candidate => candidate.id === adoptiveParentId)) {
+          throw new Error(`承继人必须是${biologicalParent.name}的兄弟。`);
+        }
+      }
+
+      if (!hasChanged && !(displayTag === '出继' && pairedAdoptiveRelation && pairedAdoptiveRelation.fromId !== adoptiveParentId)) {
+        continue;
+      }
+
+      await familyService.updateRelationship(tree.id, entry.relationship.id, {
+        displayTag,
+        lineageType,
+        sourceParentId: '',
+        sourceChildRank: 0,
+      });
+
+      if (displayTag === '出继') {
+        const biologicalRank = (() => {
+          const orderedSiblings = getOrderedChildren(biologicalParent);
+          const rankIndex = orderedSiblings.findIndex(candidate => candidate.id === childNode.id);
+          return rankIndex >= 0 ? rankIndex + 1 : 0;
+        })();
+        const selectedAdoptiveParent = allPersons.find(candidate => candidate.id === adoptiveParentId);
+
+        if (pairedAdoptiveRelation && pairedAdoptiveRelation.fromId !== adoptiveParentId) {
+          await familyService.deleteRelationship(tree.id, pairedAdoptiveRelation.id);
+        }
+
+        if (pairedAdoptiveRelation && pairedAdoptiveRelation.fromId === adoptiveParentId) {
+          await familyService.updateRelationship(tree.id, pairedAdoptiveRelation.id, {
+            displayTag: '继子',
+            lineageType: 'adoptive',
+            sourceParentId: biologicalParent.id,
+            sourceChildRank: biologicalRank,
+          });
+        } else {
+          await familyService.addRelationship(tree.id, {
+            type: 'parent-child',
+            fromId: adoptiveParentId,
+            toId: childNode.id,
+            parentRole: selectedAdoptiveParent?.gender === 'female' ? 'mother' : selectedAdoptiveParent?.gender === 'male' ? 'father' : undefined,
+            childStatus: 'adoptive',
+            lineageType: 'adoptive',
+            displayTag: '继子',
+            sourceParentId: biologicalParent.id,
+            sourceChildRank: biologicalRank,
+            sortOrder: entry.relationship.sortOrder,
+          });
+        }
+      } else if (pairedAdoptiveRelation) {
+        await familyService.deleteRelationship(tree.id, pairedAdoptiveRelation.id);
+      }
+    }
+  };
+
   const handleSave = async () => {
     if (!tree) return;
 
@@ -1579,6 +1827,7 @@ export const FamilyPersonPanel: React.FC<Props> = ({
         await Promise.all(relationGenderUpdates);
       }
 
+      await saveRelationLineageDrafts();
       await savePendingParents(parsedPendingParents);
       await savePendingChildren(parsedPendingChildren);
       if (pendingSpouseName) {
@@ -1589,6 +1838,7 @@ export const FamilyPersonPanel: React.FC<Props> = ({
       setEditing(false);
       setPendingParents([]);
       setPendingChildren([]);
+      setRelationLineageDrafts({});
       setRelationGenderOverrides({});
       setChildRankOverrides({});
       setPendingParentsError(null);
@@ -2058,7 +2308,8 @@ export const FamilyPersonPanel: React.FC<Props> = ({
       <Divider />
       <BoxAny sx={{ ...panelSectionPaddingSx, pt: 1.25, pb: 0.4 }}>
         {!editing && (
-          <BoxAny sx={relationTableSurfaceSx}>
+          <>
+          <BoxAny sx={getRelationTableSurfaceSx(relationColumns.length)}>
             <BoxAny
               sx={{
                 mt: 0,
@@ -2067,7 +2318,7 @@ export const FamilyPersonPanel: React.FC<Props> = ({
               <BoxAny
                 sx={{
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                  gridTemplateColumns: relationGridColumns,
                   columnGap: 1.1,
                   py: 0.75,
                   borderBottom: relationRowCount > 0 ? '1px solid rgba(15,23,42,0.08)' : 'none',
@@ -2085,7 +2336,7 @@ export const FamilyPersonPanel: React.FC<Props> = ({
                   key={`relation-row-${rowIndex}`}
                   sx={{
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                    gridTemplateColumns: relationGridColumns,
                     columnGap: 1.1,
                     py: 0.75,
                     borderBottom: rowIndex === relationRowCount - 1 ? 'none' : '1px solid rgba(15,23,42,0.08)',
@@ -2094,21 +2345,29 @@ export const FamilyPersonPanel: React.FC<Props> = ({
                   {relationColumns.map(column => {
                     const value = column.items[rowIndex];
                     return value ? (
-                      <Link
-                        key={`${column.key}-${rowIndex}`}
-                        component="button"
-                        variant="body2"
-                        underline="hover"
-                        onClick={() => onNavigate(value.id)}
-                        sx={{ justifySelf: 'start', textAlign: 'left', fontSize: 13, minWidth: 0, wordBreak: 'break-word' }}
-                      >
-                        {value.label}
-                        {value.suffix ? (
-                          <BoxAny component="span" sx={{ fontSize: 11, color: '#94a3b8', ml: 0.5 }}>
-                            {value.suffix}
-                          </BoxAny>
-                        ) : null}
-                      </Link>
+                      <BoxAny key={`${column.key}-${rowIndex}`} sx={{ minWidth: 0 }}>
+                        <BoxAny sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, flexWrap: 'wrap', minWidth: 0 }}>
+                          <Link
+                            component="button"
+                            variant="body2"
+                            underline="hover"
+                            onClick={() => onNavigate(value.id)}
+                            sx={{ justifySelf: 'start', textAlign: 'left', fontSize: 13, minWidth: 0, wordBreak: 'break-word' }}
+                          >
+                            {value.label}
+                            {value.suffix ? (
+                              <BoxAny component="span" sx={{ fontSize: 11, color: '#94a3b8', ml: 0.5 }}>
+                                {value.suffix}
+                              </BoxAny>
+                            ) : null}
+                          </Link>
+                          {value.annotation ? (
+                            <Typography component="span" variant="caption" color="text.secondary" sx={{ fontSize: 10.5, lineHeight: 1.25 }}>
+                              {value.annotation}
+                            </Typography>
+                          ) : null}
+                        </BoxAny>
+                      </BoxAny>
                     ) : (
                       <BoxAny key={`${column.key}-${rowIndex}`} />
                     );
@@ -2121,6 +2380,42 @@ export const FamilyPersonPanel: React.FC<Props> = ({
               )}
             </BoxAny>
           </BoxAny>
+
+          {hasAdoptiveParentRelations && biologicalParentItems.length > 0 && (
+            <BoxAny sx={{ mt: 0.9, px: 0.8, py: 0.75, borderRadius: '8px', backgroundColor: 'rgba(15,23,42,0.03)', boxShadow: 'inset 0 0 0 1px rgba(15,23,42,0.05)' }}>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontSize: 11, mb: 0.55 }}>
+                生父母
+              </Typography>
+              <BoxAny sx={{ display: 'grid', gap: 0.55 }}>
+                {biologicalParentItems.map(item => (
+                  <BoxAny key={`biological-parent-${item.id}`} sx={{ minWidth: 0 }}>
+                    <BoxAny sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, flexWrap: 'wrap', minWidth: 0 }}>
+                      <Link
+                        component="button"
+                        variant="body2"
+                        underline="hover"
+                        onClick={() => onNavigate(item.id)}
+                        sx={{ justifySelf: 'start', textAlign: 'left', fontSize: 13, minWidth: 0, wordBreak: 'break-word' }}
+                      >
+                        {item.label}
+                        {item.suffix ? (
+                          <BoxAny component="span" sx={{ fontSize: 11, color: '#94a3b8', ml: 0.5 }}>
+                            {item.suffix}
+                          </BoxAny>
+                        ) : null}
+                      </Link>
+                      {item.annotation ? (
+                        <Typography component="span" variant="caption" color="text.secondary" sx={{ fontSize: 10.5, lineHeight: 1.25 }}>
+                          {item.annotation}
+                        </Typography>
+                      ) : null}
+                    </BoxAny>
+                  </BoxAny>
+                ))}
+              </BoxAny>
+            </BoxAny>
+          )}
+          </>
         )}
 
         {editing && (
@@ -2461,6 +2756,113 @@ export const FamilyPersonPanel: React.FC<Props> = ({
             {pendingParentsError && <Alert severity="error" sx={{ mt: 0.75 }}>{pendingParentsError}</Alert>}
             {spouseDialog.error && <Alert severity="error" sx={{ mt: 0.75 }}>{spouseDialog.error}</Alert>}
             {pendingChildrenError && <Alert severity="error" sx={{ mt: 0.75 }}>{pendingChildrenError}</Alert>}
+
+            {editableLineageRelationships.length > 0 && (
+              <BoxAny sx={{ mt: 0.85, pt: 0.85, borderTop: '1px solid rgba(15,23,42,0.08)', display: 'grid', gap: 0.75 }}>
+                {editableLineageRelationships.map(entry => {
+                  const draft = getRelationLineageDraft(entry);
+                  const adoptiveBrotherOptions = getAdoptiveBrotherOptions(entry);
+                  const showAdoptiveTarget = draft.displayTag === '出继';
+
+                  return (
+                    <BoxAny
+                      key={entry.relationship.id}
+                      sx={{ display: 'grid', gridTemplateColumns: 'auto minmax(0, 1fr)', gap: 0.45, alignItems: 'center' }}
+                    >
+                      <BoxAny
+                        component="label"
+                        sx={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 0.4,
+                          minWidth: 48,
+                          justifySelf: 'start',
+                          cursor: 'pointer',
+                          userSelect: 'none',
+                        }}
+                      >
+                        <BoxAny
+                          component="input"
+                          type="checkbox"
+                          checked={showAdoptiveTarget}
+                          onChange={() => setRelationLineageDrafts(current => ({
+                            ...current,
+                            [entry.relationship.id]: {
+                              ...draft,
+                              displayTag: showAdoptiveTarget ? '' : '出继',
+                              lineageType: showAdoptiveTarget ? '' : 'biological',
+                              sourceParentId: '',
+                              sourceChildRank: '',
+                              adoptiveParentId: showAdoptiveTarget ? '' : draft.adoptiveParentId,
+                            },
+                          }))}
+                          sx={{ display: 'none' }}
+                        />
+                        <BoxAny
+                          component="span"
+                          sx={{
+                            width: 14,
+                            height: 14,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            borderRadius: '3px',
+                            boxShadow: `inset 0 0 0 1px ${showAdoptiveTarget ? 'rgba(185,28,28,0.38)' : 'rgba(71,85,105,0.28)'}`,
+                            backgroundColor: showAdoptiveTarget ? 'rgba(220,38,38,0.14)' : 'rgba(255,255,255,0.72)',
+                            color: '#b91c1c',
+                          }}
+                        >
+                          {showAdoptiveTarget ? <CheckIcon sx={{ fontSize: 12 }} /> : null}
+                        </BoxAny>
+                        <Typography component="span" sx={{ fontSize: 12, color: showAdoptiveTarget ? '#b91c1c' : '#475569', lineHeight: 1 }}>
+                          出继
+                        </Typography>
+                      </BoxAny>
+
+                      {showAdoptiveTarget ? (
+                        <Select
+                          value={draft.adoptiveParentId}
+                          onChange={event => setRelationLineageDrafts(current => ({
+                            ...current,
+                            [entry.relationship.id]: {
+                              ...draft,
+                              adoptiveParentId: event.target.value,
+                            },
+                          }))}
+                          displayEmpty
+                          disabled={adoptiveBrotherOptions.length === 0}
+                          MenuProps={linkSelectMenuProps}
+                          renderValue={selected => {
+                            if (!selected) return adoptiveBrotherOptions.length === 0 ? '无可选承继伯叔' : '';
+                            return allPersons.find(candidate => candidate.id === selected)?.name ?? '';
+                          }}
+                          input={<InputBase sx={linkSelectInputSx} />}
+                          size="small"
+                          sx={{
+                            ...inlineRowSelectSx,
+                            minWidth: 0,
+                            '& .MuiSelect-select': {
+                              ...inlineRowSelectSx['& .MuiSelect-select'],
+                              py: 0.2,
+                              minHeight: '1.25rem',
+                            },
+                          }}
+                        >
+                          {adoptiveBrotherOptions.length === 0 ? (
+                            <MenuItem value="">无可选承继伯叔</MenuItem>
+                          ) : null}
+                          {adoptiveBrotherOptions.map(candidate => (
+                            <MenuItem key={candidate.id} value={candidate.id}>{candidate.name}</MenuItem>
+                          ))}
+                        </Select>
+                      ) : (
+                        <BoxAny />
+                      )}
+                    </BoxAny>
+                  );
+                })}
+              </BoxAny>
+            )}
           </BoxAny>
         )}
       </BoxAny>
@@ -2539,11 +2941,11 @@ export const FamilyPersonPanel: React.FC<Props> = ({
                 )}
 
                 <BoxAny sx={{ borderTop: '1px solid rgba(15,23,42,0.08)', pt: 0.9 }}>
-                  <BoxAny sx={relationTableSurfaceSx}>
+                  <BoxAny sx={getRelationTableSurfaceSx(linkedRelationColumns.length)}>
                   <BoxAny
                     sx={{
                       display: 'grid',
-                      gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                      gridTemplateColumns: linkedRelationGridColumns,
                       columnGap: 1.1,
                       py: 0.75,
                       borderBottom: linkedRelationRowCount > 0 ? '1px solid rgba(15,23,42,0.08)' : 'none',
@@ -2561,7 +2963,7 @@ export const FamilyPersonPanel: React.FC<Props> = ({
                       key={`linked-relation-row-${rowIndex}`}
                       sx={{
                         display: 'grid',
-                        gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                        gridTemplateColumns: linkedRelationGridColumns,
                         columnGap: 1.1,
                         py: 0.75,
                         borderBottom: rowIndex === linkedRelationRowCount - 1 ? 'none' : '1px solid rgba(15,23,42,0.08)',
@@ -2570,21 +2972,29 @@ export const FamilyPersonPanel: React.FC<Props> = ({
                       {linkedRelationColumns.map(column => {
                         const value = column.items[rowIndex];
                         return value ? (
-                          <Link
-                            key={`${column.key}-${rowIndex}`}
-                            component="button"
-                            variant="body2"
-                            underline="hover"
-                            onClick={() => onOpenLinkedPerson?.(linkedViewState.tree.id, value.id)}
-                            sx={{ justifySelf: 'start', textAlign: 'left', fontSize: 13, minWidth: 0, wordBreak: 'break-word', color: 'rgb(42,175,71)' }}
-                          >
-                            {value.label}
-                            {value.suffix ? (
-                              <BoxAny component="span" sx={{ fontSize: 11, color: '#94a3b8', ml: 0.5 }}>
-                                {value.suffix}
-                              </BoxAny>
-                            ) : null}
-                          </Link>
+                          <BoxAny key={`${column.key}-${rowIndex}`} sx={{ minWidth: 0 }}>
+                            <BoxAny sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, flexWrap: 'wrap', minWidth: 0 }}>
+                              <Link
+                                component="button"
+                                variant="body2"
+                                underline="hover"
+                                onClick={() => onOpenLinkedPerson?.(linkedViewState.tree.id, value.id)}
+                                sx={{ justifySelf: 'start', textAlign: 'left', fontSize: 13, minWidth: 0, wordBreak: 'break-word', color: 'rgb(42,175,71)' }}
+                              >
+                                {value.label}
+                                {value.suffix ? (
+                                  <BoxAny component="span" sx={{ fontSize: 11, color: '#94a3b8', ml: 0.5 }}>
+                                    {value.suffix}
+                                  </BoxAny>
+                                ) : null}
+                              </Link>
+                              {value.annotation ? (
+                                <Typography component="span" variant="caption" color="text.secondary" sx={{ fontSize: 10.5, lineHeight: 1.25 }}>
+                                  {value.annotation}
+                                </Typography>
+                              ) : null}
+                            </BoxAny>
+                          </BoxAny>
                         ) : (
                           <BoxAny key={`${column.key}-${rowIndex}`} />
                         );
@@ -2594,6 +3004,40 @@ export const FamilyPersonPanel: React.FC<Props> = ({
                     <Typography variant="body2" color="text.secondary" sx={{ fontSize: 12, fontStyle: 'italic', py: 0.9 }}>
                       暂无记录
                     </Typography>
+                  )}
+                  {linkedHasAdoptiveParentRelations && linkedBiologicalParentItems.length > 0 && (
+                    <BoxAny sx={{ mt: 0.9, px: 0.8, py: 0.75, borderRadius: '8px', backgroundColor: 'rgba(15,23,42,0.03)', boxShadow: 'inset 0 0 0 1px rgba(15,23,42,0.05)' }}>
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontSize: 11, mb: 0.55 }}>
+                        生父母
+                      </Typography>
+                      <BoxAny sx={{ display: 'grid', gap: 0.55 }}>
+                        {linkedBiologicalParentItems.map(item => (
+                          <BoxAny key={`linked-biological-parent-${item.id}`} sx={{ minWidth: 0 }}>
+                            <BoxAny sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, flexWrap: 'wrap', minWidth: 0 }}>
+                              <Link
+                                component="button"
+                                variant="body2"
+                                underline="hover"
+                                onClick={() => onOpenLinkedPerson?.(linkedViewState.tree.id, item.id)}
+                                sx={{ justifySelf: 'start', textAlign: 'left', fontSize: 13, minWidth: 0, wordBreak: 'break-word', color: 'rgb(42,175,71)' }}
+                              >
+                                {item.label}
+                                {item.suffix ? (
+                                  <BoxAny component="span" sx={{ fontSize: 11, color: '#94a3b8', ml: 0.5 }}>
+                                    {item.suffix}
+                                  </BoxAny>
+                                ) : null}
+                              </Link>
+                              {item.annotation ? (
+                                <Typography component="span" variant="caption" color="text.secondary" sx={{ fontSize: 10.5, lineHeight: 1.25 }}>
+                                  {item.annotation}
+                                </Typography>
+                              ) : null}
+                            </BoxAny>
+                          </BoxAny>
+                        ))}
+                      </BoxAny>
+                    </BoxAny>
                   )}
                   </BoxAny>
                 </BoxAny>

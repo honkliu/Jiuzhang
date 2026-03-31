@@ -78,6 +78,10 @@ public class CreateFamilyRelationshipRequest
     public string ToId { get; set; } = string.Empty;
     public string? ParentRole { get; set; }
     public string? ChildStatus { get; set; }
+    public string? LineageType { get; set; }
+    public string? DisplayTag { get; set; }
+    public string? SourceParentId { get; set; }
+    public int? SourceChildRank { get; set; }
     public int SortOrder { get; set; }
     public string? UnionType { get; set; }
     public int? StartYear { get; set; }
@@ -87,6 +91,12 @@ public class CreateFamilyRelationshipRequest
 
 public class UpdateFamilyRelationshipRequest
 {
+    public string? ParentRole { get; set; }
+    public string? ChildStatus { get; set; }
+    public string? LineageType { get; set; }
+    public string? DisplayTag { get; set; }
+    public string? SourceParentId { get; set; }
+    public int? SourceChildRank { get; set; }
     public int? SortOrder { get; set; }
     public string? Notes { get; set; }
 }
@@ -159,6 +169,10 @@ public class FamilyRelationshipResponse
     public string ToId { get; set; } = string.Empty;
     public string? ParentRole { get; set; }
     public string? ChildStatus { get; set; }
+    public string? LineageType { get; set; }
+    public string? DisplayTag { get; set; }
+    public string? SourceParentId { get; set; }
+    public int? SourceChildRank { get; set; }
     public int SortOrder { get; set; }
     public string? UnionType { get; set; }
     public int? StartYear { get; set; }

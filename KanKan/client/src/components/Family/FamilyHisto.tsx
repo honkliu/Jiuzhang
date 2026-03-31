@@ -7,8 +7,9 @@ import type { FamilyNode, FamilyTreeDto } from '@/services/family.service';
 // ─── Layout constants (Right.md §2) ───
 const NODE_GAP = 55;
 const STUB_LEN = 20;
-const TYPICAL_BOX_H = 78;
-const LEVEL_HEIGHT = STUB_LEN + TYPICAL_BOX_H + STUB_LEN + 32; // 150
+const NODE_HEIGHT_SCALE = 1.10;
+const TYPICAL_BOX_H = Math.round(78 * NODE_HEIGHT_SCALE);
+const LEVEL_HEIGHT = STUB_LEN + TYPICAL_BOX_H + STUB_LEN + 32;
 const BOX_Y_OFFSET = 0;
 const GEN_STRIP_W = 34;
 const NODE_STEP_MS = 10;
@@ -27,6 +28,18 @@ const C = {
   maleGender: '#60a5fa',
   femaleGender: '#f472b6',
 };
+
+function canonicalIdFromNode(node: Pick<FamilyNode, 'id' | 'canonicalPersonId'>): string {
+  return node.canonicalPersonId ?? node.id.split('@@')[0] ?? node.id;
+}
+
+function canonicalIdFromValue(id: string): string {
+  return id.split('@@')[0] ?? id;
+}
+
+function matchesNodeIdentity(node: Pick<FamilyNode, 'id' | 'canonicalPersonId'>, targetId: string): boolean {
+  return node.id === targetId || canonicalIdFromNode(node) === targetId;
+}
 
 function findNodeById(root: FamilyNode, id: string): FamilyNode | null {
   if (root.id === id) return root;
@@ -276,7 +289,7 @@ function boxDims(node: FamilyNode): { w: number; h: number } {
   const nameLen = node.name.length;
   const spouseLen = node.spouses.length > 0 ? Math.max(...node.spouses.map(s => s.name.length)) : 0;
   const effectiveNameRows = Math.max(nameLen, spouseLen, 3);
-  const h = effectiveNameRows * 18 + 24;
+  const h = Math.round((effectiveNameRows * 18 + 24) * NODE_HEIGHT_SCALE);
   const w = columnCount === 1 ? 26 : 22 + (columnCount - 1) * 20;
   return { w, h };
 }
@@ -384,8 +397,16 @@ export const FamilyHisto = forwardRef<FamilyHistoHandle, Props>((props, ref) => 
       requestAnimationFrame(() => {
         const svg = svgRef.current;
         if (!svg || !zoomRef.current) return;
-        const nodeG = d3.select(svg).select<SVGGElement>(`.node[data-id="${personId}"]`);
-        if (nodeG.empty()) return;
+        const nodeGroups = d3.select(svg)
+          .selectAll<SVGGElement, unknown>('.node')
+          .filter(function () {
+            const g = d3.select(this);
+            return g.attr('data-id') === personId || g.attr('data-canonical-id') === personId;
+          })
+          .nodes();
+        const matchedNode = nodeGroups.find(node => d3.select(node).attr('data-id') === personId) ?? nodeGroups[0];
+        if (!matchedNode) return;
+        const nodeG = d3.select<SVGGElement, unknown>(matchedNode);
         const nx = parseFloat(nodeG.attr('data-x') ?? '0');
         const svgW = svg.clientWidth;
         const t = lastTransformRef.current;
@@ -444,39 +465,38 @@ export const FamilyHisto = forwardRef<FamilyHistoHandle, Props>((props, ref) => 
   // ─── Collect full branch from the ENTIRE data tree (not just visible) ───
   const collectFullBranch = useCallback((nodeId: string): Set<string> => {
     const result = new Set<string>();
-    // Walk full data tree to find the node and collect ancestors + descendants
-    function findAndCollectAncestors(n: FamilyNode, path: string[]): boolean {
-      path.push(n.id);
-      if (n.id === nodeId) {
-        // Found — add all ancestors (the current path)
-        path.forEach(id => result.add(id));
-        return true;
-      }
-      for (const child of n.children) {
-        if (findAndCollectAncestors(child, path)) return true;
-      }
-      path.pop();
-      return false;
-    }
-    findAndCollectAncestors(root, []);
+    const exactTarget = findNodeById(root, nodeId);
 
-    // Now collect all descendants of the node
-    function findNode(n: FamilyNode): FamilyNode | null {
-      if (n.id === nodeId) return n;
-      for (const c of n.children) {
-        const found = findNode(c);
-        if (found) return found;
-      }
-      return null;
+    function addDescendants(n: FamilyNode) {
+      result.add(n.id);
+      n.children.forEach(addDescendants);
     }
-    const target = findNode(root);
-    if (target) {
-      function addDescendants(n: FamilyNode) {
-        result.add(n.id);
-        n.children.forEach(addDescendants);
+
+    if (exactTarget) {
+      function findExactPath(n: FamilyNode, path: string[]): boolean {
+        const nextPath = [...path, n.id];
+        if (n.id === nodeId) {
+          nextPath.forEach(id => result.add(id));
+          addDescendants(n);
+          return true;
+        }
+        return n.children.some(child => findExactPath(child, nextPath));
       }
-      addDescendants(target);
+
+      findExactPath(root, []);
+      return result;
     }
+
+    function collectMatchingBranches(n: FamilyNode, path: string[]) {
+      const nextPath = [...path, n.id];
+      if (matchesNodeIdentity(n, nodeId) || canonicalIdFromValue(n.id) === nodeId) {
+        nextPath.forEach(id => result.add(id));
+        addDescendants(n);
+      }
+      n.children.forEach(child => collectMatchingBranches(child, nextPath));
+    }
+
+    collectMatchingBranches(root, []);
     return result;
   }, [root]);
 
@@ -498,6 +518,9 @@ export const FamilyHisto = forwardRef<FamilyHistoHandle, Props>((props, ref) => 
       g.select('.name-text').interrupt()
         .attr('fill', highlighted ? C.highlight : C.nameText)
         .attr('font-weight', highlighted ? 700 : 500);
+      g.select('.lineage-tag').interrupt()
+        .attr('fill', highlighted ? C.highlight : C.stub)
+        .attr('font-weight', highlighted ? 600 : 400);
     });
 
     sel.selectAll<SVGPathElement, unknown>('.link').each(function () {
@@ -650,6 +673,7 @@ export const FamilyHisto = forwardRef<FamilyHistoHandle, Props>((props, ref) => 
       .append('g')
       .attr('class', 'node')
       .attr('data-id', d => d.id)
+      .attr('data-canonical-id', d => canonicalIdFromNode(d.data))
       .attr('data-x', d => d._x)
       .attr('data-y', d => d._y)
       .attr('transform', d => `translate(${d._x},${d._y})`)
@@ -662,6 +686,7 @@ export const FamilyHisto = forwardRef<FamilyHistoHandle, Props>((props, ref) => 
 
     // Update existing
     nodesSel
+      .attr('data-canonical-id', d => canonicalIdFromNode(d.data))
       .attr('data-x', d => d._x)
       .attr('data-y', d => d._y)
       .attr('transform', d => `translate(${d._x},${d._y})`);
@@ -775,6 +800,12 @@ export const FamilyHisto = forwardRef<FamilyHistoHandle, Props>((props, ref) => 
     const { w, h } = boxDims(d.data);
     const nameColumns = getNameColumnXPositions(d.data);
     const primaryNameX = nameColumns[0] ?? 0;
+    const lineageTag = (() => {
+      const rel = d.data.parentRels.find(item => item.displayTag?.trim() || item.lineageType?.trim());
+      const rawTag = rel?.displayTag?.trim()
+        || (rel?.lineageType === 'adoptive' ? '继子' : rel?.lineageType === 'biological' ? '出继' : '');
+      return rawTag.split('·')[0]?.trim() ?? '';
+    })();
 
     // Box
     g.append('rect')
@@ -839,6 +870,18 @@ export const FamilyHisto = forwardRef<FamilyHistoHandle, Props>((props, ref) => 
           .text(ch);
       }
     });
+
+    if (lineageTag) {
+      g.append('text')
+        .attr('class', 'lineage-tag')
+        .attr('x', 0)
+        .attr('y', BOX_Y_OFFSET + h - 6)
+        .attr('text-anchor', 'middle')
+        .attr('font-size', 9)
+        .attr('font-family', '"Noto Sans SC", "PingFang SC", "Source Han Sans SC", sans-serif')
+        .attr('fill', C.stub)
+        .text(lineageTag);
+    }
 
     // Expand stub
     if (d.hasHiddenChildren) {
@@ -968,6 +1011,7 @@ export const FamilyHisto = forwardRef<FamilyHistoHandle, Props>((props, ref) => 
           existing
             .transition().duration(200)
             .attr('transform', `translate(${pos.x},${pos.y})`)
+            .attr('data-canonical-id', canonicalIdFromNode(n.data))
             .attr('data-x', pos.x)
             .attr('data-y', pos.y);
           // Update expand stub
@@ -983,6 +1027,7 @@ export const FamilyHisto = forwardRef<FamilyHistoHandle, Props>((props, ref) => 
             const g = treeG.append('g')
               .attr('class', 'node')
               .attr('data-id', n.id)
+              .attr('data-canonical-id', canonicalIdFromNode(layoutNode.data))
               .attr('data-x', pos.x)
               .attr('data-y', pos.y)
               .attr('transform', `translate(${pos.x},${pos.y})`)
@@ -1032,6 +1077,7 @@ export const FamilyHisto = forwardRef<FamilyHistoHandle, Props>((props, ref) => 
           const g = treeG.append('g')
             .attr('class', 'node')
             .attr('data-id', nodeId)
+            .attr('data-canonical-id', canonicalIdFromNode(layoutNode.data))
             .attr('data-x', newPos.x)
             .attr('data-y', newPos.y)
             .attr('transform', `translate(${newPos.x},${newPos.y})`)
@@ -1128,17 +1174,6 @@ export const FamilyHisto = forwardRef<FamilyHistoHandle, Props>((props, ref) => 
       };
     }
     return topNodes.map(prune).filter(Boolean) as LayoutNode[];
-  }
-
-  /** Render links for currently revealed nodes */
-  function renderLinksForRevealed(
-    treeG: d3.Selection<SVGGElement, unknown, null, undefined>,
-    flatNodes: LayoutNode[],
-    parentMap: Map<string, string>,
-    visibleIds?: Set<string>,
-  ) {
-    const linkData = buildLinkData(flatNodes, parentMap, visibleIds);
-    renderLinkData(treeG, linkData);
   }
 
   function buildLinkData(
@@ -1365,7 +1400,6 @@ export const FamilyHisto = forwardRef<FamilyHistoHandle, Props>((props, ref) => 
           const baseNode = findNodeById(root, base.id);
           const parentId = baseNode?.parentRels?.[0]?.fromId ?? null;
           if (parentId) {
-            const parentNode = findNodeById(root, parentId);
             anchorId = parentId;
           } else {
             anchorId = base.id;

@@ -15,7 +15,7 @@ import { FamilyHisto, type FamilyHistoHandle } from './FamilyHisto';
 import { FamilyPersonPanel } from './FamilyPersonPanel';
 import { FamilyNodeContextMenu } from './FamilyNodeContextMenu';
 import {
-  familyService, buildTree,
+  familyService, buildFamilyNodes, buildTree,
   type FamilyTreeDto, type FamilyPersonDto, type FamilyRelationshipDto, type FamilyNode,
   type NestedFamilyPersonImport,
 } from '@/services/family.service';
@@ -136,20 +136,6 @@ function parseZibeiPoem(input: string): string[] | undefined {
     return items.length > 0 ? items : undefined;
   }
   return Array.from(normalized).filter(Boolean);
-}
-
-function flattenTree(
-  node: FamilyNode,
-  result: FamilyNode[] = [],
-  visited: Set<string> = new Set()
-): FamilyNode[] {
-  if (visited.has(node.id)) return result;
-
-  visited.add(node.id);
-  result.push(node);
-  node.children.forEach(child => flattenTree(child, result, visited));
-  node.spouses.forEach(spouse => flattenTree(spouse, result, visited));
-  return result;
 }
 
 function getTreeDepth(node: FamilyNode): number {
@@ -345,8 +331,8 @@ export const FamilyPage: React.FC = () => {
     setPersons(p);
     setRels(r);
 
+    const nodes = buildFamilyNodes(p, r);
     const root = buildTree(p, r);
-    const nodes = root ? flattenTree(root) : [];
 
     setRootNode(root);
     setAllNodes(nodes);
@@ -412,13 +398,17 @@ export const FamilyPage: React.FC = () => {
   }, [refreshCurrentTree, selectedTreeId]);
 
   const handleNodeClick = useCallback((node: FamilyNode) => {
-    selectPerson(node);
+    const canonicalPersonId = node.canonicalPersonId ?? node.id;
+    selectPerson(allNodes.find(candidate => candidate.id === canonicalPersonId) ?? node);
     setFocusPersonId(null);
-  }, [selectPerson]);
+  }, [allNodes, selectPerson]);
 
   const handleNodeRightClick = useCallback((node: FamilyNode, x: number, y: number) => {
+    const canonicalPersonId = node.canonicalPersonId ?? node.id;
+    const canonicalNode = allNodes.find(candidate => candidate.id === canonicalPersonId) ?? node;
+
     if (isMobile) {
-      selectPerson(node);
+      selectPerson(canonicalNode);
       setFocusPersonId(null);
       return;
     }
@@ -429,8 +419,8 @@ export const FamilyPage: React.FC = () => {
     const viewportH = typeof window !== 'undefined' ? window.innerHeight : y + menuH;
     const clampedX = Math.min(x, viewportW - menuW - 8);
     const clampedY = Math.min(y, viewportH - menuH - 8);
-    setContextMenu({ node, x: Math.max(8, clampedX), y: Math.max(8, clampedY) });
-  }, [isMobile, selectPerson]);
+    setContextMenu({ node: canonicalNode, x: Math.max(8, clampedX), y: Math.max(8, clampedY) });
+  }, [allNodes, isMobile, selectPerson]);
 
   const handleCloseContextMenu = useCallback(() => setContextMenu(null), []);
 
@@ -588,7 +578,6 @@ export const FamilyPage: React.FC = () => {
 
   const canGoUp = visibleStartDepth > 0;
   const canGoDown = visibleStartDepth + MAX_VISIBLE_DEPTH <= treeMaxDepth;
-  const viewLabel = viewMode === 'tree' ? '树形' : viewMode === 'list' ? '列表' : '世代';
 
   if (!currentUser?.canViewFamilyTree) {
     return (

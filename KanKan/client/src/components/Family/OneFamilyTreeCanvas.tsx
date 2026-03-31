@@ -677,7 +677,6 @@ export const OneFamilyTreeCanvas = forwardRef<OneFamilyTreeCanvasHandle, Props>(
     const draw = useCallback((animate: boolean) => {
       if (!svgRef.current || !root) return;
       clearTimers();
-      const currentTransform = transformRef.current;
 
       const targetRoots = buildForest(root, visibleStartDepth, maxVisibleDepth);
       if (targetRoots.length === 0) return;

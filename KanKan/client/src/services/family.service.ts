@@ -73,6 +73,10 @@ export interface FamilyRelationshipDto {
   toId: string;
   parentRole?: string;
   childStatus?: string;
+  lineageType?: string;
+  displayTag?: string;
+  sourceParentId?: string;
+  sourceChildRank?: number;
   sortOrder?: number;
   unionType?: string;
   startYear?: number;
@@ -116,6 +120,7 @@ export interface NestedFamilyPersonImport {
 }
 
 export interface FamilyNode extends FamilyPersonDto {
+  canonicalPersonId?: string;
   children: FamilyNode[];
   spouses: FamilyNode[];
   parentRels: FamilyRelationshipDto[];
@@ -134,13 +139,13 @@ type UpsertFamilyPersonPayload = Partial<FamilyPersonDto> & {
   clearDeathDate?: boolean;
 };
 
-export function buildTree(
+export function buildFamilyNodes(
   persons: FamilyPersonDto[],
   rels: FamilyRelationshipDto[]
-): FamilyNode | null {
+): FamilyNode[] {
   const map = new Map(persons.map(p => [
     p.id,
-    { ...p, children: [], spouses: [], parentRels: [], spouseRels: [] } as FamilyNode
+    { ...p, canonicalPersonId: p.id, children: [], spouses: [], parentRels: [], spouseRels: [] } as FamilyNode
   ]));
 
   const pcRels = rels
@@ -167,8 +172,78 @@ export function buildTree(
     }
   }
 
-  const childIds = new Set(pcRels.map(r => r.toId));
-  return [...map.values()].find(n => !childIds.has(n.id)) ?? null;
+  return [...map.values()];
+}
+
+export function buildTree(
+  persons: FamilyPersonDto[],
+  rels: FamilyRelationshipDto[]
+): FamilyNode | null {
+  const canonicalNodes = buildFamilyNodes(persons, rels);
+  const canonicalMap = new Map(canonicalNodes.map(node => [node.id, node]));
+
+  const childIds = new Set(
+    canonicalNodes.flatMap(node => node.parentRels.map(rel => rel.toId))
+  );
+  const roots = canonicalNodes.filter(node => !childIds.has(node.id));
+  const root = roots[0] ?? canonicalNodes[0] ?? null;
+  if (!root) return null;
+
+  const isAdoptiveParentRel = (rel?: FamilyRelationshipDto) => rel?.displayTag === '继子' || rel?.lineageType === 'adoptive';
+
+  const shouldProjectChildren = (canonicalNode: FamilyNode, parentRel?: FamilyRelationshipDto) => {
+    const hasAdoptiveParent = canonicalNode.parentRels.some(rel => isAdoptiveParentRel(rel));
+    if (!hasAdoptiveParent) {
+      return true;
+    }
+
+    if (!parentRel) {
+      return canonicalNode.parentRels.length === 0;
+    }
+
+    return isAdoptiveParentRel(parentRel);
+  };
+
+  const cloneBranch = (
+    canonicalNode: FamilyNode,
+    parentRel?: FamilyRelationshipDto,
+    displayPath: Set<string> = new Set()
+  ): FamilyNode => {
+    const displayId = parentRel ? `${canonicalNode.id}@@${parentRel.fromId}` : canonicalNode.id;
+    const displayKey = `${displayId}|${parentRel?.id ?? 'root'}`;
+    if (displayPath.has(displayKey)) {
+      return {
+        ...canonicalNode,
+        id: displayId,
+        canonicalPersonId: canonicalNode.id,
+        children: [],
+        spouses: canonicalNode.spouses,
+        parentRels: parentRel ? [parentRel] : [],
+        spouseRels: canonicalNode.spouseRels,
+      };
+    }
+
+    const nextPath = new Set(displayPath);
+    nextPath.add(displayKey);
+
+    return {
+      ...canonicalNode,
+      id: displayId,
+      canonicalPersonId: canonicalNode.id,
+      children: shouldProjectChildren(canonicalNode, parentRel)
+        ? canonicalNode.children.map(child => {
+            const childCanonical = canonicalMap.get(child.id) ?? child;
+            const childRel = child.parentRels.find(rel => rel.type === 'parent-child' && rel.fromId === canonicalNode.id);
+            return cloneBranch(childCanonical, childRel, nextPath);
+          })
+        : [],
+      spouses: canonicalNode.spouses,
+      parentRels: parentRel ? [parentRel] : [],
+      spouseRels: canonicalNode.spouseRels,
+    };
+  };
+
+  return cloneBranch(root);
 }
 
 class FamilyService {
@@ -215,7 +290,16 @@ class FamilyService {
     return res.data;
   }
 
-  async updateRelationship(treeId: string, relId: string, data: { sortOrder?: number; notes?: string }): Promise<FamilyRelationshipDto> {
+  async updateRelationship(treeId: string, relId: string, data: {
+    parentRole?: string;
+    childStatus?: string;
+    lineageType?: string;
+    displayTag?: string;
+    sourceParentId?: string;
+    sourceChildRank?: number;
+    sortOrder?: number;
+    notes?: string;
+  }): Promise<FamilyRelationshipDto> {
     const res = await apiClient.put<FamilyRelationshipDto>(`/family/${treeId}/relationships/${relId}`, data);
     return res.data;
   }

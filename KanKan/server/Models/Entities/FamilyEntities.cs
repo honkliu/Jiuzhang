@@ -89,6 +89,10 @@ public class FamilyRelationship
     // parent-child fields
     public string? ParentRole { get; set; }
     public string? ChildStatus { get; set; }
+    public string? LineageType { get; set; }
+    public string? DisplayTag { get; set; }
+    public string? SourceParentId { get; set; }
+    public int? SourceChildRank { get; set; }
     public int SortOrder { get; set; }
     // spouse fields
     public string? UnionType { get; set; }
