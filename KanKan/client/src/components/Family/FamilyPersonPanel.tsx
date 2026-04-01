@@ -474,29 +474,31 @@ function getBrotherCandidates(person: FamilyNode, allPersons: FamilyNode[]) {
   });
 }
 
-function getRelationColumns(person: FamilyNode, allPersons: FamilyNode[]) {
+function expandParentPairs(parentSeeds: FamilyNode[], personId: string) {
+  const orderedParents: FamilyNode[] = [];
+  const seenIds = new Set<string>();
+
+  for (const parent of parentSeeds) {
+    if (seenIds.has(parent.id)) continue;
+
+    orderedParents.push(parent);
+    seenIds.add(parent.id);
+
+    for (const spouse of parent.spouses) {
+      if (spouse.id === personId || seenIds.has(spouse.id)) continue;
+      orderedParents.push(spouse);
+      seenIds.add(spouse.id);
+    }
+  }
+
+  return orderedParents;
+}
+
+function getPrimaryParents(person: FamilyNode, allPersons: FamilyNode[]) {
   const resolveParents = (target: FamilyNode, predicate: (rel: FamilyNode['parentRels'][number]) => boolean) => target.parentRels
     .filter(predicate)
     .map(rel => allPersons.find(candidate => candidate.id === rel.fromId))
     .filter(Boolean) as FamilyNode[];
-
-  const expandParents = (parentSeeds: FamilyNode[]) => {
-    const byId = new Map<string, FamilyNode>();
-
-    for (const parent of parentSeeds) {
-      byId.set(parent.id, parent);
-    }
-
-    for (const parent of parentSeeds) {
-      for (const spouse of parent.spouses) {
-        if (spouse.id !== person.id && !byId.has(spouse.id)) {
-          byId.set(spouse.id, spouse);
-        }
-      }
-    }
-
-    return [...byId.values()];
-  };
 
   const biologicalParentSeeds = (() => {
     const direct = resolveParents(person, rel => !isAdoptiveLineageRelationship(rel));
@@ -512,9 +514,21 @@ function getRelationColumns(person: FamilyNode, allPersons: FamilyNode[]) {
       : person.spouses.flatMap(spouse => resolveParents(spouse, rel => isAdoptiveLineageRelationship(rel)));
   })();
 
-  const adoptiveParents = expandParents(adoptiveParentSeeds);
-  const biologicalParents = expandParents(biologicalParentSeeds);
-  const parents = adoptiveParents.length > 0 ? adoptiveParents : biologicalParents;
+  const adoptiveParents = expandParentPairs(adoptiveParentSeeds, person.id);
+  const biologicalParents = expandParentPairs(biologicalParentSeeds, person.id);
+  return adoptiveParents.length > 0 ? adoptiveParents : biologicalParents;
+}
+
+function getEditableParents(person: FamilyNode, allPersons: FamilyNode[]) {
+  const directParents = person.parentRels
+    .map(rel => allPersons.find(candidate => candidate.id === rel.fromId))
+    .filter(Boolean) as FamilyNode[];
+
+  return expandParentPairs(directParents, person.id);
+}
+
+function getRelationColumns(person: FamilyNode, allPersons: FamilyNode[]) {
+  const parents = getPrimaryParents(person, allPersons);
 
   const parentRelationById = new Map(person.parentRels.map(rel => [rel.fromId, rel]));
 
@@ -558,22 +572,9 @@ function getBiologicalParentItems(person: FamilyNode, allPersons: FamilyNode[]) 
     .map(rel => allPersons.find(candidate => candidate.id === rel.fromId))
     .filter(Boolean) as FamilyNode[];
 
-  const byId = new Map<string, FamilyNode>();
-  for (const parent of biologicalParentSeeds) {
-    byId.set(parent.id, parent);
-  }
-
-  for (const parent of biologicalParentSeeds) {
-    for (const spouse of parent.spouses) {
-      if (spouse.id !== person.id && !byId.has(spouse.id)) {
-        byId.set(spouse.id, spouse);
-      }
-    }
-  }
-
   const parentRelationById = new Map(person.parentRels.map(rel => [rel.fromId, rel]));
 
-  return [...byId.values()].map((parent, index) => ({
+  return expandParentPairs(biologicalParentSeeds, person.id).map((parent, index) => ({
     id: parent.id,
     label: formatDisplayName(parent.name),
     suffix: toParentOrderLabel(index + 1),
@@ -1192,6 +1193,11 @@ export const FamilyPersonPanel: React.FC<Props> = ({
   canEdit = false,
   fullWidth = false,
 }) => {
+  const linkedTreeCacheRef = useRef(new Map<string, {
+    tree: FamilyTreeDto;
+    persons: FamilyPersonDto[];
+    linkedNodes: FamilyNode[];
+  }>());
   const [editing, setEditing] = useState(false);
   const [editorState, setEditorState] = useState<EditorState | null>(null);
   const [saving, setSaving] = useState(false);
@@ -1226,6 +1232,22 @@ export const FamilyPersonPanel: React.FC<Props> = ({
   const editorRestoreRef = useRef<EditorState | null>(null);
   const preserveEditingAfterRefreshRef = useRef(false);
   const lastSavedEditorSnapshotRef = useRef('');
+
+  const loadLinkedTreeData = async (treeId: string) => {
+    const cached = linkedTreeCacheRef.current.get(treeId);
+    if (cached) {
+      return cached;
+    }
+
+    const response = await familyService.getTree(treeId);
+    const nextValue = {
+      tree: response.tree,
+      persons: response.persons,
+      linkedNodes: hydrateFamilyNodes(response.persons, response.relationships),
+    };
+    linkedTreeCacheRef.current.set(treeId, nextValue);
+    return nextValue;
+  };
 
   useEffect(() => {
     onEditingChange?.(editing);
@@ -1298,7 +1320,7 @@ export const FamilyPersonPanel: React.FC<Props> = ({
     setLoadingLinkablePersons(true);
     setLinkedTreeSelectorError(null);
 
-    void familyService.getTree(editorState.linkedTreeId)
+    void loadLinkedTreeData(editorState.linkedTreeId)
       .then(response => {
         if (cancelled) return;
         setLinkablePersons(response.persons);
@@ -1350,17 +1372,16 @@ export const FamilyPersonPanel: React.FC<Props> = ({
     setLinkedViewLoading(true);
     setLinkedViewError(null);
 
-    void familyService.getTree(person.linkedTreeId)
+    void loadLinkedTreeData(person.linkedTreeId)
       .then(response => {
         if (cancelled) return;
-        const linkedNodes = hydrateFamilyNodes(response.persons, response.relationships);
-        const linkedPerson = linkedNodes.find(candidate => candidate.id === person.linkedPersonId);
+        const linkedPerson = response.linkedNodes.find(candidate => candidate.id === person.linkedPersonId);
         if (!linkedPerson) {
           setLinkedViewState(null);
           setLinkedViewError('已关联的人物在目标谱系中不存在。');
           return;
         }
-        setLinkedViewState({ tree: response.tree, person: linkedPerson, persons: linkedNodes });
+        setLinkedViewState({ tree: response.tree, person: linkedPerson, persons: response.linkedNodes });
       })
       .catch(() => {
         if (cancelled) return;
@@ -1386,9 +1407,7 @@ export const FamilyPersonPanel: React.FC<Props> = ({
   const poem = tree?.zibeiPoem ?? [];
   const zibeiChar = poem[person.generation - rootGen] ?? '';
   const colorSet = getGenderColor(person.gender);
-  const directParents = person.parentRels
-    .map(rel => allPersons.find(candidate => candidate.id === rel.fromId))
-    .filter(Boolean) as FamilyNode[];
+  const directParents = getEditableParents(person, allPersons);
   const children = person.children;
   const orderedChildren = getOrderedChildren(person);
   const spouses = person.spouses;
@@ -1406,24 +1425,23 @@ export const FamilyPersonPanel: React.FC<Props> = ({
   const linkedRelationGridColumns = getRelationGridColumns(linkedRelationColumns.length);
   const availableLinkedTrees = availableTrees.filter(candidate => candidate.id !== tree?.id);
   const relationshipEditing = Boolean(canEdit && editing);
-  const editableParentRelationshipsRaw = directParents
-    .map(parent => ({
-      relationship: person.parentRels.find(rel => rel.type === 'parent-child' && rel.fromId === parent.id),
-      counterpart: parent,
-      kind: 'parent' as const,
-    }))
-    .filter((entry): entry is { relationship: FamilyNode['parentRels'][number]; counterpart: FamilyNode; kind: 'parent' } => Boolean(entry.relationship) && !isAdoptiveLineageRelationship(entry.relationship));
-  const editableParentRelationships = (() => {
-    if (editableParentRelationshipsRaw.length <= 1) return editableParentRelationshipsRaw;
-    const fatherSideEntries = editableParentRelationshipsRaw.filter(entry => entry.counterpart.gender !== 'female');
-    if (fatherSideEntries.length > 0) {
-      return [fatherSideEntries[0]];
+  const editableLineageRelationships = (() => {
+    const biologicalLineageRels = person.parentRels.filter(rel => !isAdoptiveLineageRelationship(rel));
+    const preferredRelationship = biologicalLineageRels[0];
+
+    if (!preferredRelationship) {
+      return [] as Array<{ relationship: FamilyNode['parentRels'][number]; biologicalParent: FamilyNode }>;
     }
-    return [editableParentRelationshipsRaw[0]];
+
+    const biologicalParent = allPersons.find(candidate => candidate.id === preferredRelationship.fromId);
+    if (!biologicalParent) {
+      return [] as Array<{ relationship: FamilyNode['parentRels'][number]; biologicalParent: FamilyNode }>;
+    }
+
+    return [{ relationship: preferredRelationship, biologicalParent }];
   })();
-  const editableLineageRelationships = editableParentRelationships;
   const getLineageParticipants = (entry: typeof editableLineageRelationships[number]) => {
-    const biologicalParent = entry.counterpart;
+    const biologicalParent = entry.biologicalParent;
     const childNode = person;
     return { biologicalParent, childNode };
   };
