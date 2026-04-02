@@ -136,3 +136,45 @@ public class FamilyRelationshipRepository : IFamilyRelationshipRepository
         await _collection.InsertManyAsync(rels);
     }
 }
+
+public class FamilyTreeVisibilityRepository : IFamilyTreeVisibilityRepository
+{
+    private readonly IMongoCollection<FamilyTreeVisibility> _collection;
+
+    public FamilyTreeVisibilityRepository(IMongoClient mongoClient, IConfiguration configuration)
+    {
+        var db = mongoClient.GetDatabase(configuration["MongoDB:DatabaseName"] ?? "KanKanDB");
+        _collection = db.GetCollection<FamilyTreeVisibility>(configuration["MongoDB:Collections:FamilyTreeVisibilities"] ?? "FamilyTreeVisibilities");
+    }
+
+    public async Task<FamilyTreeVisibility?> GetByTreeIdAsync(string treeId)
+        => await _collection.Find(Builders<FamilyTreeVisibility>.Filter.Eq(v => v.TreeId, treeId)).FirstOrDefaultAsync();
+
+    public async Task<List<FamilyTreeVisibility>> GetByEmailAsync(string email)
+    {
+        var filter = Builders<FamilyTreeVisibility>.Filter.Or(
+            Builders<FamilyTreeVisibility>.Filter.AnyEq(v => v.UserViewers, email),
+            Builders<FamilyTreeVisibility>.Filter.AnyEq(v => v.UserEditors, email));
+        return await _collection.Find(filter).ToListAsync();
+    }
+
+    public async Task<List<FamilyTreeVisibility>> GetByDomainAsync(string domain)
+    {
+        var filter = Builders<FamilyTreeVisibility>.Filter.Or(
+            Builders<FamilyTreeVisibility>.Filter.AnyEq(v => v.DomainViewers, domain),
+            Builders<FamilyTreeVisibility>.Filter.AnyEq(v => v.DomainEditors, domain));
+        return await _collection.Find(filter).ToListAsync();
+    }
+
+    public async Task<FamilyTreeVisibility> UpsertAsync(FamilyTreeVisibility visibility)
+    {
+        await _collection.ReplaceOneAsync(
+            Builders<FamilyTreeVisibility>.Filter.Eq(v => v.TreeId, visibility.TreeId),
+            visibility,
+            new ReplaceOptions { IsUpsert = true });
+        return visibility;
+    }
+
+    public async Task DeleteByTreeIdAsync(string treeId)
+        => await _collection.DeleteOneAsync(Builders<FamilyTreeVisibility>.Filter.Eq(v => v.TreeId, treeId));
+}

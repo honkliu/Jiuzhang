@@ -5,17 +5,19 @@ using KanKan.API.Repositories.Interfaces;
 namespace KanKan.API.Repositories.Implementations;
 
 /// <summary>
-/// Combined in-memory stub for all three Family repository interfaces.
+/// Combined in-memory stub for all four Family repository interfaces.
 /// Used in InMemory (development) mode. Data is kept in memory per process lifetime.
 /// </summary>
 public class InMemoryFamilyRepository :
     IFamilyTreeRepository,
     IFamilyPersonRepository,
-    IFamilyRelationshipRepository
+    IFamilyRelationshipRepository,
+    IFamilyTreeVisibilityRepository
 {
     private readonly ConcurrentDictionary<string, FamilyTree> _trees = new();
     private readonly ConcurrentDictionary<string, FamilyPerson> _persons = new();
     private readonly ConcurrentDictionary<string, FamilyRelationship> _rels = new();
+    private readonly ConcurrentDictionary<string, FamilyTreeVisibility> _visibilities = new();
 
     // ── IFamilyTreeRepository ────────────────────────────────────────────────
 
@@ -131,6 +133,29 @@ public class InMemoryFamilyRepository :
             r.CreatedAt = DateTime.UtcNow;
             _rels[r.Id] = r;
         }
+        return Task.CompletedTask;
+    }
+
+    // ── IFamilyTreeVisibilityRepository ─────────────────────────────────────
+
+    Task<FamilyTreeVisibility?> IFamilyTreeVisibilityRepository.GetByTreeIdAsync(string treeId)
+        => Task.FromResult(_visibilities.TryGetValue(treeId, out var visibility) ? visibility : null);
+
+    Task<List<FamilyTreeVisibility>> IFamilyTreeVisibilityRepository.GetByEmailAsync(string email)
+        => Task.FromResult(_visibilities.Values.Where(v => v.UserViewers.Contains(email, StringComparer.Ordinal) || v.UserEditors.Contains(email, StringComparer.Ordinal)).ToList());
+
+    Task<List<FamilyTreeVisibility>> IFamilyTreeVisibilityRepository.GetByDomainAsync(string domain)
+        => Task.FromResult(_visibilities.Values.Where(v => v.DomainViewers.Contains(domain, StringComparer.OrdinalIgnoreCase) || v.DomainEditors.Contains(domain, StringComparer.OrdinalIgnoreCase)).ToList());
+
+    Task<FamilyTreeVisibility> IFamilyTreeVisibilityRepository.UpsertAsync(FamilyTreeVisibility visibility)
+    {
+        _visibilities[visibility.TreeId] = visibility;
+        return Task.FromResult(visibility);
+    }
+
+    Task IFamilyTreeVisibilityRepository.DeleteByTreeIdAsync(string treeId)
+    {
+        _visibilities.TryRemove(treeId, out _);
         return Task.CompletedTask;
     }
 }

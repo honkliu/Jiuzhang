@@ -19,6 +19,14 @@ public class UpdateFamilyTreeRequest
     public List<string>? ZibeiPoem { get; set; }
 }
 
+public class UpdateFamilyTreeVisibilityRequest
+{
+    public List<string>? UserViewers { get; set; }
+    public List<string>? UserEditors { get; set; }
+    public List<string>? DomainViewers { get; set; }
+    public List<string>? DomainEditors { get; set; }
+}
+
 public class FamilyDateDto
 {
     public int Year { get; set; }
@@ -133,6 +141,7 @@ public class FamilyTreeResponse
     public string OwnerId { get; set; } = string.Empty;
     public int RootGeneration { get; set; }
     public List<string> ZibeiPoem { get; set; } = new();
+    public bool CanManagePermissions { get; set; }
     public string CreatedAt { get; set; } = string.Empty;
     public string UpdatedAt { get; set; } = string.Empty;
 }
@@ -203,6 +212,15 @@ public class FullFamilyTreeResponse
     public FamilyTreeResponse Tree { get; set; } = new();
     public List<FamilyPersonResponse> Persons { get; set; } = new();
     public List<FamilyRelationshipResponse> Relationships { get; set; } = new();
+}
+
+public class FamilyTreeVisibilityResponse
+{
+    public string TreeId { get; set; } = string.Empty;
+    public List<string> UserViewers { get; set; } = new();
+    public List<string> UserEditors { get; set; } = new();
+    public List<string> DomainViewers { get; set; } = new();
+    public List<string> DomainEditors { get; set; } = new();
 }
 
 // ─── Import shape (Final.html nested JSON) ──────────────────────────────────

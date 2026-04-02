@@ -24,6 +24,7 @@ public class AuthController : ControllerBase
     private readonly IAvatarService _avatarService;
     private readonly INotificationRepository _notificationRepository;
     private readonly IUserRepository _userRepository;
+    private readonly IFamilyTreeVisibilityRepository _familyTreeVisibilityRepository;
     private readonly IHubContext<ChatHub> _hubContext;
     private readonly IConfiguration _configuration;
     private readonly ILogger<AuthController> _logger;
@@ -34,6 +35,7 @@ public class AuthController : ControllerBase
         IAvatarService avatarService,
         INotificationRepository notificationRepository,
         IUserRepository userRepository,
+        IFamilyTreeVisibilityRepository familyTreeVisibilityRepository,
         IHubContext<ChatHub> hubContext,
         IConfiguration configuration,
         ILogger<AuthController> logger)
@@ -43,6 +45,7 @@ public class AuthController : ControllerBase
         _avatarService = avatarService;
         _notificationRepository = notificationRepository;
         _userRepository = userRepository;
+        _familyTreeVisibilityRepository = familyTreeVisibilityRepository;
         _hubContext = hubContext;
         _configuration = configuration;
         _logger = logger;
@@ -441,13 +444,14 @@ public class AuthController : ControllerBase
     private async Task<UserDto> MapToUserDtoAsync(UserEntity user)
     {
         var normalizedAvatarImageId = await _avatarService.NormalizeAvatarImageIdAsync(user.AvatarImageId);
+        var familyCapabilities = await GetFamilyCapabilitiesAsync(user);
         return new UserDto
         {
             Id = user.Id,
             Handle = user.Handle,
             IsAdmin = user.IsAdmin,
-            CanViewFamilyTree = FamilyAccessPolicy.CanViewFamilyTree(_configuration, user),
-            CanEditFamilyTree = FamilyAccessPolicy.CanEditAnyFamilyTree(_configuration, user),
+            CanViewFamilyTree = familyCapabilities.canView,
+            CanEditFamilyTree = familyCapabilities.canEdit,
             IsDisabled = user.IsDisabled,
             DisplayName = user.DisplayName,
             AvatarUrl = user.AvatarUrl,
@@ -457,6 +461,37 @@ public class AuthController : ControllerBase
             IsOnline = user.IsOnline,
             LastSeen = user.LastSeen
         };
+    }
+
+    private async Task<(bool canView, bool canEdit)> GetFamilyCapabilitiesAsync(UserEntity user)
+    {
+        var canView = FamilyAccessPolicy.CanViewFamilyTree(_configuration, user);
+        var canEdit = FamilyAccessPolicy.CanEditAnyFamilyTree(_configuration, user);
+        if (canView && canEdit)
+        {
+            return (canView, canEdit);
+        }
+
+        var visibilities = new List<FamilyTreeVisibility>();
+        visibilities.AddRange(await _familyTreeVisibilityRepository.GetByEmailAsync(FamilyAccessPolicy.NormalizeEmail(user.Email)));
+
+        var domain = FamilyAccessPolicy.ResolveDomain(user);
+        if (!string.IsNullOrWhiteSpace(domain))
+        {
+            visibilities.AddRange(await _familyTreeVisibilityRepository.GetByDomainAsync(domain));
+        }
+
+        if (!canView)
+        {
+            canView = FamilyAccessPolicy.HasAnyTreeVisibility(user, visibilities);
+        }
+
+        if (!canEdit)
+        {
+            canEdit = FamilyAccessPolicy.HasAnyTreeEditAccess(user, visibilities);
+        }
+
+        return (canView, canEdit);
     }
 
     private readonly record struct AdminScope(bool IsAllowed, bool IsGlobal, string Domain)

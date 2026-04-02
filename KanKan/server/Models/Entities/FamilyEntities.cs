@@ -1,3 +1,5 @@
+using MongoDB.Bson.Serialization.Attributes;
+
 namespace KanKan.API.Models.Entities;
 
 public class FamilyDate
@@ -47,6 +49,16 @@ public class FamilyTree
     public List<string> ZibeiPoem { get; set; } = new();
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
+}
+
+[BsonIgnoreExtraElements]
+public class FamilyTreeVisibility
+{
+    public string TreeId { get; set; } = string.Empty;
+    public List<string> UserViewers { get; set; } = new();
+    public List<string> UserEditors { get; set; } = new();
+    public List<string> DomainViewers { get; set; } = new();
+    public List<string> DomainEditors { get; set; } = new();
 }
 
 public class FamilyPerson

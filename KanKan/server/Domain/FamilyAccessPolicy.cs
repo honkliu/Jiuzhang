@@ -82,6 +82,46 @@ public static class FamilyAccessPolicy
             .Any(domain => string.Equals(domain, normalizedDomain, StringComparison.OrdinalIgnoreCase));
     }
 
+    public static bool CanViewTree(IConfiguration configuration, User user, FamilyTree tree, FamilyTreeVisibility? visibility)
+    {
+        if (CanViewTreeDomain(configuration, user, tree.Domain))
+        {
+            return true;
+        }
+
+        return HasExplicitViewerAccess(user, visibility);
+    }
+
+    public static bool CanEditTree(IConfiguration configuration, User user, FamilyTree tree, FamilyTreeVisibility? visibility)
+    {
+        if (CanEditTreeDomain(configuration, user, tree.Domain))
+        {
+            return true;
+        }
+
+        return HasExplicitEditorAccess(user, visibility);
+    }
+
+    public static bool CanManageTree(IConfiguration configuration, User user, FamilyTree tree)
+    {
+        if (CanEditTreeDomain(configuration, user, tree.Domain))
+        {
+            return true;
+        }
+
+        return string.Equals(tree.OwnerId, user.Id, StringComparison.Ordinal);
+    }
+
+    public static bool HasAnyTreeVisibility(User user, IEnumerable<FamilyTreeVisibility> visibilities)
+    {
+        return visibilities.Any(visibility => HasExplicitViewerAccess(user, visibility));
+    }
+
+    public static bool HasAnyTreeEditAccess(User user, IEnumerable<FamilyTreeVisibility> visibilities)
+    {
+        return visibilities.Any(visibility => HasExplicitEditorAccess(user, visibility));
+    }
+
     public static string NormalizeDomain(string? value)
     {
         var normalized = (value ?? string.Empty).Trim().ToLowerInvariant();
@@ -96,6 +136,12 @@ public static class FamilyAccessPolicy
     public static string NormalizeEmail(string? value)
     {
         return (value ?? string.Empty).Trim().ToLowerInvariant();
+    }
+
+    public static string NormalizeVisibilityEmail(string? value)
+    {
+        var normalized = NormalizeEmail(value);
+        return normalized.Contains('@') ? normalized : string.Empty;
     }
 
     private static HashSet<string> GetEnabledDomains(IConfiguration configuration)
@@ -122,5 +168,33 @@ public static class FamilyAccessPolicy
         }
 
         return (domains ?? Array.Empty<string>()).Select(NormalizeDomain).ToArray();
+    }
+
+    private static bool HasExplicitViewerAccess(User user, FamilyTreeVisibility? visibility)
+    {
+        if (visibility == null)
+        {
+            return false;
+        }
+
+        var email = NormalizeEmail(user.Email);
+        var userDomain = ResolveDomain(user);
+        return visibility.UserViewers.Contains(email, StringComparer.Ordinal)
+            || visibility.UserEditors.Contains(email, StringComparer.Ordinal)
+            || visibility.DomainViewers.Contains(userDomain, StringComparer.OrdinalIgnoreCase)
+            || visibility.DomainEditors.Contains(userDomain, StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static bool HasExplicitEditorAccess(User user, FamilyTreeVisibility? visibility)
+    {
+        if (visibility == null)
+        {
+            return false;
+        }
+
+        var email = NormalizeEmail(user.Email);
+        var userDomain = ResolveDomain(user);
+        return visibility.UserEditors.Contains(email, StringComparer.Ordinal)
+            || visibility.DomainEditors.Contains(userDomain, StringComparer.OrdinalIgnoreCase);
     }
 }

@@ -55,6 +55,7 @@ public class MongoDbInitializer : IHostedService
             _configuration["MongoDB:Collections:FamilyTrees"] ?? "FamilyTrees",
             _configuration["MongoDB:Collections:FamilyPersons"] ?? "FamilyPersons",
             _configuration["MongoDB:Collections:FamilyRelationships"] ?? "FamilyRelationships",
+            _configuration["MongoDB:Collections:FamilyTreeVisibilities"] ?? "FamilyTreeVisibilities",
             "avatarImages",
             "imageGenerationJobs"
         };
@@ -271,6 +272,30 @@ public class MongoDbInitializer : IHostedService
         await relsCol.Indexes.CreateOneAsync(
             new CreateIndexModel<FamilyRelationship>(
                 Builders<FamilyRelationship>.IndexKeys.Ascending(r => r.TreeId).Ascending(r => r.Type).Ascending(r => r.ToId)),
+            cancellationToken: cancellationToken);
+
+        var visibilitiesCol = database.GetCollection<FamilyTreeVisibility>(
+            _configuration["MongoDB:Collections:FamilyTreeVisibilities"] ?? "FamilyTreeVisibilities");
+        await visibilitiesCol.Indexes.CreateOneAsync(
+            new CreateIndexModel<FamilyTreeVisibility>(
+                Builders<FamilyTreeVisibility>.IndexKeys.Ascending(v => v.TreeId),
+                new CreateIndexOptions { Unique = true }),
+            cancellationToken: cancellationToken);
+        await visibilitiesCol.Indexes.CreateOneAsync(
+            new CreateIndexModel<FamilyTreeVisibility>(
+                Builders<FamilyTreeVisibility>.IndexKeys.Ascending(v => v.UserViewers)),
+            cancellationToken: cancellationToken);
+        await visibilitiesCol.Indexes.CreateOneAsync(
+            new CreateIndexModel<FamilyTreeVisibility>(
+                Builders<FamilyTreeVisibility>.IndexKeys.Ascending(v => v.UserEditors)),
+            cancellationToken: cancellationToken);
+        await visibilitiesCol.Indexes.CreateOneAsync(
+            new CreateIndexModel<FamilyTreeVisibility>(
+                Builders<FamilyTreeVisibility>.IndexKeys.Ascending(v => v.DomainViewers)),
+            cancellationToken: cancellationToken);
+        await visibilitiesCol.Indexes.CreateOneAsync(
+            new CreateIndexModel<FamilyTreeVisibility>(
+                Builders<FamilyTreeVisibility>.IndexKeys.Ascending(v => v.DomainEditors)),
             cancellationToken: cancellationToken);
     }
 

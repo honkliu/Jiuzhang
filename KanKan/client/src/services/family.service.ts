@@ -39,8 +39,17 @@ export interface FamilyTreeDto {
   ownerId: string;
   rootGeneration: number;
   zibeiPoem?: string[];
+  canManagePermissions?: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface FamilyTreeVisibilityDto {
+  treeId: string;
+  userViewers: string[];
+  userEditors: string[];
+  domainViewers: string[];
+  domainEditors: string[];
 }
 
 export interface FamilyPersonDto {
@@ -107,6 +116,13 @@ export interface CreateFamilyTreeRequest {
   domain?: string;
   rootGeneration?: number;
   zibeiPoem?: string[];
+}
+
+export interface UpdateFamilyTreeVisibilityRequest {
+  userViewers?: string[];
+  userEditors?: string[];
+  domainViewers?: string[];
+  domainEditors?: string[];
 }
 
 export interface NestedFamilyPersonImport {
@@ -268,6 +284,16 @@ class FamilyService {
 
   async getTree(treeId: string): Promise<FullTreeResponse> {
     const res = await apiClient.get<FullTreeResponse>(`/family/${treeId}`);
+    return res.data;
+  }
+
+  async getTreeVisibility(treeId: string): Promise<FamilyTreeVisibilityDto> {
+    const res = await apiClient.get<FamilyTreeVisibilityDto>(`/family/${treeId}/visibility`);
+    return res.data;
+  }
+
+  async updateTreeVisibility(treeId: string, data: UpdateFamilyTreeVisibilityRequest): Promise<FamilyTreeVisibilityDto> {
+    const res = await apiClient.put<FamilyTreeVisibilityDto>(`/family/${treeId}/visibility`, data);
     return res.data;
   }
 

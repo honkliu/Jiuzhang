@@ -25,6 +25,7 @@ public class ContactController : ControllerBase
     private readonly IAvatarService _avatarService;
     private readonly IHubContext<ChatHub> _hubContext;
     private readonly INotificationRepository _notificationRepository;
+    private readonly IFamilyTreeVisibilityRepository _familyTreeVisibilityRepository;
     private readonly IConfiguration _configuration;
     private readonly ILogger<ContactController> _logger;
 
@@ -36,6 +37,7 @@ public class ContactController : ControllerBase
         IAvatarService avatarService,
         IHubContext<ChatHub> hubContext,
         INotificationRepository notificationRepository,
+        IFamilyTreeVisibilityRepository familyTreeVisibilityRepository,
         IConfiguration configuration,
         ILogger<ContactController> logger)
     {
@@ -46,6 +48,7 @@ public class ContactController : ControllerBase
         _avatarService = avatarService;
         _hubContext = hubContext;
         _notificationRepository = notificationRepository;
+        _familyTreeVisibilityRepository = familyTreeVisibilityRepository;
         _configuration = configuration;
         _logger = logger;
     }
@@ -75,27 +78,6 @@ public class ContactController : ControllerBase
         return DomainRules.CanAccess(ResolveDomain(viewer), ResolveDomain(target));
     }
 
-    private UserDto ToUserDto(User user, bool includeDomain) => new()
-    {
-        Id = user.Id,
-        Domain = includeDomain
-            ? (string.IsNullOrWhiteSpace(user.Domain) ? DomainRules.GetDomain(user.Email) : user.Domain)
-            : null,
-        IsAdmin = user.IsAdmin,
-        CanViewFamilyTree = FamilyAccessPolicy.CanViewFamilyTree(_configuration, user),
-        CanEditFamilyTree = FamilyAccessPolicy.CanEditAnyFamilyTree(_configuration, user),
-        IsDisabled = user.IsDisabled,
-        Handle = user.Handle,
-        DisplayName = user.DisplayName,
-        AvatarUrl = user.AvatarUrl,
-        AvatarImageId = user.AvatarImageId,
-        Gender = user.Gender,
-        Bio = user.Bio,
-        IsOnline = user.IsOnline,
-        LastSeen = user.LastSeen,
-        CreatedAt = user.CreatedAt
-    };
-
     private async Task<UserDto> ToUserDtoNormalizedAsync(User user, bool includeDomain)
     {
         var normalizedAvatarImageId = await _avatarService.NormalizeAvatarImageIdAsync(user.AvatarImageId);
@@ -106,7 +88,58 @@ public class ContactController : ControllerBase
             await _userRepository.UpdateAsync(user);
         }
 
-        return ToUserDto(user, includeDomain);
+        var familyCapabilities = await GetFamilyCapabilitiesAsync(user);
+        return new UserDto
+        {
+            Id = user.Id,
+            Domain = includeDomain
+                ? (string.IsNullOrWhiteSpace(user.Domain) ? DomainRules.GetDomain(user.Email) : user.Domain)
+                : null,
+            IsAdmin = user.IsAdmin,
+            CanViewFamilyTree = familyCapabilities.canView,
+            CanEditFamilyTree = familyCapabilities.canEdit,
+            IsDisabled = user.IsDisabled,
+            Handle = user.Handle,
+            DisplayName = user.DisplayName,
+            AvatarUrl = user.AvatarUrl,
+            AvatarImageId = user.AvatarImageId,
+            Gender = user.Gender,
+            Bio = user.Bio,
+            IsOnline = user.IsOnline,
+            LastSeen = user.LastSeen,
+            CreatedAt = user.CreatedAt
+        };
+    }
+
+    private async Task<(bool canView, bool canEdit)> GetFamilyCapabilitiesAsync(User user)
+    {
+        var canView = FamilyAccessPolicy.CanViewFamilyTree(_configuration, user);
+        var canEdit = FamilyAccessPolicy.CanEditAnyFamilyTree(_configuration, user);
+        if (canView && canEdit)
+        {
+            return (canView, canEdit);
+        }
+
+        var visibilities = new List<FamilyTreeVisibility>();
+        visibilities.AddRange(await _familyTreeVisibilityRepository.GetByEmailAsync(FamilyAccessPolicy.NormalizeEmail(user.Email)));
+
+        var domain = FamilyAccessPolicy.ResolveDomain(user);
+        if (!string.IsNullOrWhiteSpace(domain))
+        {
+            visibilities.AddRange(await _familyTreeVisibilityRepository.GetByDomainAsync(domain));
+        }
+
+        if (!canView)
+        {
+            canView = FamilyAccessPolicy.HasAnyTreeVisibility(user, visibilities);
+        }
+
+        if (!canEdit)
+        {
+            canEdit = FamilyAccessPolicy.HasAnyTreeEditAccess(user, visibilities);
+        }
+
+        return (canView, canEdit);
     }
 
     /// <summary>

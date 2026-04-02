@@ -32,3 +32,12 @@ public interface IFamilyRelationshipRepository
     Task DeleteByTreeIdAsync(string treeId);
     Task InsertManyAsync(List<FamilyRelationship> rels);
 }
+
+public interface IFamilyTreeVisibilityRepository
+{
+    Task<FamilyTreeVisibility?> GetByTreeIdAsync(string treeId);
+    Task<List<FamilyTreeVisibility>> GetByEmailAsync(string email);
+    Task<List<FamilyTreeVisibility>> GetByDomainAsync(string domain);
+    Task<FamilyTreeVisibility> UpsertAsync(FamilyTreeVisibility visibility);
+    Task DeleteByTreeIdAsync(string treeId);
+}

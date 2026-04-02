@@ -227,6 +227,7 @@ if (useInMemory)
     builder.Services.AddSingleton<KanKan.API.Repositories.Interfaces.IFamilyTreeRepository, KanKan.API.Repositories.Implementations.InMemoryFamilyRepository>();
     builder.Services.AddSingleton<KanKan.API.Repositories.Interfaces.IFamilyPersonRepository, KanKan.API.Repositories.Implementations.InMemoryFamilyRepository>();
     builder.Services.AddSingleton<KanKan.API.Repositories.Interfaces.IFamilyRelationshipRepository, KanKan.API.Repositories.Implementations.InMemoryFamilyRepository>();
+    builder.Services.AddSingleton<KanKan.API.Repositories.Interfaces.IFamilyTreeVisibilityRepository, KanKan.API.Repositories.Implementations.InMemoryFamilyRepository>();
 }
 else if (storageMode == "mongodb")
 {
@@ -241,6 +242,7 @@ else if (storageMode == "mongodb")
     builder.Services.AddScoped<KanKan.API.Repositories.Interfaces.IFamilyTreeRepository, KanKan.API.Repositories.Implementations.FamilyTreeRepository>();
     builder.Services.AddScoped<KanKan.API.Repositories.Interfaces.IFamilyPersonRepository, KanKan.API.Repositories.Implementations.FamilyPersonRepository>();
     builder.Services.AddScoped<KanKan.API.Repositories.Interfaces.IFamilyRelationshipRepository, KanKan.API.Repositories.Implementations.FamilyRelationshipRepository>();
+    builder.Services.AddScoped<KanKan.API.Repositories.Interfaces.IFamilyTreeVisibilityRepository, KanKan.API.Repositories.Implementations.FamilyTreeVisibilityRepository>();
 }
 
 builder.Services.AddScoped<IEmailService, EmailService>();
