@@ -68,6 +68,8 @@ public class FamilyPerson
     public string Domain { get; set; } = string.Empty;
     public string? LinkedTreeId { get; set; }
     public string? LinkedPersonId { get; set; }
+    public string? LinkedTreeName { get; set; }
+    public string? LinkedPersonName { get; set; }
     public string Name { get; set; } = string.Empty;
     public List<string> Aliases { get; set; } = new();
     // "male" | "female" | "unknown"

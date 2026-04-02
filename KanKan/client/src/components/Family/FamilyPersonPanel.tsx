@@ -1482,6 +1482,16 @@ export const FamilyPersonPanel: React.FC<Props> = ({
   const childRowCount = orderedChildren.length + pendingChildren.length;
   const editableRelationRowCount = Math.max(parentRowCount, spouseRowCount, childRowCount, 1);
   const coverImage = editorState.photos[0]?.url || person.avatarUrl;
+  const linkedFallbackTreeName = person.linkedTreeName?.trim() || '未知家谱';
+  const linkedFallbackPersonName = person.linkedPersonName?.trim() || '未知人物';
+  const handleOpenLinkedFallback = () => {
+    // Preserve clickable affordance without attempting to load missing linked data.
+  };
+  const showLinkedFallback = !editing
+    && !linkedViewLoading
+    && !linkedViewState
+    && Boolean(person.linkedTreeId && person.linkedPersonId && (person.linkedTreeName || person.linkedPersonName));
+  const showLinkedViewError = Boolean(linkedViewError) && !showLinkedFallback;
   const photoUrls = (person.photos ?? []).map(photo => photo.url);
   const photoGroups = (person.photos ?? []).map(photo => ({
     sourceUrl: photo.url,
@@ -2885,7 +2895,7 @@ export const FamilyPersonPanel: React.FC<Props> = ({
         )}
       </BoxAny>
 
-      {!editing && (linkedViewLoading || linkedViewError || linkedViewState) && (
+      {!editing && (linkedViewLoading || showLinkedViewError || linkedViewState || showLinkedFallback) && (
         <>
           <Divider />
           <BoxAny sx={{ ...panelSectionPaddingSx, py: 1.25, display: 'grid', gap: 0.9 }}>
@@ -2894,7 +2904,58 @@ export const FamilyPersonPanel: React.FC<Props> = ({
                 正在加载关联谱系…
               </Typography>
             )}
-            {linkedViewError && <Alert severity="error">{linkedViewError}</Alert>}
+            {showLinkedViewError && <Alert severity="error">{linkedViewError}</Alert>}
+            {showLinkedFallback && (
+              <BoxAny
+                sx={{
+                  display: 'grid',
+                  gap: 0.95,
+                  p: 1.1,
+                  borderRadius: '8px',
+                  border: '1px solid rgba(15,23,42,0.08)',
+                  background: 'linear-gradient(180deg, rgba(248,250,252,0.98) 0%, rgba(241,245,249,0.9) 100%)',
+                  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.75)',
+                }}
+              >
+                <BoxAny sx={{ display: 'grid', gridTemplateColumns: '40px minmax(0, 1fr)', columnGap: 0.75, alignItems: 'start' }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: 11, color: '#166534', fontWeight: 600 }}>
+                    另谱
+                  </Typography>
+                  <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 0.6, flexWrap: 'wrap', minWidth: 0 }}>
+                    <Link
+                      component="button"
+                      variant="body2"
+                      underline="hover"
+                      onClick={handleOpenLinkedFallback}
+                      sx={{ justifySelf: 'start', textAlign: 'left', fontSize: 13, minWidth: 0, wordBreak: 'break-word', color: '#dc2626' }}
+                    >
+                      {linkedFallbackPersonName}
+                    </Link>
+                    <Typography
+                      component="button"
+                      onClick={handleOpenLinkedFallback}
+                      sx={{
+                        px: 0.85,
+                        py: 0.35,
+                        border: 'none',
+                        borderRadius: 0,
+                        backgroundColor: '#d9eef2',
+                        boxShadow: '0 4px 10px rgba(15,23,42,0.10)',
+                        fontSize: 12.5,
+                        lineHeight: 1.2,
+                        fontWeight: 600,
+                        color: '#b91c1c',
+                        cursor: 'pointer',
+                        transition: 'background-color 120ms ease, color 120ms ease, box-shadow 120ms ease, transform 120ms ease',
+                        '&:hover': { backgroundColor: '#c9e5ea', color: '#991b1b', boxShadow: '0 6px 14px rgba(15,23,42,0.14)', transform: 'translateY(-1px)' },
+                      }}
+                    >
+                      {linkedFallbackTreeName}
+                    </Typography>
+                  </BoxAny>
+                </BoxAny>
+              </BoxAny>
+            )}
             {linkedViewState && (
               <BoxAny
                 sx={{

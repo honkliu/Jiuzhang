@@ -152,6 +152,8 @@ public class FamilyPersonResponse
     public string TreeId { get; set; } = string.Empty;
     public string? LinkedTreeId { get; set; }
     public string? LinkedPersonId { get; set; }
+    public string? LinkedTreeName { get; set; }
+    public string? LinkedPersonName { get; set; }
     public string Name { get; set; } = string.Empty;
     public List<string> Aliases { get; set; } = new();
     public string Gender { get; set; } = "male";
@@ -221,6 +223,62 @@ public class FamilyTreeVisibilityResponse
     public List<string> UserEditors { get; set; } = new();
     public List<string> DomainViewers { get; set; } = new();
     public List<string> DomainEditors { get; set; } = new();
+}
+
+public class FamilyTreeArchiveTreeDto
+{
+    public string SourceTreeId { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string? Surname { get; set; }
+    public string Domain { get; set; } = string.Empty;
+    public int RootGeneration { get; set; }
+    public List<string> ZibeiPoem { get; set; } = new();
+}
+
+public class FamilyArchivedPhotoDto
+{
+    public string Id { get; set; } = string.Empty;
+    public string? Url { get; set; }
+    public string? ArchivePath { get; set; }
+    public string? Caption { get; set; }
+    public int? Year { get; set; }
+}
+
+public class FamilyArchivedPersonDto
+{
+    public string Id { get; set; } = string.Empty;
+    public string TreeId { get; set; } = string.Empty;
+    public string? LinkedTreeId { get; set; }
+    public string? LinkedPersonId { get; set; }
+    public string? LinkedTreeName { get; set; }
+    public string? LinkedPersonName { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public List<string> Aliases { get; set; } = new();
+    public string Gender { get; set; } = "male";
+    public int Generation { get; set; }
+    public FamilyDateDto? BirthDate { get; set; }
+    public FamilyDateDto? DeathDate { get; set; }
+    public string? BirthPlace { get; set; }
+    public string? DeathPlace { get; set; }
+    public bool? IsAlive { get; set; }
+    public string? AvatarUrl { get; set; }
+    public string? AvatarArchivePath { get; set; }
+    public List<FamilyArchivedPhotoDto> Photos { get; set; } = new();
+    public string? Occupation { get; set; }
+    public string? Education { get; set; }
+    public string? Biography { get; set; }
+    public string? BriefNote { get; set; }
+    public List<FamilyExperienceDto> Experiences { get; set; } = new();
+}
+
+public class FamilyTreeArchiveResponse
+{
+    public int FormatVersion { get; set; } = 1;
+    public string ExportedAt { get; set; } = string.Empty;
+    public FamilyTreeArchiveTreeDto Tree { get; set; } = new();
+    public FamilyTreeVisibilityResponse? Visibility { get; set; }
+    public List<FamilyArchivedPersonDto> Persons { get; set; } = new();
+    public List<FamilyRelationshipResponse> Relationships { get; set; } = new();
 }
 
 // ─── Import shape (Final.html nested JSON) ──────────────────────────────────

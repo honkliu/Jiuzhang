@@ -57,6 +57,8 @@ export interface FamilyPersonDto {
   treeId: string;
   linkedTreeId?: string;
   linkedPersonId?: string;
+  linkedTreeName?: string;
+  linkedPersonName?: string;
   name: string;
   aliases?: string[];
   gender?: 'male' | 'female' | 'unknown';
@@ -147,6 +149,17 @@ export interface FullTreeResponse {
   tree: FamilyTreeDto;
   persons: FamilyPersonDto[];
   relationships: FamilyRelationshipDto[];
+}
+
+export interface ImportTreeArchiveRequest {
+  file: File;
+  name?: string;
+  domain?: string;
+}
+
+export interface ExportTreeArchiveResult {
+  blob: Blob;
+  fileName: string;
 }
 
 type UpsertFamilyPersonPayload = Partial<FamilyPersonDto> & {
@@ -339,8 +352,39 @@ class FamilyService {
     return res.data;
   }
 
+  async exportTreeArchive(treeId: string): Promise<ExportTreeArchiveResult> {
+    const res = await apiClient.get<Blob>(`/family/${treeId}/export-archive`, {
+      responseType: 'blob',
+    });
+
+    const disposition = String(res.headers['content-disposition'] ?? '');
+    const fileNameMatch = disposition.match(/filename\*=UTF-8''([^;]+)|filename="?([^";]+)"?/i);
+    const rawFileName = fileNameMatch?.[1] ?? fileNameMatch?.[2] ?? 'family-tree.zip';
+
+    return {
+      blob: res.data,
+      fileName: decodeURIComponent(rawFileName),
+    };
+  }
+
   async importTree(treeId: string, root: NestedFamilyPersonImport): Promise<{ personsAdded: number; relationshipsAdded: number }> {
     const res = await apiClient.post<{ personsAdded: number; relationshipsAdded: number }>(`/family/${treeId}/import`, root);
+    return res.data;
+  }
+
+  async importTreeArchive(data: ImportTreeArchiveRequest): Promise<FamilyTreeDto> {
+    const formData = new FormData();
+    formData.append('file', data.file);
+    if (data.name) {
+      formData.append('name', data.name);
+    }
+    if (data.domain) {
+      formData.append('domain', data.domain);
+    }
+
+    const res = await apiClient.post<FamilyTreeDto>('/family/import-archive', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
     return res.data;
   }
 }

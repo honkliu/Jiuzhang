@@ -4,7 +4,7 @@ import {
   FormControl, Divider, Drawer, Button, Dialog,
   DialogTitle, DialogContent, DialogActions,
   Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  TextField, Autocomplete, useMediaQuery, useTheme, InputBase, IconButton, Chip,
+  TextField, Autocomplete, useMediaQuery, useTheme, InputBase, IconButton, Chip, Tabs, Tab,
 } from '@mui/material';
 import {
   ExpandMore as ExpandMoreIcon,
@@ -28,6 +28,7 @@ import type { AppDispatch, RootState } from '@/store';
 const BoxAny = Box as any;
 
 type ViewMode = 'tree' | 'list' | 'generation';
+type CreateTreeMode = 'text' | 'archive';
 
 interface FamilyPagePersistedState {
   selectedTreeId: string | null;
@@ -341,9 +342,12 @@ export const FamilyPage: React.FC = () => {
   const [createTreeRootGeneration, setCreateTreeRootGeneration] = useState('1');
   const [createTreePoem, setCreateTreePoem] = useState('');
   const [createTreeText, setCreateTreeText] = useState(() => normalizeIndentedInputForDisplay(''));
+  const [createArchiveFile, setCreateArchiveFile] = useState<File | null>(null);
+  const [createTreeMode, setCreateTreeMode] = useState<CreateTreeMode>('text');
   const [createTreeError, setCreateTreeError] = useState<string | null>(null);
   const [creatingTree, setCreatingTree] = useState(false);
   const [deletingTree, setDeletingTree] = useState(false);
+  const [exportingTreeArchive, setExportingTreeArchive] = useState(false);
   const [visibilityDialogOpen, setVisibilityDialogOpen] = useState(false);
   const [loadingVisibility, setLoadingVisibility] = useState(false);
   const [savingVisibility, setSavingVisibility] = useState(false);
@@ -359,6 +363,7 @@ export const FamilyPage: React.FC = () => {
   const [panelEditing, setPanelEditing] = useState(false);
   const canvasRef = useRef<FamilyHistoHandle>(null);
   const createTreeTextInputRef = useRef<HTMLTextAreaElement | null>(null);
+  const createArchiveInputRef = useRef<HTMLInputElement | null>(null);
   const pendingCreateTreeTextSelectionRef = useRef<{ start: number; end: number } | null>(null);
   const selectedPersonIdRef = useRef<string | null>(persistedStateRef.current?.selectedPersonId ?? null);
   const listViewRef = useRef<HTMLDivElement | null>(null);
@@ -439,6 +444,7 @@ export const FamilyPage: React.FC = () => {
 
   const selectedTree = trees.find(t => t.id === selectedTreeId) ?? null;
   const canManageSelectedTreePermissions = Boolean(selectedTree?.canManagePermissions);
+  const isArchiveImportMode = createTreeMode === 'archive';
   const treeMaxDepth = useMemo(() => rootNode ? getTreeDepth(rootNode) : 0, [rootNode]);
   const visibilityInlineInputSx = {
     px: 0.75,
@@ -792,7 +798,56 @@ export const FamilyPage: React.FC = () => {
     if (creatingTree) return;
     setCreateDialogOpen(false);
     setCreateTreeError(null);
+    setCreateArchiveFile(null);
+    setCreateTreeMode('text');
+    if (createArchiveInputRef.current) {
+      createArchiveInputRef.current.value = '';
+    }
   }, [creatingTree]);
+
+  const handleSelectCreateArchive = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const nextFile = event.target.files?.[0] ?? null;
+    setCreateArchiveFile(nextFile);
+    setCreateTreeMode('archive');
+    setCreateTreeError(null);
+  }, []);
+
+  const handleClearCreateArchive = useCallback(() => {
+    setCreateArchiveFile(null);
+    if (createArchiveInputRef.current) {
+      createArchiveInputRef.current.value = '';
+    }
+  }, []);
+
+  const handleSelectCreateMode = useCallback((mode: CreateTreeMode) => {
+    setCreateTreeMode(mode);
+    setCreateTreeError(null);
+  }, []);
+
+  const handleExportSelectedTreeArchive = useCallback(async () => {
+    if (!selectedTreeId || !selectedTree || exportingTreeArchive) {
+      return;
+    }
+
+    setVisibilityError(null);
+    setExportingTreeArchive(true);
+
+    try {
+      const { blob, fileName } = await familyService.exportTreeArchive(selectedTreeId);
+      const objectUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = objectUrl;
+      link.download = fileName || `${selectedTree.name}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(objectUrl);
+    } catch (exportError: any) {
+      setVisibilityError(exportError?.message || '导出家谱归档失败。');
+    } finally {
+      setExportingTreeArchive(false);
+    }
+  }, [exportingTreeArchive, selectedTree, selectedTreeId]);
 
   const handleDeleteSelectedTree = useCallback(async () => {
     if (!selectedTreeId || !selectedTree || deletingTree || !canManageSelectedTreePermissions) {
@@ -874,42 +929,57 @@ export const FamilyPage: React.FC = () => {
   }, [canManageSelectedTreePermissions, loadTrees, selectedTree?.domain, selectedTreeId, visibilityRules]);
 
   const handleCreateTree = useCallback(async () => {
-    const treeName = createTreeName.trim();
-    if (!treeName) {
-      setCreateTreeError('请输入家谱名称。');
-      return;
-    }
-
-    const rootGeneration = Number.parseInt(createTreeRootGeneration, 10);
-    if (Number.isNaN(rootGeneration)) {
-      setCreateTreeError('始祖世代必须是数字。');
-      return;
-    }
-
-    let parsedRoot: NestedFamilyPersonImport | null = null;
-    if (createTreeText.trim()) {
-      try {
-        parsedRoot = parseIndentedFamilyText(createTreeText);
-      } catch (parseError) {
-        setCreateTreeError(parseError instanceof Error ? parseError.message : '家谱文本格式不正确。');
-        return;
-      }
-    }
-
     setCreatingTree(true);
     setCreateTreeError(null);
 
     try {
-      const tree = await familyService.createTree({
-        name: treeName,
-        surname: createTreeSurname.trim() || undefined,
-        domain: createTreeDomain.trim() || undefined,
-        rootGeneration,
-        zibeiPoem: parseZibeiPoem(createTreePoem),
-      });
+      let tree: FamilyTreeDto;
 
-      if (parsedRoot) {
-        await familyService.importTree(tree.id, parsedRoot);
+      if (isArchiveImportMode) {
+        if (!createArchiveFile) {
+          setCreateTreeError('请选择要导入的家谱。');
+          return;
+        }
+
+        tree = await familyService.importTreeArchive({
+          file: createArchiveFile,
+          name: createTreeName.trim() || undefined,
+          domain: createTreeDomain.trim() || undefined,
+        });
+      } else {
+        const treeName = createTreeName.trim();
+        if (!treeName) {
+          setCreateTreeError('请输入家谱名称。');
+          return;
+        }
+
+        const rootGeneration = Number.parseInt(createTreeRootGeneration, 10);
+        if (Number.isNaN(rootGeneration)) {
+          setCreateTreeError('始祖世代必须是数字。');
+          return;
+        }
+
+        let parsedRoot: NestedFamilyPersonImport | null = null;
+        if (createTreeText.trim()) {
+          try {
+            parsedRoot = parseIndentedFamilyText(createTreeText);
+          } catch (parseError) {
+            setCreateTreeError(parseError instanceof Error ? parseError.message : '家谱文本格式不正确。');
+            return;
+          }
+        }
+
+        tree = await familyService.createTree({
+          name: treeName,
+          surname: createTreeSurname.trim() || undefined,
+          domain: createTreeDomain.trim() || undefined,
+          rootGeneration,
+          zibeiPoem: parseZibeiPoem(createTreePoem),
+        });
+
+        if (parsedRoot) {
+          await familyService.importTree(tree.id, parsedRoot);
+        }
       }
 
       await loadTrees(tree.id);
@@ -919,13 +989,18 @@ export const FamilyPage: React.FC = () => {
       setCreateTreePoem('');
       setCreateTreeRootGeneration('1');
       setCreateTreeText('');
+      setCreateArchiveFile(null);
+      setCreateTreeMode('text');
       setCreateTreeError(null);
+      if (createArchiveInputRef.current) {
+        createArchiveInputRef.current.value = '';
+      }
     } catch (createError: any) {
       setCreateTreeError(createError?.message || '创建家谱失败。');
     } finally {
       setCreatingTree(false);
     }
-  }, [createTreeDomain, createTreeName, createTreePoem, createTreeRootGeneration, createTreeSurname, createTreeText, loadTrees]);
+  }, [createArchiveFile, createTreeDomain, createTreeMode, createTreeName, createTreePoem, createTreeRootGeneration, createTreeSurname, createTreeText, isArchiveImportMode, loadTrees]);
 
   const filteredPersons = listSearch
     ? allNodes.filter(person => person.name.includes(listSearch) || (person.aliases ?? []).some(alias => alias.includes(listSearch)))
@@ -948,7 +1023,7 @@ export const FamilyPage: React.FC = () => {
   const handleRemoveVisibilityRule = useCallback((ruleId: string) => {
     if (!canManageSelectedTreePermissions) return;
     setVisibilityRules(current => current.filter(rule => rule.key !== ruleId));
-  }, []);
+  }, [canManageSelectedTreePermissions]);
   const handleVisibilitySubjectChange = useCallback((ruleId: string, value: string) => {
     if (!canManageSelectedTreePermissions) return;
     setVisibilityRules(current => current.map(rule => rule.key === ruleId ? { ...rule, subject: value } : rule));
@@ -1534,6 +1609,11 @@ export const FamilyPage: React.FC = () => {
         open={createDialogOpen}
         onClose={handleCloseCreateDialog}
         maxWidth={false}
+        sx={{
+          '& .MuiDialog-container': {
+            alignItems: 'flex-start',
+          },
+        }}
         PaperProps={{
           sx: {
             width: {
@@ -1554,91 +1634,142 @@ export const FamilyPage: React.FC = () => {
           },
         }}
       >
-        <DialogTitle sx={{ backgroundColor: '#ffffff' }}>新建家谱</DialogTitle>
         <DialogContent sx={{ backgroundColor: '#ffffff', borderTop: 'none', borderBottom: 'none', px: 2.25, pt: 2, pb: 1 }}>
-          <BoxAny sx={{ display: 'grid', gap: 1.25, pt: 0.5 }}>
+          <BoxAny sx={{ display: 'grid', gap: 0.9 }}>
             {createTreeError && <Alert severity="error">{createTreeError}</Alert>}
-            <BoxAny
-              sx={{
-                display: 'grid',
-                gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)',
-                gap: 1.25,
-                p: 1.25,
-                border: '1px solid #e5e7eb',
-                borderRadius: '8px',
-                backgroundColor: '#f8fafc',
-              }}
-            >
-              <TextField
-                label="家谱名称"
-                value={createTreeName}
-                onChange={e => setCreateTreeName(e.target.value)}
-                size="small"
-                fullWidth
-                sx={createDialogTextFieldSx}
-              />
-              <TextField
-                label="姓氏"
-                value={createTreeSurname}
-                onChange={e => setCreateTreeSurname(e.target.value)}
-                size="small"
-                fullWidth
-                sx={createDialogTextFieldSx}
-              />
-              <TextField
-                label="目标域名"
-                select
-                value={createTreeDomain}
-                onChange={e => setCreateTreeDomain(e.target.value)}
-                size="small"
-                fullWidth
-                sx={createDialogSelectSx}
-                SelectProps={{
-                  IconComponent: ExpandMoreIcon,
-                  MenuProps: createDialogSelectMenuProps,
+            <Paper variant="outlined" sx={{ overflow: 'hidden', borderRadius: '8px', backgroundColor: '#f8fafc', backgroundImage: 'none' }}>
+              <Tabs
+                value={createTreeMode}
+                onChange={(_, value: CreateTreeMode) => handleSelectCreateMode(value)}
+                variant="fullWidth"
+                sx={{
+                  minHeight: 42,
+                  backgroundColor: '#f8fafc',
+                  '& .MuiTabs-indicator': {
+                    height: 2.5,
+                  },
+                  '& .MuiTab-root': {
+                    minHeight: 42,
+                    fontSize: 13,
+                    fontWeight: 600,
+                    textTransform: 'none',
+                  },
                 }}
               >
-                {editableFamilyDomains.map(domain => (
-                  <MenuItem key={domain} value={domain} sx={{ fontSize: 14, lineHeight: 1.35, minHeight: 30, py: 0.5 }}>
-                    {domain}
-                  </MenuItem>
-                ))}
-              </TextField>
-              <TextField
-                label="始祖世代"
-                value={createTreeRootGeneration}
-                onChange={e => setCreateTreeRootGeneration(e.target.value)}
-                size="small"
-                fullWidth
-                sx={createDialogTextFieldSx}
-              />
-            </BoxAny>
-            <BoxAny sx={{ display: 'grid', gap: 0 }}>
-              <TextField
-                label="输入人物，一行一人；子女前加两个空格"
-                value={createTreeText}
-                onChange={e => handleCreateTreeTextChange(e.target.value, e.target.selectionStart, e.target.selectionEnd)}
-                multiline
-                minRows={12}
-                fullWidth
-                inputRef={createTreeTextInputRef}
-                sx={createDialogTextFieldSx}
-              />
-              <Paper variant="outlined" sx={{ mt: '-1px', p: 1.25, bgcolor: '#f8fafc', backgroundImage: 'none' }}>
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
-                  示例：姓名，性别，配偶，配偶性别，出生年，去世年
-                </Typography>
-                <Typography component="pre" sx={{ m: 0, fontFamily: 'monospace', fontSize: 12, whiteSpace: 'pre-wrap' }}>
-                  {normalizeIndentedInputForDisplay(TEXT_IMPORT_EXAMPLE)}
+                <Tab value="text" label="手动输入" disabled={creatingTree} />
+                <Tab value="archive" label="家谱导入" disabled={creatingTree} />
+              </Tabs>
+            </Paper>
+
+            <Paper variant="outlined" sx={{ p: 1, borderRadius: '8px', backgroundColor: '#f8fafc', backgroundImage: 'none' }}>
+              <BoxAny
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)',
+                  gap: 1,
+                }}
+              >
+                <TextField
+                  label={isArchiveImportMode ? '家谱名称（可选覆盖）' : '家谱名称'}
+                  value={createTreeName}
+                  onChange={e => setCreateTreeName(e.target.value)}
+                  size="small"
+                  fullWidth
+                  sx={createDialogTextFieldSx}
+                />
+                <TextField
+                  label="姓氏"
+                  value={createTreeSurname}
+                  onChange={e => setCreateTreeSurname(e.target.value)}
+                  size="small"
+                  fullWidth
+                  disabled={isArchiveImportMode}
+                  sx={createDialogTextFieldSx}
+                />
+                <TextField
+                  label="目标域名"
+                  select
+                  value={createTreeDomain}
+                  onChange={e => setCreateTreeDomain(e.target.value)}
+                  size="small"
+                  fullWidth
+                  sx={createDialogSelectSx}
+                  SelectProps={{
+                    IconComponent: ExpandMoreIcon,
+                    MenuProps: createDialogSelectMenuProps,
+                  }}
+                >
+                  {editableFamilyDomains.map(domain => (
+                    <MenuItem key={domain} value={domain} sx={{ fontSize: 14, lineHeight: 1.35, minHeight: 30, py: 0.5 }}>
+                      {domain}
+                    </MenuItem>
+                  ))}
+                </TextField>
+                <TextField
+                  label="始祖世代"
+                  value={createTreeRootGeneration}
+                  onChange={e => setCreateTreeRootGeneration(e.target.value)}
+                  size="small"
+                  fullWidth
+                  disabled={isArchiveImportMode}
+                  sx={createDialogTextFieldSx}
+                />
+              </BoxAny>
+            </Paper>
+
+            {createTreeMode === 'text' ? (
+              <Paper variant="outlined" sx={{ overflow: 'visible', borderRadius: '8px', backgroundColor: '#ffffff', backgroundImage: 'none' }}>
+                <TextField
+                  label="输入人物，一行一人；子女前加两个空格"
+                  value={createTreeText}
+                  onChange={e => handleCreateTreeTextChange(e.target.value, e.target.selectionStart, e.target.selectionEnd)}
+                  multiline
+                  minRows={7}
+                  fullWidth
+                  inputRef={createTreeTextInputRef}
+                  sx={createDialogTextFieldSx}
+                />
+                <Paper variant="outlined" sx={{ mt: '-1px', p: 1, bgcolor: '#f8fafc', backgroundImage: 'none', borderRadius: 0 }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                    示例：姓名，性别，配偶，配偶性别，出生年，去世年
+                  </Typography>
+                  <Typography component="pre" sx={{ m: 0, fontFamily: 'monospace', fontSize: 12, whiteSpace: 'pre-wrap' }}>
+                    {normalizeIndentedInputForDisplay(TEXT_IMPORT_EXAMPLE)}
+                  </Typography>
+                </Paper>
+              </Paper>
+            ) : (
+              <Paper variant="outlined" sx={{ p: 1, borderRadius: '8px', backgroundColor: '#f8fafc', backgroundImage: 'none' }}>
+                <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                  <Button size="small" variant="outlined" onClick={() => createArchiveInputRef.current?.click()}>
+                    {createArchiveFile ? '更换家谱' : '选择家谱'}
+                  </Button>
+                  {createArchiveFile ? (
+                    <Button size="small" onClick={handleClearCreateArchive}>
+                      清除
+                    </Button>
+                  ) : null}
+                  <input
+                    ref={createArchiveInputRef}
+                    type="file"
+                    accept=".zip,application/zip"
+                    hidden
+                    onChange={handleSelectCreateArchive}
+                  />
+                </BoxAny>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.75 }}>
+                  {createArchiveFile
+                    ? `已选择：${createArchiveFile.name}。将从归档恢复人物、关系和照片；基本设置中的目标域名仍然生效，家谱名称可选覆盖。`
+                    : '请选择一个家谱归档文件用于导入。'}
                 </Typography>
               </Paper>
-            </BoxAny>
+            )}
           </BoxAny>
         </DialogContent>
         <DialogActions sx={{ backgroundColor: '#ffffff' }}>
           <Button onClick={handleCloseCreateDialog} disabled={creatingTree}>取消</Button>
           <Button onClick={handleCreateTree} variant="contained" disabled={creatingTree}>
-            {creatingTree ? '创建中…' : '创建'}
+            {creatingTree ? (isArchiveImportMode ? '导入中…' : '创建中…') : (isArchiveImportMode ? '导入家谱' : '创建')}
           </Button>
         </DialogActions>
       </Dialog>
@@ -1687,6 +1818,25 @@ export const FamilyPage: React.FC = () => {
               </BoxAny>
             )}
           </BoxAny>
+          {!loadingVisibility ? (
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={handleExportSelectedTreeArchive}
+              disabled={exportingTreeArchive}
+              sx={{
+                minHeight: 30,
+                minWidth: 0,
+                flexShrink: 0,
+                px: 0.75,
+                fontSize: 14,
+                lineHeight: 1.35,
+                textTransform: 'none',
+              }}
+            >
+              {exportingTreeArchive ? '导出中…' : '导出'}
+            </Button>
+          ) : null}
           {canManageSelectedTreePermissions && !loadingVisibility ? (
             <Button
               size="small"
@@ -1710,7 +1860,7 @@ export const FamilyPage: React.FC = () => {
                 },
               }}
             >
-              {deletingTree ? '删除中…' : '删除当前家谱'}
+              {deletingTree ? '删除中…' : '删除'}
             </Button>
           ) : null}
         </DialogTitle>

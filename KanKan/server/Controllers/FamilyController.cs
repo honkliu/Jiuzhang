@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.IO.Compression;
 using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text.Json;
 using KanKan.API.Domain;
 using KanKan.API.Models.DTOs.Family;
 using KanKan.API.Models.Entities;
@@ -13,13 +16,26 @@ namespace KanKan.API.Controllers;
 [Route("api/family")]
 public class FamilyController : ControllerBase
 {
+    private sealed class ArchivedMediaImportCache
+    {
+        public Dictionary<string, string> HashToUrl { get; } = new(StringComparer.OrdinalIgnoreCase);
+        public bool ExistingUploadsIndexed { get; set; }
+    }
+
     private readonly IFamilyTreeRepository _treeRepo;
     private readonly IFamilyPersonRepository _personRepo;
     private readonly IFamilyRelationshipRepository _relRepo;
     private readonly IFamilyTreeVisibilityRepository _visibilityRepo;
     private readonly IUserRepository _userRepo;
     private readonly IConfiguration _configuration;
+    private readonly IWebHostEnvironment _environment;
     private readonly ILogger<FamilyController> _logger;
+    private static readonly JsonSerializerOptions ArchiveJsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        PropertyNameCaseInsensitive = true,
+        WriteIndented = true,
+    };
 
     public FamilyController(
         IFamilyTreeRepository treeRepo,
@@ -28,6 +44,7 @@ public class FamilyController : ControllerBase
         IFamilyTreeVisibilityRepository visibilityRepo,
         IUserRepository userRepo,
         IConfiguration configuration,
+        IWebHostEnvironment environment,
         ILogger<FamilyController> logger)
     {
         _treeRepo = treeRepo;
@@ -36,6 +53,7 @@ public class FamilyController : ControllerBase
         _visibilityRepo = visibilityRepo;
         _userRepo = userRepo;
         _configuration = configuration;
+        _environment = environment;
         _logger = logger;
     }
 
@@ -231,6 +249,7 @@ public class FamilyController : ControllerBase
         var personId = $"fperson_{Guid.NewGuid():N}";
         var linkValidation = await ValidateLinkedPersonAsync(user, treeId, req.LinkedTreeId, req.LinkedPersonId, req.ClearLinkedPerson == true, personId);
         if (linkValidation != null) return linkValidation;
+        var linkSnapshot = await BuildLinkedPersonSnapshotAsync(req.LinkedTreeId, req.LinkedPersonId, req.ClearLinkedPerson == true);
 
         var person = new FamilyPerson
         {
@@ -239,6 +258,8 @@ public class FamilyController : ControllerBase
             Domain = tree.Domain,
             LinkedTreeId = req.ClearLinkedPerson == true ? null : req.LinkedTreeId,
             LinkedPersonId = req.ClearLinkedPerson == true ? null : req.LinkedPersonId,
+            LinkedTreeName = linkSnapshot.LinkedTreeName,
+            LinkedPersonName = linkSnapshot.LinkedPersonName,
             Name = req.Name ?? string.Empty,
             Gender = req.Gender ?? "male",
             Generation = req.Generation ?? tree.RootGeneration,
@@ -289,6 +310,10 @@ public class FamilyController : ControllerBase
             if (linkValidation != null) return linkValidation;
         }
 
+        var snapshotLinkedTreeId = req.ClearLinkedPerson == true ? null : req.LinkedTreeId ?? person.LinkedTreeId;
+        var snapshotLinkedPersonId = req.ClearLinkedPerson == true ? null : req.LinkedPersonId ?? person.LinkedPersonId;
+        var linkSnapshot = await BuildLinkedPersonSnapshotAsync(snapshotLinkedTreeId, snapshotLinkedPersonId, req.ClearLinkedPerson == true);
+
         if (req.Name != null) person.Name = req.Name;
         if (req.Gender != null) person.Gender = req.Gender;
         if (req.Generation.HasValue) person.Generation = req.Generation.Value;
@@ -297,11 +322,15 @@ public class FamilyController : ControllerBase
         {
             person.LinkedTreeId = null;
             person.LinkedPersonId = null;
+            person.LinkedTreeName = null;
+            person.LinkedPersonName = null;
         }
         else
         {
             if (req.LinkedTreeId != null) person.LinkedTreeId = req.LinkedTreeId;
             if (req.LinkedPersonId != null) person.LinkedPersonId = req.LinkedPersonId;
+            person.LinkedTreeName = linkSnapshot.LinkedTreeName;
+            person.LinkedPersonName = linkSnapshot.LinkedPersonName;
         }
         if (req.ClearBirthDate == true) person.BirthDate = null;
         if (req.ClearDeathDate == true) person.DeathDate = null;
@@ -426,6 +455,208 @@ public class FamilyController : ControllerBase
         return Ok(new { message = "Relationship deleted" });
     }
 
+    // ── POST /api/family/import-archive ────────────────────────────────────
+    [HttpPost("import-archive")]
+    [RequestSizeLimit(300 * 1024 * 1024)]
+    public async Task<IActionResult> ImportTreeArchive([FromForm] IFormFile file, [FromForm] string? name, [FromForm] string? domain)
+    {
+        var user = await GetCurrentUserAsync();
+        if (user == null) return Unauthorized();
+
+        if (file == null || file.Length == 0)
+        {
+            return BadRequest(new { message = "No archive file provided." });
+        }
+
+        FamilyTreeArchiveResponse? manifest;
+
+        try
+        {
+            await using var stream = file.OpenReadStream();
+            using var archive = new ZipArchive(stream, ZipArchiveMode.Read, leaveOpen: false);
+            var manifestEntry = archive.GetEntry("tree.json");
+            if (manifestEntry == null)
+            {
+                return BadRequest(new { message = "Archive is missing tree.json." });
+            }
+
+            await using var manifestStream = manifestEntry.Open();
+            manifest = await JsonSerializer.DeserializeAsync<FamilyTreeArchiveResponse>(manifestStream, ArchiveJsonOptions);
+        }
+        catch (InvalidDataException)
+        {
+            return BadRequest(new { message = "Archive is not a valid zip file." });
+        }
+        catch (JsonException)
+        {
+            return BadRequest(new { message = "Archive manifest is invalid." });
+        }
+
+        if (manifest == null || manifest.Tree == null)
+        {
+            return BadRequest(new { message = "Archive manifest is incomplete." });
+        }
+
+        var targetDomain = FamilyAccessPolicy.NormalizeDomain(string.IsNullOrWhiteSpace(domain)
+            ? manifest.Tree.Domain
+            : domain);
+        if (string.IsNullOrWhiteSpace(targetDomain))
+        {
+            targetDomain = FamilyAccessPolicy.ResolveDomain(user);
+        }
+
+        if (!FamilyAccessPolicy.CanEditTreeDomain(_configuration, user, targetDomain)) return Forbid();
+
+        var treeName = string.IsNullOrWhiteSpace(name) ? manifest.Tree.Name : name.Trim();
+        if (string.IsNullOrWhiteSpace(treeName))
+        {
+            return BadRequest(new { message = "Tree name is required." });
+        }
+
+        var tree = new FamilyTree
+        {
+            Id = $"ftree_{Guid.NewGuid():N}",
+            Name = treeName,
+            Surname = manifest.Tree.Surname,
+            OwnerId = user.Id,
+            Domain = targetDomain,
+            RootGeneration = manifest.Tree.RootGeneration > 0 ? manifest.Tree.RootGeneration : 1,
+            ZibeiPoem = manifest.Tree.ZibeiPoem ?? new List<string>()
+        };
+
+        var importedFiles = new List<string>();
+        var mediaImportCache = new ArchivedMediaImportCache();
+
+        try
+        {
+            await _treeRepo.CreateAsync(tree);
+
+            await using var stream = file.OpenReadStream();
+            using var archive = new ZipArchive(stream, ZipArchiveMode.Read, leaveOpen: false);
+
+            var sourceTreeId = manifest.Tree.SourceTreeId;
+            var archivedPersons = manifest.Persons ?? new List<FamilyArchivedPersonDto>();
+            var personIdMap = archivedPersons.ToDictionary(person => person.Id, _ => $"fperson_{Guid.NewGuid():N}", StringComparer.Ordinal);
+
+            foreach (var archivedPerson in archivedPersons)
+            {
+                var linkedTreeId = archivedPerson.LinkedTreeId;
+                var linkedPersonId = archivedPerson.LinkedPersonId;
+
+                if (string.Equals(linkedTreeId, sourceTreeId, StringComparison.Ordinal))
+                {
+                    linkedTreeId = tree.Id;
+                    linkedPersonId = !string.IsNullOrWhiteSpace(archivedPerson.LinkedPersonId)
+                        && personIdMap.TryGetValue(archivedPerson.LinkedPersonId, out var mappedLinkedPersonId)
+                        ? mappedLinkedPersonId
+                        : null;
+                }
+
+                var importedPerson = new FamilyPerson
+                {
+                    Id = personIdMap[archivedPerson.Id],
+                    TreeId = tree.Id,
+                    Domain = tree.Domain,
+                    LinkedTreeId = linkedTreeId,
+                    LinkedPersonId = linkedPersonId,
+                    LinkedTreeName = string.Equals(archivedPerson.LinkedTreeId, sourceTreeId, StringComparison.Ordinal)
+                        ? tree.Name
+                        : NormalizeOptionalString(archivedPerson.LinkedTreeName),
+                    LinkedPersonName = string.Equals(archivedPerson.LinkedTreeId, sourceTreeId, StringComparison.Ordinal)
+                        && !string.IsNullOrWhiteSpace(archivedPerson.LinkedPersonId)
+                        && personIdMap.TryGetValue(archivedPerson.LinkedPersonId, out _)
+                        ? NormalizeOptionalString(archivedPersons.FirstOrDefault(candidate => string.Equals(candidate.Id, archivedPerson.LinkedPersonId, StringComparison.Ordinal))?.Name)
+                        : NormalizeOptionalString(archivedPerson.LinkedPersonName),
+                    Name = archivedPerson.Name,
+                    Aliases = archivedPerson.Aliases ?? new List<string>(),
+                    Gender = NormalizeGender(archivedPerson.Gender, "male"),
+                    Generation = archivedPerson.Generation > 0 ? archivedPerson.Generation : tree.RootGeneration,
+                    BirthDate = ToEntityDate(archivedPerson.BirthDate),
+                    DeathDate = ToEntityDate(archivedPerson.DeathDate),
+                    BirthPlace = NormalizeOptionalString(archivedPerson.BirthPlace),
+                    DeathPlace = NormalizeOptionalString(archivedPerson.DeathPlace),
+                    IsAlive = archivedPerson.IsAlive,
+                    AvatarUrl = await ImportArchivedMediaAsync(archive, archivedPerson.AvatarArchivePath, archivedPerson.AvatarUrl, importedFiles, mediaImportCache),
+                    Photos = await ImportArchivedPhotosAsync(archive, archivedPerson.Photos, importedFiles, mediaImportCache),
+                    Occupation = NormalizeOptionalString(archivedPerson.Occupation),
+                    Education = NormalizeOptionalString(archivedPerson.Education),
+                    Biography = NormalizeOptionalString(archivedPerson.Biography),
+                    BriefNote = NormalizeOptionalString(archivedPerson.BriefNote),
+                    Experiences = (archivedPerson.Experiences ?? new List<FamilyExperienceDto>())
+                        .Select(e => new FamilyExperience
+                        {
+                            Id = string.IsNullOrWhiteSpace(e.Id) ? $"fexp_{Guid.NewGuid():N}" : e.Id,
+                            Type = e.Type,
+                            Title = e.Title,
+                            Description = NormalizeOptionalString(e.Description),
+                            StartYear = e.StartYear,
+                            EndYear = e.EndYear
+                        })
+                        .ToList()
+                };
+
+                await _personRepo.CreateAsync(importedPerson);
+            }
+
+            var importedRelationships = (manifest.Relationships ?? new List<FamilyRelationshipResponse>())
+                .Where(rel => personIdMap.ContainsKey(rel.FromId) && personIdMap.ContainsKey(rel.ToId))
+                .Select(rel => new FamilyRelationship
+                {
+                    Id = $"frel_{Guid.NewGuid():N}",
+                    TreeId = tree.Id,
+                    Domain = tree.Domain,
+                    Type = rel.Type,
+                    FromId = personIdMap[rel.FromId],
+                    ToId = personIdMap[rel.ToId],
+                    ParentRole = NormalizeOptionalString(rel.ParentRole),
+                    ChildStatus = NormalizeOptionalString(rel.ChildStatus),
+                    LineageType = NormalizeOptionalString(rel.LineageType),
+                    DisplayTag = NormalizeOptionalString(rel.DisplayTag),
+                    SourceParentId = !string.IsNullOrWhiteSpace(rel.SourceParentId) && personIdMap.TryGetValue(rel.SourceParentId, out var mappedSourceParentId)
+                        ? mappedSourceParentId
+                        : null,
+                    SourceChildRank = rel.SourceChildRank,
+                    SortOrder = rel.SortOrder,
+                    UnionType = NormalizeOptionalString(rel.UnionType),
+                    StartYear = rel.StartYear,
+                    EndYear = rel.EndYear,
+                    Notes = NormalizeOptionalString(rel.Notes)
+                })
+                .ToList();
+
+            await _relRepo.InsertManyAsync(importedRelationships);
+
+            if (manifest.Visibility != null)
+            {
+                var visibility = new FamilyTreeVisibility
+                {
+                    TreeId = tree.Id,
+                    UserViewers = NormalizeVisibilityEmails(manifest.Visibility.UserViewers),
+                    UserEditors = NormalizeVisibilityEmails(manifest.Visibility.UserEditors),
+                    DomainViewers = NormalizeDomains(manifest.Visibility.DomainViewers),
+                    DomainEditors = NormalizeDomains(manifest.Visibility.DomainEditors),
+                };
+
+                visibility.UserViewers = visibility.UserViewers
+                    .Where(email => !visibility.UserEditors.Contains(email, StringComparer.Ordinal))
+                    .ToList();
+                visibility.DomainViewers = visibility.DomainViewers
+                    .Where(value => !visibility.DomainEditors.Contains(value, StringComparer.OrdinalIgnoreCase))
+                    .ToList();
+
+                await _visibilityRepo.UpsertAsync(visibility);
+            }
+
+            return Ok(ToTreeResponse(tree, FamilyAccessPolicy.CanManageTree(_configuration, user, tree)));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to import family archive for user {UserId}", user.Id);
+            await CleanupImportedTreeAsync(tree.Id, importedFiles);
+            return StatusCode(500, new { message = "Failed to import family archive." });
+        }
+    }
+
     // ── POST /api/family/{treeId}/import ────────────────────────────────────
     [HttpPost("{treeId}/import")]
     public async Task<IActionResult> ImportTree(string treeId, [FromBody] NestedPersonImport root)
@@ -447,6 +678,35 @@ public class FamilyController : ControllerBase
         await _relRepo.InsertManyAsync(rels);
 
         return Ok(new { personsAdded = persons.Count, relationshipsAdded = rels.Count });
+    }
+
+    // ── GET /api/family/{treeId}/export-archive ─────────────────────────────
+    [HttpGet("{treeId}/export-archive")]
+    public async Task<IActionResult> ExportTreeArchive(string treeId)
+    {
+        var user = await GetCurrentUserAsync();
+        if (user == null) return Unauthorized();
+
+        var tree = await _treeRepo.GetByIdAsync(treeId);
+        if (tree == null) return NotFound();
+        var visibility = await _visibilityRepo.GetByTreeIdAsync(treeId);
+        if (!FamilyAccessPolicy.CanViewTree(_configuration, user, tree, visibility)) return Forbid();
+
+        var canManageTree = FamilyAccessPolicy.CanManageTree(_configuration, user, tree);
+        var persons = await _personRepo.GetByTreeIdAsync(treeId);
+        var rels = await _relRepo.GetByTreeIdAsync(treeId);
+
+        await using var memory = new MemoryStream();
+
+        using (var archive = new ZipArchive(memory, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            var archiveManifest = await CreateArchiveManifestAsync(tree, canManageTree ? visibility : null, persons, rels, archive);
+            var manifestEntry = archive.CreateEntry("tree.json", CompressionLevel.SmallestSize);
+            await using var manifestStream = manifestEntry.Open();
+            await JsonSerializer.SerializeAsync(manifestStream, archiveManifest, ArchiveJsonOptions);
+        }
+
+        return File(memory.ToArray(), "application/zip", BuildArchiveFileName(tree.Name));
     }
 
     // ── GET /api/family/{treeId}/export ─────────────────────────────────────
@@ -502,6 +762,7 @@ public class FamilyController : ControllerBase
     private static FamilyPersonResponse ToPersonResponse(FamilyPerson p) => new()
     {
         Id = p.Id, TreeId = p.TreeId, LinkedTreeId = p.LinkedTreeId, LinkedPersonId = p.LinkedPersonId, Name = p.Name, Aliases = p.Aliases,
+        LinkedTreeName = p.LinkedTreeName, LinkedPersonName = p.LinkedPersonName,
         Gender = p.Gender, Generation = p.Generation,
         BirthDate = p.BirthDate == null ? null : new FamilyDateDto { Year = p.BirthDate.Year, Month = p.BirthDate.Month, Day = p.BirthDate.Day, CalendarType = p.BirthDate.CalendarType, IsLeapMonth = p.BirthDate.IsLeapMonth },
         DeathDate = p.DeathDate == null ? null : new FamilyDateDto { Year = p.DeathDate.Year, Month = p.DeathDate.Month, Day = p.DeathDate.Day, CalendarType = p.DeathDate.CalendarType, IsLeapMonth = p.DeathDate.IsLeapMonth },
@@ -519,6 +780,343 @@ public class FamilyController : ControllerBase
         DisplayTag = r.DisplayTag, SourceParentId = r.SourceParentId, SourceChildRank = r.SourceChildRank, SortOrder = r.SortOrder,
         UnionType = r.UnionType, StartYear = r.StartYear, EndYear = r.EndYear, Notes = r.Notes
     };
+
+    private async Task<FamilyTreeArchiveResponse> CreateArchiveManifestAsync(
+        FamilyTree tree,
+        FamilyTreeVisibility? visibility,
+        IEnumerable<FamilyPerson> persons,
+        IEnumerable<FamilyRelationship> rels,
+        ZipArchive archive)
+    {
+        var archivedPersons = await Task.WhenAll(persons.Select(person => ToArchivedPersonResponseAsync(person, archive)));
+
+        return new FamilyTreeArchiveResponse
+        {
+            FormatVersion = 1,
+            ExportedAt = DateTime.UtcNow.ToString("o"),
+            Tree = new FamilyTreeArchiveTreeDto
+            {
+                SourceTreeId = tree.Id,
+                Name = tree.Name,
+                Surname = tree.Surname,
+                Domain = tree.Domain,
+                RootGeneration = tree.RootGeneration,
+                ZibeiPoem = tree.ZibeiPoem ?? new List<string>()
+            },
+            Visibility = visibility == null ? null : ToVisibilityResponse(visibility, tree.Id),
+            Persons = archivedPersons.ToList(),
+            Relationships = rels.Select(ToRelResponse).ToList()
+        };
+    }
+
+    private async Task<FamilyArchivedPersonDto> ToArchivedPersonResponseAsync(FamilyPerson person, ZipArchive archive)
+    {
+        var archivedPhotos = await Task.WhenAll(person.Photos.Select(async photo => new FamilyArchivedPhotoDto
+        {
+            Id = photo.Id,
+            Url = photo.Url,
+            ArchivePath = await TryAddMediaFileToArchiveAsync(archive, photo.Url),
+            Caption = photo.Caption,
+            Year = photo.Year
+        }));
+
+        return new FamilyArchivedPersonDto
+        {
+            Id = person.Id,
+            TreeId = person.TreeId,
+            LinkedTreeId = person.LinkedTreeId,
+            LinkedPersonId = person.LinkedPersonId,
+            LinkedTreeName = person.LinkedTreeName,
+            LinkedPersonName = person.LinkedPersonName,
+            Name = person.Name,
+            Aliases = person.Aliases,
+            Gender = person.Gender,
+            Generation = person.Generation,
+            BirthDate = person.BirthDate == null ? null : new FamilyDateDto
+            {
+                Year = person.BirthDate.Year,
+                Month = person.BirthDate.Month,
+                Day = person.BirthDate.Day,
+                CalendarType = person.BirthDate.CalendarType,
+                IsLeapMonth = person.BirthDate.IsLeapMonth
+            },
+            DeathDate = person.DeathDate == null ? null : new FamilyDateDto
+            {
+                Year = person.DeathDate.Year,
+                Month = person.DeathDate.Month,
+                Day = person.DeathDate.Day,
+                CalendarType = person.DeathDate.CalendarType,
+                IsLeapMonth = person.DeathDate.IsLeapMonth
+            },
+            BirthPlace = person.BirthPlace,
+            DeathPlace = person.DeathPlace,
+            IsAlive = person.IsAlive,
+            AvatarUrl = person.AvatarUrl,
+            AvatarArchivePath = await TryAddMediaFileToArchiveAsync(archive, person.AvatarUrl),
+            Photos = archivedPhotos.ToList(),
+            Occupation = person.Occupation,
+            Education = person.Education,
+            Biography = person.Biography,
+            BriefNote = person.BriefNote,
+            Experiences = person.Experiences.Select(experience => new FamilyExperienceDto
+            {
+                Id = experience.Id,
+                Type = experience.Type,
+                Title = experience.Title,
+                Description = experience.Description,
+                StartYear = experience.StartYear,
+                EndYear = experience.EndYear
+            }).ToList()
+        };
+    }
+
+    private Task<string?> TryAddMediaFileToArchiveAsync(ZipArchive archive, string? url)
+    {
+        var localFilePath = ResolveLocalUploadPath(url);
+        if (localFilePath == null || !System.IO.File.Exists(localFilePath))
+        {
+            return Task.FromResult<string?>(null);
+        }
+
+        var extension = Path.GetExtension(localFilePath);
+        if (string.IsNullOrWhiteSpace(extension))
+        {
+            extension = ".bin";
+        }
+
+        var archivePath = $"photos/{Guid.NewGuid():N}{extension.ToLowerInvariant()}";
+        var entry = archive.CreateEntry(archivePath, CompressionLevel.SmallestSize);
+
+        using var source = System.IO.File.OpenRead(localFilePath);
+        using var destination = entry.Open();
+        source.CopyTo(destination);
+
+        return Task.FromResult<string?>(archivePath);
+    }
+
+    private string? ResolveLocalUploadPath(string? url)
+    {
+        var normalizedUrl = NormalizeOptionalString(url);
+        if (string.IsNullOrWhiteSpace(normalizedUrl))
+        {
+            return null;
+        }
+
+        var trimmed = normalizedUrl.Replace('\\', '/').Trim();
+        if (Uri.TryCreate(trimmed, UriKind.Absolute, out var absoluteUri))
+        {
+            trimmed = absoluteUri.AbsolutePath;
+        }
+
+        if (!trimmed.StartsWith("/uploads/", StringComparison.OrdinalIgnoreCase)
+            && !trimmed.StartsWith("uploads/", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        var fileName = Path.GetFileName(trimmed);
+        if (string.IsNullOrWhiteSpace(fileName))
+        {
+            return null;
+        }
+
+        return Path.Combine(GetUploadsRootPath(), fileName);
+    }
+
+    private string GetUploadsRootPath()
+    {
+        var webRoot = _environment.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+        var uploadsPath = Path.Combine(webRoot, "uploads");
+        Directory.CreateDirectory(uploadsPath);
+        return uploadsPath;
+    }
+
+    private async Task<string?> ImportArchivedMediaAsync(ZipArchive archive, string? archivePath, string? fallbackUrl, List<string> importedFiles, ArchivedMediaImportCache mediaImportCache)
+    {
+        var normalizedArchivePath = NormalizeOptionalString(archivePath)?.Replace('\\', '/');
+        if (!string.IsNullOrWhiteSpace(normalizedArchivePath))
+        {
+            var entry = archive.GetEntry(normalizedArchivePath);
+            if (entry != null)
+            {
+                return await SaveArchiveEntryToUploadsAsync(entry, importedFiles, mediaImportCache);
+            }
+        }
+
+        var normalizedFallbackUrl = NormalizeOptionalString(fallbackUrl);
+        if (string.IsNullOrWhiteSpace(normalizedFallbackUrl))
+        {
+            return null;
+        }
+
+        if (ResolveLocalUploadPath(normalizedFallbackUrl) != null)
+        {
+            return null;
+        }
+
+        return normalizedFallbackUrl;
+    }
+
+    private async Task<List<FamilyPhoto>> ImportArchivedPhotosAsync(ZipArchive archive, IEnumerable<FamilyArchivedPhotoDto>? photos, List<string> importedFiles, ArchivedMediaImportCache mediaImportCache)
+    {
+        var result = new List<FamilyPhoto>();
+
+        foreach (var photo in photos ?? Array.Empty<FamilyArchivedPhotoDto>())
+        {
+            result.Add(new FamilyPhoto
+            {
+                Id = string.IsNullOrWhiteSpace(photo.Id) ? $"photo_{Guid.NewGuid():N}" : photo.Id,
+                Url = await ImportArchivedMediaAsync(archive, photo.ArchivePath, photo.Url, importedFiles, mediaImportCache) ?? string.Empty,
+                Caption = NormalizeOptionalString(photo.Caption),
+                Year = photo.Year
+            });
+        }
+
+        return result;
+    }
+
+    private async Task<string> SaveArchiveEntryToUploadsAsync(ZipArchiveEntry entry, List<string> importedFiles, ArchivedMediaImportCache mediaImportCache)
+    {
+        await EnsureUploadHashIndexAsync(mediaImportCache);
+
+        await using var source = entry.Open();
+        await using var bufferedContent = new MemoryStream();
+        await source.CopyToAsync(bufferedContent);
+
+        bufferedContent.Position = 0;
+        var contentHash = await ComputeSha256HexAsync(bufferedContent);
+        if (mediaImportCache.HashToUrl.TryGetValue(contentHash, out var existingUrl))
+        {
+            return existingUrl;
+        }
+
+        var extension = Path.GetExtension(entry.Name);
+        if (string.IsNullOrWhiteSpace(extension))
+        {
+            extension = ".bin";
+        }
+
+        var fileName = $"{Guid.NewGuid():N}{extension.ToLowerInvariant()}";
+        var absolutePath = Path.Combine(GetUploadsRootPath(), fileName);
+
+        await using (var destination = new FileStream(absolutePath, FileMode.Create, FileAccess.Write, FileShare.None))
+        {
+            bufferedContent.Position = 0;
+            await bufferedContent.CopyToAsync(destination);
+        }
+
+        importedFiles.Add(absolutePath);
+        var uploadedUrl = $"/uploads/{fileName}";
+        mediaImportCache.HashToUrl[contentHash] = uploadedUrl;
+        return uploadedUrl;
+    }
+
+    private async Task EnsureUploadHashIndexAsync(ArchivedMediaImportCache mediaImportCache)
+    {
+        if (mediaImportCache.ExistingUploadsIndexed)
+        {
+            return;
+        }
+
+        foreach (var filePath in Directory.EnumerateFiles(GetUploadsRootPath()))
+        {
+            try
+            {
+                var existingHash = await ComputeFileSha256HexAsync(filePath);
+                mediaImportCache.HashToUrl.TryAdd(existingHash, $"/uploads/{Path.GetFileName(filePath)}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to index uploaded media file {FilePath} for archive deduplication", filePath);
+            }
+        }
+
+        mediaImportCache.ExistingUploadsIndexed = true;
+    }
+
+    private static async Task<string> ComputeFileSha256HexAsync(string filePath)
+    {
+        await using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        return await ComputeSha256HexAsync(stream);
+    }
+
+    private static async Task<string> ComputeSha256HexAsync(Stream stream)
+    {
+        using var sha256 = SHA256.Create();
+        var hash = await sha256.ComputeHashAsync(stream);
+        return Convert.ToHexString(hash);
+    }
+
+    private static FamilyDate? ToEntityDate(FamilyDateDto? date)
+    {
+        if (date == null) return null;
+
+        return new FamilyDate
+        {
+            Year = date.Year,
+            Month = date.Month,
+            Day = date.Day,
+            CalendarType = date.CalendarType,
+            IsLeapMonth = date.IsLeapMonth,
+        };
+    }
+
+    private async Task CleanupImportedTreeAsync(string treeId, IEnumerable<string> importedFiles)
+    {
+        try
+        {
+            await _personRepo.ClearLinkedTreeReferencesAsync(treeId);
+            await _personRepo.DeleteByTreeIdAsync(treeId);
+            await _relRepo.DeleteByTreeIdAsync(treeId);
+            await _visibilityRepo.DeleteByTreeIdAsync(treeId);
+            await _treeRepo.DeleteAsync(treeId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to rollback imported tree {TreeId}", treeId);
+        }
+
+        foreach (var filePath in importedFiles)
+        {
+            try
+            {
+                if (System.IO.File.Exists(filePath))
+                {
+                    System.IO.File.Delete(filePath);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to delete imported media file {FilePath}", filePath);
+            }
+        }
+    }
+
+    private static string BuildArchiveFileName(string treeName)
+    {
+        var baseName = string.IsNullOrWhiteSpace(treeName) ? "family-tree" : treeName.Trim();
+        foreach (var invalid in Path.GetInvalidFileNameChars())
+        {
+            baseName = baseName.Replace(invalid, '_');
+        }
+
+        return $"{baseName}-{DateTime.UtcNow:yyyyMMddHHmmss}.zip";
+    }
+
+    private async Task<(string? LinkedTreeName, string? LinkedPersonName)> BuildLinkedPersonSnapshotAsync(string? linkedTreeId, string? linkedPersonId, bool clearLinkedPerson)
+    {
+        if (clearLinkedPerson || string.IsNullOrWhiteSpace(linkedTreeId) || string.IsNullOrWhiteSpace(linkedPersonId))
+        {
+            return (null, null);
+        }
+
+        var linkedTree = await _treeRepo.GetByIdAsync(linkedTreeId);
+        var linkedPerson = await _personRepo.GetByIdAsync(linkedPersonId);
+
+        return (
+            NormalizeOptionalString(linkedTree?.Name),
+            NormalizeOptionalString(linkedPerson?.Name));
+    }
 
     private async Task<IActionResult?> ValidateLinkedPersonAsync(User user, string currentTreeId, string? linkedTreeId, string? linkedPersonId, bool clearLinkedPerson, string? currentPersonId = null)
     {
