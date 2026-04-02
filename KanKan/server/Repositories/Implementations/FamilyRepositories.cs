@@ -81,6 +81,16 @@ public class FamilyPersonRepository : IFamilyPersonRepository
 
     public async Task DeleteByTreeIdAsync(string treeId)
         => await _collection.DeleteManyAsync(Builders<FamilyPerson>.Filter.Eq(p => p.TreeId, treeId));
+
+    public async Task ClearLinkedTreeReferencesAsync(string linkedTreeId)
+    {
+        var filter = Builders<FamilyPerson>.Filter.Eq(p => p.LinkedTreeId, linkedTreeId);
+        var update = Builders<FamilyPerson>.Update
+            .Set(p => p.LinkedTreeId, null)
+            .Set(p => p.LinkedPersonId, null)
+            .Set(p => p.UpdatedAt, DateTime.UtcNow);
+        await _collection.UpdateManyAsync(filter, update);
+    }
 }
 
 public class FamilyRelationshipRepository : IFamilyRelationshipRepository

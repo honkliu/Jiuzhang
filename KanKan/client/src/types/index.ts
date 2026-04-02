@@ -2,6 +2,7 @@
 export interface User {
   id: string;
   domain?: string;
+  editableFamilyTreeDomains?: string[];
   isAdmin?: boolean;
   canViewFamilyTree?: boolean;
   canEditFamilyTree?: boolean;

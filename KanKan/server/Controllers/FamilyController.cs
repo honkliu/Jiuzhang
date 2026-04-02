@@ -161,6 +161,7 @@ public class FamilyController : ControllerBase
         var visibility = await _visibilityRepo.GetByTreeIdAsync(treeId);
         if (!FamilyAccessPolicy.CanManageTree(_configuration, user, tree)) return Forbid();
 
+        await _personRepo.ClearLinkedTreeReferencesAsync(treeId);
         await _personRepo.DeleteByTreeIdAsync(treeId);
         await _relRepo.DeleteByTreeIdAsync(treeId);
         await _visibilityRepo.DeleteByTreeIdAsync(treeId);

@@ -19,6 +19,7 @@ public interface IFamilyPersonRepository
     Task<FamilyPerson> UpdateAsync(FamilyPerson person);
     Task DeleteAsync(string id);
     Task DeleteByTreeIdAsync(string treeId);
+    Task ClearLinkedTreeReferencesAsync(string linkedTreeId);
 }
 
 public interface IFamilyRelationshipRepository

@@ -4,11 +4,11 @@ import {
   FormControl, Divider, Drawer, Button, Dialog,
   DialogTitle, DialogContent, DialogActions,
   Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  TextField, Autocomplete, useMediaQuery, useTheme,
+  TextField, Autocomplete, useMediaQuery, useTheme, InputBase, IconButton, Chip,
 } from '@mui/material';
 import {
-  Search as SearchIcon,
   ExpandMore as ExpandMoreIcon,
+  DeleteOutline as DeleteOutlineIcon,
 } from '@mui/icons-material';
 import { AppHeader } from '@/components/Shared/AppHeader';
 import { FamilyHisto, type FamilyHistoHandle } from './FamilyHisto';
@@ -19,8 +19,11 @@ import {
   type FamilyTreeDto, type FamilyPersonDto, type FamilyRelationshipDto, type FamilyNode,
   type NestedFamilyPersonImport, type FamilyTreeVisibilityDto,
 } from '@/services/family.service';
-import { useSelector } from 'react-redux';
-import type { RootState } from '@/store';
+import { contactService } from '@/services/contact.service';
+import { authService } from '@/services/auth.service';
+import { useDispatch, useSelector } from 'react-redux';
+import { updateUser } from '@/store/authSlice';
+import type { AppDispatch, RootState } from '@/store';
 
 const BoxAny = Box as any;
 
@@ -43,6 +46,29 @@ const TEXT_IMPORT_EXAMPLE = [
   '  张二，女，，，2008，',
 ].join('\n');
 
+const IDEOGRAPHIC_SPACE = '\u3000';
+
+function normalizeIndentedInputForDisplay(input: string): string {
+  return input
+    .split(/\r?\n/)
+    .map(line => line.replace(/^[\t \u3000]+/, indent => {
+      const normalizedIndent = indent
+        .replace(/\u3000/g, ' ')
+        .replace(/\t/g, '  ');
+      return normalizedIndent.replace(/ /g, IDEOGRAPHIC_SPACE);
+    }))
+    .join('\n');
+}
+
+function normalizeIndentedInputForParsing(input: string): string {
+  return input.replace(/\u3000/g, ' ');
+}
+
+function mapDisplaySelectionOffset(input: string, offset: number | null): number | null {
+  if (offset == null) return null;
+  return normalizeIndentedInputForDisplay(input.slice(0, offset)).length;
+}
+
 function normalizeImportGender(value?: string): 'male' | 'female' | 'unknown' | undefined {
   const normalized = (value ?? '').trim().toLowerCase();
   if (!normalized) return undefined;
@@ -63,7 +89,7 @@ function parseOptionalYear(value: string | undefined, lineNumber: number, label:
 }
 
 function parseIndentedFamilyText(input: string): NestedFamilyPersonImport {
-  const lines = input
+  const lines = normalizeIndentedInputForParsing(input)
     .split(/\r?\n/)
     .map((raw, index) => ({ raw: raw.replace(/\t/g, '  '), lineNumber: index + 1 }))
     .filter(line => line.raw.trim().length > 0);
@@ -138,43 +164,102 @@ function parseZibeiPoem(input: string): string[] | undefined {
   return Array.from(normalized).filter(Boolean);
 }
 
-function parseVisibilityList(input: string): string[] {
-  return input
-    .split(/[\r\n,，]+/)
-    .map(item => item.trim())
-    .filter(Boolean);
-}
-
-function formatVisibilityList(values?: string[]): string {
-  return (values ?? []).join('\n');
-}
-
-function getEffectiveVisibilityItems(viewers: string[], editors: string[]): string[] {
-  return Array.from(new Set([...viewers, ...editors]));
-}
-
 interface VisibilityRuleRow {
   key: string;
   subject: string;
-  permission: string;
-  source: string;
-  removable: boolean;
-  onRemove?: () => void;
+  permission: 'view' | 'edit';
+  locked?: boolean;
 }
 
-interface VisibilityTextState {
-  userViewers: string;
-  userEditors: string;
-  domainViewers: string;
-  domainEditors: string;
+function createVisibilityRuleId() {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+
+  return `${Date.now()}_${Math.round(Math.random() * 100000)}`;
 }
 
-function createVisibilityTextState(visibility: FamilyTreeVisibilityDto): VisibilityTextState {
+function createVisibilityRule(subject = '', permission: 'view' | 'edit' = 'view'): VisibilityRuleRow {
   return {
-    userViewers: formatVisibilityList(visibility.userViewers),
-    userEditors: formatVisibilityList(visibility.userEditors),
-    domainViewers: formatVisibilityList(visibility.domainViewers),
-    domainEditors: formatVisibilityList(visibility.domainEditors),
+    key: `visibility-rule-${createVisibilityRuleId()}`,
+    subject,
+    permission,
+  };
+}
+
+function inferVisibilitySubjectType(subject: string): '用户' | '域' {
+  return subject.includes('@') ? '用户' : '域';
+}
+
+function formatVisibilityPermission(permission: 'view' | 'edit') {
+  return permission === 'edit' ? '编辑' : '浏览';
+}
+
+function toggleVisibilityPermission(permission: 'view' | 'edit'): 'view' | 'edit' {
+  return permission === 'edit' ? 'view' : 'edit';
+}
+
+function buildVisibilityRules(visibility: FamilyTreeVisibilityDto, treeDomain?: string): VisibilityRuleRow[] {
+  const rows: VisibilityRuleRow[] = [];
+
+  if (treeDomain) {
+    rows.push({
+      key: `visibility-baseline-${treeDomain}`,
+      subject: treeDomain,
+      permission: 'view',
+      locked: true,
+    });
+  }
+
+  visibility.userEditors.forEach(subject => rows.push(createVisibilityRule(subject, 'edit')));
+  visibility.userViewers.forEach(subject => rows.push(createVisibilityRule(subject, 'view')));
+  visibility.domainEditors.forEach(subject => rows.push(createVisibilityRule(subject, 'edit')));
+  visibility.domainViewers.forEach(subject => rows.push(createVisibilityRule(subject, 'view')));
+
+  return rows;
+}
+
+function toVisibilityRequest(rows: VisibilityRuleRow[]): FamilyTreeVisibilityDto {
+  const userViewers = new Set<string>();
+  const userEditors = new Set<string>();
+  const domainViewers = new Set<string>();
+  const domainEditors = new Set<string>();
+
+  rows.forEach(row => {
+    if (row.locked) {
+      return;
+    }
+
+    const subject = row.subject.trim();
+    if (!subject) {
+      return;
+    }
+
+    const isUser = subject.includes('@');
+    if (isUser) {
+      if (row.permission === 'edit') {
+        userEditors.add(subject);
+        userViewers.delete(subject);
+      } else if (!userEditors.has(subject)) {
+        userViewers.add(subject);
+      }
+      return;
+    }
+
+    if (row.permission === 'edit') {
+      domainEditors.add(subject);
+      domainViewers.delete(subject);
+    } else if (!domainEditors.has(subject)) {
+      domainViewers.add(subject);
+    }
+  });
+
+  return {
+    treeId: '',
+    userViewers: Array.from(userViewers),
+    userEditors: Array.from(userEditors),
+    domainViewers: Array.from(domainViewers),
+    domainEditors: Array.from(domainEditors),
   };
 }
 
@@ -225,9 +310,14 @@ function getPersonTreeDepth(personId: string, allNodes: FamilyNode[]): number {
 }
 
 export const FamilyPage: React.FC = () => {
+  const dispatch = useDispatch<AppDispatch>();
   const currentUser = useSelector((state: RootState) => state.auth.user);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const editableFamilyDomains = useMemo(() => {
+    const candidates = currentUser?.editableFamilyTreeDomains ?? [];
+    return [...new Set(candidates.map(domain => domain.trim()).filter(Boolean))];
+  }, [currentUser?.editableFamilyTreeDomains]);
   const persistedStateRef = useRef<FamilyPagePersistedState | null>(readFamilyPageState());
   const [trees, setTrees] = useState<FamilyTreeDto[]>([]);
   const [selectedTreeId, setSelectedTreeId] = useState<string | null>(persistedStateRef.current?.selectedTreeId ?? null);
@@ -247,31 +337,29 @@ export const FamilyPage: React.FC = () => {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [createTreeName, setCreateTreeName] = useState('');
   const [createTreeSurname, setCreateTreeSurname] = useState('');
-  const [createTreeDomain, setCreateTreeDomain] = useState(currentUser?.domain ?? '');
+  const [createTreeDomain, setCreateTreeDomain] = useState('');
   const [createTreeRootGeneration, setCreateTreeRootGeneration] = useState('1');
   const [createTreePoem, setCreateTreePoem] = useState('');
-  const [createTreeText, setCreateTreeText] = useState(TEXT_IMPORT_EXAMPLE);
+  const [createTreeText, setCreateTreeText] = useState(() => normalizeIndentedInputForDisplay(''));
   const [createTreeError, setCreateTreeError] = useState<string | null>(null);
   const [creatingTree, setCreatingTree] = useState(false);
+  const [deletingTree, setDeletingTree] = useState(false);
   const [visibilityDialogOpen, setVisibilityDialogOpen] = useState(false);
   const [loadingVisibility, setLoadingVisibility] = useState(false);
   const [savingVisibility, setSavingVisibility] = useState(false);
   const [visibilityError, setVisibilityError] = useState<string | null>(null);
-  const [visibilityForm, setVisibilityForm] = useState<FamilyTreeVisibilityDto>({
+  const [, setVisibilityForm] = useState<FamilyTreeVisibilityDto>({
     treeId: '',
     userViewers: [],
     userEditors: [],
     domainViewers: [],
     domainEditors: [],
   });
-  const [visibilityText, setVisibilityText] = useState<VisibilityTextState>({
-    userViewers: '',
-    userEditors: '',
-    domainViewers: '',
-    domainEditors: '',
-  });
+  const [visibilityRules, setVisibilityRules] = useState<VisibilityRuleRow[]>([]);
   const [panelEditing, setPanelEditing] = useState(false);
   const canvasRef = useRef<FamilyHistoHandle>(null);
+  const createTreeTextInputRef = useRef<HTMLTextAreaElement | null>(null);
+  const pendingCreateTreeTextSelectionRef = useRef<{ start: number; end: number } | null>(null);
   const selectedPersonIdRef = useRef<string | null>(persistedStateRef.current?.selectedPersonId ?? null);
   const listViewRef = useRef<HTMLDivElement | null>(null);
   const generationViewRef = useRef<HTMLDivElement | null>(null);
@@ -279,6 +367,7 @@ export const FamilyPage: React.FC = () => {
   const initialRestorePendingRef = useRef(Boolean(persistedStateRef.current?.selectedTreeId));
   const restoreTreeSelectionRef = useRef(false);
   const pendingTreeNavigationPersonIdRef = useRef<string | null | undefined>(undefined);
+  const refreshedFamilyUserIdRef = useRef<string | null>(null);
 
   const selectPerson = useCallback((person: FamilyNode | null) => {
     selectedPersonIdRef.current = person?.id ?? null;
@@ -329,6 +418,16 @@ export const FamilyPage: React.FC = () => {
   }, [viewMode, loading, focusPersonId, selectedPerson?.id, visibleStartDepth]);
 
   useEffect(() => {
+    const selection = pendingCreateTreeTextSelectionRef.current;
+    const input = createTreeTextInputRef.current;
+    if (!selection || !input) return;
+
+    pendingCreateTreeTextSelectionRef.current = null;
+    const restore = () => input.setSelectionRange(selection.start, selection.end);
+    window.requestAnimationFrame(restore);
+  }, [createTreeText]);
+
+  useEffect(() => {
     writeFamilyPageState({
       selectedTreeId,
       viewMode,
@@ -341,21 +440,75 @@ export const FamilyPage: React.FC = () => {
   const selectedTree = trees.find(t => t.id === selectedTreeId) ?? null;
   const canManageSelectedTreePermissions = Boolean(selectedTree?.canManagePermissions);
   const treeMaxDepth = useMemo(() => rootNode ? getTreeDepth(rootNode) : 0, [rootNode]);
-  const visibilityFieldSx = {
+  const visibilityInlineInputSx = {
+    px: 0.75,
+    py: 0.35,
+    width: '100%',
+    fontSize: 13,
+    lineHeight: 1.35,
+    borderRadius: '8px',
+    backgroundColor: '#ffffff',
+    boxShadow: 'inset 0 0 0 1px #d1d5db',
+    '& input': {
+      padding: 0,
+    },
+    '&.Mui-disabled': {
+      backgroundColor: '#f3f4f6',
+      boxShadow: 'inset 0 0 0 1px #d1d5db',
+    },
+  };
+  const compactVisibilityToggleSx = {
+    minWidth: 46,
+    width: 46,
+    px: 0.25,
+    py: 0.2,
+    fontSize: 12,
+    lineHeight: 1.2,
+    borderRadius: '8px',
+    justifySelf: 'center',
+  };
+  const visibilityTableSurfaceSx = {
+    overflow: 'hidden',
+    borderRadius: '8px',
+    backgroundColor: '#ffffff',
+    borderColor: '#d1d5db',
+    backgroundImage: 'none',
+  };
+  const createDialogTextFieldSx = {
     '& .MuiOutlinedInput-root': {
-      borderRadius: '8px',
-      alignItems: 'flex-start',
-      paddingTop: '2px',
-      paddingBottom: '2px',
+      borderRadius: '5px',
       backgroundColor: '#ffffff',
     },
-    '& .MuiInputBase-inputMultiline': {
-      paddingTop: '2px',
-      paddingBottom: '2px',
-      lineHeight: 1.25,
+  };
+  const createDialogSelectMenuProps = {
+    disableScrollLock: true,
+    PaperProps: {
+      sx: {
+        backgroundColor: '#ffffff',
+        backgroundImage: 'none',
+        border: '1px solid rgba(15, 23, 42, 0.08)',
+        boxShadow: '0 12px 32px rgba(15, 23, 42, 0.12)',
+        backdropFilter: 'none',
+        opacity: 1,
+      },
     },
-    '& .MuiOutlinedInput-root.Mui-disabled': {
-      backgroundColor: '#f3f4f6',
+  };
+  const createDialogSelectSx = {
+    ...createDialogTextFieldSx,
+    '& .MuiOutlinedInput-root': {
+      ...createDialogTextFieldSx['& .MuiOutlinedInput-root'],
+      minHeight: 40,
+    },
+    '& .MuiSelect-select': {
+      fontSize: 14,
+      lineHeight: 1.35,
+      py: '8.5px',
+      pl: '14px',
+      pr: 2.5,
+    },
+    '& .MuiSelect-icon': {
+      fontSize: '1.25rem',
+      color: 'text.primary',
     },
   };
 
@@ -392,10 +545,47 @@ export const FamilyPage: React.FC = () => {
   }, [loadTrees]);
 
   useEffect(() => {
-    if (currentUser?.domain && !createDialogOpen) {
-      setCreateTreeDomain(currentUser.domain);
+    setCreateTreeDomain(current => {
+      if (current && editableFamilyDomains.includes(current)) {
+        return current;
+      }
+
+      return editableFamilyDomains[0] ?? '';
+    });
+  }, [editableFamilyDomains]);
+
+  useEffect(() => {
+    if (!currentUser?.id || !currentUser.canEditFamilyTree) {
+      refreshedFamilyUserIdRef.current = null;
+      return;
     }
-  }, [currentUser?.domain, createDialogOpen]);
+
+    if (refreshedFamilyUserIdRef.current === currentUser.id) {
+      return;
+    }
+
+    refreshedFamilyUserIdRef.current = currentUser.id;
+
+    let cancelled = false;
+
+    contactService.getCurrentUser()
+      .then(user => {
+        if (cancelled) return;
+        dispatch(updateUser(user));
+        const accessToken = authService.getAccessToken();
+        if (accessToken) {
+          authService.saveAuth(accessToken, { ...currentUser, ...user });
+        }
+      })
+      .catch(() => {
+        refreshedFamilyUserIdRef.current = null;
+        // Leave the current session state unchanged if the refresh fails.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUser, dispatch]);
 
   const applyTreeData = useCallback((p: FamilyPersonDto[], r: FamilyRelationshipDto[], preferredPersonId?: string | null) => {
     setPersons(p);
@@ -570,16 +760,64 @@ export const FamilyPage: React.FC = () => {
     setSelectedTreeId(treeId);
   }, []);
 
-  const handleOpenCreateDialog = useCallback(() => {
+  const handleOpenCreateDialog = useCallback(async () => {
     setCreateTreeError(null);
+
+    if (currentUser?.canEditFamilyTree) {
+      try {
+        const user = await contactService.getCurrentUser();
+        dispatch(updateUser(user));
+        const accessToken = authService.getAccessToken();
+        if (accessToken) {
+          authService.saveAuth(accessToken, { ...currentUser, ...user });
+        }
+
+        const nextDomains = [...new Set((user.editableFamilyTreeDomains ?? []).map(domain => domain.trim()).filter(Boolean))];
+        setCreateTreeDomain(current => {
+          if (current && nextDomains.includes(current)) {
+            return current;
+          }
+
+          return nextDomains[0] ?? '';
+        });
+      } catch {
+        // Keep the dialog usable with the last known client-side capabilities.
+      }
+    }
+
     setCreateDialogOpen(true);
-  }, []);
+  }, [currentUser, dispatch]);
 
   const handleCloseCreateDialog = useCallback(() => {
     if (creatingTree) return;
     setCreateDialogOpen(false);
     setCreateTreeError(null);
   }, [creatingTree]);
+
+  const handleDeleteSelectedTree = useCallback(async () => {
+    if (!selectedTreeId || !selectedTree || deletingTree || !canManageSelectedTreePermissions) {
+      return;
+    }
+
+    const confirmed = window.confirm(`确定删除家谱“${selectedTree.name}”吗？`);
+    if (!confirmed) {
+      return;
+    }
+
+    setDeletingTree(true);
+    setError(null);
+
+    try {
+      await familyService.deleteTree(selectedTreeId);
+      selectPerson(null);
+      setVisibilityDialogOpen(false);
+      await loadTrees();
+    } catch (deleteError: any) {
+      setError(deleteError?.message || '删除家谱失败。');
+    } finally {
+      setDeletingTree(false);
+    }
+  }, [canManageSelectedTreePermissions, deletingTree, loadTrees, selectPerson, selectedTree, selectedTreeId]);
 
   const handleOpenVisibilityDialog = useCallback(async () => {
     if (!selectedTreeId) return;
@@ -591,7 +829,7 @@ export const FamilyPage: React.FC = () => {
     try {
       const visibility = await familyService.getTreeVisibility(selectedTreeId);
       setVisibilityForm(visibility);
-      setVisibilityText(createVisibilityTextState(visibility));
+      setVisibilityRules(buildVisibilityRules(visibility, selectedTree?.domain));
     } catch (loadError: any) {
       const emptyVisibility = {
         treeId: selectedTreeId,
@@ -601,12 +839,12 @@ export const FamilyPage: React.FC = () => {
         domainEditors: [],
       };
       setVisibilityForm(emptyVisibility);
-      setVisibilityText(createVisibilityTextState(emptyVisibility));
+      setVisibilityRules(buildVisibilityRules(emptyVisibility, selectedTree?.domain));
       setVisibilityError(loadError?.message || '加载可见范围失败。');
     } finally {
       setLoadingVisibility(false);
     }
-  }, [selectedTreeId]);
+  }, [selectedTree?.domain, selectedTreeId]);
 
   const handleCloseVisibilityDialog = useCallback(() => {
     if (savingVisibility) return;
@@ -620,17 +858,12 @@ export const FamilyPage: React.FC = () => {
     setSavingVisibility(true);
     setVisibilityError(null);
 
-    const nextRequest = {
-      userViewers: parseVisibilityList(visibilityText.userViewers),
-      userEditors: parseVisibilityList(visibilityText.userEditors),
-      domainViewers: parseVisibilityList(visibilityText.domainViewers),
-      domainEditors: parseVisibilityList(visibilityText.domainEditors),
-    };
+    const nextRequest = toVisibilityRequest(visibilityRules);
 
     try {
       const nextVisibility = await familyService.updateTreeVisibility(selectedTreeId, nextRequest);
       setVisibilityForm(nextVisibility);
-      setVisibilityText(createVisibilityTextState(nextVisibility));
+      setVisibilityRules(buildVisibilityRules(nextVisibility, selectedTree?.domain));
       setVisibilityDialogOpen(false);
       await loadTrees(selectedTreeId);
     } catch (saveError: any) {
@@ -638,7 +871,7 @@ export const FamilyPage: React.FC = () => {
     } finally {
       setSavingVisibility(false);
     }
-  }, [canManageSelectedTreePermissions, loadTrees, selectedTreeId, visibilityText]);
+  }, [canManageSelectedTreePermissions, loadTrees, selectedTree?.domain, selectedTreeId, visibilityRules]);
 
   const handleCreateTree = useCallback(async () => {
     const treeName = createTreeName.trim();
@@ -685,7 +918,7 @@ export const FamilyPage: React.FC = () => {
       setCreateTreeSurname('');
       setCreateTreePoem('');
       setCreateTreeRootGeneration('1');
-      setCreateTreeText(TEXT_IMPORT_EXAMPLE);
+      setCreateTreeText('');
       setCreateTreeError(null);
     } catch (createError: any) {
       setCreateTreeError(createError?.message || '创建家谱失败。');
@@ -707,93 +940,41 @@ export const FamilyPage: React.FC = () => {
 
   const canGoUp = visibleStartDepth > 0;
   const canGoDown = visibleStartDepth + MAX_VISIBLE_DEPTH <= treeMaxDepth;
-  const handleRemoveVisibilityUser = useCallback((userPrincipal: string, permission: 'view' | 'edit') => {
-    setVisibilityForm(current => {
-      const next = permission === 'edit'
-        ? { ...current, userEditors: current.userEditors.filter(value => value !== userPrincipal) }
-        : { ...current, userViewers: current.userViewers.filter(value => value !== userPrincipal) };
-      setVisibilityText(createVisibilityTextState(next));
-      return next;
-    });
-  }, []);
-  const handleRemoveVisibilityDomain = useCallback((domain: string, permission: 'view' | 'edit') => {
-    setVisibilityForm(current => {
-      const next = permission === 'edit'
-        ? { ...current, domainEditors: current.domainEditors.filter(value => value !== domain) }
-        : { ...current, domainViewers: current.domainViewers.filter(value => value !== domain) };
-      setVisibilityText(createVisibilityTextState(next));
-      return next;
-    });
-  }, []);
-  const handleVisibilityTextChange = useCallback((field: keyof VisibilityTextState, value: string) => {
-    setVisibilityText(current => ({
-      ...current,
-      [field]: value,
-    }));
-    setVisibilityForm(current => ({
-      ...current,
-      [field]: parseVisibilityList(value),
-    }));
-  }, []);
-  const visibilityRules = useMemo<VisibilityRuleRow[]>(() => {
-    const rows: VisibilityRuleRow[] = [];
+  const handleAddVisibilityRule = useCallback(() => {
+    if (!canManageSelectedTreePermissions) return;
+    setVisibilityRules(current => [...current, createVisibilityRule()]);
+  }, [canManageSelectedTreePermissions]);
 
-    if (selectedTree?.domain) {
-      rows.push({
-        key: `baseline-${selectedTree.domain}`,
-        subject: selectedTree.domain,
-        permission: '浏览',
-        source: '本家',
-        removable: false,
-      });
+  const handleRemoveVisibilityRule = useCallback((ruleId: string) => {
+    if (!canManageSelectedTreePermissions) return;
+    setVisibilityRules(current => current.filter(rule => rule.key !== ruleId));
+  }, []);
+  const handleVisibilitySubjectChange = useCallback((ruleId: string, value: string) => {
+    if (!canManageSelectedTreePermissions) return;
+    setVisibilityRules(current => current.map(rule => rule.key === ruleId ? { ...rule, subject: value } : rule));
+  }, [canManageSelectedTreePermissions]);
+
+  const handleToggleVisibilityRulePermission = useCallback((ruleId: string) => {
+    if (!canManageSelectedTreePermissions) return;
+    setVisibilityRules(current => current.map(rule =>
+      rule.key === ruleId
+        ? { ...rule, permission: toggleVisibilityPermission(rule.permission) }
+        : rule));
+  }, [canManageSelectedTreePermissions]);
+  const handleCreateTreeTextChange = useCallback((value: string, selectionStart: number | null, selectionEnd: number | null) => {
+    const nextValue = normalizeIndentedInputForDisplay(value);
+    const nextSelectionStart = mapDisplaySelectionOffset(value, selectionStart);
+    const nextSelectionEnd = mapDisplaySelectionOffset(value, selectionEnd);
+
+    if (nextSelectionStart != null && nextSelectionEnd != null) {
+      pendingCreateTreeTextSelectionRef.current = {
+        start: nextSelectionStart,
+        end: nextSelectionEnd,
+      };
     }
 
-    visibilityForm.userEditors.forEach(userPrincipal => {
-      rows.push({
-        key: `user-edit-${userPrincipal}`,
-        subject: userPrincipal,
-        permission: '编辑',
-        source: '共享',
-        removable: canManageSelectedTreePermissions,
-        onRemove: () => handleRemoveVisibilityUser(userPrincipal, 'edit'),
-      });
-    });
-
-    visibilityForm.userViewers.forEach(userPrincipal => {
-      rows.push({
-        key: `user-view-${userPrincipal}`,
-        subject: userPrincipal,
-        permission: '浏览',
-        source: '共享',
-        removable: canManageSelectedTreePermissions,
-        onRemove: () => handleRemoveVisibilityUser(userPrincipal, 'view'),
-      });
-    });
-
-    visibilityForm.domainEditors.forEach(domain => {
-      rows.push({
-        key: `domain-edit-${domain}`,
-        subject: domain,
-        permission: '编辑',
-        source: '共享',
-        removable: canManageSelectedTreePermissions,
-        onRemove: () => handleRemoveVisibilityDomain(domain, 'edit'),
-      });
-    });
-
-    visibilityForm.domainViewers.forEach(domain => {
-      rows.push({
-        key: `domain-view-${domain}`,
-        subject: domain,
-        permission: '浏览',
-        source: '共享',
-        removable: canManageSelectedTreePermissions,
-        onRemove: () => handleRemoveVisibilityDomain(domain, 'view'),
-      });
-    });
-
-    return rows;
-  }, [canManageSelectedTreePermissions, handleRemoveVisibilityDomain, handleRemoveVisibilityUser, selectedTree?.domain, visibilityForm.domainEditors, visibilityForm.domainViewers, visibilityForm.userEditors, visibilityForm.userViewers]);
+    setCreateTreeText(nextValue);
+  }, []);
 
   if (!currentUser?.canViewFamilyTree) {
     return (
@@ -1115,7 +1296,7 @@ export const FamilyPage: React.FC = () => {
                 },
               }}
             >
-              权限
+              设置
             </Button>
           )}
           {allNodes.length > 0 && (
@@ -1349,68 +1530,112 @@ export const FamilyPage: React.FC = () => {
         />
       )}
 
-      <Dialog open={createDialogOpen} onClose={handleCloseCreateDialog} fullWidth maxWidth="md">
-        <DialogTitle>新建家谱</DialogTitle>
-        <DialogContent dividers>
+      <Dialog
+        open={createDialogOpen}
+        onClose={handleCloseCreateDialog}
+        maxWidth={false}
+        PaperProps={{
+          sx: {
+            width: {
+              xs: 'calc(100vw - 16px)',
+              sm: 'min(720px, calc(100vw - 64px))',
+            },
+            maxWidth: {
+              xs: 'calc(100vw - 16px)',
+              sm: 'min(720px, calc(100vw - 64px))',
+            },
+            m: {
+              xs: '8px',
+              sm: '32px',
+            },
+            borderRadius: '8px',
+            backgroundColor: '#ffffff',
+            backgroundImage: 'none',
+          },
+        }}
+      >
+        <DialogTitle sx={{ backgroundColor: '#ffffff' }}>新建家谱</DialogTitle>
+        <DialogContent sx={{ backgroundColor: '#ffffff', borderTop: 'none', borderBottom: 'none', px: 2.25, pt: 2, pb: 1 }}>
           <BoxAny sx={{ display: 'grid', gap: 1.25, pt: 0.5 }}>
             {createTreeError && <Alert severity="error">{createTreeError}</Alert>}
-            <TextField
-              label="家谱名称"
-              value={createTreeName}
-              onChange={e => setCreateTreeName(e.target.value)}
-              size="small"
-              fullWidth
-            />
-            <TextField
-              label="姓氏"
-              value={createTreeSurname}
-              onChange={e => setCreateTreeSurname(e.target.value)}
-              size="small"
-              fullWidth
-            />
-            <TextField
-              label="目标域名"
-              value={createTreeDomain}
-              onChange={e => setCreateTreeDomain(e.target.value)}
-              size="small"
-              fullWidth
-              helperText="例如 four.com 或 five.com。服务器会校验你是否有权管理这个域。"
-            />
-            <TextField
-              label="始祖世代"
-              value={createTreeRootGeneration}
-              onChange={e => setCreateTreeRootGeneration(e.target.value)}
-              size="small"
-              fullWidth
-            />
-            <TextField
-              label="字辈"
-              value={createTreePoem}
-              onChange={e => setCreateTreePoem(e.target.value)}
-              size="small"
-              fullWidth
-              helperText="可留空。可输入连续汉字，或用空格/逗号分隔。"
-            />
-            <TextField
-              label="家谱文本"
-              value={createTreeText}
-              onChange={e => setCreateTreeText(e.target.value)}
-              multiline
-              minRows={12}
-              fullWidth
-              helperText="每行格式：姓名，性别，配偶姓名，配偶性别，出生年，去世年。可使用中文逗号。"
-            />
-            <Paper variant="outlined" sx={{ p: 1.25, bgcolor: 'rgba(15,23,42,0.02)' }}>
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
-                示例
-              </Typography>
-              <Typography component="pre" sx={{ m: 0, fontFamily: 'monospace', fontSize: 12, whiteSpace: 'pre-wrap' }}>
-                {TEXT_IMPORT_EXAMPLE}
-              </Typography>
-            </Paper>
+            <BoxAny
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)',
+                gap: 1.25,
+                p: 1.25,
+                border: '1px solid #e5e7eb',
+                borderRadius: '8px',
+                backgroundColor: '#f8fafc',
+              }}
+            >
+              <TextField
+                label="家谱名称"
+                value={createTreeName}
+                onChange={e => setCreateTreeName(e.target.value)}
+                size="small"
+                fullWidth
+                sx={createDialogTextFieldSx}
+              />
+              <TextField
+                label="姓氏"
+                value={createTreeSurname}
+                onChange={e => setCreateTreeSurname(e.target.value)}
+                size="small"
+                fullWidth
+                sx={createDialogTextFieldSx}
+              />
+              <TextField
+                label="目标域名"
+                select
+                value={createTreeDomain}
+                onChange={e => setCreateTreeDomain(e.target.value)}
+                size="small"
+                fullWidth
+                sx={createDialogSelectSx}
+                SelectProps={{
+                  IconComponent: ExpandMoreIcon,
+                  MenuProps: createDialogSelectMenuProps,
+                }}
+              >
+                {editableFamilyDomains.map(domain => (
+                  <MenuItem key={domain} value={domain} sx={{ fontSize: 14, lineHeight: 1.35, minHeight: 30, py: 0.5 }}>
+                    {domain}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <TextField
+                label="始祖世代"
+                value={createTreeRootGeneration}
+                onChange={e => setCreateTreeRootGeneration(e.target.value)}
+                size="small"
+                fullWidth
+                sx={createDialogTextFieldSx}
+              />
+            </BoxAny>
+            <BoxAny sx={{ display: 'grid', gap: 0 }}>
+              <TextField
+                label="输入人物，一行一人；子女前加两个空格"
+                value={createTreeText}
+                onChange={e => handleCreateTreeTextChange(e.target.value, e.target.selectionStart, e.target.selectionEnd)}
+                multiline
+                minRows={12}
+                fullWidth
+                inputRef={createTreeTextInputRef}
+                sx={createDialogTextFieldSx}
+              />
+              <Paper variant="outlined" sx={{ mt: '-1px', p: 1.25, bgcolor: '#f8fafc', backgroundImage: 'none' }}>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                  示例：姓名，性别，配偶，配偶性别，出生年，去世年
+                </Typography>
+                <Typography component="pre" sx={{ m: 0, fontFamily: 'monospace', fontSize: 12, whiteSpace: 'pre-wrap' }}>
+                  {normalizeIndentedInputForDisplay(TEXT_IMPORT_EXAMPLE)}
+                </Typography>
+              </Paper>
+            </BoxAny>
           </BoxAny>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ backgroundColor: '#ffffff' }}>
           <Button onClick={handleCloseCreateDialog} disabled={creatingTree}>取消</Button>
           <Button onClick={handleCreateTree} variant="contained" disabled={creatingTree}>
             {creatingTree ? '创建中…' : '创建'}
@@ -1421,15 +1646,75 @@ export const FamilyPage: React.FC = () => {
       <Dialog
         open={visibilityDialogOpen}
         onClose={handleCloseVisibilityDialog}
-        fullWidth
-        maxWidth="sm"
-        PaperProps={{ sx: { borderRadius: '8px', backgroundColor: '#ffffff', backgroundImage: 'none' } }}
+        maxWidth={false}
+        sx={{
+          '& .MuiDialog-container': {
+            alignItems: {
+              xs: 'flex-end',
+              sm: 'center',
+            },
+          },
+        }}
+        PaperProps={{
+          sx: {
+            width: {
+              xs: '100%',
+              sm: 'min(560px, calc(100vw - 64px))',
+            },
+            maxWidth: {
+              xs: '100%',
+              sm: 'min(560px, calc(100vw - 64px))',
+            },
+            m: {
+              xs: 0,
+              sm: '32px',
+            },
+            borderRadius: {
+              xs: '12px 12px 0 0',
+              sm: '8px',
+            },
+            backgroundColor: '#ffffff',
+            backgroundImage: 'none',
+          },
+        }}
       >
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', backgroundColor: '#ffffff' }}>
-          <BoxAny component="span">家谱权限</BoxAny>
-          {selectedTree && <BoxAny component="span">{selectedTree.name}</BoxAny>}
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, backgroundColor: '#ffffff' }}>
+          <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0, flex: 1 }}>
+            <BoxAny component="span" sx={{ flexShrink: 0 }}>家谱权限</BoxAny>
+            {selectedTree && (
+              <BoxAny component="span" sx={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {selectedTree.name}
+              </BoxAny>
+            )}
+          </BoxAny>
+          {canManageSelectedTreePermissions && !loadingVisibility ? (
+            <Button
+              size="small"
+              variant="outlined"
+              color="error"
+              onClick={handleDeleteSelectedTree}
+              disabled={deletingTree}
+              sx={{
+                minHeight: 30,
+                minWidth: 0,
+                flexShrink: 0,
+                borderColor: 'rgba(220, 38, 38, 0.35)',
+                color: '#b91c1c',
+                px: 0.75,
+                fontSize: 14,
+                lineHeight: 1.35,
+                textTransform: 'none',
+                '&:hover': {
+                  borderColor: 'rgba(185, 28, 28, 0.55)',
+                  backgroundColor: 'rgba(220, 38, 38, 0.04)',
+                },
+              }}
+            >
+              {deletingTree ? '删除中…' : '删除当前家谱'}
+            </Button>
+          ) : null}
         </DialogTitle>
-        <DialogContent sx={{ backgroundColor: '#ffffff', borderTop: 'none', borderBottom: 'none', px: 3, pt: 2, pb: 1 }}>
+        <DialogContent sx={{ backgroundColor: '#ffffff', borderTop: 'none', borderBottom: 'none', px: 2.25, pt: 2, pb: 1 }}>
           <BoxAny sx={{ display: 'grid', gap: 1.25, pt: 0.5 }}>
             {visibilityError && <Alert severity="error">{visibilityError}</Alert>}
             {loadingVisibility ? (
@@ -1437,89 +1722,111 @@ export const FamilyPage: React.FC = () => {
                 <CircularProgress size={28} />
               </BoxAny>
             ) : (
-              <>
-                <Paper variant="outlined" sx={{ overflow: 'hidden', borderRadius: '8px', backgroundColor: '#ffffff', borderColor: '#d1d5db', backgroundImage: 'none' }}>
-                  <TableContainer>
-                    <Table size="small">
-                      <TableHead sx={{ backgroundColor: '#f3f4f6' }}>
-                        <TableRow>
-                          <TableCell sx={{ width: '58%' }}>对象</TableCell>
-                          <TableCell sx={{ width: '18%' }}>权限</TableCell>
-                          <TableCell sx={{ width: '24%' }}>来源</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {visibilityRules.map(rule => (
-                          <TableRow key={rule.key} hover sx={{ '&:hover': { backgroundColor: '#f8fafc' } }}>
-                            <TableCell sx={{ fontSize: 13, py: 0.75 }}>
-                              <BoxAny sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
-                                <BoxAny sx={{ fontFamily: rule.subject.includes('@') ? 'monospace' : 'inherit' }}>{rule.subject}</BoxAny>
-                                {rule.removable ? (
-                                  <Button size="small" color="inherit" onClick={rule.onRemove} sx={{ minWidth: 0, px: 1, flexShrink: 0, borderRadius: '8px', '&:hover': { backgroundColor: '#f3f4f6' } }}>
-                                    移除
-                                  </Button>
-                                ) : null}
-                              </BoxAny>
-                            </TableCell>
-                            <TableCell>{rule.permission}</TableCell>
-                            <TableCell>{rule.source}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-
-                  <BoxAny sx={{ px: 1.5, pt: 1.25, pb: 0.75, backgroundColor: '#ffffff' }}>
-                    <Typography variant="subtitle2" sx={{ mb: 0.75 }}>规则</Typography>
-                    <BoxAny sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.25 }}>
-                      <TextField
-                        label="可查看邮箱"
-                        value={visibilityText.userViewers}
-                        onChange={e => handleVisibilityTextChange('userViewers', e.target.value)}
-                        disabled={!canManageSelectedTreePermissions}
-                        multiline
-                        minRows={3}
-                        maxRows={3}
-                        fullWidth
-                        sx={visibilityFieldSx}
-                      />
-                      <TextField
-                        label="可编辑邮箱"
-                        value={visibilityText.userEditors}
-                        onChange={e => handleVisibilityTextChange('userEditors', e.target.value)}
-                        disabled={!canManageSelectedTreePermissions}
-                        multiline
-                        minRows={3}
-                        maxRows={3}
-                        fullWidth
-                        sx={visibilityFieldSx}
-                      />
-                      <TextField
-                        label="可查看域"
-                        value={visibilityText.domainViewers}
-                        onChange={e => handleVisibilityTextChange('domainViewers', e.target.value)}
-                        disabled={!canManageSelectedTreePermissions}
-                        multiline
-                        minRows={3}
-                        maxRows={3}
-                        fullWidth
-                        sx={visibilityFieldSx}
-                      />
-                      <TextField
-                        label="可编辑域"
-                        value={visibilityText.domainEditors}
-                        onChange={e => handleVisibilityTextChange('domainEditors', e.target.value)}
-                        disabled={!canManageSelectedTreePermissions}
-                        multiline
-                        minRows={3}
-                        maxRows={3}
-                        fullWidth
-                        sx={visibilityFieldSx}
-                      />
-                    </BoxAny>
+              <Paper variant="outlined" sx={visibilityTableSurfaceSx}>
+                <BoxAny
+                  sx={{
+                    display: 'grid',
+                    gridTemplateColumns: canManageSelectedTreePermissions
+                      ? 'minmax(0, 1fr) 64px 56px 28px'
+                      : 'minmax(0, 1fr) 64px 56px',
+                    columnGap: 1,
+                    px: 1.25,
+                    py: 0.75,
+                    alignItems: 'center',
+                    backgroundColor: '#f3f4f6',
+                    borderBottom: visibilityRules.length > 0 ? '1px solid #e5e7eb' : 'none',
+                  }}
+                >
+                  <BoxAny sx={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: 11 }}>
+                      对象
+                    </Typography>
+                    {canManageSelectedTreePermissions && (
+                      <Button
+                        size="small"
+                        onClick={handleAddVisibilityRule}
+                        sx={{ ml: 'auto', flexShrink: 0, minWidth: 30, px: 0.5, fontSize: 18, lineHeight: 1, fontWeight: 500 }}
+                      >
+                        +
+                      </Button>
+                    )}
                   </BoxAny>
-                </Paper>
-              </>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: 11, textAlign: 'center' }}>
+                    类型
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: 11, textAlign: 'center' }}>
+                    权限
+                  </Typography>
+                  {canManageSelectedTreePermissions ? <BoxAny /> : null}
+                </BoxAny>
+
+                <BoxAny sx={{ px: 1.25, py: 0.35 }}>
+                  {visibilityRules.length === 0 ? (
+                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: 12, fontStyle: 'italic', py: 0.75 }}>
+                      暂无记录
+                    </Typography>
+                  ) : visibilityRules.map((rule, index) => {
+                    const subjectType = inferVisibilitySubjectType(rule.subject.trim());
+                    const showDelete = canManageSelectedTreePermissions && !rule.locked;
+
+                    return (
+                      <BoxAny
+                        key={rule.key}
+                        sx={{
+                          display: 'grid',
+                          gridTemplateColumns: canManageSelectedTreePermissions
+                            ? 'minmax(0, 1fr) 64px 56px 28px'
+                            : 'minmax(0, 1fr) 64px 56px',
+                          columnGap: 1,
+                          py: 0.65,
+                          alignItems: 'center',
+                          borderBottom: index === visibilityRules.length - 1 ? 'none' : '1px solid #e5e7eb',
+                        }}
+                      >
+                        <BoxAny sx={{ minWidth: 0 }}>
+                          {rule.locked || !canManageSelectedTreePermissions ? (
+                            <Typography sx={{ fontSize: 13, minWidth: 0, wordBreak: 'break-word', fontFamily: rule.subject.includes('@') ? 'monospace' : 'inherit' }}>
+                              {rule.subject}
+                            </Typography>
+                          ) : (
+                            <InputBase
+                              value={rule.subject}
+                              onChange={event => handleVisibilitySubjectChange(rule.key, event.target.value)}
+                              fullWidth
+                              sx={{
+                                ...visibilityInlineInputSx,
+                                fontFamily: rule.subject.includes('@') ? 'monospace' : 'inherit',
+                              }}
+                            />
+                          )}
+                        </BoxAny>
+
+                        <Typography sx={{ fontSize: 12, textAlign: 'center', color: 'text.secondary' }}>
+                          {subjectType}
+                        </Typography>
+
+                        <Button
+                          size="small"
+                          variant="text"
+                          disabled={!canManageSelectedTreePermissions || Boolean(rule.locked)}
+                          onClick={() => handleToggleVisibilityRulePermission(rule.key)}
+                          sx={compactVisibilityToggleSx}
+                        >
+                          {formatVisibilityPermission(rule.permission)}
+                        </Button>
+
+                        {canManageSelectedTreePermissions ? (
+                          showDelete ? (
+                            <IconButton size="small" onClick={() => handleRemoveVisibilityRule(rule.key)} sx={{ width: 24, height: 24, justifySelf: 'end' }}>
+                              <DeleteOutlineIcon fontSize="small" />
+                            </IconButton>
+                          ) : <BoxAny sx={{ width: 24, height: 24 }} />
+                        ) : null}
+                      </BoxAny>
+                    );
+                  })}
+                </BoxAny>
+              </Paper>
             )}
           </BoxAny>
         </DialogContent>

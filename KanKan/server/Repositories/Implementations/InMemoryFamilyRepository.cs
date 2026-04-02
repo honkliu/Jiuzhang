@@ -84,6 +84,19 @@ public class InMemoryFamilyRepository :
         return Task.CompletedTask;
     }
 
+    Task IFamilyPersonRepository.ClearLinkedTreeReferencesAsync(string linkedTreeId)
+    {
+        foreach (var person in _persons.Values.Where(p => string.Equals(p.LinkedTreeId, linkedTreeId, StringComparison.Ordinal)).ToList())
+        {
+            person.LinkedTreeId = null;
+            person.LinkedPersonId = null;
+            person.UpdatedAt = DateTime.UtcNow;
+            _persons[person.Id] = person;
+        }
+
+        return Task.CompletedTask;
+    }
+
     // ── IFamilyRelationshipRepository ────────────────────────────────────────
 
     Task<List<FamilyRelationship>> IFamilyRelationshipRepository.GetByTreeIdAsync(string treeId)

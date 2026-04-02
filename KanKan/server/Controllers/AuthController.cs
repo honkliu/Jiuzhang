@@ -445,9 +445,12 @@ public class AuthController : ControllerBase
     {
         var normalizedAvatarImageId = await _avatarService.NormalizeAvatarImageIdAsync(user.AvatarImageId);
         var familyCapabilities = await GetFamilyCapabilitiesAsync(user);
+        var editableFamilyTreeDomains = FamilyAccessPolicy.GetEditableDomains(_configuration, user).ToArray();
         return new UserDto
         {
             Id = user.Id,
+            Domain = string.IsNullOrWhiteSpace(user.Domain) ? DomainRules.GetDomain(user.Email) : user.Domain,
+            EditableFamilyTreeDomains = editableFamilyTreeDomains.ToList(),
             Handle = user.Handle,
             IsAdmin = user.IsAdmin,
             CanViewFamilyTree = familyCapabilities.canView,

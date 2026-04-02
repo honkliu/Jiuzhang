@@ -59,10 +59,7 @@ public static class FamilyAccessPolicy
         var managedDomains = GetManagedDomains(configuration, user.Email);
         foreach (var domain in managedDomains)
         {
-            if (enabledDomains.Contains(domain))
-            {
-                domains.Add(domain);
-            }
+            domains.Add(domain);
         }
 
         return domains.ToArray();

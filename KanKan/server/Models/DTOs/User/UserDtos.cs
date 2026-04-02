@@ -4,6 +4,7 @@ public class UserDto
 {
     public string Id { get; set; } = string.Empty;
     public string? Domain { get; set; }
+    public List<string> EditableFamilyTreeDomains { get; set; } = new();
     public bool IsAdmin { get; set; }
     public bool CanViewFamilyTree { get; set; }
     public bool CanEditFamilyTree { get; set; }

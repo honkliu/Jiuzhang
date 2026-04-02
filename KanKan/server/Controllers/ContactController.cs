@@ -89,12 +89,15 @@ public class ContactController : ControllerBase
         }
 
         var familyCapabilities = await GetFamilyCapabilitiesAsync(user);
+        var resolvedDomain = string.IsNullOrWhiteSpace(user.Domain) ? DomainRules.GetDomain(user.Email) : user.Domain;
+        var editableFamilyTreeDomains = FamilyAccessPolicy.GetEditableDomains(_configuration, user).ToArray();
         return new UserDto
         {
             Id = user.Id,
             Domain = includeDomain
-                ? (string.IsNullOrWhiteSpace(user.Domain) ? DomainRules.GetDomain(user.Email) : user.Domain)
+                ? resolvedDomain
                 : null,
+            EditableFamilyTreeDomains = editableFamilyTreeDomains.ToList(),
             IsAdmin = user.IsAdmin,
             CanViewFamilyTree = familyCapabilities.canView,
             CanEditFamilyTree = familyCapabilities.canEdit,
