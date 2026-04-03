@@ -38,6 +38,7 @@ public class FamilyAttachment
     public string MimeType { get; set; } = string.Empty;
 }
 
+[BsonIgnoreExtraElements]
 public class FamilyTree
 {
     public string Id { get; set; } = string.Empty;
@@ -47,6 +48,7 @@ public class FamilyTree
     public string Domain { get; set; } = string.Empty;
     public int RootGeneration { get; set; } = 1;
     public List<string> ZibeiPoem { get; set; } = new();
+    public string? NotebookId { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 }
@@ -132,6 +134,50 @@ public class FamilyDocument
     public int? GenerationFrom { get; set; }
     public int? GenerationTo { get; set; }
     public string AuthorId { get; set; } = string.Empty;
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
+}
+
+// ─── Sections & Pages (OneNote-like) ────────────────────────────────────────
+
+public class PageElement
+{
+    public string Id { get; set; } = string.Empty;
+    // "text" | "image"
+    public string Type { get; set; } = "text";
+    public double X { get; set; }
+    public double Y { get; set; }
+    public double Width { get; set; }
+    public double Height { get; set; }
+    // For text blocks
+    public string? Text { get; set; }
+    public double FontSize { get; set; } = 16;
+    public string TextAlign { get; set; } = "left";
+    // For image blocks
+    public string? ImageUrl { get; set; }
+    public int ZIndex { get; set; }
+}
+
+[BsonIgnoreExtraElements]
+public class FamilySection
+{
+    public string Id { get; set; } = string.Empty;
+    public string TreeId { get; set; } = string.Empty;
+    public string Domain { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public int SortOrder { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
+}
+
+public class FamilyPage
+{
+    public string Id { get; set; } = string.Empty;
+    public string SectionId { get; set; } = string.Empty;
+    public string TreeId { get; set; } = string.Empty;
+    public string Domain { get; set; } = string.Empty;
+    public int PageNumber { get; set; } = 1;
+    public List<PageElement> Elements { get; set; } = new();
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 }

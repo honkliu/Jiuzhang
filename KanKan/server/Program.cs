@@ -230,6 +230,12 @@ if (useInMemory)
     builder.Services.AddSingleton<KanKan.API.Repositories.Interfaces.IFamilyPersonRepository, KanKan.API.Repositories.Implementations.InMemoryFamilyRepository>();
     builder.Services.AddSingleton<KanKan.API.Repositories.Interfaces.IFamilyRelationshipRepository, KanKan.API.Repositories.Implementations.InMemoryFamilyRepository>();
     builder.Services.AddSingleton<KanKan.API.Repositories.Interfaces.IFamilyTreeVisibilityRepository, KanKan.API.Repositories.Implementations.InMemoryFamilyRepository>();
+    builder.Services.AddSingleton<KanKan.API.Repositories.Interfaces.IFamilySectionRepository, KanKan.API.Repositories.Implementations.InMemoryFamilyRepository>();
+    builder.Services.AddSingleton<KanKan.API.Repositories.Interfaces.IFamilyPageRepository, KanKan.API.Repositories.Implementations.InMemoryFamilyRepository>();
+    builder.Services.AddSingleton<KanKan.API.Repositories.Interfaces.INotebookRepository, KanKan.API.Repositories.Implementations.InMemoryNotebookRepository>();
+    builder.Services.AddSingleton<KanKan.API.Repositories.Interfaces.INotebookVisibilityRepository, KanKan.API.Repositories.Implementations.InMemoryNotebookRepository>();
+    builder.Services.AddSingleton<KanKan.API.Repositories.Interfaces.INotebookSectionRepository, KanKan.API.Repositories.Implementations.InMemoryNotebookRepository>();
+    builder.Services.AddSingleton<KanKan.API.Repositories.Interfaces.INotebookPageRepository, KanKan.API.Repositories.Implementations.InMemoryNotebookRepository>();
 }
 else if (storageMode == "mongodb")
 {
@@ -245,6 +251,12 @@ else if (storageMode == "mongodb")
     builder.Services.AddScoped<KanKan.API.Repositories.Interfaces.IFamilyPersonRepository, KanKan.API.Repositories.Implementations.FamilyPersonRepository>();
     builder.Services.AddScoped<KanKan.API.Repositories.Interfaces.IFamilyRelationshipRepository, KanKan.API.Repositories.Implementations.FamilyRelationshipRepository>();
     builder.Services.AddScoped<KanKan.API.Repositories.Interfaces.IFamilyTreeVisibilityRepository, KanKan.API.Repositories.Implementations.FamilyTreeVisibilityRepository>();
+    builder.Services.AddScoped<KanKan.API.Repositories.Interfaces.IFamilySectionRepository, KanKan.API.Repositories.Implementations.FamilySectionRepository>();
+    builder.Services.AddScoped<KanKan.API.Repositories.Interfaces.IFamilyPageRepository, KanKan.API.Repositories.Implementations.FamilyPageRepository>();
+    builder.Services.AddScoped<KanKan.API.Repositories.Interfaces.INotebookRepository, KanKan.API.Repositories.Implementations.NotebookRepository>();
+    builder.Services.AddScoped<KanKan.API.Repositories.Interfaces.INotebookVisibilityRepository, KanKan.API.Repositories.Implementations.NotebookVisibilityRepository>();
+    builder.Services.AddScoped<KanKan.API.Repositories.Interfaces.INotebookSectionRepository, KanKan.API.Repositories.Implementations.NotebookSectionRepository>();
+    builder.Services.AddScoped<KanKan.API.Repositories.Interfaces.INotebookPageRepository, KanKan.API.Repositories.Implementations.NotebookPageRepository>();
 }
 
 builder.Services.AddScoped<IEmailService, EmailService>();

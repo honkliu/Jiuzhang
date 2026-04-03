@@ -130,6 +130,46 @@ public class UpsertFamilyDocumentRequest
     public int? GenerationTo { get; set; }
 }
 
+// ─── Section & Page Request DTOs ────────────────────────────────────────────
+
+public class CreateFamilySectionRequest
+{
+    public string Name { get; set; } = string.Empty;
+    public int? SortOrder { get; set; }
+}
+
+public class UpdateFamilySectionRequest
+{
+    public string? Name { get; set; }
+    public int? SortOrder { get; set; }
+}
+
+public class PageElementDto
+{
+    public string Id { get; set; } = string.Empty;
+    public string Type { get; set; } = "text";
+    public double X { get; set; }
+    public double Y { get; set; }
+    public double Width { get; set; }
+    public double Height { get; set; }
+    public string? Text { get; set; }
+    public double FontSize { get; set; } = 16;
+    public string TextAlign { get; set; } = "left";
+    public string? ImageUrl { get; set; }
+    public int ZIndex { get; set; }
+}
+
+public class CreateFamilyPageRequest
+{
+    public int? PageNumber { get; set; }
+}
+
+public class UpdateFamilyPageRequest
+{
+    public List<PageElementDto>? Elements { get; set; }
+    public int? PageNumber { get; set; }
+}
+
 // ─── Response DTOs ──────────────────────────────────────────────────────────
 
 public class FamilyTreeResponse
@@ -207,6 +247,33 @@ public class FamilyDocumentResponse
     public string AuthorId { get; set; } = string.Empty;
     public string CreatedAt { get; set; } = string.Empty;
     public string UpdatedAt { get; set; } = string.Empty;
+}
+
+public class FamilySectionResponse
+{
+    public string Id { get; set; } = string.Empty;
+    public string TreeId { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public int SortOrder { get; set; }
+    public string CreatedAt { get; set; } = string.Empty;
+    public string UpdatedAt { get; set; } = string.Empty;
+}
+
+public class FamilyPageResponse
+{
+    public string Id { get; set; } = string.Empty;
+    public string SectionId { get; set; } = string.Empty;
+    public string TreeId { get; set; } = string.Empty;
+    public int PageNumber { get; set; }
+    public List<PageElementDto> Elements { get; set; } = new();
+    public string CreatedAt { get; set; } = string.Empty;
+    public string UpdatedAt { get; set; } = string.Empty;
+}
+
+public class FamilyPageSummaryResponse
+{
+    public string Id { get; set; } = string.Empty;
+    public int PageNumber { get; set; }
 }
 
 public class FullFamilyTreeResponse

@@ -24,6 +24,7 @@ import { authService } from '@/services/auth.service';
 import { useDispatch, useSelector } from 'react-redux';
 import { updateUser } from '@/store/authSlice';
 import type { AppDispatch, RootState } from '@/store';
+import { FamilyNotebook } from './FamilyNotebook';
 
 const BoxAny = Box as any;
 
@@ -373,6 +374,9 @@ export const FamilyPage: React.FC = () => {
   const restoreTreeSelectionRef = useRef(false);
   const pendingTreeNavigationPersonIdRef = useRef<string | null | undefined>(undefined);
   const refreshedFamilyUserIdRef = useRef<string | null>(null);
+
+  // ── Notebook dialog state ──────────────────────────────────────────────
+  const [notebookDialogOpen, setNotebookDialogOpen] = useState(false);
 
   const selectPerson = useCallback((person: FamilyNode | null) => {
     selectedPersonIdRef.current = person?.id ?? null;
@@ -1303,6 +1307,33 @@ export const FamilyPage: React.FC = () => {
         )}
       </BoxAny>
 
+      {/* Notebook dialog (谱志) */}
+      <Dialog
+        fullScreen
+        open={notebookDialogOpen}
+        onClose={() => setNotebookDialogOpen(false)}
+      >
+        <BoxAny sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+          <BoxAny sx={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            px: 2, py: 1, borderBottom: '1px solid rgba(15,23,42,0.08)',
+            background: 'rgba(255,255,255,0.97)',
+          }}>
+            <Typography variant="subtitle1" fontWeight={600}>
+              {selectedTree?.name ?? ''} 谱志
+            </Typography>
+            <Button onClick={() => setNotebookDialogOpen(false)} size="small" sx={{ textTransform: 'none' }}>
+              关闭
+            </Button>
+          </BoxAny>
+          {selectedTreeId && (
+            <FamilyNotebook
+              treeId={selectedTreeId}
+            />
+          )}
+        </BoxAny>
+      </Dialog>
+
       {/* Bottom control bar */}
       <BoxAny sx={{
         borderTop: '1px solid rgba(15,23,42,0.08)',
@@ -1372,6 +1403,30 @@ export const FamilyPage: React.FC = () => {
               }}
             >
               设置
+            </Button>
+          )}
+          {selectedTree && (
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={() => setNotebookDialogOpen(true)}
+              sx={{
+                minHeight: 30,
+                minWidth: 0,
+                borderColor: 'rgba(15, 23, 42, 0.23)',
+                color: 'text.primary',
+                ...(isMobile ? { flexShrink: 0 } : {}),
+                px: 0.5,
+                fontSize: 14,
+                lineHeight: 1.35,
+                textTransform: 'none',
+                '&:hover': {
+                  borderColor: 'rgba(15, 23, 42, 0.35)',
+                  backgroundColor: 'rgba(15, 23, 42, 0.03)',
+                },
+              }}
+            >
+              谱志
             </Button>
           )}
           {allNodes.length > 0 && (

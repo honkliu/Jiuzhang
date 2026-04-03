@@ -188,3 +188,88 @@ public class FamilyTreeVisibilityRepository : IFamilyTreeVisibilityRepository
     public async Task DeleteByTreeIdAsync(string treeId)
         => await _collection.DeleteOneAsync(Builders<FamilyTreeVisibility>.Filter.Eq(v => v.TreeId, treeId));
 }
+
+public class FamilySectionRepository : IFamilySectionRepository
+{
+    private readonly IMongoCollection<FamilySection> _collection;
+
+    public FamilySectionRepository(IMongoClient mongoClient, IConfiguration configuration)
+    {
+        var db = mongoClient.GetDatabase(configuration["MongoDB:DatabaseName"] ?? "KanKanDB");
+        _collection = db.GetCollection<FamilySection>(configuration["MongoDB:Collections:FamilySections"] ?? "FamilySections");
+    }
+
+    public async Task<List<FamilySection>> GetByTreeIdAsync(string treeId)
+    {
+        var filter = Builders<FamilySection>.Filter.Eq(s => s.TreeId, treeId);
+        return await _collection.Find(filter).SortBy(s => s.SortOrder).ToListAsync();
+    }
+
+    public async Task<FamilySection?> GetByIdAsync(string id)
+        => await _collection.Find(Builders<FamilySection>.Filter.Eq(s => s.Id, id)).FirstOrDefaultAsync();
+
+    public async Task<FamilySection> CreateAsync(FamilySection section)
+    {
+        section.CreatedAt = DateTime.UtcNow;
+        section.UpdatedAt = DateTime.UtcNow;
+        await _collection.InsertOneAsync(section);
+        return section;
+    }
+
+    public async Task<FamilySection> UpdateAsync(FamilySection section)
+    {
+        section.UpdatedAt = DateTime.UtcNow;
+        await _collection.ReplaceOneAsync(Builders<FamilySection>.Filter.Eq(s => s.Id, section.Id), section);
+        return section;
+    }
+
+    public async Task DeleteAsync(string id)
+        => await _collection.DeleteOneAsync(Builders<FamilySection>.Filter.Eq(s => s.Id, id));
+
+    public async Task DeleteByTreeIdAsync(string treeId)
+        => await _collection.DeleteManyAsync(Builders<FamilySection>.Filter.Eq(s => s.TreeId, treeId));
+}
+
+public class FamilyPageRepository : IFamilyPageRepository
+{
+    private readonly IMongoCollection<FamilyPage> _collection;
+
+    public FamilyPageRepository(IMongoClient mongoClient, IConfiguration configuration)
+    {
+        var db = mongoClient.GetDatabase(configuration["MongoDB:DatabaseName"] ?? "KanKanDB");
+        _collection = db.GetCollection<FamilyPage>(configuration["MongoDB:Collections:FamilyPages"] ?? "FamilyPages");
+    }
+
+    public async Task<List<FamilyPage>> GetBySectionIdAsync(string sectionId)
+    {
+        var filter = Builders<FamilyPage>.Filter.Eq(p => p.SectionId, sectionId);
+        return await _collection.Find(filter).SortBy(p => p.PageNumber).ToListAsync();
+    }
+
+    public async Task<FamilyPage?> GetByIdAsync(string id)
+        => await _collection.Find(Builders<FamilyPage>.Filter.Eq(p => p.Id, id)).FirstOrDefaultAsync();
+
+    public async Task<FamilyPage> CreateAsync(FamilyPage page)
+    {
+        page.CreatedAt = DateTime.UtcNow;
+        page.UpdatedAt = DateTime.UtcNow;
+        await _collection.InsertOneAsync(page);
+        return page;
+    }
+
+    public async Task<FamilyPage> UpdateAsync(FamilyPage page)
+    {
+        page.UpdatedAt = DateTime.UtcNow;
+        await _collection.ReplaceOneAsync(Builders<FamilyPage>.Filter.Eq(p => p.Id, page.Id), page);
+        return page;
+    }
+
+    public async Task DeleteAsync(string id)
+        => await _collection.DeleteOneAsync(Builders<FamilyPage>.Filter.Eq(p => p.Id, id));
+
+    public async Task DeleteBySectionIdAsync(string sectionId)
+        => await _collection.DeleteManyAsync(Builders<FamilyPage>.Filter.Eq(p => p.SectionId, sectionId));
+
+    public async Task DeleteByTreeIdAsync(string treeId)
+        => await _collection.DeleteManyAsync(Builders<FamilyPage>.Filter.Eq(p => p.TreeId, treeId));
+}

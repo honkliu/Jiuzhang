@@ -112,6 +112,46 @@ export interface FamilyDocumentDto {
   updatedAt: string;
 }
 
+// ─── Section & Page types ───────────────────────────────────────────────────
+
+export interface FamilySectionDto {
+  id: string;
+  treeId: string;
+  name: string;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PageElementDto {
+  id: string;
+  type: 'text' | 'image';
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  text?: string;
+  fontSize: number;
+  textAlign: 'left' | 'center' | 'right';
+  imageUrl?: string;
+  zIndex: number;
+}
+
+export interface FamilyPageDto {
+  id: string;
+  sectionId: string;
+  treeId: string;
+  pageNumber: number;
+  elements: PageElementDto[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FamilyPageSummaryDto {
+  id: string;
+  pageNumber: number;
+}
+
 export interface CreateFamilyTreeRequest {
   name: string;
   surname?: string;
@@ -385,6 +425,70 @@ class FamilyService {
     const res = await apiClient.post<FamilyTreeDto>('/family/import-archive', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
+    return res.data;
+  }
+
+  // ── Sections ──────────────────────────────────────────────────────────────
+
+  async listSections(treeId: string): Promise<FamilySectionDto[]> {
+    const res = await apiClient.get<FamilySectionDto[]>(`/family/${treeId}/sections`);
+    return res.data;
+  }
+
+  async createSection(treeId: string, data: { name: string; sortOrder?: number }): Promise<FamilySectionDto> {
+    const res = await apiClient.post<FamilySectionDto>(`/family/${treeId}/sections`, data);
+    return res.data;
+  }
+
+  async updateSection(treeId: string, sectionId: string, data: { name?: string; sortOrder?: number }): Promise<FamilySectionDto> {
+    const res = await apiClient.put<FamilySectionDto>(`/family/${treeId}/sections/${sectionId}`, data);
+    return res.data;
+  }
+
+  async deleteSection(treeId: string, sectionId: string): Promise<void> {
+    await apiClient.delete(`/family/${treeId}/sections/${sectionId}`);
+  }
+
+  // ── Pages ─────────────────────────────────────────────────────────────────
+
+  async listPages(treeId: string, sectionId: string): Promise<FamilyPageSummaryDto[]> {
+    const res = await apiClient.get<FamilyPageSummaryDto[]>(`/family/${treeId}/sections/${sectionId}/pages`);
+    return res.data;
+  }
+
+  async getPage(treeId: string, pageId: string): Promise<FamilyPageDto> {
+    const res = await apiClient.get<FamilyPageDto>(`/family/${treeId}/pages/${pageId}`);
+    return res.data;
+  }
+
+  async createPage(treeId: string, sectionId: string, data?: { pageNumber?: number }): Promise<FamilyPageDto> {
+    const res = await apiClient.post<FamilyPageDto>(`/family/${treeId}/sections/${sectionId}/pages`, data ?? {});
+    return res.data;
+  }
+
+  async updatePage(treeId: string, pageId: string, data: { elements?: PageElementDto[]; pageNumber?: number }): Promise<FamilyPageDto> {
+    const res = await apiClient.put<FamilyPageDto>(`/family/${treeId}/pages/${pageId}`, data);
+    return res.data;
+  }
+
+  async deletePage(treeId: string, pageId: string): Promise<void> {
+    await apiClient.delete(`/family/${treeId}/pages/${pageId}`);
+  }
+
+  async seedSections(): Promise<{ message: string; treeId?: string }> {
+    const res = await apiClient.post<{ message: string; treeId?: string }>('/family/seed-sections');
+    return res.data;
+  }
+
+  // ── Tree Notebook Bridge ──
+
+  async getTreeNotebook(treeId: string): Promise<{ notebookId: string | null }> {
+    const res = await apiClient.get<{ notebookId: string | null }>(`/family/${treeId}/notebook`);
+    return res.data;
+  }
+
+  async getOrCreateTreeNotebook(treeId: string): Promise<{ notebookId: string }> {
+    const res = await apiClient.post<{ notebookId: string }>(`/family/${treeId}/notebook`);
     return res.data;
   }
 }

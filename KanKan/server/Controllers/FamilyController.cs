@@ -26,6 +26,10 @@ public class FamilyController : ControllerBase
     private readonly IFamilyPersonRepository _personRepo;
     private readonly IFamilyRelationshipRepository _relRepo;
     private readonly IFamilyTreeVisibilityRepository _visibilityRepo;
+    private readonly IFamilySectionRepository _sectionRepo;
+    private readonly IFamilyPageRepository _pageRepo;
+    private readonly INotebookRepository _nbRepo;
+    private readonly INotebookVisibilityRepository _nbVisRepo;
     private readonly IUserRepository _userRepo;
     private readonly IConfiguration _configuration;
     private readonly IWebHostEnvironment _environment;
@@ -42,6 +46,10 @@ public class FamilyController : ControllerBase
         IFamilyPersonRepository personRepo,
         IFamilyRelationshipRepository relRepo,
         IFamilyTreeVisibilityRepository visibilityRepo,
+        IFamilySectionRepository sectionRepo,
+        IFamilyPageRepository pageRepo,
+        INotebookRepository nbRepo,
+        INotebookVisibilityRepository nbVisRepo,
         IUserRepository userRepo,
         IConfiguration configuration,
         IWebHostEnvironment environment,
@@ -51,6 +59,10 @@ public class FamilyController : ControllerBase
         _personRepo = personRepo;
         _relRepo = relRepo;
         _visibilityRepo = visibilityRepo;
+        _sectionRepo = sectionRepo;
+        _pageRepo = pageRepo;
+        _nbRepo = nbRepo;
+        _nbVisRepo = nbVisRepo;
         _userRepo = userRepo;
         _configuration = configuration;
         _environment = environment;
@@ -180,6 +192,8 @@ public class FamilyController : ControllerBase
         if (!FamilyAccessPolicy.CanManageTree(_configuration, user, tree)) return Forbid();
 
         await _personRepo.ClearLinkedTreeReferencesAsync(treeId);
+        await _pageRepo.DeleteByTreeIdAsync(treeId);
+        await _sectionRepo.DeleteByTreeIdAsync(treeId);
         await _personRepo.DeleteByTreeIdAsync(treeId);
         await _relRepo.DeleteByTreeIdAsync(treeId);
         await _visibilityRepo.DeleteByTreeIdAsync(treeId);
@@ -231,6 +245,20 @@ public class FamilyController : ControllerBase
             .ToList();
 
         await _visibilityRepo.UpsertAsync(visibility);
+
+        // Sync notebook visibility if tree has a linked notebook
+        if (!string.IsNullOrEmpty(tree.NotebookId))
+        {
+            await _nbVisRepo.UpsertAsync(new NotebookVisibility
+            {
+                NotebookId = tree.NotebookId,
+                UserViewers = visibility.UserViewers,
+                UserEditors = visibility.UserEditors,
+                DomainViewers = visibility.DomainViewers,
+                DomainEditors = visibility.DomainEditors,
+            });
+        }
+
         return Ok(ToVisibilityResponse(visibility, treeId));
     }
 
@@ -734,6 +762,391 @@ public class FamilyController : ControllerBase
         return Ok(export);
     }
 
+    // ── Tree Notebook Bridge ───────────────────────────────────────────────
+
+    [HttpGet("{treeId}/notebook")]
+    public async Task<IActionResult> GetTreeNotebook(string treeId)
+    {
+        var user = await GetCurrentUserAsync();
+        if (user == null) return Unauthorized();
+
+        var tree = await _treeRepo.GetByIdAsync(treeId);
+        if (tree == null) return NotFound();
+        var visibility = await _visibilityRepo.GetByTreeIdAsync(treeId);
+        if (!FamilyAccessPolicy.CanViewTree(_configuration, user, tree, visibility)) return Forbid();
+
+        if (string.IsNullOrEmpty(tree.NotebookId))
+            return Ok(new { notebookId = (string?)null });
+
+        return Ok(new { notebookId = tree.NotebookId });
+    }
+
+    [HttpPost("{treeId}/notebook")]
+    public async Task<IActionResult> GetOrCreateTreeNotebook(string treeId)
+    {
+        var user = await GetCurrentUserAsync();
+        if (user == null) return Unauthorized();
+
+        var tree = await _treeRepo.GetByIdAsync(treeId);
+        if (tree == null) return NotFound();
+        var treeVisibility = await _visibilityRepo.GetByTreeIdAsync(treeId);
+        if (!FamilyAccessPolicy.CanEditTree(_configuration, user, tree, treeVisibility)) return Forbid();
+
+        if (!string.IsNullOrEmpty(tree.NotebookId))
+        {
+            var existing = await _nbRepo.GetByIdAsync(tree.NotebookId);
+            if (existing != null)
+                return Ok(new { notebookId = tree.NotebookId });
+        }
+
+        // Create a new notebook for this tree
+        var notebook = new Notebook
+        {
+            Id = $"nb_{Guid.NewGuid():N}",
+            Name = $"{tree.Name} 谱志",
+            OwnerId = tree.OwnerId,
+            Domain = tree.Domain,
+        };
+        await _nbRepo.CreateAsync(notebook);
+
+        // Copy tree visibility to notebook so shared users can access it
+        if (treeVisibility != null)
+        {
+            await _nbVisRepo.UpsertAsync(new NotebookVisibility
+            {
+                NotebookId = notebook.Id,
+                UserViewers = treeVisibility.UserViewers ?? new(),
+                UserEditors = treeVisibility.UserEditors ?? new(),
+                DomainViewers = treeVisibility.DomainViewers ?? new(),
+                DomainEditors = treeVisibility.DomainEditors ?? new(),
+            });
+        }
+
+        tree.NotebookId = notebook.Id;
+        await _treeRepo.UpdateAsync(tree);
+
+        return Ok(new { notebookId = notebook.Id });
+    }
+
+    // ── Section Endpoints ──────────────────────────────────────────────────
+
+    [HttpGet("{treeId}/sections")]
+    public async Task<IActionResult> ListSections(string treeId)
+    {
+        var user = await GetCurrentUserAsync();
+        if (user == null) return Unauthorized();
+
+        var tree = await _treeRepo.GetByIdAsync(treeId);
+        if (tree == null) return NotFound();
+        var visibility = await _visibilityRepo.GetByTreeIdAsync(treeId);
+        if (!FamilyAccessPolicy.CanViewTree(_configuration, user, tree, visibility)) return Forbid();
+
+        var sections = await _sectionRepo.GetByTreeIdAsync(treeId);
+        return Ok(sections.Select(ToSectionResponse).ToList());
+    }
+
+    [HttpPost("{treeId}/sections")]
+    public async Task<IActionResult> CreateSection(string treeId, [FromBody] CreateFamilySectionRequest req)
+    {
+        var user = await GetCurrentUserAsync();
+        if (user == null) return Unauthorized();
+
+        var tree = await _treeRepo.GetByIdAsync(treeId);
+        if (tree == null) return NotFound();
+        var visibility = await _visibilityRepo.GetByTreeIdAsync(treeId);
+        if (!FamilyAccessPolicy.CanEditTree(_configuration, user, tree, visibility)) return Forbid();
+
+        var existing = await _sectionRepo.GetByTreeIdAsync(treeId);
+        var sortOrder = req.SortOrder ?? (existing.Count > 0 ? existing.Max(s => s.SortOrder) + 1 : 1);
+
+        var section = new FamilySection
+        {
+            Id = $"fsec_{Guid.NewGuid():N}",
+            TreeId = treeId,
+            Domain = tree.Domain,
+            Name = req.Name,
+            SortOrder = sortOrder,
+        };
+        await _sectionRepo.CreateAsync(section);
+
+        // Auto-create one blank page in the new section
+        await _pageRepo.CreateAsync(new FamilyPage
+        {
+            Id = $"fpage_{Guid.NewGuid():N}",
+            SectionId = section.Id,
+            TreeId = treeId,
+            Domain = tree.Domain,
+            PageNumber = 1,
+            Elements = new List<PageElement>(),
+        });
+
+        return Ok(ToSectionResponse(section));
+    }
+
+    [HttpPut("{treeId}/sections/{sectionId}")]
+    public async Task<IActionResult> UpdateSection(string treeId, string sectionId, [FromBody] UpdateFamilySectionRequest req)
+    {
+        var user = await GetCurrentUserAsync();
+        if (user == null) return Unauthorized();
+
+        var tree = await _treeRepo.GetByIdAsync(treeId);
+        if (tree == null) return NotFound();
+        var visibility = await _visibilityRepo.GetByTreeIdAsync(treeId);
+        if (!FamilyAccessPolicy.CanEditTree(_configuration, user, tree, visibility)) return Forbid();
+
+        var section = await _sectionRepo.GetByIdAsync(sectionId);
+        if (section == null || section.TreeId != treeId) return NotFound();
+
+        if (req.Name != null) section.Name = req.Name;
+        if (req.SortOrder.HasValue) section.SortOrder = req.SortOrder.Value;
+
+        await _sectionRepo.UpdateAsync(section);
+        return Ok(ToSectionResponse(section));
+    }
+
+    [HttpDelete("{treeId}/sections/{sectionId}")]
+    public async Task<IActionResult> DeleteSection(string treeId, string sectionId)
+    {
+        var user = await GetCurrentUserAsync();
+        if (user == null) return Unauthorized();
+
+        var tree = await _treeRepo.GetByIdAsync(treeId);
+        if (tree == null) return NotFound();
+        var visibility = await _visibilityRepo.GetByTreeIdAsync(treeId);
+        if (!FamilyAccessPolicy.CanEditTree(_configuration, user, tree, visibility)) return Forbid();
+
+        var section = await _sectionRepo.GetByIdAsync(sectionId);
+        if (section == null || section.TreeId != treeId) return NotFound();
+
+        await _pageRepo.DeleteBySectionIdAsync(sectionId);
+        await _sectionRepo.DeleteAsync(sectionId);
+        return Ok(new { message = "Section deleted" });
+    }
+
+    // ── Page Endpoints ─────────────────────────────────────────────────────
+
+    [HttpGet("{treeId}/sections/{sectionId}/pages")]
+    public async Task<IActionResult> ListPages(string treeId, string sectionId)
+    {
+        var user = await GetCurrentUserAsync();
+        if (user == null) return Unauthorized();
+
+        var tree = await _treeRepo.GetByIdAsync(treeId);
+        if (tree == null) return NotFound();
+        var visibility = await _visibilityRepo.GetByTreeIdAsync(treeId);
+        if (!FamilyAccessPolicy.CanViewTree(_configuration, user, tree, visibility)) return Forbid();
+
+        var section = await _sectionRepo.GetByIdAsync(sectionId);
+        if (section == null || section.TreeId != treeId) return NotFound();
+
+        var pages = await _pageRepo.GetBySectionIdAsync(sectionId);
+        return Ok(pages.Select(p => new FamilyPageSummaryResponse
+        {
+            Id = p.Id,
+            PageNumber = p.PageNumber,
+        }).ToList());
+    }
+
+    [HttpGet("{treeId}/pages/{pageId}")]
+    public async Task<IActionResult> GetPage(string treeId, string pageId)
+    {
+        var user = await GetCurrentUserAsync();
+        if (user == null) return Unauthorized();
+
+        var tree = await _treeRepo.GetByIdAsync(treeId);
+        if (tree == null) return NotFound();
+        var visibility = await _visibilityRepo.GetByTreeIdAsync(treeId);
+        if (!FamilyAccessPolicy.CanViewTree(_configuration, user, tree, visibility)) return Forbid();
+
+        var page = await _pageRepo.GetByIdAsync(pageId);
+        if (page == null || page.TreeId != treeId) return NotFound();
+
+        return Ok(ToPageResponse(page));
+    }
+
+    [HttpPost("{treeId}/sections/{sectionId}/pages")]
+    public async Task<IActionResult> CreatePage(string treeId, string sectionId, [FromBody] CreateFamilyPageRequest? req)
+    {
+        var user = await GetCurrentUserAsync();
+        if (user == null) return Unauthorized();
+
+        var tree = await _treeRepo.GetByIdAsync(treeId);
+        if (tree == null) return NotFound();
+        var visibility = await _visibilityRepo.GetByTreeIdAsync(treeId);
+        if (!FamilyAccessPolicy.CanEditTree(_configuration, user, tree, visibility)) return Forbid();
+
+        var section = await _sectionRepo.GetByIdAsync(sectionId);
+        if (section == null || section.TreeId != treeId) return NotFound();
+
+        var existingPages = await _pageRepo.GetBySectionIdAsync(sectionId);
+        var pageNumber = req?.PageNumber ?? (existingPages.Count > 0 ? existingPages.Max(p => p.PageNumber) + 1 : 1);
+
+        var page = new FamilyPage
+        {
+            Id = $"fpage_{Guid.NewGuid():N}",
+            SectionId = sectionId,
+            TreeId = treeId,
+            Domain = tree.Domain,
+            PageNumber = pageNumber,
+            Elements = new List<PageElement>(),
+        };
+        await _pageRepo.CreateAsync(page);
+        return Ok(ToPageResponse(page));
+    }
+
+    [HttpPut("{treeId}/pages/{pageId}")]
+    public async Task<IActionResult> UpdatePage(string treeId, string pageId, [FromBody] UpdateFamilyPageRequest req)
+    {
+        var user = await GetCurrentUserAsync();
+        if (user == null) return Unauthorized();
+
+        var tree = await _treeRepo.GetByIdAsync(treeId);
+        if (tree == null) return NotFound();
+        var visibility = await _visibilityRepo.GetByTreeIdAsync(treeId);
+        if (!FamilyAccessPolicy.CanEditTree(_configuration, user, tree, visibility)) return Forbid();
+
+        var page = await _pageRepo.GetByIdAsync(pageId);
+        if (page == null || page.TreeId != treeId) return NotFound();
+
+        if (req.PageNumber.HasValue) page.PageNumber = req.PageNumber.Value;
+        if (req.Elements != null)
+        {
+            page.Elements = req.Elements.Select(e => new PageElement
+            {
+                Id = string.IsNullOrEmpty(e.Id) ? $"pelem_{Guid.NewGuid():N}" : e.Id,
+                Type = e.Type,
+                X = e.X,
+                Y = e.Y,
+                Width = e.Width,
+                Height = e.Height,
+                Text = e.Text,
+                FontSize = e.FontSize,
+                TextAlign = e.TextAlign ?? "left",
+                ImageUrl = e.ImageUrl,
+                ZIndex = e.ZIndex,
+            }).ToList();
+        }
+
+        await _pageRepo.UpdateAsync(page);
+        return Ok(ToPageResponse(page));
+    }
+
+    [HttpDelete("{treeId}/pages/{pageId}")]
+    public async Task<IActionResult> DeletePage(string treeId, string pageId)
+    {
+        var user = await GetCurrentUserAsync();
+        if (user == null) return Unauthorized();
+
+        var tree = await _treeRepo.GetByIdAsync(treeId);
+        if (tree == null) return NotFound();
+        var visibility = await _visibilityRepo.GetByTreeIdAsync(treeId);
+        if (!FamilyAccessPolicy.CanEditTree(_configuration, user, tree, visibility)) return Forbid();
+
+        var page = await _pageRepo.GetByIdAsync(pageId);
+        if (page == null || page.TreeId != treeId) return NotFound();
+
+        await _pageRepo.DeleteAsync(pageId);
+        return Ok(new { message = "Page deleted" });
+    }
+
+    // ── Seed Sections ──────────────────────────────────────────────────────
+
+    [HttpPost("seed-sections")]
+    public async Task<IActionResult> SeedSections()
+    {
+        var user = await GetCurrentUserAsync();
+        if (user == null) return Unauthorized();
+
+        // Only allow admins
+        var adminEmails = _configuration.GetSection("AdminEmails").Get<string[]>() ?? Array.Empty<string>();
+        if (!adminEmails.Contains(user.Email, StringComparer.OrdinalIgnoreCase))
+            return Forbid();
+
+        // Find first tree the user owns
+        var visibleDomains = FamilyAccessPolicy.GetVisibleDomains(_configuration, user);
+        FamilyTree? tree = null;
+        foreach (var domain in visibleDomains)
+        {
+            var trees = await _treeRepo.GetByDomainAsync(domain);
+            tree = trees.FirstOrDefault(t => t.OwnerId == user.Id);
+            if (tree != null) break;
+        }
+
+        if (tree == null) return BadRequest(new { message = "No tree found for this user. Create a tree first." });
+
+        // Check if sections already exist
+        var existingSections = await _sectionRepo.GetByTreeIdAsync(tree.Id);
+        if (existingSections.Count > 0)
+            return Ok(new { message = "Sections already exist for this tree", sectionCount = existingSections.Count });
+
+        // Create sample notebook sections with pages
+        var sampleSections = new[]
+        {
+            ("家族历史", 0),
+            ("家族照片", 1),
+            ("家训家规", 2),
+            ("纪念册", 3),
+        };
+
+        foreach (var (name, sortOrder) in sampleSections)
+        {
+            var section = new FamilySection
+            {
+                Id = $"fsec_{Guid.NewGuid():N}",
+                TreeId = tree.Id,
+                Domain = tree.Domain,
+                Name = name,
+                SortOrder = sortOrder,
+            };
+            await _sectionRepo.CreateAsync(section);
+
+            // Create 2 sample pages per section
+            for (var pageNum = 1; pageNum <= 2; pageNum++)
+            {
+                var page = new FamilyPage
+                {
+                    Id = $"fpage_{Guid.NewGuid():N}",
+                    SectionId = section.Id,
+                    TreeId = tree.Id,
+                    Domain = tree.Domain,
+                    PageNumber = pageNum,
+                    Elements = new List<PageElement>
+                    {
+                        new()
+                        {
+                            Id = $"pelem_{Guid.NewGuid():N}",
+                            Type = "text",
+                            X = 72,
+                            Y = 72,
+                            Width = 500,
+                            Height = 52,
+                            Text = name,
+                            FontSize = 28,
+                            TextAlign = "left",
+                            ZIndex = 1,
+                        },
+                        new()
+                        {
+                            Id = $"pelem_{Guid.NewGuid():N}",
+                            Type = "text",
+                            X = 72,
+                            Y = 148,
+                            Width = 660,
+                            Height = 120,
+                            Text = $"这是 {name} 的第 {pageNum} 页。\n\n点击页面空白处开始输入文字。可以拖入图片或粘贴截图。",
+                            FontSize = 16,
+                            TextAlign = "left",
+                            ZIndex = 2,
+                        },
+                    },
+                };
+                await _pageRepo.CreateAsync(page);
+            }
+        }
+
+        return Ok(new { message = "Seeded 4 notebook sections with sample pages", treeId = tree.Id });
+    }
+
     // ── Helpers ─────────────────────────────────────────────────────────────
 
     private async Task<User?> GetCurrentUserAsync()
@@ -779,6 +1192,24 @@ public class FamilyController : ControllerBase
         ParentRole = r.ParentRole, ChildStatus = r.ChildStatus, LineageType = r.LineageType,
         DisplayTag = r.DisplayTag, SourceParentId = r.SourceParentId, SourceChildRank = r.SourceChildRank, SortOrder = r.SortOrder,
         UnionType = r.UnionType, StartYear = r.StartYear, EndYear = r.EndYear, Notes = r.Notes
+    };
+
+    private static FamilySectionResponse ToSectionResponse(FamilySection s) => new()
+    {
+        Id = s.Id, TreeId = s.TreeId, Name = s.Name, SortOrder = s.SortOrder,
+        CreatedAt = s.CreatedAt.ToString("o"), UpdatedAt = s.UpdatedAt.ToString("o")
+    };
+
+    private static FamilyPageResponse ToPageResponse(FamilyPage p) => new()
+    {
+        Id = p.Id, SectionId = p.SectionId, TreeId = p.TreeId, PageNumber = p.PageNumber,
+        Elements = p.Elements.Select(e => new PageElementDto
+        {
+            Id = e.Id, Type = e.Type, X = e.X, Y = e.Y, Width = e.Width, Height = e.Height,
+            Text = e.Text, FontSize = e.FontSize, TextAlign = e.TextAlign,
+            ImageUrl = e.ImageUrl, ZIndex = e.ZIndex
+        }).ToList(),
+        CreatedAt = p.CreatedAt.ToString("o"), UpdatedAt = p.UpdatedAt.ToString("o")
     };
 
     private async Task<FamilyTreeArchiveResponse> CreateArchiveManifestAsync(
@@ -1066,6 +1497,8 @@ public class FamilyController : ControllerBase
         try
         {
             await _personRepo.ClearLinkedTreeReferencesAsync(treeId);
+            await _pageRepo.DeleteByTreeIdAsync(treeId);
+            await _sectionRepo.DeleteByTreeIdAsync(treeId);
             await _personRepo.DeleteByTreeIdAsync(treeId);
             await _relRepo.DeleteByTreeIdAsync(treeId);
             await _visibilityRepo.DeleteByTreeIdAsync(treeId);

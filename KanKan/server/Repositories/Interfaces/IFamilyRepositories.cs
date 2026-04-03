@@ -42,3 +42,24 @@ public interface IFamilyTreeVisibilityRepository
     Task<FamilyTreeVisibility> UpsertAsync(FamilyTreeVisibility visibility);
     Task DeleteByTreeIdAsync(string treeId);
 }
+
+public interface IFamilySectionRepository
+{
+    Task<List<FamilySection>> GetByTreeIdAsync(string treeId);
+    Task<FamilySection?> GetByIdAsync(string id);
+    Task<FamilySection> CreateAsync(FamilySection section);
+    Task<FamilySection> UpdateAsync(FamilySection section);
+    Task DeleteAsync(string id);
+    Task DeleteByTreeIdAsync(string treeId);
+}
+
+public interface IFamilyPageRepository
+{
+    Task<List<FamilyPage>> GetBySectionIdAsync(string sectionId);
+    Task<FamilyPage?> GetByIdAsync(string id);
+    Task<FamilyPage> CreateAsync(FamilyPage page);
+    Task<FamilyPage> UpdateAsync(FamilyPage page);
+    Task DeleteAsync(string id);
+    Task DeleteBySectionIdAsync(string sectionId);
+    Task DeleteByTreeIdAsync(string treeId);
+}

@@ -12,12 +12,16 @@ public class InMemoryFamilyRepository :
     IFamilyTreeRepository,
     IFamilyPersonRepository,
     IFamilyRelationshipRepository,
-    IFamilyTreeVisibilityRepository
+    IFamilyTreeVisibilityRepository,
+    IFamilySectionRepository,
+    IFamilyPageRepository
 {
     private readonly ConcurrentDictionary<string, FamilyTree> _trees = new();
     private readonly ConcurrentDictionary<string, FamilyPerson> _persons = new();
     private readonly ConcurrentDictionary<string, FamilyRelationship> _rels = new();
     private readonly ConcurrentDictionary<string, FamilyTreeVisibility> _visibilities = new();
+    private readonly ConcurrentDictionary<string, FamilySection> _sections = new();
+    private readonly ConcurrentDictionary<string, FamilyPage> _pages = new();
 
     // ── IFamilyTreeRepository ────────────────────────────────────────────────
 
@@ -169,6 +173,85 @@ public class InMemoryFamilyRepository :
     Task IFamilyTreeVisibilityRepository.DeleteByTreeIdAsync(string treeId)
     {
         _visibilities.TryRemove(treeId, out _);
+        return Task.CompletedTask;
+    }
+
+    // ── IFamilySectionRepository ────────────────────────────────────────────
+
+    Task<List<FamilySection>> IFamilySectionRepository.GetByTreeIdAsync(string treeId)
+        => Task.FromResult(_sections.Values.Where(s => s.TreeId == treeId).OrderBy(s => s.SortOrder).ToList());
+
+    Task<FamilySection?> IFamilySectionRepository.GetByIdAsync(string id)
+        => Task.FromResult(_sections.TryGetValue(id, out var s) ? s : null);
+
+    Task<FamilySection> IFamilySectionRepository.CreateAsync(FamilySection section)
+    {
+        section.CreatedAt = DateTime.UtcNow;
+        section.UpdatedAt = DateTime.UtcNow;
+        _sections[section.Id] = section;
+        return Task.FromResult(section);
+    }
+
+    Task<FamilySection> IFamilySectionRepository.UpdateAsync(FamilySection section)
+    {
+        section.UpdatedAt = DateTime.UtcNow;
+        _sections[section.Id] = section;
+        return Task.FromResult(section);
+    }
+
+    Task IFamilySectionRepository.DeleteAsync(string id)
+    {
+        _sections.TryRemove(id, out _);
+        return Task.CompletedTask;
+    }
+
+    Task IFamilySectionRepository.DeleteByTreeIdAsync(string treeId)
+    {
+        var keys = _sections.Where(kv => kv.Value.TreeId == treeId).Select(kv => kv.Key).ToList();
+        foreach (var k in keys) _sections.TryRemove(k, out _);
+        return Task.CompletedTask;
+    }
+
+    // ── IFamilyPageRepository ───────────────────────────────────────────────
+
+    Task<List<FamilyPage>> IFamilyPageRepository.GetBySectionIdAsync(string sectionId)
+        => Task.FromResult(_pages.Values.Where(p => p.SectionId == sectionId).OrderBy(p => p.PageNumber).ToList());
+
+    Task<FamilyPage?> IFamilyPageRepository.GetByIdAsync(string id)
+        => Task.FromResult(_pages.TryGetValue(id, out var p) ? p : null);
+
+    Task<FamilyPage> IFamilyPageRepository.CreateAsync(FamilyPage page)
+    {
+        page.CreatedAt = DateTime.UtcNow;
+        page.UpdatedAt = DateTime.UtcNow;
+        _pages[page.Id] = page;
+        return Task.FromResult(page);
+    }
+
+    Task<FamilyPage> IFamilyPageRepository.UpdateAsync(FamilyPage page)
+    {
+        page.UpdatedAt = DateTime.UtcNow;
+        _pages[page.Id] = page;
+        return Task.FromResult(page);
+    }
+
+    Task IFamilyPageRepository.DeleteAsync(string id)
+    {
+        _pages.TryRemove(id, out _);
+        return Task.CompletedTask;
+    }
+
+    Task IFamilyPageRepository.DeleteBySectionIdAsync(string sectionId)
+    {
+        var keys = _pages.Where(kv => kv.Value.SectionId == sectionId).Select(kv => kv.Key).ToList();
+        foreach (var k in keys) _pages.TryRemove(k, out _);
+        return Task.CompletedTask;
+    }
+
+    Task IFamilyPageRepository.DeleteByTreeIdAsync(string treeId)
+    {
+        var keys = _pages.Where(kv => kv.Value.TreeId == treeId).Select(kv => kv.Key).ToList();
+        foreach (var k in keys) _pages.TryRemove(k, out _);
         return Task.CompletedTask;
     }
 }
