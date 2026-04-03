@@ -41,6 +41,24 @@ public class InMemoryAuthService : IAuthService
         return await _userRepository.GetByEmailAsync(email);
     }
 
+    public async Task<UserEntity?> GetUserByValidRefreshTokenAsync(string token)
+    {
+        if (string.IsNullOrWhiteSpace(token))
+            return null;
+
+        var user = await _userRepository.GetByRefreshTokenAsync(token);
+
+        if (user == null || user.IsDisabled)
+            return null;
+
+        var refreshToken = user.RefreshTokens.FirstOrDefault(rt => rt.Token == token);
+
+        if (refreshToken == null || refreshToken.ExpiresAt < DateTime.UtcNow)
+            return null;
+
+        return user;
+    }
+
     public Task<string?> GetActiveVerificationCodeAsync(string email, string purpose)
     {
         lock (_lock)
@@ -228,17 +246,9 @@ public class InMemoryAuthService : IAuthService
 
     public async Task<RefreshTokenResult?> RefreshTokenAsync(string token, string ipAddress)
     {
-        var user = await _userRepository.GetByRefreshTokenAsync(token);
+        var user = await GetUserByValidRefreshTokenAsync(token);
 
         if (user == null)
-            return null;
-
-        if (user.IsDisabled)
-            return null;
-
-        var refreshToken = user.RefreshTokens.FirstOrDefault(rt => rt.Token == token);
-
-        if (refreshToken == null || refreshToken.ExpiresAt < DateTime.UtcNow)
             return null;
 
         // Generate new tokens

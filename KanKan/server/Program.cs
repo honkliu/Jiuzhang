@@ -1,5 +1,7 @@
 using System.Collections.Concurrent;
+using System.Security.Claims;
 using System.Text;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -578,6 +580,49 @@ if (!app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
 }
+
+app.UseWhen(
+    context => context.Request.Path.StartsWithSegments("/uploads"),
+    uploadBranch =>
+    {
+        uploadBranch.UseAuthentication();
+        uploadBranch.Use(async (context, next) =>
+        {
+            var authResult = await context.AuthenticateAsync();
+            if (authResult.Succeeded && authResult.Principal != null)
+            {
+                context.User = authResult.Principal;
+                await next();
+                return;
+            }
+
+            var refreshToken = context.Request.Cookies["refreshToken"];
+            if (string.IsNullOrWhiteSpace(refreshToken))
+            {
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                return;
+            }
+
+            var authService = context.RequestServices.GetRequiredService<IAuthService>();
+            var user = await authService.GetUserByValidRefreshTokenAsync(refreshToken);
+            if (user == null)
+            {
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                return;
+            }
+
+            context.User = new ClaimsPrincipal(
+                new ClaimsIdentity(
+                    new[]
+                    {
+                        new Claim(ClaimTypes.NameIdentifier, user.Id),
+                        new Claim(ClaimTypes.Name, user.DisplayName)
+                    },
+                    authenticationType: "RefreshTokenUploadAccess"));
+
+            await next();
+        });
+    });
 
 app.UseStaticFiles();
 

@@ -45,6 +45,24 @@ public class AuthService : IAuthService
         return await _userRepository.GetByEmailAsync(email);
     }
 
+    public async Task<UserEntity?> GetUserByValidRefreshTokenAsync(string token)
+    {
+        if (string.IsNullOrWhiteSpace(token))
+            return null;
+
+        var user = await _userRepository.GetByRefreshTokenAsync(token);
+
+        if (user == null || user.IsDisabled)
+            return null;
+
+        var refreshToken = user.RefreshTokens.FirstOrDefault(rt => rt.Token == token);
+
+        if (refreshToken == null || refreshToken.ExpiresAt < DateTime.UtcNow)
+            return null;
+
+        return user;
+    }
+
     public async Task<string?> GetActiveVerificationCodeAsync(string email, string purpose)
     {
         var filter = Builders<EmailVerification>.Filter.And(
@@ -243,17 +261,9 @@ public class AuthService : IAuthService
 
     public async Task<RefreshTokenResult?> RefreshTokenAsync(string token, string ipAddress)
     {
-        var user = await _userRepository.GetByRefreshTokenAsync(token);
+        var user = await GetUserByValidRefreshTokenAsync(token);
 
         if (user == null)
-            return null;
-
-        if (user.IsDisabled)
-            return null;
-
-        var refreshToken = user.RefreshTokens.FirstOrDefault(rt => rt.Token == token);
-
-        if (refreshToken == null || refreshToken.ExpiresAt < DateTime.UtcNow)
             return null;
 
         // Generate new tokens
