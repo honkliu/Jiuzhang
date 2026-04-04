@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Box, IconButton, Menu, MenuItem, Button, Chip,
+  Box, IconButton, Menu, MenuItem, Button,
   CircularProgress, Divider, InputBase, Stack, Tooltip, Typography,
 } from '@mui/material';
 import {
@@ -45,7 +45,7 @@ export const Notebook: React.FC<NotebookProps> = ({ notebookId, canEdit }) => {
   // ── UI ──
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [zoom, setZoom] = useState(0.92);
+  const [zoom, setZoom] = useState(1.0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const sortedSections = useMemo(() => [...sections].sort((a, b) => a.sortOrder - b.sortOrder), [sections]);
@@ -219,16 +219,19 @@ export const Notebook: React.FC<NotebookProps> = ({ notebookId, canEdit }) => {
     <BoxAny sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* ── Toolbar row: sections (left) | pages + actions (right) ── */}
       <BoxAny sx={{
-        display: 'flex', alignItems: 'center',
-        borderBottom: '1px solid rgba(15,23,42,0.08)',
-        background: 'rgba(255,255,255,0.97)',
-        px: 0.5, minHeight: 38,
+        display: 'flex', alignItems: 'stretch',
+        borderBottom: '1px solid rgba(15,23,42,0.10)',
+        background: '#f1f5f9',
+        minHeight: 36,
         flexWrap: 'nowrap', overflowX: 'auto',
       }}>
         {/* ── Left: Section tabs ── */}
-        <Stack direction="row" spacing={0} alignItems="center" sx={{ flexShrink: 0 }}>
-          {sortedSections.map(section => {
+        <Stack direction="row" spacing={0} alignItems="stretch" sx={{ flexShrink: 0 }}>
+          {sortedSections.map((section, idx) => {
             const isActive = section.id === activeSectionId;
+            const colors = ['#dbeafe', '#fce7f3', '#d1fae5', '#fef9c3', '#e0e7ff', '#fde68a', '#ccfbf1', '#f3e8ff'];
+            const activeColors = ['#93c5fd', '#f9a8d4', '#6ee7b7', '#fde047', '#a5b4fc', '#fcd34d', '#5eead4', '#d8b4fe'];
+            const ci = idx % colors.length;
             return (
               <BoxAny
                 key={section.id}
@@ -236,14 +239,18 @@ export const Notebook: React.FC<NotebookProps> = ({ notebookId, canEdit }) => {
                 onDoubleClick={() => { if (canEdit) { setEditingTabId(section.id); setEditingTabName(section.name); } }}
                 onContextMenu={(e: React.MouseEvent<HTMLElement>) => { if (canEdit) { e.preventDefault(); setSectionContextMenu({ sectionId: section.id, anchorEl: e.currentTarget }); } }}
                 sx={{
-                  px: 1.25, py: 0.5,
-                  fontSize: 12.5, fontWeight: isActive ? 600 : 400,
+                  px: 1.5, py: 0,
+                  fontSize: 12.5, fontWeight: isActive ? 700 : 400,
                   cursor: 'pointer',
-                  borderBottom: isActive ? '2px solid #2563eb' : '2px solid transparent',
-                  color: isActive ? '#1e40af' : 'text.secondary',
-                  '&:hover': { color: '#1e40af', background: 'rgba(37,99,235,0.04)' },
+                  background: isActive ? activeColors[ci] : colors[ci],
+                  color: isActive ? '#1e293b' : '#475569',
+                  borderRight: '1px solid rgba(15,23,42,0.10)',
+                  borderBottom: isActive ? '2px solid #1e40af' : '2px solid transparent',
+                  borderTopLeftRadius: 6, borderTopRightRadius: 6,
+                  '&:hover': { background: activeColors[ci] },
                   whiteSpace: 'nowrap',
-                  minHeight: 36, display: 'flex', alignItems: 'center',
+                  display: 'flex', alignItems: 'center', minHeight: 36,
+                  transition: 'background 0.15s',
                 }}
               >
                 {editingTabId === section.id ? (
@@ -261,71 +268,97 @@ export const Notebook: React.FC<NotebookProps> = ({ notebookId, canEdit }) => {
             );
           })}
           {canEdit && (
-            <IconButton size="small" onClick={handleAddSection} sx={{ width: 24, height: 24, ml: 0.25 }}>
-              <AddIcon sx={{ fontSize: 16 }} />
-            </IconButton>
+            <BoxAny
+              onClick={handleAddSection}
+              sx={{
+                px: 1.25, display: 'flex', alignItems: 'center', cursor: 'pointer',
+                color: '#64748b', '&:hover': { color: '#2563eb', background: 'rgba(37,99,235,0.08)' },
+                fontSize: 20, fontWeight: 400, userSelect: 'none', minHeight: 36,
+              }}
+            >
+              +
+            </BoxAny>
           )}
         </Stack>
 
         {/* ── Right: Page tabs + actions (pushed right) ── */}
-        <Stack direction="row" spacing={0.5} alignItems="center" sx={{ ml: 'auto', flexShrink: 0 }}>
-          {/* Page chips */}
-          <Stack direction="row" spacing={0.25} alignItems="center">
-            {sortedPages.map(page => (
-              <Chip
+        <Stack direction="row" spacing={0} alignItems="stretch" sx={{ ml: 'auto', flexShrink: 0 }}>
+          {/* Page tabs */}
+          {sortedPages.map(page => {
+            const isActive = page.id === activePageId;
+            return (
+              <BoxAny
                 key={page.id}
-                label={page.pageNumber}
-                size="small"
-                variant={page.id === activePageId ? 'filled' : 'outlined'}
-                color={page.id === activePageId ? 'primary' : 'default'}
-                clickable
                 onClick={() => setActivePageId(page.id)}
-                onContextMenu={(e) => { if (canEdit) { e.preventDefault(); setPageContextMenu({ pageId: page.id, anchorEl: e.currentTarget as HTMLElement }); } }}
-                sx={{ minWidth: 28, height: 22, fontSize: 11, fontWeight: page.id === activePageId ? 600 : 400 }}
-              />
-            ))}
-            {canEdit && activeSectionId && (
-              <IconButton size="small" onClick={handleAddPage} sx={{ width: 22, height: 22 }}>
-                <AddIcon sx={{ fontSize: 14 }} />
-              </IconButton>
-            )}
-          </Stack>
+                onContextMenu={(e: React.MouseEvent<HTMLElement>) => { if (canEdit) { e.preventDefault(); setPageContextMenu({ pageId: page.id, anchorEl: e.currentTarget }); } }}
+                sx={{
+                  px: 1.25, py: 0,
+                  fontSize: 12, fontWeight: isActive ? 700 : 400,
+                  cursor: 'pointer',
+                  background: isActive ? '#bfdbfe' : '#e2e8f0',
+                  color: isActive ? '#1e3a8a' : '#64748b',
+                  borderLeft: '1px solid rgba(15,23,42,0.06)',
+                  borderBottom: isActive ? '2px solid #1e40af' : '2px solid transparent',
+                  borderTopLeftRadius: 4, borderTopRightRadius: 4,
+                  '&:hover': { background: '#bfdbfe' },
+                  display: 'flex', alignItems: 'center', minHeight: 36, minWidth: 32, justifyContent: 'center',
+                  transition: 'background 0.15s',
+                }}
+              >
+                {page.pageNumber}
+              </BoxAny>
+            );
+          })}
+          {canEdit && activeSectionId && (
+            <BoxAny
+              onClick={handleAddPage}
+              sx={{
+                px: 1, display: 'flex', alignItems: 'center', cursor: 'pointer',
+                color: '#64748b', '&:hover': { color: '#2563eb', background: 'rgba(37,99,235,0.08)' },
+                fontSize: 18, fontWeight: 400, userSelect: 'none', minHeight: 36,
+              }}
+            >
+              +
+            </BoxAny>
+          )}
 
-          <Divider orientation="vertical" flexItem sx={{ mx: 0.25 }} />
+          <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
 
           {/* Actions: save, image, zoom */}
-          {canEdit && activePage && (
-            <>
-              <Button size="small" variant="outlined" startIcon={<AddPhotoAlternateIcon sx={{ fontSize: 14 }} />}
-                onClick={handleChooseImage} disabled={saving}
-                sx={{ fontSize: 11, textTransform: 'none', minHeight: 24, px: 0.75, py: 0 }}>
-                图片
-              </Button>
-              <Button size="small" variant="contained" onClick={handleSave} disabled={!hasChanges || saving}
-                sx={{ fontSize: 11, textTransform: 'none', minHeight: 24, px: 1, py: 0 }}>
-                {saving ? '…' : '保存'}
-              </Button>
-              <Typography variant="caption" color="text.secondary" sx={{ fontSize: 10, whiteSpace: 'nowrap' }}>
-                {saving ? '保存中…' : hasChanges ? '未保存' : '✓'}
-              </Typography>
-            </>
-          )}
-          <Tooltip title="缩小"><span>
-            <IconButton size="small" onClick={() => setZoom(z => clamp(+(z - 0.1).toFixed(2), 0.5, 1.4))} sx={{ width: 24, height: 24 }}>
-              <ZoomOutIcon sx={{ fontSize: 14 }} />
-            </IconButton>
-          </span></Tooltip>
-          <Typography variant="caption" sx={{ fontSize: 10, minWidth: 30, textAlign: 'center' }}>{Math.round(zoom * 100)}%</Typography>
-          <Tooltip title="放大"><span>
-            <IconButton size="small" onClick={() => setZoom(z => clamp(+(z + 0.1).toFixed(2), 0.5, 1.4))} sx={{ width: 24, height: 24 }}>
-              <ZoomInIcon sx={{ fontSize: 14 }} />
-            </IconButton>
-          </span></Tooltip>
-          <Tooltip title="适配"><span>
-            <IconButton size="small" onClick={() => setZoom(0.92)} sx={{ width: 24, height: 24 }}>
-              <FitScreenIcon sx={{ fontSize: 14 }} />
-            </IconButton>
-          </span></Tooltip>
+          <Stack direction="row" spacing={0.5} alignItems="center" sx={{ px: 0.5 }}>
+            {canEdit && activePage && (
+              <>
+                <Button size="small" variant="outlined" startIcon={<AddPhotoAlternateIcon sx={{ fontSize: 14 }} />}
+                  onClick={handleChooseImage} disabled={saving}
+                  sx={{ fontSize: 11, textTransform: 'none', minHeight: 24, px: 0.75, py: 0 }}>
+                  图片
+                </Button>
+                <Button size="small" variant="contained" onClick={handleSave} disabled={!hasChanges || saving}
+                  sx={{ fontSize: 11, textTransform: 'none', minHeight: 24, px: 1, py: 0 }}>
+                  {saving ? '…' : '保存'}
+                </Button>
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: 10, whiteSpace: 'nowrap' }}>
+                  {saving ? '保存中…' : hasChanges ? '未保存' : '✓'}
+                </Typography>
+              </>
+            )}
+            <Tooltip title="缩小"><span>
+              <IconButton size="small" onClick={() => setZoom(z => clamp(+(z - 0.01).toFixed(2), 0.3, 2.0))} sx={{ width: 24, height: 24 }}>
+                <ZoomOutIcon sx={{ fontSize: 14 }} />
+              </IconButton>
+            </span></Tooltip>
+            <Typography variant="caption" sx={{ fontSize: 10, minWidth: 30, textAlign: 'center' }}>{Math.round(zoom * 100)}%</Typography>
+            <Tooltip title="放大"><span>
+              <IconButton size="small" onClick={() => setZoom(z => clamp(+(z + 0.01).toFixed(2), 0.3, 2.0))} sx={{ width: 24, height: 24 }}>
+                <ZoomInIcon sx={{ fontSize: 14 }} />
+              </IconButton>
+            </span></Tooltip>
+            <Tooltip title="100%"><span>
+              <IconButton size="small" onClick={() => setZoom(1.0)} sx={{ width: 24, height: 24 }}>
+                <FitScreenIcon sx={{ fontSize: 14 }} />
+              </IconButton>
+            </span></Tooltip>
+          </Stack>
         </Stack>
       </BoxAny>
 

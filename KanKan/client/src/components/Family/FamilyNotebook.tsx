@@ -23,31 +23,28 @@ export const FamilyNotebook: React.FC<FamilyNotebookProps> = ({ treeId }) => {
 
     familyService.getTreeNotebook(treeId).then(async result => {
       if (cancelled) return;
-      if (result.notebookId) {
-        // Notebook exists — fetch it to get canEdit from server
-        try {
-          const notebooks = await notebookService.list();
-          const nb = notebooks.find(n => n.id === result.notebookId);
-          if (!cancelled) {
-            setNotebookId(result.notebookId);
-            setCanEdit(nb?.canEdit ?? false);
-            setLoading(false);
-          }
-        } catch {
-          if (!cancelled) {
-            setNotebookId(result.notebookId);
-            setCanEdit(false);
-            setLoading(false);
-          }
-        }
-        return;
-      }
+
+      let nbId = result.notebookId;
+
       // No notebook yet — try to create
+      if (!nbId) {
+        try {
+          const created = await familyService.getOrCreateTreeNotebook(treeId);
+          nbId = created.notebookId;
+        } catch {
+          // POST failed (viewer without edit rights) — show empty state
+          if (!cancelled) { setNotebookId(null); setCanEdit(false); setLoading(false); }
+          return;
+        }
+      }
+
+      // Fetch notebook to get canEdit from server
       try {
-        const created = await familyService.getOrCreateTreeNotebook(treeId);
-        if (!cancelled) { setNotebookId(created.notebookId); setCanEdit(true); setLoading(false); }
+        const nb = await notebookService.get(nbId);
+        if (!cancelled) { setNotebookId(nb.id); setCanEdit(nb.canEdit); setLoading(false); }
       } catch {
-        if (!cancelled) { setNotebookId(null); setLoading(false); }
+        // Can view tree but not notebook? Show read-only
+        if (!cancelled) { setNotebookId(nbId); setCanEdit(false); setLoading(false); }
       }
     }).catch(err => {
       if (cancelled) return;

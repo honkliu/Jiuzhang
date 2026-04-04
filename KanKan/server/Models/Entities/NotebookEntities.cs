@@ -10,6 +10,7 @@ public class Notebook
     public string Name { get; set; } = string.Empty;
     public string OwnerId { get; set; } = string.Empty;
     public string Domain { get; set; } = string.Empty;
+    public string? LinkedTreeId { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 }

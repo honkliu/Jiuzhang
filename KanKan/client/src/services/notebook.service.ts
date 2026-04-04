@@ -56,6 +56,11 @@ class NotebookService {
     return res.data;
   }
 
+  async get(notebookId: string): Promise<NotebookDto> {
+    const res = await apiClient.get<NotebookDto>(`/notebook/${notebookId}`);
+    return res.data;
+  }
+
   async create(data: { name: string; domain?: string }): Promise<NotebookDto> {
     const res = await apiClient.post<NotebookDto>('/notebook', data);
     return res.data;
@@ -139,12 +144,10 @@ class NotebookService {
     return { blob: res.data, fileName: decodeURIComponent(rawFileName) };
   }
 
-  async importArchive(data: { file: File; name?: string; domain?: string }): Promise<NotebookDto> {
+  async importArchive(notebookId: string, file: File): Promise<{ message: string }> {
     const formData = new FormData();
-    formData.append('file', data.file);
-    if (data.name) formData.append('name', data.name);
-    if (data.domain) formData.append('domain', data.domain);
-    const res = await apiClient.post<NotebookDto>('/notebook/import-archive', formData, {
+    formData.append('file', file);
+    const res = await apiClient.post<{ message: string }>(`/notebook/${notebookId}/import-archive`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     return res.data;

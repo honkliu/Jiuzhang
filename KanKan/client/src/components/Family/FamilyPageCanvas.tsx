@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Box,
   Paper,
+  Select,
+  MenuItem,
   TextField,
   Typography,
 } from '@mui/material';
@@ -282,16 +284,34 @@ export const FamilyPageCanvas: React.FC<FamilyPageCanvasProps> = ({
               if (block.type === 'image') {
                 const rect = getRenderedImageRect(block, imageNaturalSizes[block.id]);
                 return block.imageUrl ? (
-                  <BoxAny key={block.id} component="img" data-block-root="true" src={block.imageUrl} alt="" draggable={false}
+                  <BoxAny key={block.id} data-block-root="true"
                     onClick={(e: React.MouseEvent) => { e.stopPropagation(); if (canEdit) { setSelectedBlockId(block.id); bringToFront(block.id); } }}
                     onMouseDown={canEdit ? (e: React.MouseEvent<HTMLElement>) => {
                       const r = e.currentTarget.getBoundingClientRect();
                       startPointerInteraction(e, block, r.right - e.clientX <= 24 && r.bottom - e.clientY <= 24 ? 'resize' : 'move');
                     } : undefined}
-                    onDragStart={(e: React.DragEvent) => e.preventDefault()}
-                    sx={{ position: 'absolute', left: rect.left, top: rect.top, width: rect.width, height: rect.height, zIndex: block.zIndex, objectFit: 'fill', display: 'block', userSelect: 'none', cursor: canEdit ? 'move' : 'default', outline: isSelected ? '2px solid rgba(37,99,235,0.5)' : 'none', outlineOffset: 2 }}
-                    onLoad={(e: React.SyntheticEvent<HTMLImageElement>) => { const t = e.currentTarget; if (t.naturalWidth && t.naturalHeight) setImageNaturalSizes(c => ({ ...c, [block.id]: { width: t.naturalWidth, height: t.naturalHeight } })); }}
-                  />
+                    sx={{ position: 'absolute', left: rect.left, top: rect.top, width: rect.width, height: rect.height, zIndex: block.zIndex, userSelect: 'none', cursor: canEdit ? 'move' : 'default', outline: isSelected ? '2px solid rgba(37,99,235,0.5)' : 'none', outlineOffset: 2 }}
+                  >
+                    <BoxAny component="img" src={block.imageUrl} alt="" draggable={false}
+                      onDragStart={(e: React.DragEvent) => e.preventDefault()}
+                      sx={{ width: '100%', height: '100%', objectFit: 'fill', display: 'block', pointerEvents: 'none' }}
+                      onLoad={(e: React.SyntheticEvent<HTMLImageElement>) => { const t = e.currentTarget; if (t.naturalWidth && t.naturalHeight) setImageNaturalSizes(c => ({ ...c, [block.id]: { width: t.naturalWidth, height: t.naturalHeight } })); }}
+                    />
+                    {/* Resize handle at bottom-right */}
+                    {canEdit && isSelected && (
+                      <BoxAny
+                        onMouseDown={(e: React.MouseEvent<HTMLElement>) => { e.stopPropagation(); startPointerInteraction(e, block, 'resize'); }}
+                        sx={{ position: 'absolute', right: -4, bottom: -4, width: 12, height: 12, cursor: 'nwse-resize', background: '#2563eb', borderRadius: '2px', border: '1px solid #fff' }}
+                      />
+                    )}
+                    {/* Floating toolbar */}
+                    {canEdit && isSelected && (
+                      <Paper elevation={3} sx={{ position: 'absolute', top: -34, left: 0, display: 'flex', alignItems: 'center', gap: 0.25, px: 0.5, py: 0.25, borderRadius: '999px', backgroundColor: 'rgba(255,255,255,0.96)' }}>
+                        <IconButton size="small" onMouseDown={e => startPointerInteraction(e, block, 'move')}><DragIndicatorIcon fontSize="small" /></IconButton>
+                        <IconButton size="small" onClick={handleDeleteBlock}><DeleteOutlineIcon fontSize="small" /></IconButton>
+                      </Paper>
+                    )}
+                  </BoxAny>
                 ) : null;
               }
               return (
@@ -312,8 +332,21 @@ export const FamilyPageCanvas: React.FC<FamilyPageCanvasProps> = ({
                     </BoxAny>
                   )}
                   {canEdit && isSelected && (
-                    <Paper elevation={3} sx={{ position: 'absolute', top: -34, left: 0, display: 'flex', alignItems: 'center', gap: 0.25, px: 0.5, py: 0.25, borderRadius: '999px', backgroundColor: 'rgba(255,255,255,0.96)' }}>
+                    <Paper elevation={3} sx={{ position: 'absolute', top: -38, left: 0, display: 'flex', alignItems: 'center', gap: 0.25, px: 0.5, py: 0.25, borderRadius: '999px', backgroundColor: 'rgba(255,255,255,0.96)' }}>
                       <IconButton size="small" onMouseDown={e => startPointerInteraction(e, block, 'move')}><DragIndicatorIcon fontSize="small" /></IconButton>
+                      <Select
+                        size="small"
+                        value={block.fontSize ?? 16}
+                        onChange={e => { e.stopPropagation(); updateBlock(block.id, cur => ({ ...cur, fontSize: Number(e.target.value), height: estimateTextHeight(cur.text ?? '', cur.width, Number(e.target.value)) })); }}
+                        onClick={e => e.stopPropagation()}
+                        variant="standard"
+                        disableUnderline
+                        sx={{ fontSize: 11, minWidth: 36, '& .MuiSelect-select': { py: 0, px: 0.5 } }}
+                      >
+                        {[12, 14, 16, 18, 20, 24, 28, 32, 36, 40, 48].map(s => (
+                          <MenuItem key={s} value={s} sx={{ fontSize: 11 }}>{s}</MenuItem>
+                        ))}
+                      </Select>
                       <IconButton size="small" onClick={handleDeleteBlock}><DeleteOutlineIcon fontSize="small" /></IconButton>
                     </Paper>
                   )}

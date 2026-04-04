@@ -76,7 +76,10 @@ public class NotebookController : ControllerBase
             if (nb != null) shared.Add(nb);
         }
 
-        var all = own.Concat(shared).DistinctBy(n => n.Id).OrderByDescending(n => n.UpdatedAt).ToList();
+        var all = own.Concat(shared).DistinctBy(n => n.Id)
+            .Where(n => string.IsNullOrEmpty(n.LinkedTreeId))
+            .OrderByDescending(n => n.UpdatedAt).ToList();
+
         var responses = new List<NotebookResponse>();
         foreach (var n in all)
         {
@@ -84,6 +87,17 @@ public class NotebookController : ControllerBase
             responses.Add(ToResponse(n, user, vis));
         }
         return Ok(responses);
+    }
+
+    [HttpGet("{notebookId}")]
+    public async Task<IActionResult> GetNotebook(string notebookId)
+    {
+        var (user, notebook, visibility) = await GetUserNotebookVisAsync(notebookId);
+        if (user == null) return Unauthorized();
+        if (notebook == null) return NotFound();
+        if (!NotebookAccessPolicy.CanViewNotebook(_configuration, user, notebook, visibility)) return Forbid();
+
+        return Ok(ToResponse(notebook, user, visibility));
     }
 
     [HttpPost]
@@ -469,12 +483,14 @@ public class NotebookController : ControllerBase
 
     // ── Import ─────────────────────────────────────────────────────────────
 
-    [HttpPost("import-archive")]
+    [HttpPost("{notebookId}/import-archive")]
     [RequestSizeLimit(300 * 1024 * 1024)]
-    public async Task<IActionResult> ImportArchive([FromForm] IFormFile file, string? name, string? domain)
+    public async Task<IActionResult> ImportArchive(string notebookId, [FromForm] IFormFile file)
     {
-        var user = await GetCurrentUserAsync();
+        var (user, notebook, visibility) = await GetUserNotebookVisAsync(notebookId);
         if (user == null) return Unauthorized();
+        if (notebook == null) return NotFound();
+        if (!NotebookAccessPolicy.CanEditNotebook(_configuration, user, notebook, visibility)) return Forbid();
 
         using var zipStream = file.OpenReadStream();
         using var archive = new ZipArchive(zipStream, ZipArchiveMode.Read);
@@ -489,44 +505,24 @@ public class NotebookController : ControllerBase
                 ?? throw new InvalidOperationException("Failed to parse notebook.json");
         }
 
-        var targetDomain = FamilyAccessPolicy.NormalizeDomain(domain ?? FamilyAccessPolicy.ResolveDomain(user));
         var importedFiles = new List<string>();
         var hashCache = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
-        var notebook = new Notebook
-        {
-            Id = $"nb_{Guid.NewGuid():N}",
-            Name = name ?? manifest.Notebook.Name,
-            OwnerId = user.Id,
-            Domain = targetDomain,
-        };
+        // Calculate sortOrder offset so imported sections come after existing ones
+        var existingSections = await _secRepo.GetByNotebookIdAsync(notebookId);
+        var sortOrderOffset = existingSections.Count > 0 ? existingSections.Max(s => s.SortOrder) + 1 : 0;
 
         try
         {
-            await _nbRepo.CreateAsync(notebook);
-
-            // Import visibility
-            if (manifest.Visibility != null)
-            {
-                await _visRepo.UpsertAsync(new NotebookVisibility
-                {
-                    NotebookId = notebook.Id,
-                    UserViewers = manifest.Visibility.UserViewers ?? new(),
-                    UserEditors = manifest.Visibility.UserEditors ?? new(),
-                    DomainViewers = manifest.Visibility.DomainViewers ?? new(),
-                    DomainEditors = manifest.Visibility.DomainEditors ?? new(),
-                });
-            }
-
             foreach (var secDto in manifest.Sections)
             {
                 var section = new NotebookSection
                 {
                     Id = $"nbsec_{Guid.NewGuid():N}",
-                    NotebookId = notebook.Id,
-                    Domain = targetDomain,
+                    NotebookId = notebookId,
+                    Domain = notebook.Domain,
                     Name = secDto.Name,
-                    SortOrder = secDto.SortOrder,
+                    SortOrder = secDto.SortOrder + sortOrderOffset,
                 };
                 await _secRepo.CreateAsync(section);
 
@@ -556,30 +552,19 @@ public class NotebookController : ControllerBase
                     {
                         Id = $"nbpage_{Guid.NewGuid():N}",
                         SectionId = section.Id,
-                        NotebookId = notebook.Id,
-                        Domain = targetDomain,
+                        NotebookId = notebookId,
+                        Domain = notebook.Domain,
                         PageNumber = pageDto.PageNumber,
                         Elements = elements,
                     });
                 }
             }
 
-            return Ok(ToResponse(notebook, user));
+            return Ok(new { message = $"Imported {manifest.Sections.Count} section(s)" });
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to import notebook archive, rolling back");
-            try
-            {
-                await _pageRepo.DeleteByNotebookIdAsync(notebook.Id);
-                await _secRepo.DeleteByNotebookIdAsync(notebook.Id);
-                await _visRepo.DeleteByNotebookIdAsync(notebook.Id);
-                await _nbRepo.DeleteAsync(notebook.Id);
-            }
-            catch (Exception rollbackEx)
-            {
-                _logger.LogWarning(rollbackEx, "Failed to rollback imported notebook {NotebookId}", notebook.Id);
-            }
+            _logger.LogWarning(ex, "Failed to import into notebook {NotebookId}", notebookId);
             foreach (var filePath in importedFiles)
             {
                 try { if (System.IO.File.Exists(filePath)) System.IO.File.Delete(filePath); } catch { }

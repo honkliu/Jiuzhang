@@ -30,6 +30,8 @@ public class FamilyController : ControllerBase
     private readonly IFamilyPageRepository _pageRepo;
     private readonly INotebookRepository _nbRepo;
     private readonly INotebookVisibilityRepository _nbVisRepo;
+    private readonly INotebookSectionRepository _nbSecRepo;
+    private readonly INotebookPageRepository _nbPageRepo;
     private readonly IUserRepository _userRepo;
     private readonly IConfiguration _configuration;
     private readonly IWebHostEnvironment _environment;
@@ -50,6 +52,8 @@ public class FamilyController : ControllerBase
         IFamilyPageRepository pageRepo,
         INotebookRepository nbRepo,
         INotebookVisibilityRepository nbVisRepo,
+        INotebookSectionRepository nbSecRepo,
+        INotebookPageRepository nbPageRepo,
         IUserRepository userRepo,
         IConfiguration configuration,
         IWebHostEnvironment environment,
@@ -63,6 +67,8 @@ public class FamilyController : ControllerBase
         _pageRepo = pageRepo;
         _nbRepo = nbRepo;
         _nbVisRepo = nbVisRepo;
+        _nbSecRepo = nbSecRepo;
+        _nbPageRepo = nbPageRepo;
         _userRepo = userRepo;
         _configuration = configuration;
         _environment = environment;
@@ -775,10 +781,19 @@ public class FamilyController : ControllerBase
         var visibility = await _visibilityRepo.GetByTreeIdAsync(treeId);
         if (!FamilyAccessPolicy.CanViewTree(_configuration, user, tree, visibility)) return Forbid();
 
-        if (string.IsNullOrEmpty(tree.NotebookId))
-            return Ok(new { notebookId = (string?)null });
+        if (!string.IsNullOrEmpty(tree.NotebookId))
+        {
+            // Verify the notebook still exists
+            var nb = await _nbRepo.GetByIdAsync(tree.NotebookId);
+            if (nb != null)
+                return Ok(new { notebookId = tree.NotebookId });
 
-        return Ok(new { notebookId = tree.NotebookId });
+            // Notebook was deleted — clear the stale reference
+            tree.NotebookId = null;
+            await _treeRepo.UpdateAsync(tree);
+        }
+
+        return Ok(new { notebookId = (string?)null });
     }
 
     [HttpPost("{treeId}/notebook")]
@@ -791,6 +806,10 @@ public class FamilyController : ControllerBase
         if (tree == null) return NotFound();
         var treeVisibility = await _visibilityRepo.GetByTreeIdAsync(treeId);
         if (!FamilyAccessPolicy.CanEditTree(_configuration, user, tree, treeVisibility)) return Forbid();
+
+        // Re-read tree to minimize race window
+        tree = await _treeRepo.GetByIdAsync(treeId);
+        if (tree == null) return NotFound();
 
         if (!string.IsNullOrEmpty(tree.NotebookId))
         {
@@ -806,8 +825,23 @@ public class FamilyController : ControllerBase
             Name = $"{tree.Name} 谱志",
             OwnerId = tree.OwnerId,
             Domain = tree.Domain,
+            LinkedTreeId = treeId,
         };
         await _nbRepo.CreateAsync(notebook);
+
+        // Set tree.NotebookId — re-read tree again to avoid overwriting concurrent changes
+        tree = await _treeRepo.GetByIdAsync(treeId);
+        if (tree != null)
+        {
+            if (!string.IsNullOrEmpty(tree.NotebookId) && tree.NotebookId != notebook.Id)
+            {
+                // Another request won the race — delete the one we just created and use theirs
+                await _nbRepo.DeleteAsync(notebook.Id);
+                return Ok(new { notebookId = tree.NotebookId });
+            }
+            tree.NotebookId = notebook.Id;
+            await _treeRepo.UpdateAsync(tree);
+        }
 
         // Copy tree visibility to notebook so shared users can access it
         if (treeVisibility != null)
@@ -1145,6 +1179,62 @@ public class FamilyController : ControllerBase
         }
 
         return Ok(new { message = "Seeded 4 notebook sections with sample pages", treeId = tree.Id });
+    }
+
+    // ── Backfill: set LinkedTreeId on existing tree notebooks ───────────────
+
+    [HttpPost("backfill-notebook-links")]
+    public async Task<IActionResult> BackfillNotebookLinks()
+    {
+        var user = await GetCurrentUserAsync();
+        if (user == null) return Unauthorized();
+
+        var adminEmails = _configuration.GetSection("AdminEmails").Get<string[]>() ?? Array.Empty<string>();
+        if (!adminEmails.Contains(user.Email, StringComparer.OrdinalIgnoreCase))
+            return Forbid();
+
+        var visibleDomains = FamilyAccessPolicy.GetVisibleDomains(_configuration, user);
+        var linked = 0;
+        var deleted = 0;
+
+        foreach (var domain in visibleDomains)
+        {
+            var trees = await _treeRepo.GetByDomainAsync(domain);
+            foreach (var tree in trees)
+            {
+                if (string.IsNullOrEmpty(tree.NotebookId)) continue;
+
+                // Fix LinkedTreeId on the canonical notebook
+                var notebook = await _nbRepo.GetByIdAsync(tree.NotebookId);
+                if (notebook != null && string.IsNullOrEmpty(notebook.LinkedTreeId))
+                {
+                    notebook.LinkedTreeId = tree.Id;
+                    await _nbRepo.UpdateAsync(notebook);
+                    linked++;
+                }
+
+                // Find and delete orphaned duplicate notebooks for this tree
+                // (notebooks with LinkedTreeId == tree.Id but not the canonical one,
+                //  or notebooks whose name matches "{treeName} 谱志" and owned by tree owner)
+                var ownedNotebooks = await _nbRepo.GetByOwnerIdAsync(tree.OwnerId);
+                foreach (var nb in ownedNotebooks)
+                {
+                    if (nb.Id == tree.NotebookId) continue; // keep the canonical one
+                    var isDuplicate = nb.LinkedTreeId == tree.Id
+                        || (nb.Name == $"{tree.Name} 谱志" && string.IsNullOrEmpty(nb.LinkedTreeId));
+                    if (!isDuplicate) continue;
+
+                    // Delete the duplicate and its data
+                    await _nbPageRepo.DeleteByNotebookIdAsync(nb.Id);
+                    await _nbSecRepo.DeleteByNotebookIdAsync(nb.Id);
+                    await _nbVisRepo.DeleteByNotebookIdAsync(nb.Id);
+                    await _nbRepo.DeleteAsync(nb.Id);
+                    deleted++;
+                }
+            }
+        }
+
+        return Ok(new { message = $"Backfilled {linked} notebook(s), deleted {deleted} duplicate(s)" });
     }
 
     // ── Helpers ─────────────────────────────────────────────────────────────
