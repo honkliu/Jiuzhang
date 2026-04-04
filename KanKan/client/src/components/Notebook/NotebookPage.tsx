@@ -37,14 +37,18 @@ interface VisibilityRuleRow {
   key: string;
   subject: string;
   permission: 'view' | 'edit';
+  locked?: boolean;
 }
 
 function createRule(subject = '', permission: 'view' | 'edit' = 'view'): VisibilityRuleRow {
   return { key: `rule-${Date.now()}_${Math.round(Math.random() * 100000)}`, subject, permission };
 }
 
-function buildRules(vis: NotebookVisibilityDto): VisibilityRuleRow[] {
+function buildRules(vis: NotebookVisibilityDto, ownerEmail?: string): VisibilityRuleRow[] {
   const rows: VisibilityRuleRow[] = [];
+  if (ownerEmail) {
+    rows.push({ key: 'owner-baseline', subject: ownerEmail, permission: 'edit', locked: true });
+  }
   vis.userEditors.forEach(s => rows.push(createRule(s, 'edit')));
   vis.userViewers.forEach(s => rows.push(createRule(s, 'view')));
   vis.domainEditors.forEach(s => rows.push(createRule(s, 'edit')));
@@ -55,6 +59,7 @@ function buildRules(vis: NotebookVisibilityDto): VisibilityRuleRow[] {
 function rulesToRequest(rows: VisibilityRuleRow[]) {
   const uv = new Set<string>(), ue = new Set<string>(), dv = new Set<string>(), de = new Set<string>();
   rows.forEach(r => {
+    if (r.locked) return;
     const s = r.subject.trim();
     if (!s) return;
     const isUser = s.includes('@');
@@ -97,6 +102,7 @@ export const NotebookPage: React.FC = () => {
   const [visRules, setVisRules] = useState<VisibilityRuleRow[]>([]);
   const [deleting, setDeleting] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
   const importRef = useRef<HTMLInputElement>(null);
 
   const selectedNotebook = notebooks.find(n => n.id === selectedId) ?? null;
@@ -139,10 +145,10 @@ export const NotebookPage: React.FC = () => {
     setSettingsOpen(true); setLoadingVis(true); setVisError(null);
     try {
       const vis = await notebookService.getVisibility(selectedId);
-      setVisRules(buildRules(vis));
+      setVisRules(buildRules(vis, selectedNotebook?.ownerDisplayName));
     } catch (err: any) { setVisError(err?.message || '加载权限失败'); }
     setLoadingVis(false);
-  }, [selectedId]);
+  }, [selectedId, selectedNotebook?.ownerDisplayName]);
 
   const handleSaveVis = useCallback(async () => {
     if (!selectedId || !canManage) return;
@@ -150,11 +156,11 @@ export const NotebookPage: React.FC = () => {
     try {
       const req = rulesToRequest(visRules);
       const vis = await notebookService.updateVisibility(selectedId, req);
-      setVisRules(buildRules(vis));
+      setVisRules(buildRules(vis, selectedNotebook?.ownerDisplayName));
       setSettingsOpen(false);
     } catch (err: any) { setVisError(err?.message || '保存失败'); }
     setSavingVis(false);
-  }, [selectedId, canManage, visRules]);
+  }, [selectedId, canManage, visRules, selectedNotebook?.ownerDisplayName]);
 
   const handleDelete = useCallback(async () => {
     if (!selectedId) return;
@@ -177,12 +183,13 @@ export const NotebookPage: React.FC = () => {
     const file = event.target.files?.[0]; event.target.value = '';
     if (!file || !selectedId) return;
     try {
-      await notebookService.importArchive(selectedId, file);
-      // Force re-render of the Notebook component by toggling selectedId
-      const id = selectedId;
-      setSelectedId(null);
-      setTimeout(() => setSelectedId(id), 50);
-    } catch {}
+      const result = await notebookService.importArchive(selectedId, file);
+      console.log('Import result:', result);
+      setRefreshKey(k => k + 1);
+    } catch (err: any) {
+      console.error('Import failed:', err);
+      alert(err?.response?.data?.message || err?.message || '导入失败');
+    }
   }, [selectedId]);
 
   return (
@@ -202,7 +209,7 @@ export const NotebookPage: React.FC = () => {
           </BoxAny>
         )}
         {!loading && !error && selectedNotebook && (
-          <Notebook notebookId={selectedNotebook.id} canEdit={selectedNotebook.canEdit} />
+          <Notebook key={`${selectedNotebook.id}-${refreshKey}`} notebookId={selectedNotebook.id} canEdit={selectedNotebook.canEdit} />
         )}
       </BoxAny>
 
@@ -388,7 +395,8 @@ export const NotebookPage: React.FC = () => {
                   {visRules.length === 0 ? (
                     <Typography variant="body2" color="text.secondary" sx={{ fontSize: 12, fontStyle: 'italic', py: 0.75 }}>暂无记录</Typography>
                   ) : visRules.map((rule, index) => {
-                    const subjectType = inferType(rule.subject.trim());
+                    const subjectType = rule.locked ? '所有者' : inferType(rule.subject.trim());
+                    const showDelete = canManage && !rule.locked;
                     return (
                       <BoxAny key={rule.key} sx={{
                         display: 'grid',
@@ -397,25 +405,27 @@ export const NotebookPage: React.FC = () => {
                         borderBottom: index === visRules.length - 1 ? 'none' : '1px solid #e5e7eb',
                       }}>
                         <BoxAny sx={{ minWidth: 0 }}>
-                          {canManage ? (
+                          {canManage && !rule.locked ? (
                             <InputBase value={rule.subject}
                               onChange={e => setVisRules(r => r.map(x => x.key === rule.key ? { ...x, subject: e.target.value } : x))}
                               fullWidth sx={{ ...inlineInputSx, fontFamily: rule.subject.includes('@') ? 'monospace' : 'inherit' }} />
                           ) : (
-                            <Typography sx={{ fontSize: 13, wordBreak: 'break-word', fontFamily: rule.subject.includes('@') ? 'monospace' : 'inherit' }}>{rule.subject}</Typography>
+                            <Typography sx={{ fontSize: 13, px: 0.75, py: 0.35, wordBreak: 'break-word', fontFamily: rule.subject.includes('@') ? 'monospace' : 'inherit' }}>{rule.subject}</Typography>
                           )}
                         </BoxAny>
                         <Typography sx={{ fontSize: 12, textAlign: 'center', color: 'text.secondary' }}>{subjectType}</Typography>
-                        <Button size="small" variant="text" disabled={!canManage}
+                        <Button size="small" variant="text" disabled={!canManage || rule.locked}
                           onClick={() => setVisRules(r => r.map(x => x.key === rule.key ? { ...x, permission: togglePerm(x.permission) } : x))}
                           sx={toggleBtnSx}>{formatPerm(rule.permission)}</Button>
                         {canManage ? (
-                          <BoxAny sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                            <BoxAny component="button" onClick={() => setVisRules(r => r.filter(x => x.key !== rule.key))}
-                              sx={{ width: 24, height: 24, border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', '&:hover': { backgroundColor: 'rgba(220,38,38,0.08)' } }}>
-                              <DeleteOutlineIcon sx={{ fontSize: 16, color: '#94a3b8' }} />
+                          showDelete ? (
+                            <BoxAny sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                              <BoxAny component="button" onClick={() => setVisRules(r => r.filter(x => x.key !== rule.key))}
+                                sx={{ width: 24, height: 24, border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', '&:hover': { backgroundColor: 'rgba(220,38,38,0.08)' } }}>
+                                <DeleteOutlineIcon sx={{ fontSize: 16, color: '#94a3b8' }} />
+                              </BoxAny>
                             </BoxAny>
-                          </BoxAny>
+                          ) : <BoxAny sx={{ width: 24, height: 24 }} />
                         ) : null}
                       </BoxAny>
                     );

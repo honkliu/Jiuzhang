@@ -5,22 +5,20 @@ namespace KanKan.API.Domain;
 public static class NotebookAccessPolicy
 {
     /// <summary>
-    /// Can view if: owner, OR domain match (same rules as family tree), OR explicit viewer/editor.
+    /// Can view if: owner, OR explicit viewer/editor in NotebookVisibility.
     /// </summary>
     public static bool CanViewNotebook(IConfiguration config, User user, Notebook notebook, NotebookVisibility? visibility)
     {
         if (notebook.OwnerId == user.Id) return true;
-        if (FamilyAccessPolicy.CanViewTreeDomain(config, user, notebook.Domain)) return true;
         return HasExplicitViewerAccess(user, visibility);
     }
 
     /// <summary>
-    /// Can edit if: owner, OR domain edit (same rules as family tree), OR explicit editor.
+    /// Can edit if: owner, OR explicit editor in NotebookVisibility.
     /// </summary>
     public static bool CanEditNotebook(IConfiguration config, User user, Notebook notebook, NotebookVisibility? visibility)
     {
         if (notebook.OwnerId == user.Id) return true;
-        if (FamilyAccessPolicy.CanEditTreeDomain(config, user, notebook.Domain)) return true;
         return HasExplicitEditorAccess(user, visibility);
     }
 

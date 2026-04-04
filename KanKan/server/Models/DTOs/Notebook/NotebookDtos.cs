@@ -54,6 +54,7 @@ public class NotebookResponse
     public string Name { get; set; } = string.Empty;
     public string Domain { get; set; } = string.Empty;
     public string OwnerId { get; set; } = string.Empty;
+    public string OwnerDisplayName { get; set; } = string.Empty;
     public bool CanEdit { get; set; }
     public bool CanManage { get; set; }
     public string CreatedAt { get; set; } = string.Empty;

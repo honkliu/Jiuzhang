@@ -81,10 +81,17 @@ public class NotebookController : ControllerBase
             .OrderByDescending(n => n.UpdatedAt).ToList();
 
         var responses = new List<NotebookResponse>();
+        var ownerCache = new Dictionary<string, string>();
         foreach (var n in all)
         {
             var vis = await _visRepo.GetByNotebookIdAsync(n.Id);
-            responses.Add(ToResponse(n, user, vis));
+            if (!ownerCache.TryGetValue(n.OwnerId, out var ownerName))
+            {
+                var owner = await _userRepo.GetByIdAsync(n.OwnerId);
+                ownerName = owner?.DisplayName ?? "";
+                ownerCache[n.OwnerId] = ownerName;
+            }
+            responses.Add(ToResponse(n, user, vis, ownerName));
         }
         return Ok(responses);
     }
@@ -97,7 +104,8 @@ public class NotebookController : ControllerBase
         if (notebook == null) return NotFound();
         if (!NotebookAccessPolicy.CanViewNotebook(_configuration, user, notebook, visibility)) return Forbid();
 
-        return Ok(ToResponse(notebook, user, visibility));
+        var owner = await _userRepo.GetByIdAsync(notebook.OwnerId);
+        return Ok(ToResponse(notebook, user, visibility, owner?.DisplayName ?? ""));
     }
 
     [HttpPost]
@@ -137,6 +145,14 @@ public class NotebookController : ControllerBase
         if (user == null) return Unauthorized();
         if (notebook == null) return NotFound();
         if (!NotebookAccessPolicy.CanManageNotebook(user, notebook)) return Forbid();
+
+        // Delete images from all pages first
+        var sections = await _secRepo.GetByNotebookIdAsync(notebookId);
+        foreach (var sec in sections)
+        {
+            var pages = await _pageRepo.GetBySectionIdAsync(sec.Id);
+            await DeletePagesWithImages(pages);
+        }
 
         await _pageRepo.DeleteByNotebookIdAsync(notebookId);
         await _secRepo.DeleteByNotebookIdAsync(notebookId);
@@ -274,6 +290,8 @@ public class NotebookController : ControllerBase
         var section = await _secRepo.GetByIdAsync(sectionId);
         if (section == null || section.NotebookId != notebookId) return NotFound();
 
+        var pages = await _pageRepo.GetBySectionIdAsync(sectionId);
+        await DeletePagesWithImages(pages);
         await _pageRepo.DeleteBySectionIdAsync(sectionId);
         await _secRepo.DeleteAsync(sectionId);
         return Ok(new { message = "Section deleted" });
@@ -351,6 +369,23 @@ public class NotebookController : ControllerBase
         if (req.PageNumber.HasValue) page.PageNumber = req.PageNumber.Value;
         if (req.Elements != null)
         {
+            // Find images that were removed and delete their files
+            var oldImageUrls = new HashSet<string>(
+                page.Elements.Where(e => e.Type == "image" && !string.IsNullOrWhiteSpace(e.ImageUrl)).Select(e => e.ImageUrl!),
+                StringComparer.OrdinalIgnoreCase);
+            var newImageUrls = new HashSet<string>(
+                req.Elements.Where(e => e.Type == "image" && !string.IsNullOrWhiteSpace(e.ImageUrl)).Select(e => e.ImageUrl!),
+                StringComparer.OrdinalIgnoreCase);
+            foreach (var removedUrl in oldImageUrls.Except(newImageUrls))
+            {
+                var path = ResolveLocalUploadPath(removedUrl);
+                if (path != null)
+                {
+                    try { if (System.IO.File.Exists(path)) System.IO.File.Delete(path); }
+                    catch (Exception ex) { _logger.LogWarning(ex, "Failed to delete removed image {Path}", path); }
+                }
+            }
+
             page.Elements = req.Elements.Select(e => new PageElement
             {
                 Id = string.IsNullOrEmpty(e.Id) ? $"pelem_{Guid.NewGuid():N}" : e.Id,
@@ -376,6 +411,7 @@ public class NotebookController : ControllerBase
         var page = await _pageRepo.GetByIdAsync(pageId);
         if (page == null || page.NotebookId != notebookId) return NotFound();
 
+        DeletePageImages(page);
         await _pageRepo.DeleteAsync(pageId);
         return Ok(new { message = "Page deleted" });
     }
@@ -506,7 +542,7 @@ public class NotebookController : ControllerBase
         }
 
         var importedFiles = new List<string>();
-        var hashCache = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var archivePathToUrl = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
         // Calculate sortOrder offset so imported sections come after existing ones
         var existingSections = await _secRepo.GetByNotebookIdAsync(notebookId);
@@ -534,7 +570,7 @@ public class NotebookController : ControllerBase
                         var imageUrl = elemDto.ImageUrl;
                         if (elemDto.Type == "image" && !string.IsNullOrWhiteSpace(elemDto.ArchivePath))
                         {
-                            var imported = await ImportArchivedMediaAsync(archive, elemDto.ArchivePath, importedFiles, hashCache);
+                            var imported = await ImportArchivedMediaAsync(archive, elemDto.ArchivePath, importedFiles, archivePathToUrl);
                             if (imported != null) imageUrl = imported;
                         }
 
@@ -599,9 +635,10 @@ public class NotebookController : ControllerBase
         return (user, notebook, visibility);
     }
 
-    private NotebookResponse ToResponse(Notebook n, User user, NotebookVisibility? visibility = null) => new()
+    private NotebookResponse ToResponse(Notebook n, User user, NotebookVisibility? visibility = null, string? ownerDisplayName = null) => new()
     {
         Id = n.Id, Name = n.Name, Domain = n.Domain, OwnerId = n.OwnerId,
+        OwnerDisplayName = ownerDisplayName ?? (n.OwnerId == user.Id ? user.DisplayName : ""),
         CanEdit = NotebookAccessPolicy.CanEditNotebook(_configuration, user, n, visibility),
         CanManage = NotebookAccessPolicy.CanManageNotebook(user, n),
         CreatedAt = n.CreatedAt.ToString("o"), UpdatedAt = n.UpdatedAt.ToString("o"),
@@ -641,6 +678,23 @@ public class NotebookController : ControllerBase
         return uploadsPath;
     }
 
+    private void DeletePageImages(NotebookPage page)
+    {
+        foreach (var elem in page.Elements)
+        {
+            if (elem.Type != "image" || string.IsNullOrWhiteSpace(elem.ImageUrl)) continue;
+            var path = ResolveLocalUploadPath(elem.ImageUrl);
+            if (path == null) continue;
+            try { if (System.IO.File.Exists(path)) System.IO.File.Delete(path); }
+            catch (Exception ex) { _logger.LogWarning(ex, "Failed to delete image {Path}", path); }
+        }
+    }
+
+    private async Task DeletePagesWithImages(IEnumerable<NotebookPage> pages)
+    {
+        foreach (var page in pages) DeletePageImages(page);
+    }
+
     private static async Task<string> ComputeSha256HexAsync(string filePath)
     {
         using var sha = SHA256.Create();
@@ -651,56 +705,32 @@ public class NotebookController : ControllerBase
 
     private async Task<string?> ImportArchivedMediaAsync(
         ZipArchive archive, string archivePath, List<string> importedFiles,
-        Dictionary<string, string> hashCache)
+        Dictionary<string, string> archivePathToUrl)
     {
         var normalizedPath = archivePath.Replace('\\', '/');
+
+        // Dedup within the same archive only (same image referenced by multiple elements)
+        if (archivePathToUrl.TryGetValue(normalizedPath, out var cachedUrl))
+            return cachedUrl;
+
         var entry = archive.GetEntry(normalizedPath);
         if (entry == null) return null;
 
-        // Extract to temp, compute hash, check dedup
+        // Always create a new file — no cross-entity dedup for notebooks
         var uploadsPath = GetUploadsRootPath();
-        var tempPath = Path.Combine(uploadsPath, $"_tmp_{Guid.NewGuid():N}");
-        try
+        var ext = Path.GetExtension(normalizedPath);
+        var finalName = $"nb_{Guid.NewGuid():N}{ext}";
+        var finalPath = Path.Combine(uploadsPath, finalName);
+
+        using (var entryStream = entry.Open())
+        using (var fileStream = System.IO.File.Create(finalPath))
         {
-            using (var entryStream = entry.Open())
-            using (var fileStream = System.IO.File.Create(tempPath))
-            {
-                await entryStream.CopyToAsync(fileStream);
-            }
-
-            var hash = await ComputeSha256HexAsync(tempPath);
-            if (hashCache.TryGetValue(hash, out var existingUrl))
-            {
-                System.IO.File.Delete(tempPath);
-                return existingUrl;
-            }
-
-            // Check existing uploads for same hash
-            foreach (var existing in Directory.GetFiles(uploadsPath).Where(f => !f.Contains("_tmp_")))
-            {
-                var existingHash = await ComputeSha256HexAsync(existing);
-                if (string.Equals(existingHash, hash, StringComparison.OrdinalIgnoreCase))
-                {
-                    hashCache[hash] = $"/uploads/{Path.GetFileName(existing)}";
-                    System.IO.File.Delete(tempPath);
-                    return hashCache[hash];
-                }
-            }
-
-            var ext = Path.GetExtension(normalizedPath);
-            var finalName = $"{Guid.NewGuid():N}{ext}";
-            var finalPath = Path.Combine(uploadsPath, finalName);
-            System.IO.File.Move(tempPath, finalPath);
-            importedFiles.Add(finalPath);
-
-            var url = $"/uploads/{finalName}";
-            hashCache[hash] = url;
-            return url;
+            await entryStream.CopyToAsync(fileStream);
         }
-        catch
-        {
-            if (System.IO.File.Exists(tempPath)) System.IO.File.Delete(tempPath);
-            throw;
-        }
+
+        importedFiles.Add(finalPath);
+        var url = $"/uploads/{finalName}";
+        archivePathToUrl[normalizedPath] = url;
+        return url;
     }
 }

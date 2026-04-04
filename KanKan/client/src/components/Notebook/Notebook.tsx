@@ -235,7 +235,7 @@ export const Notebook: React.FC<NotebookProps> = ({ notebookId, canEdit }) => {
             return (
               <BoxAny
                 key={section.id}
-                onClick={() => setActiveSectionId(section.id)}
+                onClick={() => { if (editingTabId && editingTabId !== section.id) commitTabRename(); setActiveSectionId(section.id); }}
                 onDoubleClick={() => { if (canEdit) { setEditingTabId(section.id); setEditingTabName(section.name); } }}
                 onContextMenu={(e: React.MouseEvent<HTMLElement>) => { if (canEdit) { e.preventDefault(); setSectionContextMenu({ sectionId: section.id, anchorEl: e.currentTarget }); } }}
                 sx={{
@@ -258,8 +258,7 @@ export const Notebook: React.FC<NotebookProps> = ({ notebookId, canEdit }) => {
                     autoFocus
                     value={editingTabName}
                     onChange={e => setEditingTabName(e.target.value)}
-                    onBlur={commitTabRename}
-                    onKeyDown={e => { if (e.key === 'Enter') commitTabRename(); if (e.key === 'Escape') setEditingTabId(null); }}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); commitTabRename(); } if (e.key === 'Escape') setEditingTabId(null); }}
                     onClick={e => e.stopPropagation()}
                     sx={{ fontSize: 12.5, fontWeight: 500, width: Math.max(48, editingTabName.length * 9 + 16), '& input': { py: 0, textAlign: 'center' } }}
                   />

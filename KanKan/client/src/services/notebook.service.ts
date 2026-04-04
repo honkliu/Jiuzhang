@@ -8,6 +8,7 @@ export interface NotebookDto {
   name: string;
   domain: string;
   ownerId: string;
+  ownerDisplayName: string;
   canEdit: boolean;
   canManage: boolean;
   createdAt: string;
