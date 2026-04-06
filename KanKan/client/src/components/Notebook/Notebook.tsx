@@ -17,6 +17,7 @@ import {
 import type { PageElementDto } from '@/services/family.service';
 import apiClient from '@/utils/api';
 import { FamilyPageCanvas, normalizeBlocks, type PendingImageUpload } from '@/components/Family/FamilyPageCanvas';
+import { RichTextToolbar, SharedRichTextToolbar, editorRegistry } from '@/components/Family/RichTextBlock';
 
 const BoxAny = Box as any;
 
@@ -46,7 +47,9 @@ export const Notebook: React.FC<NotebookProps> = ({ notebookId, canEdit }) => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [zoom, setZoom] = useState(1.0);
+  const [activeTextBlockId, setActiveTextBlockId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const canvasWrapperRef = useRef<HTMLDivElement>(null);
 
   const sortedSections = useMemo(() => [...sections].sort((a, b) => a.sortOrder - b.sortOrder), [sections]);
   const sortedPages = useMemo(() => [...pageSummaries].sort((a, b) => a.pageNumber - b.pageNumber), [pageSummaries]);
@@ -189,6 +192,15 @@ export const Notebook: React.FC<NotebookProps> = ({ notebookId, canEdit }) => {
     setSaving(false);
   }, [notebookId, activePageId, hasChanges, draftBlocks, pendingImages]);
 
+  // ── Zoom fit to width ──
+  const handleFitToWidth = useCallback(() => {
+    const wrapper = canvasWrapperRef.current;
+    if (!wrapper) { setZoom(1.0); return; }
+    const available = wrapper.clientWidth - 48; // padding
+    const fit = clamp(+(available / 816).toFixed(2), 0.3, 2.0);
+    setZoom(fit);
+  }, []);
+
   // ── Image file picker ──
   const handleChooseImage = useCallback(() => fileInputRef.current?.click(), []);
   const handleImageFile = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
@@ -222,8 +234,9 @@ export const Notebook: React.FC<NotebookProps> = ({ notebookId, canEdit }) => {
         display: 'flex', alignItems: 'stretch',
         borderBottom: '1px solid rgba(15,23,42,0.10)',
         background: '#f1f5f9',
-        minHeight: 36,
-        flexWrap: 'nowrap', overflowX: 'auto',
+        minHeight: 36, maxHeight: 36,
+        flexWrap: 'nowrap', overflowX: 'auto', overflowY: 'hidden',
+        scrollbarWidth: 'none', '&::-webkit-scrollbar': { display: 'none' },
       }}>
         {/* ── Left: Section tabs ── */}
         <Stack direction="row" spacing={0} alignItems="stretch" sx={{ flexShrink: 0 }}>
@@ -280,6 +293,15 @@ export const Notebook: React.FC<NotebookProps> = ({ notebookId, canEdit }) => {
           )}
         </Stack>
 
+        {/* ── Middle: Rich text toolbar (only when a text block is focused) ── */}
+        {canEdit && activeTextBlockId && (
+          <BoxAny sx={{ display: 'flex', alignItems: 'center', px: 0.5, overflowX: 'auto', flexShrink: 1, minWidth: 0 }}
+            onClick={(e: React.MouseEvent) => e.stopPropagation()}
+          >
+            <SharedRichTextToolbar activeBlockId={activeTextBlockId} />
+          </BoxAny>
+        )}
+
         {/* ── Right: Page tabs + actions (pushed right) ── */}
         <Stack direction="row" spacing={0} alignItems="stretch" sx={{ ml: 'auto', flexShrink: 0 }}>
           {/* Page tabs */}
@@ -324,36 +346,36 @@ export const Notebook: React.FC<NotebookProps> = ({ notebookId, canEdit }) => {
           <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
 
           {/* Actions: save, image, zoom */}
-          <Stack direction="row" spacing={0.5} alignItems="center" sx={{ px: 0.5 }}>
+          <Stack direction="row" spacing={0.25} alignItems="center" sx={{ px: 0.5 }}>
             {canEdit && activePage && (
               <>
-                <Button size="small" variant="outlined" startIcon={<AddPhotoAlternateIcon sx={{ fontSize: 14 }} />}
-                  onClick={handleChooseImage} disabled={saving}
-                  sx={{ fontSize: 11, textTransform: 'none', minHeight: 24, px: 0.75, py: 0 }}>
-                  图片
-                </Button>
-                <Button size="small" variant="contained" onClick={handleSave} disabled={!hasChanges || saving}
-                  sx={{ fontSize: 11, textTransform: 'none', minHeight: 24, px: 1, py: 0 }}>
-                  {saving ? '…' : '保存'}
-                </Button>
-                <Typography variant="caption" color="text.secondary" sx={{ fontSize: 10, whiteSpace: 'nowrap' }}>
-                  {saving ? '保存中…' : hasChanges ? '未保存' : '✓'}
-                </Typography>
+                <Tooltip title="插入图片"><span>
+                  <IconButton size="small" onClick={handleChooseImage} disabled={saving} sx={{ width: 26, height: 26, color: '#16a34a', '&:hover': { color: '#15803d', backgroundColor: 'rgba(22,163,74,0.08)' } }}>
+                    <AddPhotoAlternateIcon sx={{ fontSize: 16 }} />
+                  </IconButton>
+                </span></Tooltip>
+                {hasChanges && (
+                  <Button size="small" variant="contained" onClick={handleSave} disabled={saving}
+                    sx={{ fontSize: 10, textTransform: 'none', minHeight: 22, minWidth: 0, px: 0.75, py: 0 }}>
+                    {saving ? '…' : '保存'}
+                  </Button>
+                )}
+                {hasChanges && !saving && <Typography variant="caption" color="warning.main" sx={{ fontSize: 9 }}>●</Typography>}
               </>
             )}
             <Tooltip title="缩小"><span>
-              <IconButton size="small" onClick={() => setZoom(z => clamp(+(z - 0.01).toFixed(2), 0.3, 2.0))} sx={{ width: 24, height: 24 }}>
+              <IconButton size="small" onClick={() => setZoom(z => clamp(+(z - 0.01).toFixed(2), 0.3, 2.0))} sx={{ width: 22, height: 22 }}>
                 <ZoomOutIcon sx={{ fontSize: 14 }} />
               </IconButton>
             </span></Tooltip>
-            <Typography variant="caption" sx={{ fontSize: 10, minWidth: 30, textAlign: 'center' }}>{Math.round(zoom * 100)}%</Typography>
+            <Typography variant="caption" sx={{ fontSize: 9, minWidth: 28, textAlign: 'center' }}>{Math.round(zoom * 100)}%</Typography>
             <Tooltip title="放大"><span>
-              <IconButton size="small" onClick={() => setZoom(z => clamp(+(z + 0.01).toFixed(2), 0.3, 2.0))} sx={{ width: 24, height: 24 }}>
+              <IconButton size="small" onClick={() => setZoom(z => clamp(+(z + 0.01).toFixed(2), 0.3, 2.0))} sx={{ width: 22, height: 22 }}>
                 <ZoomInIcon sx={{ fontSize: 14 }} />
               </IconButton>
             </span></Tooltip>
-            <Tooltip title="100%"><span>
-              <IconButton size="small" onClick={() => setZoom(1.0)} sx={{ width: 24, height: 24 }}>
+            <Tooltip title="适应宽度"><span>
+              <IconButton size="small" onClick={handleFitToWidth} sx={{ width: 22, height: 22 }}>
                 <FitScreenIcon sx={{ fontSize: 14 }} />
               </IconButton>
             </span></Tooltip>
@@ -362,6 +384,7 @@ export const Notebook: React.FC<NotebookProps> = ({ notebookId, canEdit }) => {
       </BoxAny>
 
       {/* ── Canvas ── */}
+      <BoxAny ref={canvasWrapperRef} sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
       {activePage ? (
         <FamilyPageCanvas
           pageId={activePage.id}
@@ -372,6 +395,7 @@ export const Notebook: React.FC<NotebookProps> = ({ notebookId, canEdit }) => {
           onBlocksChange={setDraftBlocks}
           pendingImages={pendingImages}
           onPendingImagesChange={setPendingImages}
+          onActiveTextBlockChange={setActiveTextBlockId}
         />
       ) : sections.length === 0 ? (
         <BoxAny sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -384,6 +408,7 @@ export const Notebook: React.FC<NotebookProps> = ({ notebookId, canEdit }) => {
           <Typography color="text.secondary">选择一个章节</Typography>
         </BoxAny>
       )}
+      </BoxAny>
 
       <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={handleImageFile} />
 

@@ -64,5 +64,12 @@ export default defineConfig(({ mode }) => {
       outDir: 'build',
       sourcemap: true,
     },
+    css: {
+      preprocessorOptions: {
+        scss: {
+          api: 'modern-compiler',
+        },
+      },
+    },
   }
 })

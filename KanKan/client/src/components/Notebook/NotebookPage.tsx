@@ -145,7 +145,7 @@ export const NotebookPage: React.FC = () => {
     setSettingsOpen(true); setLoadingVis(true); setVisError(null);
     try {
       const vis = await notebookService.getVisibility(selectedId);
-      setVisRules(buildRules(vis, selectedNotebook?.ownerDisplayName));
+      setVisRules(buildRules(vis, selectedNotebook?.ownerEmail || selectedNotebook?.ownerDisplayName));
     } catch (err: any) { setVisError(err?.message || '加载权限失败'); }
     setLoadingVis(false);
   }, [selectedId, selectedNotebook?.ownerDisplayName]);
@@ -156,7 +156,7 @@ export const NotebookPage: React.FC = () => {
     try {
       const req = rulesToRequest(visRules);
       const vis = await notebookService.updateVisibility(selectedId, req);
-      setVisRules(buildRules(vis, selectedNotebook?.ownerDisplayName));
+      setVisRules(buildRules(vis, selectedNotebook?.ownerEmail || selectedNotebook?.ownerDisplayName));
       setSettingsOpen(false);
     } catch (err: any) { setVisError(err?.message || '保存失败'); }
     setSavingVis(false);

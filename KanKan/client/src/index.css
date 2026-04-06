@@ -1,3 +1,6 @@
+@import './styles/_variables.scss';
+@import './styles/_keyframe-animations.scss';
+
 * {
   margin: 0;
   padding: 0;
@@ -65,3 +68,21 @@ a {
   text-decoration: none;
   color: inherit;
 }
+
+/* Tiptap heading sizes in pt-equivalent px (H1=24pt=32px, H2=18pt=24px, H3=15pt=20px) */
+.tiptap h1 { font-size: 32px !important; font-weight: 700 !important; margin: 0 !important; line-height: 1.3 !important; }
+.tiptap h1 span { font-size: inherit !important; }
+.tiptap h2 { font-size: 24px !important; font-weight: 700 !important; margin: 0 !important; line-height: 1.35 !important; }
+.tiptap h2 span { font-size: inherit !important; }
+.tiptap h3 { font-size: 20px !important; font-weight: 600 !important; margin: 0 !important; line-height: 1.4 !important; }
+.tiptap h3 span { font-size: inherit !important; }
+
+/* Tiptap list overrides — match Word defaults */
+.tiptap ul, .tiptap ol { margin-top: 0 !important; margin-bottom: 0 !important; }
+.tiptap li > p { margin: 0 !important; line-height: 1.5 !important; font-size: inherit !important; }
+.tiptap p { font-size: inherit !important; line-height: 1.5 !important; margin-top: 0 !important; margin-bottom: 8pt !important; }
+.tiptap p:last-child { margin-bottom: 0 !important; }
+.tiptap li > p { margin-bottom: 0 !important; }
+
+/* Tiptap image styles */
+.tiptap img { max-width: 100%; height: auto; }

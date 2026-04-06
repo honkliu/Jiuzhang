@@ -81,17 +81,17 @@ public class NotebookController : ControllerBase
             .OrderByDescending(n => n.UpdatedAt).ToList();
 
         var responses = new List<NotebookResponse>();
-        var ownerCache = new Dictionary<string, string>();
+        var ownerCache = new Dictionary<string, (string name, string email)>();
         foreach (var n in all)
         {
             var vis = await _visRepo.GetByNotebookIdAsync(n.Id);
-            if (!ownerCache.TryGetValue(n.OwnerId, out var ownerName))
+            if (!ownerCache.TryGetValue(n.OwnerId, out var ownerInfo))
             {
                 var owner = await _userRepo.GetByIdAsync(n.OwnerId);
-                ownerName = owner?.DisplayName ?? "";
-                ownerCache[n.OwnerId] = ownerName;
+                ownerInfo = (owner?.DisplayName ?? "", owner?.Email ?? "");
+                ownerCache[n.OwnerId] = ownerInfo;
             }
-            responses.Add(ToResponse(n, user, vis, ownerName));
+            responses.Add(ToResponse(n, user, vis, ownerInfo.name, ownerInfo.email));
         }
         return Ok(responses);
     }
@@ -105,7 +105,7 @@ public class NotebookController : ControllerBase
         if (!NotebookAccessPolicy.CanViewNotebook(_configuration, user, notebook, visibility)) return Forbid();
 
         var owner = await _userRepo.GetByIdAsync(notebook.OwnerId);
-        return Ok(ToResponse(notebook, user, visibility, owner?.DisplayName ?? ""));
+        return Ok(ToResponse(notebook, user, visibility, owner?.DisplayName ?? "", owner?.Email ?? ""));
     }
 
     [HttpPost]
@@ -635,10 +635,11 @@ public class NotebookController : ControllerBase
         return (user, notebook, visibility);
     }
 
-    private NotebookResponse ToResponse(Notebook n, User user, NotebookVisibility? visibility = null, string? ownerDisplayName = null) => new()
+    private NotebookResponse ToResponse(Notebook n, User user, NotebookVisibility? visibility = null, string? ownerDisplayName = null, string? ownerEmail = null) => new()
     {
         Id = n.Id, Name = n.Name, Domain = n.Domain, OwnerId = n.OwnerId,
         OwnerDisplayName = ownerDisplayName ?? (n.OwnerId == user.Id ? user.DisplayName : ""),
+        OwnerEmail = ownerEmail ?? (n.OwnerId == user.Id ? user.Email : ""),
         CanEdit = NotebookAccessPolicy.CanEditNotebook(_configuration, user, n, visibility),
         CanManage = NotebookAccessPolicy.CanManageNotebook(user, n),
         CreatedAt = n.CreatedAt.ToString("o"), UpdatedAt = n.UpdatedAt.ToString("o"),
