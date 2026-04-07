@@ -250,27 +250,27 @@
   --tt-color-text-red-contrast: hsla(0, 67%, 60%, 0.25);
 }
 
-/* Highlight colors */
+/* Highlight colors — OneNote-style bold colors */
 :root {
-  --tt-color-highlight-yellow: #fef9c3;
-  --tt-color-highlight-green: #dcfce7;
-  --tt-color-highlight-blue: #e0f2fe;
-  --tt-color-highlight-purple: #f3e8ff;
-  --tt-color-highlight-red: #ffe4e6;
-  --tt-color-highlight-gray: rgb(248, 248, 247);
-  --tt-color-highlight-brown: rgb(244, 238, 238);
-  --tt-color-highlight-orange: rgb(251, 236, 221);
-  --tt-color-highlight-pink: rgb(252, 241, 246);
+  --tt-color-highlight-yellow: #FFFF00;
+  --tt-color-highlight-green: #00FF00;
+  --tt-color-highlight-blue: #00FFFF;
+  --tt-color-highlight-purple: #CC99FF;
+  --tt-color-highlight-red: #FF7F7F;
+  --tt-color-highlight-gray: #D0D0D0;
+  --tt-color-highlight-brown: #D2B48C;
+  --tt-color-highlight-orange: #FFA500;
+  --tt-color-highlight-pink: #FF69B4;
 
-  --tt-color-highlight-yellow-contrast: #fbe604;
-  --tt-color-highlight-green-contrast: #c7fad8;
-  --tt-color-highlight-blue-contrast: #ceeafd;
-  --tt-color-highlight-purple-contrast: #e4ccff;
-  --tt-color-highlight-red-contrast: #ffccd0;
-  --tt-color-highlight-gray-contrast: rgba(84, 72, 49, 0.15);
-  --tt-color-highlight-brown-contrast: rgba(210, 162, 141, 0.35);
-  --tt-color-highlight-orange-contrast: rgba(224, 124, 57, 0.27);
-  --tt-color-highlight-pink-contrast: rgba(225, 136, 179, 0.27);
+  --tt-color-highlight-yellow-contrast: #FFFF00;
+  --tt-color-highlight-green-contrast: #00FF00;
+  --tt-color-highlight-blue-contrast: #00FFFF;
+  --tt-color-highlight-purple-contrast: #CC99FF;
+  --tt-color-highlight-red-contrast: #FF7F7F;
+  --tt-color-highlight-gray-contrast: #D0D0D0;
+  --tt-color-highlight-brown-contrast: #D2B48C;
+  --tt-color-highlight-orange-contrast: #FFA500;
+  --tt-color-highlight-pink-contrast: #FF69B4;
 }
 
 .dark {

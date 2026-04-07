@@ -7,12 +7,60 @@ import {
 import {
   DeleteOutline as DeleteOutlineIcon,
   DragIndicator as DragIndicatorIcon,
+  AddPhotoAlternate as AddImageIcon,
 } from '@mui/icons-material';
 import IconButton from '@mui/material/IconButton';
 import type { PageElementDto } from '@/services/family.service';
 import { RichTextBlockWithRegistry } from './RichTextBlock';
 
 const BoxAny = Box as any;
+
+// 5 page styles: 网格, 白纸, 宣纸, 竹简, 古籍
+export const PAGE_STYLES = [
+  { name: '网格', icon: '⊞' },
+  { name: '白纸', icon: '☐' },
+  { name: '宣纸', icon: '宣' },
+  { name: '竹简', icon: '竹' },
+  { name: '古籍', icon: '古' },
+];
+
+function getPageStyleSx(style: number, zoom: number) {
+  switch (style) {
+    case 0: // 网格 — dotted grid on warm paper
+      return {
+        backgroundColor: '#fffdf7',
+        backgroundImage: `linear-gradient(rgba(148,163,184,0.12) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.08) 1px, transparent 1px)`,
+        backgroundSize: `${24 * zoom}px ${24 * zoom}px`,
+      };
+    case 1: // 白纸 — clean white
+      return {
+        backgroundColor: '#ffffff',
+        backgroundImage: 'none',
+      };
+    case 2: // 宣纸 — warm cream with subtle fiber texture
+      return {
+        backgroundColor: '#f5f0e8',
+        backgroundImage: `
+          radial-gradient(ellipse at 20% 50%, rgba(139,119,90,0.03) 0%, transparent 50%),
+          radial-gradient(ellipse at 80% 20%, rgba(139,119,90,0.04) 0%, transparent 40%),
+          radial-gradient(ellipse at 50% 80%, rgba(160,140,110,0.03) 0%, transparent 45%),
+          url("data:image/svg+xml,%3Csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E")
+        `,
+      };
+    case 3: // 竹简 — warm earthy bamboo tone
+      return {
+        backgroundColor: '#e8dcc8',
+        backgroundImage: `linear-gradient(180deg, rgba(101,78,50,0.04) 0%, rgba(101,78,50,0.08) 100%)`,
+      };
+    case 4: // 古籍 — aged parchment, like 古线装书
+      return {
+        backgroundColor: '#f2ead8',
+        backgroundImage: `linear-gradient(180deg, rgba(140,100,60,0.05) 0%, rgba(140,100,60,0.1) 100%)`,
+      };
+    default:
+      return { backgroundColor: '#fffdf7', backgroundImage: 'none' };
+  }
+}
 
 export const PAGE_WIDTH = 816;
 export const PAGE_HEIGHT = 1056;
@@ -89,13 +137,15 @@ export interface FamilyPageCanvasProps {
   pendingImages: Record<string, PendingImageUpload>;
   onPendingImagesChange: (updater: (current: Record<string, PendingImageUpload>) => Record<string, PendingImageUpload>) => void;
   onActiveTextBlockChange?: (blockId: string | null) => void;
+  pageStyle?: number;
 }
 
 export const FamilyPageCanvas: React.FC<FamilyPageCanvasProps> = ({
-  pageId, pageNumber, blocks, canEdit, zoom, onBlocksChange, pendingImages, onPendingImagesChange, onActiveTextBlockChange,
+  pageId, pageNumber, blocks, canEdit, zoom, onBlocksChange, pendingImages, onPendingImagesChange, onActiveTextBlockChange, pageStyle = 0,
 }) => {
   const pageRef = useRef<HTMLDivElement | null>(null);
   const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const dragStateRef = useRef<DragState>(null);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [pendingFocusBlockId, setPendingFocusBlockId] = useState<string | null>(null);
@@ -283,7 +333,7 @@ export const FamilyPageCanvas: React.FC<FamilyPageCanvasProps> = ({
   );
 
   // Floating toolbar
-  // Render toolbar inline — only drag + delete (rich text toolbar is now in notebook header)
+  // Render toolbar inline — drag + image + delete
   const renderBlockToolbar = (block: PageElementDto) => (
     canEdit && selectedBlockId === block.id ? (
       <Paper elevation={3} sx={{ position: 'absolute', top: -32, left: 0, display: 'flex', alignItems: 'center', gap: 0.25, px: 0.5, py: 0.25, borderRadius: '12px', backgroundColor: 'rgba(255,255,255,0.97)', zIndex: 9999 }}
@@ -291,6 +341,7 @@ export const FamilyPageCanvas: React.FC<FamilyPageCanvasProps> = ({
         onMouseDown={(e: React.MouseEvent) => e.stopPropagation()}
       >
         <IconButton size="small" onMouseDown={e => { e.stopPropagation(); startPointerInteraction(e, block, 'move'); }}><DragIndicatorIcon fontSize="small" /></IconButton>
+        <IconButton size="small" onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }} sx={{ color: '#16a34a' }}><AddImageIcon sx={{ fontSize: 18 }} /></IconButton>
         <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleDeleteBlock(); }}><DeleteOutlineIcon fontSize="small" /></IconButton>
       </Paper>
     ) : null
@@ -314,9 +365,7 @@ export const FamilyPageCanvas: React.FC<FamilyPageCanvasProps> = ({
           sx={{
             width: PAGE_WIDTH * zoom, height: PAGE_HEIGHT * zoom,
             position: 'relative', overflow: 'hidden', borderRadius: '12px',
-            backgroundColor: '#fffdf7',
-            backgroundImage: `linear-gradient(rgba(148,163,184,0.12) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.08) 1px, transparent 1px)`,
-            backgroundSize: `${24 * zoom}px ${24 * zoom}px`,
+            ...getPageStyleSx(pageStyle, zoom),
             boxShadow: '0 20px 60px rgba(15,23,42,0.14)',
             border: '1px solid rgba(15,23,42,0.08)',
             cursor: canEdit ? 'text' : 'default',
@@ -327,17 +376,6 @@ export const FamilyPageCanvas: React.FC<FamilyPageCanvasProps> = ({
             <BoxAny sx={{ position: 'absolute', top: 12, left: 20, color: 'rgba(100,116,139,0.4)', pointerEvents: 'none', fontSize: 10 }}>
               第 {pageNumber} 页
             </BoxAny>
-
-            {blocks.length === 0 && (
-              <BoxAny sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', px: 8 }}>
-                <Paper elevation={0} sx={{ px: 3, py: 2, borderRadius: '16px', bgcolor: 'rgba(255,255,255,0.88)', backgroundImage: 'none' }}>
-                  <Typography sx={{ fontWeight: 700, mb: 0.5 }}>开始书写</Typography>
-                  <Typography color="text.secondary">
-                    {canEdit ? '单击页面任意空白处开始输入。拖入或粘贴图片。' : '只读模式'}
-                  </Typography>
-                </Paper>
-              </BoxAny>
-            )}
 
             {blocks.map(block => {
               const isSelected = selectedBlockId === block.id;
@@ -406,6 +444,11 @@ export const FamilyPageCanvas: React.FC<FamilyPageCanvasProps> = ({
           </BoxAny>
         </BoxAny>
       </BoxAny>
+      <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={(e) => {
+        const file = e.target.files?.[0]; e.target.value = '';
+        if (!file) return;
+        addPendingImageAtPoint(file, lastPointerPointRef.current);
+      }} />
     </BoxAny>
   );
 };

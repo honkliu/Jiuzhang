@@ -11,8 +11,8 @@ import { Selection } from '@tiptap/extensions';
 import { TextStyle, Color, FontSize, FontFamily } from '@tiptap/extension-text-style';
 import Underline from '@tiptap/extension-underline';
 import ImageResize from 'tiptap-extension-resize-image';
-import { Box, IconButton, Select, MenuItem } from '@mui/material';
-import { Remove as MinusIcon, Add as PlusIcon } from '@mui/icons-material';
+import { Box, IconButton, Select, MenuItem, Popover } from '@mui/material';
+import { Remove as MinusIcon, Add as PlusIcon, FormatColorText as FontColorIcon } from '@mui/icons-material';
 
 // --- Tiptap UI Components ---
 import { Toolbar, ToolbarGroup, ToolbarSeparator } from '@/components/tiptap-ui-primitive/toolbar';
@@ -62,9 +62,25 @@ const FONTS = [
 
 const fontSelectSx = {
   fontSize: 11, height: 24, bgcolor: '#fff', borderRadius: '4px',
-  '& .MuiSelect-select': { py: '2px', px: 0.5 },
+  '& .MuiSelect-select': { py: '2px !important', pl: '3px !important', pr: '12px !important', minHeight: '0 !important' },
+  '& .MuiSelect-icon': { right: -2, fontSize: 14, top: 'calc(50% - 7px)' },
+  '& .MuiInputBase-input': { padding: '2px 3px !important' },
   '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(15,23,42,0.2)' },
   '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(15,23,42,0.4)' },
+};
+
+const fontMenuProps = {
+  PaperProps: {
+    sx: {
+      bgcolor: '#fff',
+      backgroundImage: 'none',
+      boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+      border: '1px solid rgba(15,23,42,0.08)',
+      maxHeight: 300,
+      scrollbarWidth: 'none',
+      '&::-webkit-scrollbar': { display: 'none' },
+    },
+  },
 };
 
 interface RichTextBlockProps {
@@ -165,6 +181,40 @@ export const RichTextBlockWithRegistry: React.FC<RichTextBlockProps & { blockId:
   );
 };
 
+// ── Font color popover with 8 preset colors ────────────────────────────────
+
+const FontColorPopover: React.FC<{ currentColor: string; colors: string[]; onSelect: (c: string) => void }> = ({ currentColor, colors, onSelect }) => {
+  const [anchorEl, setAnchorEl] = React.useState<HTMLElement | null>(null);
+  return (
+    <>
+      <IconButton size="small" onClick={e => { e.stopPropagation(); setAnchorEl(e.currentTarget); }}
+        sx={{ width: 24, height: 24, p: 0.25, position: 'relative' }}>
+        <FontColorIcon sx={{ fontSize: 16 }} />
+        <BoxAny sx={{ position: 'absolute', bottom: 1, left: 4, right: 4, height: 3, borderRadius: 1, bgcolor: currentColor }} />
+      </IconButton>
+      <Popover
+        open={Boolean(anchorEl)}
+        anchorEl={anchorEl}
+        onClose={() => setAnchorEl(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+        slotProps={{ paper: { sx: { p: 1, borderRadius: '8px', boxShadow: '0 4px 16px rgba(0,0,0,0.12)' } } }}
+      >
+        <BoxAny sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 0.5 }}>
+          {colors.map(c => (
+            <BoxAny key={c} onClick={() => { onSelect(c); setAnchorEl(null); }}
+              sx={{
+                width: 24, height: 24, borderRadius: '4px', cursor: 'pointer',
+                bgcolor: c, border: c === currentColor ? '2px solid #2563eb' : '1px solid rgba(0,0,0,0.15)',
+                '&:hover': { transform: 'scale(1.15)' }, transition: 'transform 0.1s',
+              }}
+            />
+          ))}
+        </BoxAny>
+      </Popover>
+    </>
+  );
+};
+
 // ── Shared toolbar using Tiptap UI components ─────────────────────────────
 
 export const SharedRichTextToolbar: React.FC<{ activeBlockId?: string | null }> = ({ activeBlockId }) => {
@@ -202,7 +252,13 @@ export const SharedRichTextToolbar: React.FC<{ activeBlockId?: string | null }> 
 
   return (
     <EditorContext.Provider value={{ editor }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25, flexWrap: 'nowrap' }}>
+      <Box sx={{
+        display: 'flex', alignItems: 'center', gap: 0.25, flexWrap: 'nowrap',
+        /* 1. Make all tiptap dropdown/popover buttons non-transparent */
+        '& button, & [role="button"]': { minWidth: 0 },
+        /* 2. Compact all toolbar buttons */
+        '& .tiptap-button': { padding: '2px 4px !important', minWidth: '24px !important' },
+      }}>
       <Toolbar style={{ border: 'none', background: 'transparent', padding: 0, minHeight: 0, boxShadow: 'none', gap: 2, flexWrap: 'nowrap', alignItems: 'center' }}>
         <ToolbarGroup>
           <UndoRedoButton action="undo" />
@@ -211,22 +267,35 @@ export const SharedRichTextToolbar: React.FC<{ activeBlockId?: string | null }> 
 
         <ToolbarSeparator />
 
-        <Select size="small" value={currentFontFamily}
-          onChange={e => { e.stopPropagation(); const v = e.target.value as string; v ? editor.chain().focus().setFontFamily(v).run() : editor.chain().focus().unsetFontFamily().run(); }}
-          onClick={e => e.stopPropagation()} displayEmpty
-          renderValue={v => FONTS.find(f => f.value === v)?.label || '字体'}
-          sx={{ ...fontSelectSx, minWidth: 48 }}>
-          {FONTS.map(f => <MenuItem key={f.value} value={f.value} sx={{ fontSize: 11, fontFamily: f.value || 'inherit' }}>{f.label}</MenuItem>)}
-        </Select>
+        <ToolbarGroup>
+          <MarkButton type="bold" />
+          <MarkButton type="italic" />
+          <MarkButton type="underline" />
+        </ToolbarGroup>
+
+        <ToolbarSeparator />
+
+        {/* Font color */}
+        {(() => {
+          const currentColor = editor.getAttributes('textStyle').color || '#000000';
+          const colors = ['#000000', '#FF0000', '#0000FF', '#008000', '#FF8C00', '#800080', '#964B00', '#808080'];
+          return <FontColorPopover currentColor={currentColor} colors={colors} onSelect={c => editor.chain().focus().setColor(c).run()} />;
+        })()}
+        <ColorHighlightPopover />
+        <LinkPopover />
+
+        <ToolbarSeparator />
 
         <IconButton size="small" onClick={() => stepFontSize(-1)} sx={{ width: 20, height: 20, p: 0 }}>
           <MinusIcon sx={{ fontSize: 12 }} />
         </IconButton>
         <Select size="small" value={FONT_SIZES_PT.includes(currentPt) ? currentPt : ''}
+          displayEmpty
           renderValue={() => `${currentPt}`}
           onChange={e => { e.stopPropagation(); editor.chain().focus().setFontSize(`${ptToPx(Number(e.target.value))}px`).run(); }}
           onClick={e => e.stopPropagation()}
-          sx={{ ...fontSelectSx, minWidth: 32, '& .MuiSelect-select': { py: '2px', px: 0.25, textAlign: 'center' } }}>
+          sx={{ ...fontSelectSx, minWidth: 36 }}
+          MenuProps={fontMenuProps}>
           {FONT_SIZES_PT.map(s => <MenuItem key={s} value={s} sx={{ fontSize: 11 }}>{s}</MenuItem>)}
         </Select>
         <IconButton size="small" onClick={() => stepFontSize(1)} sx={{ width: 20, height: 20, p: 0 }}>
@@ -236,21 +305,7 @@ export const SharedRichTextToolbar: React.FC<{ activeBlockId?: string | null }> 
         <ToolbarSeparator />
 
         <ToolbarGroup>
-          <HeadingDropdownMenu modal={false} levels={[1, 2, 3]} />
-          <ListDropdownMenu modal={false} types={['bulletList', 'orderedList']} />
-          <BlockquoteButton />
-          <CodeBlockButton />
-        </ToolbarGroup>
-
-        <ToolbarSeparator />
-
-        <ToolbarGroup>
-          <MarkButton type="bold" />
-          <MarkButton type="italic" />
-          <MarkButton type="underline" />
-          <MarkButton type="strike" />
-          <ColorHighlightPopover />
-          <LinkPopover />
+          <ImageUploadButton text="" />
         </ToolbarGroup>
 
         <ToolbarSeparator />
@@ -263,8 +318,22 @@ export const SharedRichTextToolbar: React.FC<{ activeBlockId?: string | null }> 
 
         <ToolbarSeparator />
 
+        <Select size="small" value={currentFontFamily}
+          onChange={e => { e.stopPropagation(); const v = e.target.value as string; v ? editor.chain().focus().setFontFamily(v).run() : editor.chain().focus().unsetFontFamily().run(); }}
+          onClick={e => e.stopPropagation()} displayEmpty
+          renderValue={v => FONTS.find(f => f.value === v)?.label || '字体'}
+          sx={{ ...fontSelectSx, minWidth: 48 }}
+          MenuProps={fontMenuProps}>
+          {FONTS.map(f => <MenuItem key={f.value} value={f.value} sx={{ fontSize: 11, fontFamily: f.value || 'inherit' }}>{f.label}</MenuItem>)}
+        </Select>
+
+        <ToolbarSeparator />
+
         <ToolbarGroup>
-          <ImageUploadButton text="" />
+          <HeadingDropdownMenu modal={false} levels={[1, 2, 3]} />
+          <ListDropdownMenu modal={false} types={['bulletList', 'orderedList']} />
+          <BlockquoteButton />
+          <CodeBlockButton />
         </ToolbarGroup>
       </Toolbar>
       </Box>
