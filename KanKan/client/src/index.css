@@ -90,3 +90,11 @@ a {
   background-color: transparent !important;
   outline: none !important;
 }
+
+/* Drop cursor — visible for inline drops */
+.ProseMirror-dropcursor { background: #FF0000 !important; width: 4px !important; z-index: 9999 !important; }
+
+/* Make dragged elements semi-transparent so drop cursor is visible */
+.tiptap [draggable="true"]:active,
+.tiptap img:active { opacity: 0.4; }
+.ProseMirror-hideselection *::selection { background: transparent; }

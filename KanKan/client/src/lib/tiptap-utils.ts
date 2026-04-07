@@ -374,17 +374,26 @@ export const handleImageUpload = async (
     )
   }
 
-  // For demo/testing: Simulate upload progress. In production, replace the following code
-  // with your own upload implementation.
-  for (let progress = 0; progress <= 100; progress += 10) {
-    if (abortSignal?.aborted) {
-      throw new Error("Upload cancelled")
-    }
-    await new Promise((resolve) => setTimeout(resolve, 500))
-    onProgress?.({ progress })
+  // Upload to server
+  const formData = new FormData()
+  formData.append('file', file)
+
+  const response = await fetch('/api/media/upload', {
+    method: 'POST',
+    body: formData,
+    signal: abortSignal,
+    headers: {
+      'Authorization': `Bearer ${localStorage.getItem('accessToken') || ''}`,
+    },
+  })
+
+  if (!response.ok) {
+    throw new Error(`Upload failed: ${response.statusText}`)
   }
 
-  return "/images/tiptap-ui-placeholder-image.jpg"
+  const data = await response.json()
+  onProgress?.({ progress: 100 })
+  return data.url
 }
 
 type ProtocolOptions = {

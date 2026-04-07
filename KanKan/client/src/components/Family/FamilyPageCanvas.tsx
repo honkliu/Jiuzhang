@@ -354,9 +354,18 @@ export const FamilyPageCanvas: React.FC<FamilyPageCanvasProps> = ({
           ref={pageRef}
           onClick={handleCanvasClick}
           onMouseMove={(e: React.MouseEvent) => { const p = getPagePoint(e.clientX, e.clientY); if (p) lastPointerPointRef.current = p; }}
-          onDragOver={(e: React.DragEvent) => { if (!canEdit) return; e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }}
+          onDragOver={(e: React.DragEvent) => {
+            if (!canEdit) return;
+            // Let Tiptap handle drags inside text blocks
+            if ((e.target as HTMLElement)?.closest('.tiptap')) return;
+            if (e.dataTransfer.types.includes('Files')) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }
+          }}
           onDrop={(e: React.DragEvent) => {
-            if (!canEdit) return; e.preventDefault();
+            if (!canEdit) return;
+            // Let Tiptap handle drops inside text blocks
+            if ((e.target as HTMLElement)?.closest('.tiptap')) return;
+            if (!e.dataTransfer.types.includes('Files')) return;
+            e.preventDefault();
             const file = Array.from(e.dataTransfer.files).find(f => f.type.startsWith('image/'));
             if (!file) return;
             const point = getPagePoint(e.clientX, e.clientY);
