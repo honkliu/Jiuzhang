@@ -84,11 +84,12 @@ a {
 .tiptap p:last-child { margin-bottom: 0 !important; }
 .tiptap li > p { margin-bottom: 0 !important; }
 
-/* Tiptap image/node selection — no visual highlight */
+/* Tiptap image/node selection — no background highlight, allow resize controllers */
 .tiptap img { max-width: 100%; height: auto; }
 .tiptap .ProseMirror-selectednode {
   background-color: transparent !important;
   outline: none !important;
+  overflow: visible !important;
 }
 
 /* Drop cursor — visible for inline drops */

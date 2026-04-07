@@ -109,7 +109,7 @@ export const RichTextBlockWithRegistry: React.FC<RichTextBlockProps & { blockId:
         dropcursor: { color: '#FF0000', width: 4 },
       }),
       HorizontalRule,
-      ImageResize.configure({ inline: true }),
+      ImageResize.configure({ inline: false }),
       TaskList,
       TaskItem.configure({ nested: true }),
       NodeBackground,
