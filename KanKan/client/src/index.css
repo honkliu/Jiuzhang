@@ -96,5 +96,7 @@ a {
 
 /* Make dragged elements semi-transparent so drop cursor is visible */
 .tiptap [draggable="true"]:active,
-.tiptap img:active { opacity: 0.4; }
+.tiptap img:active { opacity: 0.4; cursor: grabbing; }
+.tiptap img { cursor: grab; }
+.tiptap img:active { cursor: grabbing; }
 .ProseMirror-hideselection *::selection { background: transparent; }
