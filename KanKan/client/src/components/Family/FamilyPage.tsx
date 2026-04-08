@@ -1307,32 +1307,23 @@ export const FamilyPage: React.FC = () => {
         )}
       </BoxAny>
 
-      {/* Notebook dialog (谱志) */}
-      <Dialog
-        fullScreen
-        open={notebookDialogOpen}
-        onClose={() => setNotebookDialogOpen(false)}
-      >
-        <BoxAny sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+      {/* Notebook view (谱志) — same layout as 札记 */}
+      {notebookDialogOpen && selectedTreeId && (
+        <BoxAny sx={{ position: 'fixed', top: 61, left: 0, right: 0, bottom: 0, zIndex: 5, display: 'flex', flexDirection: 'column', background: '#fff' }}>
+          <BoxAny sx={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+            <FamilyNotebook treeId={selectedTreeId} />
+          </BoxAny>
           <BoxAny sx={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            px: 2, py: 1, borderBottom: '1px solid rgba(15,23,42,0.08)',
-            background: 'rgba(255,255,255,0.97)',
+            borderTop: '1px solid rgba(15,23,42,0.08)', background: 'rgba(255,255,255,0.95)',
+            px: 2, py: 1, display: 'flex', justifyContent: 'flex-end',
           }}>
-            <Typography variant="subtitle1" fontWeight={600}>
-              {selectedTree?.name ?? ''} 谱志
-            </Typography>
-            <Button onClick={() => setNotebookDialogOpen(false)} size="small" sx={{ textTransform: 'none' }}>
-              关闭
+            <Button onClick={() => setNotebookDialogOpen(false)} size="small" variant="outlined"
+              sx={{ minHeight: 30, px: 0.5, fontSize: 14, lineHeight: 1.35, textTransform: 'none', borderColor: 'rgba(15,23,42,0.23)', color: 'text.primary', '&:hover': { borderColor: 'rgba(15,23,42,0.35)', backgroundColor: 'rgba(15,23,42,0.03)' } }}>
+              返回族谱
             </Button>
           </BoxAny>
-          {selectedTreeId && (
-            <FamilyNotebook
-              treeId={selectedTreeId}
-            />
-          )}
         </BoxAny>
-      </Dialog>
+      )}
 
       {/* Bottom control bar */}
       <BoxAny sx={{
