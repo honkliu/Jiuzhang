@@ -270,7 +270,7 @@ export const FamilyPageCanvas: React.FC<FamilyPageCanvasProps> = ({
   };
 
   // Drag / Resize
-  const startPointerInteraction = useCallback((event: React.MouseEvent<HTMLElement>, block: PageElementDto, mode: 'move' | 'resize-br' | 'resize-tr') => {
+  const startPointerInteraction = useCallback((event: React.PointerEvent<HTMLElement> | React.MouseEvent<HTMLElement>, block: PageElementDto, mode: 'move' | 'resize-br' | 'resize-tr') => {
     if (!canEdit) return;
     event.preventDefault();
     event.stopPropagation();
@@ -278,7 +278,11 @@ export const FamilyPageCanvas: React.FC<FamilyPageCanvasProps> = ({
     bringToFront(block.id);
     dragStateRef.current = { blockId: block.id, mode, originX: block.x, originY: block.y, originWidth: block.width, originHeight: block.height, startX: event.clientX, startY: event.clientY };
 
-    const handleMove = (e: MouseEvent) => {
+    if ('currentTarget' in event && 'setPointerCapture' in event.currentTarget && 'pointerId' in event) {
+      try { event.currentTarget.setPointerCapture(event.pointerId); } catch {}
+    }
+
+    const handleMove = (e: PointerEvent | MouseEvent) => {
       const ds = dragStateRef.current;
       if (!ds) return;
       const dx = (e.clientX - ds.startX) / zoom, dy = (e.clientY - ds.startY) / zoom;
@@ -297,7 +301,15 @@ export const FamilyPageCanvas: React.FC<FamilyPageCanvasProps> = ({
         return { ...b, width: clamp(ds.originWidth + dx, MIN_BLOCK_WIDTH, PAGE_WIDTH - b.x), y: newY, height: newHeight };
       }));
     };
-    const handleUp = () => { dragStateRef.current = null; window.removeEventListener('mousemove', handleMove); window.removeEventListener('mouseup', handleUp); };
+    const handleUp = () => {
+      dragStateRef.current = null;
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', handleUp);
+      window.removeEventListener('mousemove', handleMove);
+      window.removeEventListener('mouseup', handleUp);
+    };
+    window.addEventListener('pointermove', handleMove);
+    window.addEventListener('pointerup', handleUp);
     window.addEventListener('mousemove', handleMove);
     window.addEventListener('mouseup', handleUp);
   }, [canEdit, blocks, onBlocksChange, bringToFront, zoom]);
@@ -320,13 +332,13 @@ export const FamilyPageCanvas: React.FC<FamilyPageCanvasProps> = ({
       <>
         {/* Top-right */}
         <BoxAny
-          onMouseDown={(e: React.MouseEvent<HTMLElement>) => { e.stopPropagation(); e.preventDefault(); startPointerInteraction(e, block, 'resize-tr'); }}
-          sx={{ position: 'absolute', right: -3, top: -3, width: 14, height: 14, cursor: 'nesw-resize', background: '#2563eb', borderRadius: '2px', border: '2px solid #fff', zIndex: 9999, boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }}
+          onPointerDown={(e: React.PointerEvent<HTMLElement>) => { e.stopPropagation(); e.preventDefault(); startPointerInteraction(e, block, 'resize-tr'); }}
+          sx={{ position: 'absolute', right: -3, top: -3, width: 18, height: 18, cursor: 'nesw-resize', background: '#2563eb', borderRadius: '3px', border: '2px solid #fff', zIndex: 9999, boxShadow: '0 1px 3px rgba(0,0,0,0.2)', touchAction: 'none' }}
         />
         {/* Bottom-right */}
         <BoxAny
-          onMouseDown={(e: React.MouseEvent<HTMLElement>) => { e.stopPropagation(); e.preventDefault(); startPointerInteraction(e, block, 'resize-br'); }}
-          sx={{ position: 'absolute', right: -3, bottom: -3, width: 14, height: 14, cursor: 'nwse-resize', background: '#2563eb', borderRadius: '2px', border: '2px solid #fff', zIndex: 9999, boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }}
+          onPointerDown={(e: React.PointerEvent<HTMLElement>) => { e.stopPropagation(); e.preventDefault(); startPointerInteraction(e, block, 'resize-br'); }}
+          sx={{ position: 'absolute', right: -3, bottom: -3, width: 18, height: 18, cursor: 'nwse-resize', background: '#2563eb', borderRadius: '3px', border: '2px solid #fff', zIndex: 9999, boxShadow: '0 1px 3px rgba(0,0,0,0.2)', touchAction: 'none' }}
         />
       </>
     ) : null
@@ -338,9 +350,9 @@ export const FamilyPageCanvas: React.FC<FamilyPageCanvasProps> = ({
     canEdit && selectedBlockId === block.id ? (
       <Paper elevation={3} sx={{ position: 'absolute', top: -32, left: 0, display: 'flex', alignItems: 'center', gap: 0.25, px: 0.5, py: 0.25, borderRadius: '12px', backgroundColor: 'rgba(255,255,255,0.97)', zIndex: 9999 }}
         onClick={(e: React.MouseEvent) => e.stopPropagation()}
-        onMouseDown={(e: React.MouseEvent) => e.stopPropagation()}
+        onPointerDown={(e: React.PointerEvent) => e.stopPropagation()}
       >
-        <IconButton size="small" onMouseDown={e => { e.stopPropagation(); startPointerInteraction(e, block, 'move'); }}><DragIndicatorIcon fontSize="small" /></IconButton>
+        <IconButton size="small" onPointerDown={e => { e.stopPropagation(); startPointerInteraction(e, block, 'move'); }} sx={{ touchAction: 'none' }}><DragIndicatorIcon fontSize="small" /></IconButton>
         <IconButton size="small" onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }} sx={{ color: '#16a34a' }}><AddImageIcon sx={{ fontSize: 18 }} /></IconButton>
         <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleDeleteBlock(); }}><DeleteOutlineIcon fontSize="small" /></IconButton>
       </Paper>
@@ -393,7 +405,7 @@ export const FamilyPageCanvas: React.FC<FamilyPageCanvasProps> = ({
                 return block.imageUrl ? (
                   <BoxAny key={block.id} data-block-root="true"
                     onClick={(e: React.MouseEvent) => { e.stopPropagation(); if (canEdit) { setSelectedBlockId(block.id); bringToFront(block.id); } }}
-                    onMouseDown={canEdit ? (e: React.MouseEvent<HTMLElement>) => {
+                    onPointerDown={canEdit ? (e: React.PointerEvent<HTMLElement>) => {
                       const r = e.currentTarget.getBoundingClientRect();
                       const nearRight = r.right - e.clientX <= 24;
                       const nearTop = e.clientY - r.top <= 24;
@@ -401,7 +413,7 @@ export const FamilyPageCanvas: React.FC<FamilyPageCanvasProps> = ({
                       const mode = nearRight && nearBottom ? 'resize-br' : nearRight && nearTop ? 'resize-tr' : 'move';
                       startPointerInteraction(e, block, mode);
                     } : undefined}
-                    sx={{ position: 'absolute', left: block.x, top: block.y, width: block.width, height: block.height, zIndex: block.zIndex, userSelect: 'none', cursor: canEdit ? 'move' : 'default', outline: isSelected ? '2px solid rgba(37,99,235,0.5)' : 'none', outlineOffset: 1, overflow: 'visible' }}
+                    sx={{ position: 'absolute', left: block.x, top: block.y, width: block.width, height: block.height, zIndex: block.zIndex, userSelect: 'none', cursor: canEdit ? 'move' : 'default', outline: isSelected ? '2px solid rgba(37,99,235,0.5)' : 'none', outlineOffset: 1, overflow: 'visible', touchAction: 'none' }}
                   >
                     <BoxAny component="img" src={block.imageUrl} alt="" draggable={false}
                       onDragStart={(e: React.DragEvent) => e.preventDefault()}
