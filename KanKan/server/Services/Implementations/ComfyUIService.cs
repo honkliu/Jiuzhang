@@ -348,11 +348,6 @@ public class ComfyUIService : IComfyUIService
                     {
                         throw new ComfyUiTerminalFailureException(promptId, historyState.Summary);
                     }
-
-                    if (attempt < 3 || (attempt + 1) % 5 == 0)
-                    {
-                        _logger.LogInformation("ComfyUI history state for {PromptId}: {Summary}", promptId, historyState.Summary);
-                    }
                 }
                 else
                 {
@@ -514,10 +509,8 @@ public class ComfyUIService : IComfyUIService
         {
             AppendJsonValue(parts, "status_str", status, "status_str");
             AppendJsonValue(parts, "completed", status, "completed");
-            AppendJsonValue(parts, "exec_info", status, "exec_info");
             AppendJsonValue(parts, "execution_error", status, "execution_error");
             AppendJsonValue(parts, "error", status, "error");
-            AppendJsonValue(parts, "messages", status, "messages");
 
             var detailedExecutionError = ExtractExecutionErrorFromMessages(status);
             if (!string.IsNullOrWhiteSpace(detailedExecutionError))
@@ -530,7 +523,6 @@ public class ComfyUIService : IComfyUIService
         AppendJsonValue(parts, "completed", prompt, "completed");
         AppendJsonValue(parts, "execution_error", prompt, "execution_error");
         AppendJsonValue(parts, "error", prompt, "error");
-        AppendJsonValue(parts, "messages", prompt, "messages");
 
         return string.Join("; ", parts.Distinct(StringComparer.Ordinal));
     }
@@ -570,8 +562,6 @@ public class ComfyUIService : IComfyUIService
             AppendJsonValue(parts, "exception_message", payload, "exception_message");
             AppendJsonValue(parts, "exception_type", payload, "exception_type");
             AppendJsonValue(parts, "error", payload, "error");
-            AppendJsonValue(parts, "traceback", payload, "traceback");
-            AppendJsonValue(parts, "current_inputs", payload, "current_inputs");
 
             if (parts.Count == 0)
             {

@@ -1,4 +1,6 @@
 using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Metadata;
+using SixLabors.ImageSharp.Metadata.Profiles.Exif;
 using SixLabors.ImageSharp.Processing;
 using SixLabors.ImageSharp.Formats.Webp;
 using SixLabors.ImageSharp.Formats.Png;
@@ -67,9 +69,23 @@ public static class ImageResizer
     public static byte[] NormalizeToPng(byte[] imageData)
     {
         using var image = Image.Load(imageData);
+        StripMetadata(image.Metadata);
+
+        var pngMetadata = image.Metadata.GetPngMetadata();
+        pngMetadata.TextData.Clear();
+
         using var ms = new MemoryStream();
         image.SaveAsPng(ms, new PngEncoder());
         return ms.ToArray();
+    }
+
+    private static void StripMetadata(ImageMetadata metadata)
+    {
+        metadata.ExifProfile = null;
+        metadata.IccProfile = null;
+        metadata.IptcProfile = null;
+        metadata.XmpProfile = null;
+        metadata.CicpProfile = null;
     }
 
     /// <summary>
