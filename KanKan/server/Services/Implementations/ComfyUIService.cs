@@ -342,6 +342,26 @@ public class ComfyUIService : IComfyUIService
                     {
                         return extracted;
                     }
+
+                    var historyState = InspectHistoryState(promptId, historyJson);
+                    if (historyState.IsTerminalFailure)
+                    {
+                        throw new InvalidOperationException($"ComfyUI prompt {promptId} failed: {historyState.Summary}");
+                    }
+
+                    if (attempt < 3 || (attempt + 1) % 5 == 0)
+                    {
+                        _logger.LogInformation("ComfyUI history state for {PromptId}: {Summary}", promptId, historyState.Summary);
+                    }
+                }
+                else
+                {
+                    var responseBody = await statusResponse.Content.ReadAsStringAsync(cancellationToken);
+                    _logger.LogWarning(
+                        "ComfyUI history request for {PromptId} returned {StatusCode}: {Body}",
+                        promptId,
+                        (int)statusResponse.StatusCode,
+                        TrimForLog(responseBody, 800));
                 }
 
                 await Task.Delay(pollDelayMs, cancellationToken);
@@ -419,4 +439,134 @@ public class ComfyUIService : IComfyUIService
 
         return null;
     }
+
+    private ComfyHistoryState InspectHistoryState(string promptId, string historyJson)
+    {
+        try
+        {
+            using var history = JsonDocument.Parse(historyJson);
+            if (!history.RootElement.TryGetProperty(promptId, out var prompt))
+            {
+                return new ComfyHistoryState(false, false, $"history entry for prompt {promptId} not present yet");
+            }
+
+            var outputsSummary = "outputs=missing";
+            var hasImages = false;
+
+            if (prompt.TryGetProperty("outputs", out var outputs))
+            {
+                if (outputs.ValueKind == JsonValueKind.Object)
+                {
+                    var nodeCount = 0;
+                    var imageCount = 0;
+                    foreach (var outputEntry in outputs.EnumerateObject())
+                    {
+                        nodeCount++;
+                        if (!outputEntry.Value.TryGetProperty("images", out var images) || images.ValueKind != JsonValueKind.Array)
+                        {
+                            continue;
+                        }
+
+                        imageCount += images.GetArrayLength();
+                    }
+
+                    hasImages = imageCount > 0;
+                    outputsSummary = $"outputs=object nodes={nodeCount} images={imageCount}";
+                }
+                else
+                {
+                    outputsSummary = $"outputs={outputs.ValueKind}";
+                }
+            }
+
+            var statusSummary = ExtractPromptStatusSummary(prompt);
+            var isTerminalFailure = LooksLikeTerminalFailure(statusSummary);
+            var combinedSummary = string.IsNullOrWhiteSpace(statusSummary)
+                ? outputsSummary
+                : $"{outputsSummary}; {statusSummary}";
+
+            if (!hasImages && string.IsNullOrWhiteSpace(statusSummary))
+            {
+                combinedSummary = $"{outputsSummary}; no status metadata present";
+            }
+
+            return new ComfyHistoryState(true, isTerminalFailure, combinedSummary);
+        }
+        catch (Exception ex)
+        {
+            return new ComfyHistoryState(false, false, $"failed to parse history JSON: {ex.Message}");
+        }
+    }
+
+    private static string ExtractPromptStatusSummary(JsonElement prompt)
+    {
+        var parts = new List<string>();
+
+        if (prompt.TryGetProperty("status", out var status))
+        {
+            AppendJsonValue(parts, "status_str", status, "status_str");
+            AppendJsonValue(parts, "completed", status, "completed");
+            AppendJsonValue(parts, "exec_info", status, "exec_info");
+            AppendJsonValue(parts, "execution_error", status, "execution_error");
+            AppendJsonValue(parts, "error", status, "error");
+            AppendJsonValue(parts, "messages", status, "messages");
+        }
+
+        AppendJsonValue(parts, "status_str", prompt, "status_str");
+        AppendJsonValue(parts, "completed", prompt, "completed");
+        AppendJsonValue(parts, "execution_error", prompt, "execution_error");
+        AppendJsonValue(parts, "error", prompt, "error");
+        AppendJsonValue(parts, "messages", prompt, "messages");
+
+        return string.Join("; ", parts.Distinct(StringComparer.Ordinal));
+    }
+
+    private static bool LooksLikeTerminalFailure(string statusSummary)
+    {
+        if (string.IsNullOrWhiteSpace(statusSummary))
+        {
+            return false;
+        }
+
+        return statusSummary.Contains("error", StringComparison.OrdinalIgnoreCase)
+            || statusSummary.Contains("failed", StringComparison.OrdinalIgnoreCase)
+            || statusSummary.Contains("exception", StringComparison.OrdinalIgnoreCase)
+            || statusSummary.Contains("interrupted", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static void AppendJsonValue(List<string> parts, string label, JsonElement source, string propertyName)
+    {
+        if (!source.TryGetProperty(propertyName, out var value))
+        {
+            return;
+        }
+
+        var rendered = value.ValueKind switch
+        {
+            JsonValueKind.String => value.GetString(),
+            JsonValueKind.True => "true",
+            JsonValueKind.False => "false",
+            JsonValueKind.Number => value.GetRawText(),
+            JsonValueKind.Array => TrimForLog(value.GetRawText(), 400),
+            JsonValueKind.Object => TrimForLog(value.GetRawText(), 400),
+            _ => value.GetRawText()
+        };
+
+        if (!string.IsNullOrWhiteSpace(rendered))
+        {
+            parts.Add($"{label}={rendered}");
+        }
+    }
+
+    private static string TrimForLog(string? value, int maxLength)
+    {
+        if (string.IsNullOrWhiteSpace(value) || value.Length <= maxLength)
+        {
+            return value ?? string.Empty;
+        }
+
+        return value[..maxLength] + "...";
+    }
+
+    private sealed record ComfyHistoryState(bool HasPrompt, bool IsTerminalFailure, string Summary);
 }

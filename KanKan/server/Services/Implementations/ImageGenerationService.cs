@@ -92,7 +92,7 @@ public class ImageGenerationService : IImageGenerationService
         };
 
         await _generationJobs.InsertOneAsync(job);
-        _logger.LogWarning(
+        _logger.LogInformation(
             "Mongo insert imageGenerationJobs: {JobId} sourceType={SourceType} generationType={GenerationType} emotion={Emotion}",
             job.JobId,
             job.SourceType,
@@ -313,7 +313,7 @@ public class ImageGenerationService : IImageGenerationService
                 .Set(j => j.Status, "processing")
                 .Set(j => j.Progress, 0);
             await _generationJobs.UpdateOneAsync(j => j.JobId == jobId, updateStatus);
-            _logger.LogWarning("Mongo update imageGenerationJobs processing: {JobId}", jobId);
+            _logger.LogInformation("Mongo update imageGenerationJobs processing: {JobId}", jobId);
 
             // Fetch original avatar from MongoDB
             var originalAvatar = await _avatarImages.Find(a => a.Id == request.AvatarId).FirstOrDefaultAsync();
@@ -365,7 +365,7 @@ public class ImageGenerationService : IImageGenerationService
                             .Set(j => j.Prompt, fullPrompt)
                             .Set(j => j.Progress, 0);
                         await _generationJobs.UpdateOneAsync(j => j.JobId == jobId, updatePrompt);
-                        _logger.LogWarning("Mongo update imageGenerationJobs prompt: {JobId}", jobId);
+                        _logger.LogInformation("Mongo update imageGenerationJobs prompt: {JobId}", jobId);
 
                         try
                         {
@@ -421,7 +421,7 @@ public class ImageGenerationService : IImageGenerationService
                 .Set(j => j.CompletedAt, DateTime.UtcNow);
 
             await _generationJobs.UpdateOneAsync(j => j.JobId == jobId, updateComplete);
-            _logger.LogWarning("Mongo update imageGenerationJobs completed: {JobId}", jobId);
+            _logger.LogInformation("Mongo update imageGenerationJobs completed: {JobId}", jobId);
 
             _logger.LogInformation("Avatar generation completed for job {JobId}", jobId);
         }
@@ -545,7 +545,7 @@ public class ImageGenerationService : IImageGenerationService
                 .Set(j => j.ErrorMessage, null);
 
             await _generationJobs.UpdateOneAsync(j => j.JobId == job.JobId, updateComplete);
-            _logger.LogWarning("Mongo update imageGenerationJobs recovered-existing: {JobId}", job.JobId);
+            _logger.LogInformation("Mongo update imageGenerationJobs recovered-existing: {JobId}", job.JobId);
             return await _generationJobs.Find(j => j.JobId == job.JobId).FirstOrDefaultAsync();
         }
 
@@ -578,7 +578,7 @@ public class ImageGenerationService : IImageGenerationService
             .Set(j => j.ErrorMessage, null);
 
         await _generationJobs.UpdateOneAsync(j => j.JobId == job.JobId, updateCompleteRecovered);
-        _logger.LogWarning("Mongo update imageGenerationJobs recovered-complete: {JobId}", job.JobId);
+        _logger.LogInformation("Mongo update imageGenerationJobs recovered-complete: {JobId}", job.JobId);
         return await _generationJobs.Find(j => j.JobId == job.JobId).FirstOrDefaultAsync();
     }
 
@@ -597,7 +597,7 @@ public class ImageGenerationService : IImageGenerationService
                 .Set(j => j.Status, "processing")
                 .Set(j => j.Progress, 0);
             await _generationJobs.UpdateOneAsync(j => j.JobId == jobId, updateStatus);
-            _logger.LogWarning("Mongo update imageGenerationJobs chat processing: {JobId}", jobId);
+            _logger.LogInformation("Mongo update imageGenerationJobs chat processing: {JobId}", jobId);
 
             // Resolve source (for naming) and input (for editing)
             var message = await _messages.Find(m => m.Id == request.MessageId).FirstOrDefaultAsync();
@@ -706,7 +706,7 @@ public class ImageGenerationService : IImageGenerationService
                 .Set(j => j.CompletedAt, DateTime.UtcNow);
 
             await _generationJobs.UpdateOneAsync(j => j.JobId == jobId, updateComplete);
-            _logger.LogWarning("Mongo update imageGenerationJobs chat completed: {JobId}", jobId);
+            _logger.LogInformation("Mongo update imageGenerationJobs chat completed: {JobId}", jobId);
 
             _logger.LogInformation("Chat image generation completed for job {JobId}", jobId);
         }
