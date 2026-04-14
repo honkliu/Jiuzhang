@@ -365,41 +365,55 @@ public class ComfyUIService : IComfyUIService
         {
             if (prompt.TryGetProperty("outputs", out var outputs))
             {
-                var output = outputs.EnumerateObject().First().Value;
-                var images = output.GetProperty("images");
-                if (images.GetArrayLength() == 0)
+                if (outputs.ValueKind != JsonValueKind.Object)
                 {
                     return null;
                 }
 
-                var image = images[0];
-                if (image.TryGetProperty("image_data", out var inlineData))
+                foreach (var outputEntry in outputs.EnumerateObject())
                 {
-                    return inlineData.GetString();
-                }
-
-                if (image.TryGetProperty("filename", out var fileNameElement))
-                {
-                    var fileName = fileNameElement.GetString();
-                    var subfolder = image.TryGetProperty("subfolder", out var subfolderElement)
-                        ? subfolderElement.GetString()
-                        : string.Empty;
-                    var imageType = image.TryGetProperty("type", out var typeElement)
-                        ? typeElement.GetString()
-                        : "output";
-                    var viewUrl = $"/view?filename={Uri.EscapeDataString(fileName ?? string.Empty)}";
-                    if (!string.IsNullOrWhiteSpace(subfolder))
+                    var output = outputEntry.Value;
+                    if (!output.TryGetProperty("images", out var images) || images.ValueKind != JsonValueKind.Array)
                     {
-                        viewUrl += $"&subfolder={Uri.EscapeDataString(subfolder)}";
-                    }
-                    if (!string.IsNullOrWhiteSpace(imageType))
-                    {
-                        viewUrl += $"&type={Uri.EscapeDataString(imageType)}";
+                        continue;
                     }
 
-                    var imageBytes = await _httpClient.GetByteArrayAsync(viewUrl, cancellationToken);
-                    return Convert.ToBase64String(imageBytes);
+                    if (images.GetArrayLength() == 0)
+                    {
+                        continue;
+                    }
+
+                    var image = images[0];
+                    if (image.TryGetProperty("image_data", out var inlineData))
+                    {
+                        return inlineData.GetString();
+                    }
+
+                    if (image.TryGetProperty("filename", out var fileNameElement))
+                    {
+                        var fileName = fileNameElement.GetString();
+                        var subfolder = image.TryGetProperty("subfolder", out var subfolderElement)
+                            ? subfolderElement.GetString()
+                            : string.Empty;
+                        var imageType = image.TryGetProperty("type", out var typeElement)
+                            ? typeElement.GetString()
+                            : "output";
+                        var viewUrl = $"/view?filename={Uri.EscapeDataString(fileName ?? string.Empty)}";
+                        if (!string.IsNullOrWhiteSpace(subfolder))
+                        {
+                            viewUrl += $"&subfolder={Uri.EscapeDataString(subfolder)}";
+                        }
+                        if (!string.IsNullOrWhiteSpace(imageType))
+                        {
+                            viewUrl += $"&type={Uri.EscapeDataString(imageType)}";
+                        }
+
+                        var imageBytes = await _httpClient.GetByteArrayAsync(viewUrl, cancellationToken);
+                        return Convert.ToBase64String(imageBytes);
+                    }
                 }
+
+                return null;
             }
         }
 
