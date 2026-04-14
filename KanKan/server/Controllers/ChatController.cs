@@ -779,6 +779,7 @@ public class ChatController : ControllerBase
             {
                 Id = message.Id,
                 ChatId = message.ChatId,
+                ClientRequestId = request.ClientRequestId,
                 SenderId = message.SenderId,
                 SenderName = message.SenderName,
                 SenderAvatar = message.SenderAvatar,

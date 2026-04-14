@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Box, Button, CircularProgress, IconButton, Modal, TextField, Typography, useMediaQuery, useTheme } from '@mui/material';
+import { Box, Button, ButtonBase, CircularProgress, Dialog, DialogContent, IconButton, Modal, TextField, Typography, useMediaQuery, useTheme } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
@@ -14,6 +14,7 @@ import { imageGenerationService } from '@/services/imageGeneration.service';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { AvatarQuickPicker } from '@/components/Avatar/AvatarQuickPicker';
 import { PromptComposer, type SelectedPrompt } from '@/components/Avatar/PromptComposer';
+import { ImageHoverPreview } from '@/components/Shared/ImageHoverPreview';
 
 const BoxAny = Box as any;
 
@@ -21,6 +22,13 @@ interface LightboxGroup {
   sourceUrl: string;
   messageId: string;
   canEdit: boolean;
+}
+
+interface ScopedSelectableImage {
+  key: string;
+  url: string;
+  label: string;
+  kind: 'source' | 'edit';
 }
 
 interface ImageLightboxProps {
@@ -43,10 +51,13 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
   const { t, language } = useLanguage();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isHoverCapable = useMediaQuery('(hover: hover) and (pointer: fine)');
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [activeGroupIndex, setActiveGroupIndex] = useState(initialGroupIndex ?? 0);
   const [prompt, setPrompt] = useState('');
   const [composerOpen, setComposerOpen] = useState(false);
+  const [imagePickerOpen, setImagePickerOpen] = useState(false);
+  const [selectedReferenceImageUrl, setSelectedReferenceImageUrl] = useState<string | null>(null);
   const [selectedPrompts, setSelectedPrompts] = useState<SelectedPrompt[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedByGroup, setGeneratedByGroup] = useState<Record<string, string[]>>({});
@@ -91,11 +102,48 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
   const imgRef = useRef<HTMLImageElement | null>(null);
   const thumbnailRefs = useRef<(HTMLDivElement | null)[]>([]);
   const thumbnailStripRef = useRef<HTMLDivElement | null>(null);
+  const suppressSelectedImageClearUntilRef = useRef(0);
   const isIos = /iP(ad|hone|od)/i.test(navigator.userAgent);
 
   const hasGroups = Boolean(groups && groups.length > 0);
   const activeGroup = hasGroups ? groups![Math.min(activeGroupIndex, groups!.length - 1)] : null;
   const sourceImages = useMemo(() => (hasGroups ? groups!.map((group) => group.sourceUrl) : images), [groups, hasGroups, images]);
+  const getImageDisplayName = useCallback((url: string) => {
+    const fileName = url.split('?')[0].split('/').filter(Boolean).pop() ?? url;
+    const decoded = decodeURIComponent(fileName);
+    return decoded.replace(/\.[^.]+$/, '');
+  }, []);
+
+  const scopedSelectableImages = useMemo(() => {
+    if (!groups?.length) {
+      return [] as ScopedSelectableImage[];
+    }
+
+    const seen = new Set<string>();
+    const results: ScopedSelectableImage[] = [];
+    for (const group of groups) {
+      const append = (url: string, kind: 'source' | 'edit') => {
+        if (!url || seen.has(url)) {
+          return;
+        }
+
+        seen.add(url);
+        results.push({
+          key: `${group.messageId}:${kind}:${url}`,
+          url,
+          label: getImageDisplayName(url),
+          kind,
+        });
+      };
+
+      append(group.sourceUrl, 'source');
+      for (const url of generatedByGroup[group.messageId] || []) {
+        append(url, 'edit');
+      }
+    }
+
+    return results;
+  }, [generatedByGroup, getImageDisplayName, groups]);
 
   const activeGeneratedUrls = useMemo(() => {
     if (!activeGroup) return [];
@@ -136,6 +184,12 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
     return Number(nextZoom.toFixed(2));
   };
   const zoomPercent = Math.round(zoom * 100);
+  const actionControlHeight = isMobile ? 35 : 37;
+  const pickerPreviewBehavior = {
+    openOnHover: isHoverCapable,
+    openOnLongPress: !isHoverCapable,
+    openOnTap: false,
+  };
 
   useEffect(() => {
     if (!open) {
@@ -162,6 +216,8 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
     setIsImageReady(false);
     setRenderedImage('');
     setShowSourceInEdits(true);
+    setImagePickerOpen(false);
+    setSelectedReferenceImageUrl(null);
   }, [open, initialIndex, initialGroupIndex, hasGroups]);
 
   useEffect(() => {
@@ -747,6 +803,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
         generationType: 'custom',
         messageId: activeGroup.messageId,
         mediaUrl: displayedImage,
+        secondaryMediaUrl: selectedReferenceImageUrl ?? undefined,
         customPrompts: [trimmed],
         extraPrompt: trimmed,
       });
@@ -760,6 +817,8 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
         setThumbnailMode('edits');
         setShowSourceInEdits(false);
       }
+
+      setSelectedReferenceImageUrl(null);
     } finally {
       setIsGenerating(false);
     }
@@ -1071,6 +1130,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
                         '& .MuiOutlinedInput-root': {
                           backgroundColor: 'rgba(255,255,255,0.08)',
                           minHeight: isMobile ? 40 : 42,
+                          borderRadius: '8px',
                         },
                         '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.25)' },
                         '& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline': {
@@ -1079,11 +1139,68 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
                       }}
                     />
                     <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 0.25, flexShrink: 0 }}>
+                      {selectedReferenceImageUrl && (
+                        <ImageHoverPreview
+                          src={selectedReferenceImageUrl}
+                          alt={t('image.selectedImage')}
+                          maxSize={420}
+                          openOnHover={isHoverCapable}
+                          openOnLongPress={!isHoverCapable}
+                          openOnTap={false}
+                          onOpenChange={(open) => {
+                            if (open && !isHoverCapable) {
+                              suppressSelectedImageClearUntilRef.current = Date.now() + 500;
+                            }
+                          }}
+                        >
+                          {(previewProps) => (
+                            <Button
+                              {...previewProps}
+                              onClick={(event) => {
+                                previewProps.onClick?.(event);
+                                if (event.defaultPrevented) {
+                                  return;
+                                }
+
+                                if (Date.now() < suppressSelectedImageClearUntilRef.current) {
+                                  return;
+                                }
+
+                                setSelectedReferenceImageUrl(null);
+                              }}
+                              title={t('image.clearSelectedImage')}
+                              sx={{
+                                minWidth: 0,
+                                width: actionControlHeight,
+                                height: actionControlHeight,
+                                p: 0,
+                                borderRadius: '2px',
+                                overflow: 'hidden',
+                                border: '1px solid rgba(255,255,255,0.2)',
+                                bgcolor: 'rgba(255,255,255,0.06)',
+                                flexShrink: 0,
+                              }}
+                            >
+                              <BoxAny
+                                component="img"
+                                src={selectedReferenceImageUrl}
+                                alt={t('image.selectedImage')}
+                                sx={{
+                                  display: 'block',
+                                  width: '100%',
+                                  height: '100%',
+                                  objectFit: 'cover',
+                                }}
+                              />
+                            </Button>
+                          )}
+                        </ImageHoverPreview>
+                      )}
                       <IconButton
                         size="small"
                         title={t('promptComposer.browsePrompts')}
                         onClick={() => setComposerOpen(true)}
-                        sx={{ color: 'rgba(255,255,255,0.85)' }}
+                        sx={{ color: 'rgba(255,255,255,0.85)', width: actionControlHeight, height: actionControlHeight }}
                       >
                         <LibraryBooksIcon fontSize="small" />
                       </IconButton>
@@ -1091,15 +1208,31 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
                         size="small"
                         title={t('promptComposer.browsePrompts')}
                         onClick={() => setShowPromptTools((prev) => !prev)}
-                        sx={{ color: showPromptTools ? 'white' : 'rgba(255,255,255,0.85)' }}
+                        sx={{ color: showPromptTools ? 'white' : 'rgba(255,255,255,0.85)', width: actionControlHeight, height: actionControlHeight }}
                       >
                         <TuneIcon fontSize="small" />
                       </IconButton>
                       <Button
+                        variant={selectedReferenceImageUrl ? 'outlined' : 'text'}
+                        onClick={() => setImagePickerOpen(true)}
+                        disabled={isGenerating || scopedSelectableImages.length === 0}
+                        sx={{
+                          minWidth: isMobile ? 50 : 56,
+                          minHeight: actionControlHeight,
+                          px: isMobile ? 0.75 : 1,
+                          flexShrink: 0,
+                          color: 'rgba(255,255,255,0.92)',
+                          borderColor: 'rgba(255,255,255,0.3)',
+                          lineHeight: 1,
+                        }}
+                      >
+                        {t('image.selectImageAction')}
+                      </Button>
+                      <Button
                         variant="contained"
                         onClick={handlePicEdit}
                         disabled={isGenerating || (!prompt.trim() && selectedPrompts.length === 0)}
-                        sx={{ minWidth: isMobile ? 78 : 92, px: isMobile ? 1.25 : 1.75, flexShrink: 0 }}
+                        sx={{ minWidth: isMobile ? 50 : 56, minHeight: actionControlHeight, px: isMobile ? 0.9 : 1.1, flexShrink: 0, lineHeight: 1 }}
                       >
                         {isGenerating ? <CircularProgress size={18} sx={{ color: 'white' }} /> : t('image.editAction')}
                       </Button>
@@ -1391,6 +1524,92 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
               setComposerOpen(false);
             }}
           />
+        )}
+
+        {hasGroups && activeGroup?.canEdit && (
+          <Dialog
+            open={imagePickerOpen}
+            onClose={() => setImagePickerOpen(false)}
+            fullWidth
+            maxWidth="md"
+            PaperProps={{
+              sx: {
+                bgcolor: 'background.paper',
+                backgroundImage: 'none',
+                opacity: 1,
+                borderRadius: '10px',
+              },
+            }}
+          >
+            <DialogContent
+              sx={{
+                p: 1,
+                bgcolor: 'background.paper',
+                backgroundImage: 'none',
+              }}
+            >
+              <BoxAny
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(96px, 1fr))',
+                  gap: 1,
+                }}
+              >
+                {scopedSelectableImages.map((item) => {
+                  const isSelected = selectedReferenceImageUrl === item.url;
+                  return (
+                    <ImageHoverPreview
+                      key={item.key}
+                      src={item.url}
+                      alt={item.label}
+                      maxSize={420}
+                      {...pickerPreviewBehavior}
+                    >
+                      {(previewProps) => (
+                        <ButtonBase
+                          {...previewProps}
+                          onClick={() => {
+                            setSelectedReferenceImageUrl(item.url);
+                            setImagePickerOpen(false);
+                          }}
+                          sx={{
+                            display: 'block',
+                            width: '100%',
+                            borderRadius: '5px',
+                            border: isSelected ? '2px solid' : '1px solid',
+                            borderColor: isSelected ? 'primary.main' : 'divider',
+                            cursor: 'pointer',
+                            overflow: 'hidden',
+                            lineHeight: 0,
+                            backgroundColor: 'rgba(2, 6, 23, 0.02)',
+                            boxShadow: isSelected ? '0 10px 24px rgba(25, 118, 210, 0.20)' : 'none',
+                            transition: 'transform 120ms ease, box-shadow 120ms ease',
+                            '&:hover': {
+                              transform: 'translateY(-1px)',
+                              boxShadow: '0 10px 24px rgba(2, 6, 23, 0.10)',
+                            },
+                            '&:focus-visible': {
+                              boxShadow: '0 0 0 3px rgba(25, 118, 210, 0.25)',
+                              outline: 'none',
+                            },
+                          }}
+                        >
+                          <BoxAny
+                            component="img"
+                            src={item.url}
+                            alt={item.label}
+                            loading="eager"
+                            decoding="sync"
+                            sx={{ display: 'block', width: '100%', aspectRatio: '1 / 1', objectFit: 'cover', borderRadius: 'inherit' }}
+                          />
+                        </ButtonBase>
+                      )}
+                    </ImageHoverPreview>
+                  );
+                })}
+              </BoxAny>
+            </DialogContent>
+          </Dialog>
         )}
 
         {!hasGroups && images.length > 1 && (

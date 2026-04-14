@@ -37,10 +37,11 @@ import {
 } from '@mui/icons-material';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState, AppDispatch } from '@/store';
-import { fetchMessages, addMessage, updateChat } from '@/store/chatSlice';
+import { fetchMessages, addMessage, removeMessage, updateChat } from '@/store/chatSlice';
 import { MessageBubble } from './MessageBubble';
 import { signalRService } from '@/services/signalr.service';
 import { chatService, type Chat, type Message } from '@/services/chat.service';
+import { imageGenerationService } from '@/services/imageGeneration.service';
 import { mediaService } from '@/services/media.service';
 import { avatarService, type EmotionThumbnailResult } from '@/services/avatar.service';
 import { contactService } from '@/services/contact.service';
@@ -161,7 +162,7 @@ interface Chat2DSegment {
   fileName?: string;
 }
 
-type ChatCommandId = '/w' | '/wa' | '/h' | '/b' | '/i' | '/r';
+type ChatCommandId = '/w' | '/wa' | '/h' | '/b' | '/i' | '/r' | '/p';
 
 interface ChatMessagesProps {
   activeChat: Chat | null;
@@ -406,6 +407,7 @@ const ChatInputPanel: React.FC<ChatInputPanelProps> = React.memo(({
 
   const scheduleDraftSend = useCallback((text: string) => {
     if (!activeChatId) return;
+
     const sendDraft = () => {
       if (lastDraftRef.current === text) return;
       lastDraftRef.current = text;
@@ -417,10 +419,8 @@ const ChatInputPanel: React.FC<ChatInputPanelProps> = React.memo(({
       window.clearTimeout(draftDebounceRef.current);
     }
 
-    draftDebounceRef.current = window.setTimeout(() => {
-      sendDraft();
-      draftDebounceRef.current = null;
-    }, 200);
+    sendDraft();
+    draftDebounceRef.current = null;
   }, [activeChatId]);
 
   const handlePickFile = useCallback(() => {
@@ -493,12 +493,48 @@ const ChatInputPanel: React.FC<ChatInputPanelProps> = React.memo(({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const nextValue = e.target.value;
+    const nativeEvent = e.nativeEvent as InputEvent | undefined;
+    const inputType = nativeEvent?.inputType || '';
+    const isInsertion = inputType.startsWith('insert') || inputType === '';
+
+    if (isInsertion && (nextValue === '/p' || nextValue === '/p ')) {
+      applyCommandDraftText('/p');
+      return;
+    }
+
     setMessageText(nextValue);
     syncSelection(e.target);
     if (activeChatId) {
       scheduleDraftSend(nextValue);
     }
   };
+
+  const getCommandDraftText = useCallback((commandId: ChatCommandId) => {
+    if (commandId === '/p') {
+      return `${commandId} ${t('chat.command.template.p')}`;
+    }
+
+    return `${commandId} `;
+  }, [t]);
+
+  const applyCommandDraftText = useCallback((commandId: ChatCommandId) => {
+    const nextValue = getCommandDraftText(commandId);
+    setMessageText(nextValue);
+    if (activeChatId) {
+      scheduleDraftSend(nextValue);
+    }
+
+    const cursor = nextValue.length;
+    selectionStartRef.current = cursor;
+    selectionEndRef.current = cursor;
+
+    window.requestAnimationFrame(() => {
+      const input = inputRef.current;
+      if (!input) return;
+      input.focus();
+      input.setSelectionRange(cursor, cursor);
+    });
+  }, [activeChatId, getCommandDraftText, scheduleDraftSend]);
 
   const handleKeyPress = async (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -528,7 +564,7 @@ const ChatInputPanel: React.FC<ChatInputPanelProps> = React.memo(({
     } else if (e.key === 'Tab') {
       e.preventDefault();
       const next = commandSuggestions[commandSelectedIndex] ?? commandSuggestions[0];
-      setMessageText(`${next.id} `);
+      applyCommandDraftText(next.id);
     }
   };
 
@@ -782,7 +818,7 @@ const ChatInputPanel: React.FC<ChatInputPanelProps> = React.memo(({
                     color={idx === commandSelectedIndex ? 'primary' : 'default'}
                     variant={idx === commandSelectedIndex ? 'filled' : 'outlined'}
                     onMouseEnter={() => setCommandSelectedIndex(idx)}
-                    onClick={() => setMessageText(`${c.id} `)}
+                    onClick={() => applyCommandDraftText(c.id)}
                     sx={{ fontFamily: 'monospace' }}
                   />
                 ))}
@@ -971,6 +1007,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
       { id: '/b' as const, description: t('chat.command.desc.b'), example: `/b ${exampleText}` },
       { id: '/i' as const, description: t('chat.command.desc.i'), example: `/i ${exampleText}` },
       { id: '/r' as const, description: t('chat.command.desc.r'), example: `/r ${exampleText}` },
+      { id: '/p' as const, description: t('chat.command.desc.p'), example: `/p ${exampleText}` },
     ];
   }, [t]);
 
@@ -1017,11 +1054,12 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
     }
 
     switch (cmd as ChatCommandId) {
-      case '/h':
+      case '/h': {
         addLocalInfoMessage(
           [t('chat.command.available'), ...chatCommands.map((c) => `  ${c.example}  — ${c.description}`)].join('\n')
         );
         return;
+      }
 
       case '/w': {
         const names = getRealParticipants(activeChat.participants).map((p) => p.displayName);
@@ -1079,6 +1117,56 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
           text: formatted,
         });
         dispatch(addMessage(message));
+        return;
+      }
+
+      case '/p': {
+        if (!rest) {
+          addLocalInfoMessage(t('chat.command.usage.p'));
+          return;
+        }
+
+        const targetChatId = activeChat.id;
+        const primaryAvatar = rightAvatar?.trim();
+        const secondaryAvatar = leftAvatar?.trim();
+        if (!primaryAvatar || !secondaryAvatar) {
+          addLocalInfoMessage(t('chat.command.photoAvatarMissing'));
+          return;
+        }
+
+        addLocalInfoMessage(t('chat.command.generatingPhoto'));
+
+        void (async () => {
+          try {
+            const jobResponse = await imageGenerationService.generate({
+              sourceType: 'chat_image',
+              generationType: 'custom',
+              mediaUrl: primaryAvatar,
+              secondaryMediaUrl: secondaryAvatar,
+              customPrompts: [rest],
+              variationCount: 1,
+            });
+
+            const job = await imageGenerationService.pollJobUntilComplete(jobResponse.jobId);
+            const generatedUrl = job.results?.generatedUrls?.[0];
+            if (job.status !== 'completed' || !generatedUrl) {
+              throw new Error(job.errorMessage || t('chat.command.photoFailed'));
+            }
+
+            const fileName = generatedUrl.split('/').pop()?.split('?')[0] || 'photo.png';
+            const message = await chatService.sendMessage(targetChatId, {
+              messageType: 'image',
+              mediaUrl: generatedUrl,
+              thumbnailUrl: generatedUrl,
+              fileName,
+            });
+            dispatch(addMessage(message));
+          } catch (error) {
+            console.error('Failed to generate pair photo:', error);
+            addLocalInfoMessage(t('chat.command.photoFailed'));
+          }
+        })();
+
         return;
       }
     }
@@ -1163,15 +1251,38 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
     }
 
     setSending(true);
+    const clientRequestId = `client_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+    const optimisticMessage = {
+      id: `pending_${clientRequestId}`,
+      clientRequestId,
+      chatId: activeChat.id,
+      senderId: user?.id || '',
+      senderName: user?.displayName || '',
+      senderAvatar: rightAvatar || user?.avatarUrl || '',
+      senderAvatarSourceId: undefined,
+      senderAvatarEmotion: rightMood || undefined,
+      senderGender: user?.gender || 'male',
+      messageType: 'text',
+      text,
+      timestamp: new Date().toISOString(),
+      deliveredTo: [],
+      readBy: [],
+      reactions: {},
+      isDeleted: false,
+    };
+
+    dispatch(addMessage(optimisticMessage as any));
 
     try {
       const message = await chatService.sendMessage(activeChat.id, {
+        clientRequestId,
         messageType: 'text',
         text,
       });
       dispatch(addMessage(message));
       return true;
     } catch (error: any) {
+      dispatch(removeMessage({ chatId: activeChat.id, messageId: optimisticMessage.id }));
       console.error('Failed to send message:', error);
       if (error?.response?.status === 403) {
         addLocalInfoMessage(t('chat.notFriends'));
@@ -1739,7 +1850,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
       gender: user.gender,
     };
   }, [user, rightAvatar]);
-
 
   useEffect(() => {
     if (!inputRootRef.current || !activeChat?.id) return;

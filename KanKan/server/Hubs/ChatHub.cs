@@ -370,6 +370,7 @@ public class ChatHub : Hub
         {
             Id = newMessage.Id,
             ChatId = newMessage.ChatId,
+            ClientRequestId = message.ClientRequestId,
             SenderId = newMessage.SenderId,
             SenderName = newMessage.SenderName,
             SenderAvatar = newMessage.SenderAvatar,
@@ -500,19 +501,6 @@ public class ChatHub : Hub
 
         if (string.IsNullOrEmpty(userId))
             return;
-
-        // Skip draft for non-friends in direct chats
-        var chat = await _chatRepository.GetByIdAsync(chatId);
-        if (chat != null && chat.ChatType == "direct")
-        {
-            var other = chat.Participants.FirstOrDefault(p => p.UserId != userId);
-            if (other != null && other.UserId != ChatDomain.AgentUserId)
-            {
-                var contact = await _contactRepository.GetByUserAndContactAsync(userId, other.UserId);
-                if (contact == null || contact.Status != "accepted")
-                    return;
-            }
-        }
 
         await Clients.OthersInGroup(chatId).SendAsync("DraftChanged", chatId, userId, userName, text);
     }

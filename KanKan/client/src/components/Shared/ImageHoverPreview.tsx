@@ -5,6 +5,7 @@ export interface ImageHoverPreviewProps {
   src?: string | null;
   alt?: string;
   maxSize?: number;
+  openDelayMs?: number;
   interactive?: boolean;
   disabled?: boolean;
   openOnHover?: boolean;
@@ -52,6 +53,7 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
   src,
   alt,
   maxSize,
+  openDelayMs = 350,
   interactive = true,
   disabled = false,
   openOnHover = true,
@@ -92,6 +94,9 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
   const maxHeight = typeof maxSize === 'number'
     ? Math.min(maxSize, viewportHeight * viewportCap, absoluteCap)
     : Math.min(viewportHeight * viewportCap, absoluteCap);
+  const previewPaddingPx = 8;
+  const imageMaxWidth = Math.max(0, maxWidth - previewPaddingPx);
+  const imageMaxHeight = Math.max(0, maxHeight - previewPaddingPx);
 
   const handleOpen = (event: React.MouseEvent<HTMLElement> | React.FocusEvent<HTMLElement>) => {
     if (!src || disabled || isTouchDevice) return;
@@ -109,7 +114,7 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
       setAnchorEl(currentTarget);
       onOpenChange?.(true);
       openTimerRef.current = null;
-    }, 350);
+    }, openDelayMs);
   };
 
   const closePreview = React.useCallback((force: boolean = false) => {
@@ -358,7 +363,6 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
         PaperProps={{
           ref: popoverPaperRef,
           sx: {
-            p: 0.5,
             maxWidth,
             maxHeight,
             borderRadius: 1,
@@ -399,27 +403,39 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
         }}
       >
         <Box
-          component="img"
-          src={src || undefined}
-          alt={alt || 'Image preview'}
           onTouchStart={isTouchDevice ? stopTouchPropagation : undefined}
           onTouchEnd={isTouchDevice ? stopTouchPropagation : undefined}
-          onContextMenu={(event: React.MouseEvent<HTMLImageElement>) => {
-            event.preventDefault();
-          }}
           sx={{
-            display: 'block',
+            p: 0.5,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxSizing: 'border-box',
             maxWidth,
             maxHeight,
-            width: 'auto',
-            height: 'auto',
-            objectFit: 'contain',
-            WebkitTouchCallout: 'none',
-            WebkitUserSelect: 'none',
-            userSelect: 'none',
-            WebkitUserDrag: 'none',
           }}
-        />
+        >
+          <Box
+            component="img"
+            src={src || undefined}
+            alt={alt || 'Image preview'}
+            onContextMenu={(event: React.MouseEvent<HTMLImageElement>) => {
+              event.preventDefault();
+            }}
+            sx={{
+              display: 'block',
+              maxWidth: imageMaxWidth,
+              maxHeight: imageMaxHeight,
+              width: 'auto',
+              height: 'auto',
+              objectFit: 'contain',
+              WebkitTouchCallout: 'none',
+              WebkitUserSelect: 'none',
+              userSelect: 'none',
+              WebkitUserDrag: 'none',
+            }}
+          />
+        </Box>
       </Popover>
     </>
   );

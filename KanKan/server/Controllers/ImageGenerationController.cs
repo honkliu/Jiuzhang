@@ -43,8 +43,8 @@ public class ImageGenerationController : ControllerBase
             if (request.SourceType == "avatar" && string.IsNullOrEmpty(request.AvatarId))
                 return BadRequest(new { message = "AvatarId is required for avatar generation" });
 
-            if (request.SourceType == "chat_image" && (string.IsNullOrEmpty(request.MessageId) || string.IsNullOrEmpty(request.MediaUrl)))
-                return BadRequest(new { message = "MessageId and MediaUrl are required for chat image generation" });
+            if (request.SourceType == "chat_image" && string.IsNullOrEmpty(request.MediaUrl))
+                return BadRequest(new { message = "MediaUrl is required for chat image generation" });
 
             // Call unified service
             var jobId = await _imageGenerationService.GenerateAsync(new GenerationRequest
@@ -54,6 +54,7 @@ public class ImageGenerationController : ControllerBase
                 AvatarId = request.AvatarId,
                 MessageId = request.MessageId,
                 MediaUrl = request.MediaUrl,
+                SecondaryMediaUrl = request.SecondaryMediaUrl,
                 GenerationType = request.GenerationType,
                 Emotion = request.Emotion,
                 Mode = request.Mode,
@@ -152,6 +153,7 @@ public class UnifiedGenerationRequest
     // For chat_image source
     public string? MessageId { get; set; }
     public string? MediaUrl { get; set; }
+    public string? SecondaryMediaUrl { get; set; }
 
     // Generation parameters
     public string? Emotion { get; set; }

@@ -32,6 +32,7 @@ const restorePipesInMath = () => {
 
 const remarkPlugins = [remarkMath, remarkGfm, restorePipesInMath];
 const rehypePlugins = [rehypeKatex];
+const redTagPattern = /\[red\]([\s\S]*?)\[\/red\]/gi;
 
 const escapePipesInMathForGfm = (input: string): string => {
   let out = '';
@@ -103,6 +104,72 @@ const escapePipesInMathForGfm = (input: string): string => {
   }
 
   return out;
+};
+
+const preserveBoundaryWhitespace = (value: string) => value.replace(/ /g, '\u00A0').replace(/\t/g, '\u00A0\u00A0\u00A0\u00A0');
+
+const renderMarkdownFragment = (key: string, text: string, sx?: Record<string, unknown>) => {
+  const leadingWhitespace = text.match(/^\s+/)?.[0] ?? '';
+  const trailingWhitespace = text.match(/\s+$/)?.[0] ?? '';
+  const startIndex = leadingWhitespace.length;
+  const endIndex = trailingWhitespace.length > 0 ? text.length - trailingWhitespace.length : text.length;
+  const coreText = text.slice(startIndex, endIndex);
+
+  return (
+    <BoxAny
+      key={key}
+      component="span"
+      sx={{ whiteSpace: 'break-spaces', '& p': { margin: 0, display: 'inline' }, ...(sx || {}) }}
+    >
+      {leadingWhitespace ? preserveBoundaryWhitespace(leadingWhitespace) : null}
+      {coreText ? (
+        <ReactMarkdown remarkPlugins={remarkPlugins} rehypePlugins={rehypePlugins}>
+          {escapePipesInMathForGfm(coreText)}
+        </ReactMarkdown>
+      ) : null}
+      {trailingWhitespace ? preserveBoundaryWhitespace(trailingWhitespace) : null}
+    </BoxAny>
+  );
+};
+
+const renderMarkdownWithRedTags = (input: string) => {
+  const matches = Array.from(input.matchAll(redTagPattern));
+  if (matches.length === 0) {
+    return (
+      <ReactMarkdown remarkPlugins={remarkPlugins} rehypePlugins={rehypePlugins}>
+        {escapePipesInMathForGfm(input)}
+      </ReactMarkdown>
+    );
+  }
+
+  const nodes: React.ReactNode[] = [];
+  let lastIndex = 0;
+
+  matches.forEach((match, index) => {
+    const matchStart = match.index ?? 0;
+    const matchEnd = matchStart + match[0].length;
+    const innerText = match[1] ?? '';
+
+    if (matchStart > lastIndex) {
+      const plainText = input.slice(lastIndex, matchStart);
+      if (plainText) {
+        nodes.push(renderMarkdownFragment(`plain-${index}-${matchStart}`, plainText));
+      }
+    }
+
+    nodes.push(renderMarkdownFragment(`red-${index}-${matchStart}`, innerText, { color: 'error.main', '& a': { color: 'inherit' } }));
+
+    lastIndex = matchEnd;
+  });
+
+  if (lastIndex < input.length) {
+    const trailingText = input.slice(lastIndex);
+    if (trailingText) {
+      nodes.push(renderMarkdownFragment(`plain-tail-${lastIndex}`, trailingText));
+    }
+  }
+
+  return nodes;
 };
 
 interface ParticipantInfo {
@@ -349,9 +416,7 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
                     '& pre code': { padding: 0, backgroundColor: 'transparent' },
                   }}
                 >
-                  <ReactMarkdown remarkPlugins={remarkPlugins} rehypePlugins={rehypePlugins}>
-                    {escapePipesInMathForGfm(segment.text || '')}
-                  </ReactMarkdown>
+                  {renderMarkdownWithRedTags(segment.text || '')}
                 </BoxAny>
               );
             }

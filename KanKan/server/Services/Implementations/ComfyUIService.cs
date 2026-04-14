@@ -48,12 +48,12 @@ public class ComfyUIService : IComfyUIService
         }
     }
 
-    public async Task<string> GenerateImageAsync(string imageBase64, string prompt, CancellationToken cancellationToken = default)
+    public async Task<string> GenerateImageAsync(string imageBase64, string prompt, string? secondaryImageBase64 = null, CancellationToken cancellationToken = default)
     {
         using var gate = await AcquireGenerationSlotAsync(cancellationToken);
         try
         {
-            var promptId = await SubmitPromptAsync(imageBase64, prompt, cancellationToken);
+            var promptId = await SubmitPromptAsync(imageBase64, prompt, secondaryImageBase64, cancellationToken);
             return await FetchResultAsync(promptId, cancellationToken);
         }
         catch (Exception ex)
@@ -69,13 +69,13 @@ public class ComfyUIService : IComfyUIService
         return new GenerationGateHandle(_generationGate);
     }
 
-    public async Task<List<string>> GenerateImagesAsync(string imageBase64, string prompt, int count, CancellationToken cancellationToken = default)
+    public async Task<List<string>> GenerateImagesAsync(string imageBase64, string prompt, int count, string? secondaryImageBase64 = null, CancellationToken cancellationToken = default)
     {
         var tasks = new List<Task<string>>();
 
         for (int i = 0; i < count; i++)
         {
-            tasks.Add(GenerateImageAsync(imageBase64, prompt, cancellationToken));
+            tasks.Add(GenerateImageAsync(imageBase64, prompt, secondaryImageBase64, cancellationToken));
         }
 
         var results = await Task.WhenAll(tasks);
@@ -101,9 +101,9 @@ public class ComfyUIService : IComfyUIService
         }
     }
 
-    public async Task<string> SubmitPromptAsync(string imageBase64, string prompt, CancellationToken cancellationToken = default)
+    public async Task<string> SubmitPromptAsync(string imageBase64, string prompt, string? secondaryImageBase64 = null, CancellationToken cancellationToken = default)
     {
-        var workflow = await BuildWorkflowAsync(imageBase64, prompt, cancellationToken);
+        var workflow = await BuildWorkflowAsync(imageBase64, prompt, secondaryImageBase64, cancellationToken);
         var response = await _httpClient.PostAsync(
             "/prompt",
             new StringContent(JsonSerializer.Serialize(workflow), Encoding.UTF8, "application/json"),
@@ -161,12 +161,12 @@ public class ComfyUIService : IComfyUIService
         };
     }
 
-    private async Task<object> BuildWorkflowAsync(string imageBase64, string prompt, CancellationToken cancellationToken)
+    private async Task<object> BuildWorkflowAsync(string imageBase64, string prompt, string? secondaryImageBase64, CancellationToken cancellationToken)
     {
-        var workflowPath = _configuration["ComfyUI:WorkflowPath"];
+        var workflowPath = ResolveWorkflowPath(!string.IsNullOrWhiteSpace(secondaryImageBase64));
         if (string.IsNullOrWhiteSpace(workflowPath) || !File.Exists(workflowPath))
         {
-            throw new InvalidOperationException("ComfyUI workflow file is missing. Configure ComfyUI:WorkflowPath with an API workflow JSON.");
+            throw new InvalidOperationException("ComfyUI workflow file is missing. Configure the ComfyUI workflow path with an API workflow JSON.");
         }
 
         var workflowJson = await File.ReadAllTextAsync(workflowPath, cancellationToken);
@@ -191,15 +191,31 @@ public class ComfyUIService : IComfyUIService
             };
         }
 
-        var needsUpload = NeedsImageUpload(promptGraph);
-        string? uploadedFileName = null;
-        if (needsUpload)
+        var sourceImages = new List<string> { imageBase64 };
+        if (!string.IsNullOrWhiteSpace(secondaryImageBase64))
         {
-            uploadedFileName = await UploadImageAsync(imageBase64, cancellationToken);
+            sourceImages.Add(secondaryImageBase64);
         }
 
-        ApplyPromptOverrides(promptGraph, imageBase64, uploadedFileName, prompt);
+        var needsUpload = NeedsImageUpload(promptGraph);
+        var uploadedFileNames = new List<string>();
+        if (needsUpload)
+        {
+            uploadedFileNames = await UploadImagesAsync(sourceImages, cancellationToken);
+        }
+
+        ApplyPromptOverrides(promptGraph, sourceImages, uploadedFileNames, prompt);
         return workflow;
+    }
+
+    private string? ResolveWorkflowPath(bool hasSecondaryImage)
+    {
+        if (!hasSecondaryImage)
+        {
+            return _configuration["ComfyUI:WorkflowPath"];
+        }
+
+        return _configuration["ComfyUI:MultiImageWorkflowPath"];
     }
 
     private static bool NeedsImageUpload(JsonObject promptGraph)
@@ -216,9 +232,14 @@ public class ComfyUIService : IComfyUIService
         return false;
     }
 
-    private static void ApplyPromptOverrides(JsonObject promptGraph, string imageBase64, string? uploadedFileName, string prompt)
+    private static void ApplyPromptOverrides(JsonObject promptGraph, IReadOnlyList<string> sourceImages, IReadOnlyList<string> uploadedFileNames, string prompt)
     {
-        foreach (var node in promptGraph)
+        var base64Index = 0;
+        var uploadIndex = 0;
+
+        foreach (var node in promptGraph
+            .OrderBy(entry => int.TryParse(entry.Key, out var numericKey) ? numericKey : int.MaxValue)
+            .ThenBy(entry => entry.Key, StringComparer.Ordinal))
         {
             if (node.Value is not JsonObject nodeObj)
             {
@@ -236,13 +257,19 @@ public class ComfyUIService : IComfyUIService
             if (string.Equals(classType, "ETN_LoadImageBase64", StringComparison.OrdinalIgnoreCase)
                 && inputs.ContainsKey("image"))
             {
-                inputs["image"] = imageBase64;
+                if (base64Index < sourceImages.Count)
+                {
+                    inputs["image"] = sourceImages[base64Index];
+                }
+                base64Index++;
             }
 
             if (string.Equals(classType, "LoadImage", StringComparison.OrdinalIgnoreCase)
-                && inputs.ContainsKey("image") && uploadedFileName != null)
+                && inputs.ContainsKey("image")
+                && uploadIndex < uploadedFileNames.Count)
             {
-                inputs["image"] = uploadedFileName;
+                inputs["image"] = uploadedFileNames[uploadIndex];
+                uploadIndex++;
             }
 
             if (inputs.ContainsKey("prompt"))
@@ -255,6 +282,17 @@ public class ComfyUIService : IComfyUIService
                 inputs["seed"] = Random.Shared.NextInt64(0, long.MaxValue);
             }
         }
+    }
+
+    private async Task<List<string>> UploadImagesAsync(IReadOnlyList<string> imageBase64Values, CancellationToken cancellationToken)
+    {
+        var uploaded = new List<string>(imageBase64Values.Count);
+        foreach (var imageBase64 in imageBase64Values)
+        {
+            uploaded.Add(await UploadImageAsync(imageBase64, cancellationToken));
+        }
+
+        return uploaded;
     }
 
     private async Task<string> UploadImageAsync(string imageBase64, CancellationToken cancellationToken)

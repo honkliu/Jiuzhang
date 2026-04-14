@@ -4,7 +4,7 @@ public interface IComfyUIService
 {
     Task<IDisposable> AcquireGenerationSlotAsync(CancellationToken cancellationToken = default);
 
-    Task<string> SubmitPromptAsync(string imageBase64, string prompt, CancellationToken cancellationToken = default);
+    Task<string> SubmitPromptAsync(string imageBase64, string prompt, string? secondaryImageBase64 = null, CancellationToken cancellationToken = default);
 
     Task<string?> TryFetchResultAsync(string promptId, CancellationToken cancellationToken = default);
 
@@ -17,10 +17,10 @@ public interface IComfyUIService
     /// <param name="prompt">Generation prompt</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Base64 encoded generated image</returns>
-    Task<string> GenerateImageAsync(string imageBase64, string prompt, CancellationToken cancellationToken = default);
+    Task<string> GenerateImageAsync(string imageBase64, string prompt, string? secondaryImageBase64 = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Batch generate multiple images
     /// </summary>
-    Task<List<string>> GenerateImagesAsync(string imageBase64, string prompt, int count, CancellationToken cancellationToken = default);
+    Task<List<string>> GenerateImagesAsync(string imageBase64, string prompt, int count, string? secondaryImageBase64 = null, CancellationToken cancellationToken = default);
 }

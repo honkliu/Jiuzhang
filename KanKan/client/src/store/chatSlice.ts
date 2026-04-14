@@ -77,6 +77,11 @@ const chatSlice = createSlice({
       if (!state.messages[message.chatId]) {
         state.messages[message.chatId] = [];
       }
+      if (message.clientRequestId) {
+        state.messages[message.chatId] = state.messages[message.chatId].filter(
+          (existing) => existing.clientRequestId !== message.clientRequestId
+        );
+      }
       // Avoid duplicates
       const exists = state.messages[message.chatId].some((m) => m.id === message.id);
       if (!exists) {
@@ -101,6 +106,13 @@ const chatSlice = createSlice({
         const chat = state.chats.splice(chatIndex, 1)[0];
         state.chats.unshift(chat);
       }
+    },
+    removeMessage: (state, action: PayloadAction<{ chatId: string; messageId: string }>) => {
+      const { chatId, messageId } = action.payload;
+      const chatMessages = state.messages[chatId];
+      if (!chatMessages) return;
+
+      state.messages[chatId] = chatMessages.filter((message) => message.id !== messageId);
     },
     addChat: (state, action: PayloadAction<Chat>) => {
       const incoming = action.payload;
@@ -345,6 +357,7 @@ export const {
   incrementUnread,
   clearUnread,
   addMessage,
+  removeMessage,
   addChat,
   updateChat,
   removeChat,

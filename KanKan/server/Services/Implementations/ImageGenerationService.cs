@@ -8,6 +8,13 @@ namespace KanKan.API.Services.Implementations;
 
 public class ImageGenerationService : IImageGenerationService
 {
+    private sealed class ResolvedImageSource
+    {
+        public byte[] Bytes { get; init; } = Array.Empty<byte>();
+        public string FileStem { get; init; } = string.Empty;
+        public string Extension { get; init; } = ".png";
+    }
+
     private readonly IMongoCollection<ImageGenerationJob> _generationJobs;
     private readonly IMongoCollection<Message> _messages;
     private readonly IMongoCollection<AvatarImage> _avatarImages;
@@ -74,7 +81,8 @@ public class ImageGenerationService : IImageGenerationService
             {
                 AvatarId = request.AvatarId,
                 MessageId = request.MessageId,
-                OriginalMediaUrl = originalMediaUrl
+                OriginalMediaUrl = originalMediaUrl,
+                SecondaryMediaUrl = request.SecondaryMediaUrl
             },
             GenerationType = request.GenerationType,
             Emotion = request.Emotion,
@@ -606,29 +614,29 @@ public class ImageGenerationService : IImageGenerationService
             var uploadsPath = GetUploadsPath();
             Directory.CreateDirectory(uploadsPath);
 
-            var sourceFileName = GetFileNameFromUrl(sourceUrl);
-            var inputFileName = GetFileNameFromUrl(inputUrl);
-            var filePath = Path.Combine(uploadsPath, inputFileName);
+            var sourceImage = await ResolveImageSourceAsync(sourceUrl);
+            var inputImage = string.Equals(inputUrl, sourceUrl, StringComparison.OrdinalIgnoreCase)
+                ? sourceImage
+                : await ResolveImageSourceAsync(inputUrl);
 
-            if (!File.Exists(filePath))
-            {
-                throw new FileNotFoundException($"Source image not found: {filePath}");
-            }
-
-            var imageBytes = await File.ReadAllBytesAsync(filePath);
+            var imageBytes = inputImage.Bytes;
             var (targetWidth, targetHeight) = ImageResizer.GetScaledDimensions(imageBytes, 1024);
             var imageBase64 = Convert.ToBase64String(imageBytes);
+            string? secondaryImageBase64 = null;
+
+            if (!string.IsNullOrWhiteSpace(request.SecondaryMediaUrl))
+            {
+                var secondaryImageBytes = (await ResolveImageSourceAsync(request.SecondaryMediaUrl)).Bytes;
+                secondaryImageBase64 = Convert.ToBase64String(secondaryImageBytes);
+            }
 
             // Determine prompts
             var prompts = GetPrompts(request.GenerationType, request.CustomPrompts, null, BaseEmotionTypes);
             var generatedUrls = new List<string>();
-            var filePrefix = Path.GetFileNameWithoutExtension(sourceFileName);
-            var fileExtension = Path.GetExtension(sourceFileName);
-            if (string.IsNullOrWhiteSpace(fileExtension))
-            {
-                fileExtension = Path.GetExtension(inputFileName);
-            }
+            var filePrefix = sourceImage.FileStem;
+            var fileExtension = sourceImage.Extension;
             var totalCount = prompts.Count;
+            var failureMessages = new List<string>();
 
             for (int i = 0; i < totalCount; i++)
             {
@@ -645,7 +653,7 @@ public class ImageGenerationService : IImageGenerationService
                     {
                         fullPrompt = $"{fullPrompt} {extraPrompt}";
                     }
-                    var generatedBase64 = await _comfyUIService.GenerateImageAsync(imageBase64, fullPrompt);
+                    var generatedBase64 = await _comfyUIService.GenerateImageAsync(imageBase64, fullPrompt, secondaryImageBase64);
 
                     // Save to file system
                     var nextIndex = GetNextGeneratedIndex(uploadsPath, filePrefix, fileExtension);
@@ -669,13 +677,32 @@ public class ImageGenerationService : IImageGenerationService
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Failed to generate variation {Index} for job {JobId}", i + 1, jobId);
+                    failureMessages.Add(ex.Message);
                 }
+            }
+
+            if (generatedUrls.Count == 0)
+            {
+                var combinedError = failureMessages.Count > 0
+                    ? string.Join(" | ", failureMessages.Distinct(StringComparer.Ordinal))
+                    : "No images were generated.";
+
+                var updateFailed = Builders<ImageGenerationJob>.Update
+                    .Set(j => j.Status, "failed")
+                    .Set(j => j.ErrorMessage, combinedError)
+                    .Set(j => j.CompletedAt, DateTime.UtcNow);
+
+                await _generationJobs.UpdateOneAsync(j => j.JobId == jobId, updateFailed);
+                _logger.LogWarning("Mongo update imageGenerationJobs chat failed-empty: {JobId}", jobId);
+                return;
             }
 
             // Update job as completed
             var updateComplete = Builders<ImageGenerationJob>.Update
                 .Set(j => j.Status, "completed")
                 .Set(j => j.Progress, 100)
+                .Set(j => j.Results, new GenerationResults { GeneratedUrls = generatedUrls })
+                .Set(j => j.ErrorMessage, failureMessages.Count > 0 ? string.Join(" | ", failureMessages.Distinct(StringComparer.Ordinal)) : null)
                 .Set(j => j.CompletedAt, DateTime.UtcNow);
 
             await _generationJobs.UpdateOneAsync(j => j.JobId == jobId, updateComplete);
@@ -770,6 +797,96 @@ public class ImageGenerationService : IImageGenerationService
         var bytes = Convert.FromBase64String(generatedBase64);
         var resized = ImageResizer.ResizeToExact(bytes, targetWidth, targetHeight, contentType);
         return Convert.ToBase64String(resized);
+    }
+
+    private async Task<ResolvedImageSource> ResolveImageSourceAsync(string url)
+    {
+        var normalizedPath = NormalizeAssetPath(url);
+
+        if (TryExtractAvatarImageId(normalizedPath, out var avatarImageId))
+        {
+            var avatarImage = await _avatarImages.Find(a => a.Id == avatarImageId).FirstOrDefaultAsync();
+            if (avatarImage?.ImageData == null || avatarImage.ImageData.Length == 0)
+            {
+                throw new FileNotFoundException($"Avatar image not found: {avatarImageId}");
+            }
+
+            return new ResolvedImageSource
+            {
+                Bytes = avatarImage.ImageData,
+                FileStem = avatarImageId,
+                Extension = GetExtensionFromContentType(avatarImage.ContentType)
+            };
+        }
+
+        var fileName = GetFileNameFromUrl(normalizedPath);
+        var filePath = Path.Combine(GetUploadsPath(), fileName);
+        if (!File.Exists(filePath))
+        {
+            throw new FileNotFoundException($"Source image not found: {filePath}");
+        }
+
+        var extension = Path.GetExtension(fileName);
+        return new ResolvedImageSource
+        {
+            Bytes = await File.ReadAllBytesAsync(filePath),
+            FileStem = Path.GetFileNameWithoutExtension(fileName),
+            Extension = string.IsNullOrWhiteSpace(extension) ? ".png" : extension
+        };
+    }
+
+    private static string NormalizeAssetPath(string url)
+    {
+        if (Uri.TryCreate(url, UriKind.Absolute, out var absoluteUri))
+        {
+            return absoluteUri.AbsolutePath;
+        }
+
+        return url;
+    }
+
+    private static bool TryExtractAvatarImageId(string path, out string avatarImageId)
+    {
+        avatarImageId = string.Empty;
+        const string prefix = "/api/avatar/image/";
+
+        if (!path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var remainder = path.Substring(prefix.Length);
+        if (string.IsNullOrWhiteSpace(remainder))
+        {
+            return false;
+        }
+
+        var slashIndex = remainder.IndexOf('/');
+        if (slashIndex >= 0)
+        {
+            remainder = remainder.Substring(0, slashIndex);
+        }
+
+        var queryIndex = remainder.IndexOf('?');
+        if (queryIndex >= 0)
+        {
+            remainder = remainder.Substring(0, queryIndex);
+        }
+
+        avatarImageId = remainder;
+        return !string.IsNullOrWhiteSpace(avatarImageId) && !string.Equals(avatarImageId, "default", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string GetExtensionFromContentType(string? contentType)
+    {
+        return contentType?.ToLowerInvariant() switch
+        {
+            "image/jpeg" => ".jpg",
+            "image/jpg" => ".jpg",
+            "image/png" => ".png",
+            "image/webp" => ".webp",
+            _ => ".png"
+        };
     }
 
     private async Task<string?> ResolveOriginalMediaUrlAsync(string messageId, string? fallbackUrl)

@@ -55,6 +55,7 @@ public class MessageDto
 {
     public string Id { get; set; } = string.Empty;
     public string ChatId { get; set; } = string.Empty;
+    public string? ClientRequestId { get; set; }
     public string SenderId { get; set; } = string.Empty;
     public string SenderName { get; set; } = string.Empty;
     public string SenderAvatar { get; set; } = string.Empty;
@@ -79,6 +80,7 @@ public class MessageDto
 public class SendMessageDto
 {
     public string ChatId { get; set; } = string.Empty;
+    public string? ClientRequestId { get; set; }
 
     public string? MessageType { get; set; } = "text";
     public string? Text { get; set; }

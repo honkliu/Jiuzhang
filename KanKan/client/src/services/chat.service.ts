@@ -32,6 +32,7 @@ export interface Chat {
 export interface Message {
   id: string;
   chatId: string;
+  clientRequestId?: string;
   senderId: string;
   senderName: string;
   senderAvatar: string;
@@ -61,6 +62,7 @@ export interface CreateChatRequest {
 }
 
 export interface SendMessageRequest {
+  clientRequestId?: string;
   messageType?: string;
   text?: string;
   mediaUrl?: string;

@@ -62,6 +62,9 @@ public class SourceReference
 
     [BsonElement("originalMediaUrl")]
     public string? OriginalMediaUrl { get; set; }
+
+    [BsonElement("secondaryMediaUrl")]
+    public string? SecondaryMediaUrl { get; set; }
 }
 
 public class GenerationResults
