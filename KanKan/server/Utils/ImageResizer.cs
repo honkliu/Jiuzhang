@@ -62,6 +62,17 @@ public static class ImageResizer
     }
 
     /// <summary>
+    /// Re-encode arbitrary image bytes into a standard PNG payload for downstream model compatibility.
+    /// </summary>
+    public static byte[] NormalizeToPng(byte[] imageData)
+    {
+        using var image = Image.Load(imageData);
+        using var ms = new MemoryStream();
+        image.SaveAsPng(ms, new PngEncoder());
+        return ms.ToArray();
+    }
+
+    /// <summary>
     /// Resize image to max width/height while keeping aspect ratio
     /// </summary>
     public static byte[] ResizeImage(byte[] imageData, int maxWidth, int maxHeight, int quality = 85)

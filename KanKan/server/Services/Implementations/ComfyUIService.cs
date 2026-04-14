@@ -346,7 +346,7 @@ public class ComfyUIService : IComfyUIService
                     var historyState = InspectHistoryState(promptId, historyJson);
                     if (historyState.IsTerminalFailure)
                     {
-                        throw new InvalidOperationException($"ComfyUI prompt {promptId} failed: {historyState.Summary}");
+                        throw new ComfyUiTerminalFailureException(promptId, historyState.Summary);
                     }
 
                     if (attempt < 3 || (attempt + 1) % 5 == 0)
@@ -366,6 +366,14 @@ public class ComfyUIService : IComfyUIService
 
                 await Task.Delay(pollDelayMs, cancellationToken);
                 attempt++;
+            }
+            catch (ComfyUiTerminalFailureException)
+            {
+                throw;
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
@@ -510,6 +518,12 @@ public class ComfyUIService : IComfyUIService
             AppendJsonValue(parts, "execution_error", status, "execution_error");
             AppendJsonValue(parts, "error", status, "error");
             AppendJsonValue(parts, "messages", status, "messages");
+
+            var detailedExecutionError = ExtractExecutionErrorFromMessages(status);
+            if (!string.IsNullOrWhiteSpace(detailedExecutionError))
+            {
+                parts.Add($"execution_error_details={detailedExecutionError}");
+            }
         }
 
         AppendJsonValue(parts, "status_str", prompt, "status_str");
@@ -519,6 +533,55 @@ public class ComfyUIService : IComfyUIService
         AppendJsonValue(parts, "messages", prompt, "messages");
 
         return string.Join("; ", parts.Distinct(StringComparer.Ordinal));
+    }
+
+    private static string? ExtractExecutionErrorFromMessages(JsonElement status)
+    {
+        if (!status.TryGetProperty("messages", out var messages) || messages.ValueKind != JsonValueKind.Array)
+        {
+            return null;
+        }
+
+        foreach (var messageEntry in messages.EnumerateArray())
+        {
+            if (messageEntry.ValueKind != JsonValueKind.Array || messageEntry.GetArrayLength() < 2)
+            {
+                continue;
+            }
+
+            var eventName = messageEntry[0].ValueKind == JsonValueKind.String
+                ? messageEntry[0].GetString()
+                : null;
+
+            if (!string.Equals(eventName, "execution_error", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var payload = messageEntry[1];
+            if (payload.ValueKind != JsonValueKind.Object)
+            {
+                return TrimForLog(payload.GetRawText(), 500);
+            }
+
+            var parts = new List<string>();
+            AppendJsonValue(parts, "node_id", payload, "node_id");
+            AppendJsonValue(parts, "node_type", payload, "node_type");
+            AppendJsonValue(parts, "exception_message", payload, "exception_message");
+            AppendJsonValue(parts, "exception_type", payload, "exception_type");
+            AppendJsonValue(parts, "error", payload, "error");
+            AppendJsonValue(parts, "traceback", payload, "traceback");
+            AppendJsonValue(parts, "current_inputs", payload, "current_inputs");
+
+            if (parts.Count == 0)
+            {
+                return TrimForLog(payload.GetRawText(), 500);
+            }
+
+            return string.Join(", ", parts);
+        }
+
+        return null;
     }
 
     private static bool LooksLikeTerminalFailure(string statusSummary)
@@ -547,8 +610,8 @@ public class ComfyUIService : IComfyUIService
             JsonValueKind.True => "true",
             JsonValueKind.False => "false",
             JsonValueKind.Number => value.GetRawText(),
-            JsonValueKind.Array => TrimForLog(value.GetRawText(), 400),
-            JsonValueKind.Object => TrimForLog(value.GetRawText(), 400),
+            JsonValueKind.Array => TrimForLog(value.GetRawText(), 1200),
+            JsonValueKind.Object => TrimForLog(value.GetRawText(), 1200),
             _ => value.GetRawText()
         };
 
@@ -569,4 +632,12 @@ public class ComfyUIService : IComfyUIService
     }
 
     private sealed record ComfyHistoryState(bool HasPrompt, bool IsTerminalFailure, string Summary);
+
+    private sealed class ComfyUiTerminalFailureException : InvalidOperationException
+    {
+        public ComfyUiTerminalFailureException(string promptId, string summary)
+            : base($"ComfyUI prompt {promptId} failed: {summary}")
+        {
+        }
+    }
 }

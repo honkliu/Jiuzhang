@@ -621,14 +621,28 @@ public class ImageGenerationService : IImageGenerationService
 
             var imageBytes = inputImage.Bytes;
             var (targetWidth, targetHeight) = ImageResizer.GetScaledDimensions(imageBytes, 1024);
-            var imageBase64 = Convert.ToBase64String(imageBytes);
+            var normalizedPrimaryBytes = ImageResizer.NormalizeToPng(imageBytes);
+            var imageBase64 = Convert.ToBase64String(normalizedPrimaryBytes);
             string? secondaryImageBase64 = null;
+            string? secondarySourceDescription = null;
 
             if (!string.IsNullOrWhiteSpace(request.SecondaryMediaUrl))
             {
-                var secondaryImageBytes = (await ResolveImageSourceAsync(request.SecondaryMediaUrl)).Bytes;
-                secondaryImageBase64 = Convert.ToBase64String(secondaryImageBytes);
+                var secondarySource = await ResolveImageSourceAsync(request.SecondaryMediaUrl);
+                var secondaryImageBytes = secondarySource.Bytes;
+                var normalizedSecondaryBytes = ImageResizer.NormalizeToPng(secondaryImageBytes);
+                secondaryImageBase64 = Convert.ToBase64String(normalizedSecondaryBytes);
+                secondarySourceDescription = $"url={request.SecondaryMediaUrl}; ext={secondarySource.Extension}; bytes={secondaryImageBytes.Length}; normalizedPngBytes={normalizedSecondaryBytes.Length}";
             }
+
+            _logger.LogInformation(
+                "Chat image generation inputs for job {JobId}: primary(url={PrimaryUrl}; ext={PrimaryExt}; bytes={PrimaryBytes}; normalizedPngBytes={PrimaryNormalizedBytes}) secondary({SecondaryDescription})",
+                jobId,
+                inputUrl,
+                inputImage.Extension,
+                imageBytes.Length,
+                normalizedPrimaryBytes.Length,
+                secondarySourceDescription ?? "none");
 
             // Determine prompts
             var prompts = GetPrompts(request.GenerationType, request.CustomPrompts, null, BaseEmotionTypes);
