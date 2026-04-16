@@ -1,17 +1,20 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import {
   Box,
   Paper,
-  Typography,
 } from '@mui/material';
 import {
   DeleteOutline as DeleteOutlineIcon,
   DragIndicator as DragIndicatorIcon,
   AddPhotoAlternate as AddImageIcon,
+  AutoAwesome as MagicIcon,
+  SwapHoriz as CycleImageIcon,
 } from '@mui/icons-material';
 import IconButton from '@mui/material/IconButton';
 import type { PageElementDto } from '@/services/family.service';
-import { RichTextBlockWithRegistry } from './RichTextBlock';
+import { editorRegistry, RichTextBlockWithRegistry } from './RichTextBlock';
+import { ImageLightbox } from '@/components/Shared/ImageLightbox';
+import { imageGenerationService } from '@/services/imageGeneration.service';
 
 const BoxAny = Box as any;
 
@@ -83,6 +86,15 @@ type InsertPoint = { x: number; y: number };
 
 export type PendingImageUpload = { file: File; objectUrl: string };
 
+type PageLightboxEntry = {
+  sourceUrl: string;
+  messageId: string;
+  canEdit: boolean;
+  blockId: string;
+  kind: 'block' | 'embedded';
+  embeddedIndex?: number;
+};
+
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
 }
@@ -120,11 +132,18 @@ function createImageBlock(zIndex: number, imageUrl: string, left = 92, top = 92)
   return { id: `pelem_${crypto.randomUUID()}`, type: 'image', x: left, y: top, width: 320, height: 260, zIndex, imageUrl, fontSize: 16, textAlign: 'left' };
 }
 
-function estimateTextHeight(text: string, width: number, fontSize: number) {
-  const safeWidth = Math.max(width, 220);
-  const charsPerLine = Math.max(Math.floor((safeWidth - 28) / Math.max(fontSize * 0.62, 8)), 8);
-  const lines = Math.max(text.split('\n').reduce((count, line) => count + Math.max(1, Math.ceil(Math.max(line.length, 1) / charsPerLine)), 0), 1);
-  return clamp(Math.ceil(lines * fontSize * 1.5 + 16), MIN_BLOCK_HEIGHT, PAGE_HEIGHT);
+function deriveOriginalImageUrlFromGeneratedName(url: string) {
+  if (!url) {
+    return url;
+  }
+
+  const match = url.match(/^(.*\/)?([^/?#]+?)(_(\d+))(\.[^.?#]+)(\?[^#]*)?(#.*)?$/);
+  if (!match) {
+    return url;
+  }
+
+  const [, directory = '', baseName, , , extension = '', query = '', hash = ''] = match;
+  return `${directory}${baseName}${extension}${query}${hash}`;
 }
 
 export interface FamilyPageCanvasProps {
@@ -149,7 +168,107 @@ export const FamilyPageCanvas: React.FC<FamilyPageCanvasProps> = ({
   const dragStateRef = useRef<DragState>(null);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [pendingFocusBlockId, setPendingFocusBlockId] = useState<string | null>(null);
+  const [lightbox, setLightbox] = useState<{
+    images: string[];
+    index: number;
+    groups?: Array<{ sourceUrl: string; messageId: string; canEdit: boolean }>;
+    groupIndex?: number;
+  } | null>(null);
   const lastPointerPointRef = useRef<InsertPoint | null>(null);
+
+  const pageLightboxEntries = useMemo<PageLightboxEntry[]>(() => {
+    const extractEmbeddedImages = (html: string | undefined) => {
+      if (!html || typeof window === 'undefined') {
+        return [] as string[];
+      }
+
+      const container = window.document.createElement('div');
+      container.innerHTML = html;
+      return Array.from(container.querySelectorAll('img'))
+        .map((img) => img.getAttribute('src') || '')
+        .filter((url) => !!url && !url.startsWith('blob:'));
+    };
+
+    const entries: PageLightboxEntry[] = [];
+    blocks.forEach((block) => {
+      if (block.type === 'image' && block.imageUrl && !pendingImages[block.id] && !block.imageUrl.startsWith('blob:')) {
+        entries.push({
+          sourceUrl: block.imageUrl,
+          messageId: `page_image:${pageId}:${block.id}`,
+          canEdit,
+          blockId: block.id,
+          kind: 'block',
+        });
+        return;
+      }
+
+      if (block.type !== 'text') {
+        return;
+      }
+
+      extractEmbeddedImages(block.text).forEach((url, index) => {
+        entries.push({
+          sourceUrl: url,
+          messageId: `page_rich_image:${pageId}:${block.id}:${index}`,
+          canEdit,
+          blockId: block.id,
+          kind: 'embedded',
+          embeddedIndex: index,
+        });
+      });
+    });
+
+    return entries;
+  }, [blocks, canEdit, pageId, pendingImages]);
+
+  const lightboxImages = useMemo(
+    () => pageLightboxEntries.map((entry) => entry.sourceUrl),
+    [pageLightboxEntries]
+  );
+
+  const lightboxIndexByBlockId = useMemo(() => {
+    const map: Record<string, number> = {};
+    pageLightboxEntries.forEach((entry, index) => {
+      if (entry.kind === 'block') {
+        map[entry.blockId] = index;
+      }
+    });
+    return map;
+  }, [pageLightboxEntries]);
+
+  const lightboxIndexByEmbeddedImageKey = useMemo(() => {
+    const map: Record<string, number> = {};
+    pageLightboxEntries.forEach((entry, index) => {
+      if (entry.kind === 'embedded' && entry.embeddedIndex !== undefined) {
+        map[`${entry.blockId}:${entry.embeddedIndex}`] = index;
+      }
+    });
+    return map;
+  }, [pageLightboxEntries]);
+
+  const resolveLightboxPayload = useCallback(async () => {
+    const resolvedEntries = await Promise.all(pageLightboxEntries.map(async (entry) => {
+      try {
+        const result = await imageGenerationService.getResults(entry.messageId, 'chat_image');
+        const generatedUrls = Array.isArray(result.results) ? (result.results as string[]) : [];
+        const sourceUrl = generatedUrls.includes(entry.sourceUrl)
+          ? deriveOriginalImageUrlFromGeneratedName(entry.sourceUrl)
+          : entry.sourceUrl;
+        return { ...entry, sourceUrl };
+      } catch {
+        return entry;
+      }
+    }));
+
+    return {
+      images: resolvedEntries.map((entry) => entry.sourceUrl),
+      groups: resolvedEntries.map(({ sourceUrl, messageId, canEdit: entryCanEdit }) => ({
+        sourceUrl,
+        messageId,
+        canEdit: entryCanEdit,
+      })),
+    };
+  }, [pageLightboxEntries]);
 
   useEffect(() => {
     setSelectedBlockId(current => blocks.some(b => b.id === current) ? current : null);
@@ -232,6 +351,79 @@ export const FamilyPageCanvas: React.FC<FamilyPageCanvasProps> = ({
   const updateBlock = useCallback((blockId: string, updater: (b: PageElementDto) => PageElementDto) => {
     onBlocksChange(blocksRef.current.map(b => b.id === blockId ? updater(b) : b));
   }, [onBlocksChange]);
+
+  const getNextImageInSequence = useCallback((currentUrl: string, sourceUrl: string, generatedUrls: string[]) => {
+    const sequence = [sourceUrl, ...generatedUrls].filter((url, index, arr) => !!url && arr.indexOf(url) === index);
+    if (sequence.length <= 1) {
+      return null;
+    }
+
+    const currentIndex = sequence.findIndex((url) => url === currentUrl);
+    const safeIndex = currentIndex >= 0 ? currentIndex : 0;
+    return sequence[(safeIndex + 1) % sequence.length] || null;
+  }, []);
+
+  const cycleStandaloneImage = useCallback(async (blockId: string) => {
+    const entry = pageLightboxEntries.find((candidate) => candidate.kind === 'block' && candidate.blockId === blockId);
+    const block = blocksRef.current.find((candidate) => candidate.id === blockId && candidate.type === 'image');
+    if (!entry || !block?.imageUrl) {
+      return;
+    }
+
+    try {
+      const result = await imageGenerationService.getResults(entry.messageId, 'chat_image');
+      const generatedUrls = Array.isArray(result.results) ? (result.results as string[]) : [];
+      const originalSourceUrl = generatedUrls.includes(block.imageUrl)
+        ? deriveOriginalImageUrlFromGeneratedName(block.imageUrl)
+        : block.imageUrl;
+      const nextUrl = getNextImageInSequence(block.imageUrl, originalSourceUrl, generatedUrls);
+      if (!nextUrl || nextUrl === block.imageUrl) {
+        return;
+      }
+
+      updateBlock(blockId, (current) => current.type === 'image' ? { ...current, imageUrl: nextUrl } : current);
+    } catch {
+      // Keep the current image when no generated results are available.
+    }
+  }, [getNextImageInSequence, pageLightboxEntries, updateBlock]);
+
+  const cycleEmbeddedImage = useCallback(async (blockId: string, embeddedIndex: number) => {
+    const entry = pageLightboxEntries.find((candidate) => candidate.kind === 'embedded' && candidate.blockId === blockId && candidate.embeddedIndex === embeddedIndex);
+    const block = blocksRef.current.find((candidate) => candidate.id === blockId && candidate.type === 'text');
+    if (!entry || !block?.text || typeof window === 'undefined') {
+      return;
+    }
+
+    const container = window.document.createElement('div');
+    container.innerHTML = block.text;
+    const images = Array.from(container.querySelectorAll('img'));
+    const target = images[embeddedIndex];
+    const currentUrl = target?.getAttribute('src') || '';
+    if (!target || !currentUrl) {
+      return;
+    }
+
+    try {
+      const result = await imageGenerationService.getResults(entry.messageId, 'chat_image');
+      const generatedUrls = Array.isArray(result.results) ? (result.results as string[]) : [];
+      const originalSourceUrl = generatedUrls.includes(currentUrl)
+        ? deriveOriginalImageUrlFromGeneratedName(currentUrl)
+        : currentUrl;
+      const nextUrl = getNextImageInSequence(currentUrl, originalSourceUrl, generatedUrls);
+      if (!nextUrl || nextUrl === currentUrl) {
+        return;
+      }
+
+      target.setAttribute('src', nextUrl);
+      const editor = editorRegistry.get(blockId);
+      if (editor) {
+        editor.commands.setContent(container.innerHTML, false);
+      }
+      updateBlock(blockId, (current) => current.type === 'text' ? { ...current, text: container.innerHTML } : current);
+    } catch {
+      // Keep the current image when no generated results are available.
+    }
+  }, [getNextImageInSequence, pageLightboxEntries, updateBlock]);
 
   const bringToFront = useCallback((blockId: string) => {
     const nextZ = getNextZIndex(blocksRef.current);
@@ -326,6 +518,69 @@ export const FamilyPageCanvas: React.FC<FamilyPageCanvasProps> = ({
     setSelectedBlockId(null);
   }, [selectedBlockId, onBlocksChange, onPendingImagesChange]);
 
+  const openImageLightbox = useCallback(async (blockId: string) => {
+    const index = lightboxIndexByBlockId[blockId];
+    if (index === undefined || !lightboxImages[index]) {
+      return;
+    }
+
+    const resolved = await resolveLightboxPayload();
+    if (!resolved.images[index]) {
+      return;
+    }
+
+    setLightbox({
+      images: resolved.images,
+      index,
+      groups: resolved.groups,
+      groupIndex: index,
+    });
+  }, [lightboxImages, lightboxIndexByBlockId, resolveLightboxPayload]);
+
+  const openEmbeddedImageLightbox = useCallback(async (blockId: string, embeddedIndex: number) => {
+    const index = lightboxIndexByEmbeddedImageKey[`${blockId}:${embeddedIndex}`];
+    if (index === undefined || !lightboxImages[index]) {
+      return;
+    }
+
+    const resolved = await resolveLightboxPayload();
+    if (!resolved.images[index]) {
+      return;
+    }
+
+    setLightbox({
+      images: resolved.images,
+      index,
+      groups: resolved.groups,
+      groupIndex: index,
+    });
+  }, [lightboxImages, lightboxIndexByEmbeddedImageKey, resolveLightboxPayload]);
+
+  const getEmbeddedImageIndexFromEvent = useCallback((event: React.SyntheticEvent<HTMLElement>) => {
+    const target = (event.target as HTMLElement | null)?.closest('img');
+    const currentTarget = event.currentTarget as HTMLElement | null;
+    if (!target || !currentTarget) {
+      return null;
+    }
+
+    const contentRoot = currentTarget.querySelector('[data-richtext-content="true"]') as HTMLElement | null;
+    const searchRoot = contentRoot || currentTarget;
+    const images = Array.from(searchRoot.querySelectorAll('img'));
+    const imageIndex = images.findIndex((img) => img === target);
+    return imageIndex >= 0 ? imageIndex : null;
+  }, []);
+
+  const handleReadOnlyTextImageClick = useCallback((event: React.MouseEvent<HTMLElement>, blockId: string) => {
+    const imageIndex = getEmbeddedImageIndexFromEvent(event);
+    if (imageIndex === null) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    openEmbeddedImageLightbox(blockId, imageIndex);
+  }, [getEmbeddedImageIndexFromEvent, openEmbeddedImageLightbox]);
+
   // Resize handle component
   const ResizeHandles = ({ block }: { block: PageElementDto }) => (
     canEdit && selectedBlockId === block.id ? (
@@ -353,6 +608,16 @@ export const FamilyPageCanvas: React.FC<FamilyPageCanvasProps> = ({
         onPointerDown={(e: React.PointerEvent) => e.stopPropagation()}
       >
         <IconButton size="small" onPointerDown={e => { e.stopPropagation(); startPointerInteraction(e, block, 'move'); }} sx={{ touchAction: 'none' }}><DragIndicatorIcon fontSize="small" /></IconButton>
+        {block.type === 'image' && lightboxIndexByBlockId[block.id] !== undefined && (
+          <IconButton size="small" onClick={(e) => { e.stopPropagation(); openImageLightbox(block.id); }} sx={{ color: '#2563eb' }}>
+            <MagicIcon sx={{ fontSize: 18 }} />
+          </IconButton>
+        )}
+        {block.type === 'image' && lightboxIndexByBlockId[block.id] !== undefined && (
+          <IconButton size="small" onClick={(e) => { e.stopPropagation(); void cycleStandaloneImage(block.id); }} sx={{ color: '#2563eb' }}>
+            <CycleImageIcon sx={{ fontSize: 18 }} />
+          </IconButton>
+        )}
         <IconButton size="small" onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }} sx={{ color: '#16a34a' }}><AddImageIcon sx={{ fontSize: 18 }} /></IconButton>
         <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleDeleteBlock(); }}><DeleteOutlineIcon fontSize="small" /></IconButton>
       </Paper>
@@ -404,7 +669,21 @@ export const FamilyPageCanvas: React.FC<FamilyPageCanvasProps> = ({
               if (block.type === 'image') {
                 return block.imageUrl ? (
                   <BoxAny key={block.id} data-block-root="true"
-                    onClick={(e: React.MouseEvent) => { e.stopPropagation(); if (canEdit) { setSelectedBlockId(block.id); bringToFront(block.id); } }}
+                    onClick={(e: React.MouseEvent) => {
+                      e.stopPropagation();
+                      if (!canEdit) {
+                        openImageLightbox(block.id);
+                        return;
+                      }
+                      setSelectedBlockId(block.id);
+                      bringToFront(block.id);
+                    }}
+                    onDoubleClick={canEdit && lightboxIndexByBlockId[block.id] !== undefined
+                      ? (e: React.MouseEvent) => {
+                          e.stopPropagation();
+                          openImageLightbox(block.id);
+                        }
+                      : undefined}
                     onPointerDown={canEdit ? (e: React.PointerEvent<HTMLElement>) => {
                       const r = e.currentTarget.getBoundingClientRect();
                       const nearRight = r.right - e.clientX <= 24;
@@ -432,19 +711,28 @@ export const FamilyPageCanvas: React.FC<FamilyPageCanvasProps> = ({
                   sx={{ position: 'absolute', left: block.x, top: block.y, width: block.width, height: block.height, zIndex: block.zIndex, overflow: 'visible', borderRadius: '4px', border: isSelected ? '1px solid rgba(37,99,235,0.45)' : '1px solid transparent', backgroundColor: 'transparent', display: 'flex', flexDirection: 'column' }}
                 >
                   {canEdit ? (
-                    <RichTextBlockWithRegistry
-                      blockId={block.id}
-                      html={block.text ?? ''}
-                      autoFocus={pendingFocusBlockId === block.id}
-                      onChange={html => {
-                        updateBlock(block.id, cur => ({ ...cur, text: html }));
-                        if (pendingFocusBlockId === block.id) setPendingFocusBlockId(null);
-                      }}
-                      onFocus={() => { setSelectedBlockId(block.id); if (pendingFocusBlockId === block.id) setPendingFocusBlockId(null); }}
-                      fontSize={block.fontSize}
-                    />
+                    <BoxAny
+                      data-richtext-content="true"
+                      sx={{ flex: '1 1 auto', minHeight: 0, '& .tiptap img': { cursor: 'default' } }}
+                    >
+                      <RichTextBlockWithRegistry
+                        blockId={block.id}
+                        html={block.text ?? ''}
+                        autoFocus={pendingFocusBlockId === block.id}
+                        onChange={html => {
+                          updateBlock(block.id, cur => ({ ...cur, text: html }));
+                          if (pendingFocusBlockId === block.id) setPendingFocusBlockId(null);
+                        }}
+                        onFocus={() => { setSelectedBlockId(block.id); if (pendingFocusBlockId === block.id) setPendingFocusBlockId(null); }}
+                        fontSize={block.fontSize}
+                        onImageLightboxRequest={(imageIndex) => openEmbeddedImageLightbox(block.id, imageIndex)}
+                        onImageCycleRequest={(imageIndex) => { void cycleEmbeddedImage(block.id, imageIndex); }}
+                      />
+                    </BoxAny>
                   ) : (
-                    <BoxAny sx={{
+                    <BoxAny data-richtext-content="true"
+                      onClickCapture={(e: React.MouseEvent<HTMLElement>) => handleReadOnlyTextImageClick(e, block.id)}
+                      sx={{
                         px: 0.5, py: 0.25, fontSize: block.fontSize ?? 16, textAlign: block.textAlign ?? 'left',
                         lineHeight: 1.5, wordBreak: 'break-word', flex: '1 1 auto',
                         '& p': { margin: 0 },
@@ -453,6 +741,7 @@ export const FamilyPageCanvas: React.FC<FamilyPageCanvasProps> = ({
                         '& h3': { margin: 0, fontSize: '1.25em', fontWeight: 600, lineHeight: 1.4 },
                         '& ul, & ol': { margin: 0, paddingLeft: '1.6em' },
                         '& li': { margin: 0, '& > p': { margin: 0 } },
+                        '& img': { cursor: 'zoom-in' },
                       }}
                       dangerouslySetInnerHTML={{ __html: block.text ?? '' }}
                     />
@@ -470,6 +759,16 @@ export const FamilyPageCanvas: React.FC<FamilyPageCanvasProps> = ({
         if (!file) return;
         addPendingImageAtPoint(file, lastPointerPointRef.current);
       }} />
+      {lightbox ? (
+        <ImageLightbox
+          images={lightbox.images}
+          initialIndex={lightbox.index}
+          groups={lightbox.groups}
+          initialGroupIndex={lightbox.groupIndex}
+          open
+          onClose={() => setLightbox(null)}
+        />
+      ) : null}
     </BoxAny>
   );
 };

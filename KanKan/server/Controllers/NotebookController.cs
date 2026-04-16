@@ -376,8 +376,16 @@ public class NotebookController : ControllerBase
             var newImageUrls = new HashSet<string>(
                 req.Elements.Where(e => e.Type == "image" && !string.IsNullOrWhiteSpace(e.ImageUrl)).Select(e => e.ImageUrl!),
                 StringComparer.OrdinalIgnoreCase);
+            var newImageFamilies = new HashSet<string>(
+                newImageUrls.Select(GetImageFamilyKey),
+                StringComparer.OrdinalIgnoreCase);
             foreach (var removedUrl in oldImageUrls.Except(newImageUrls))
             {
+                if (newImageFamilies.Contains(GetImageFamilyKey(removedUrl)))
+                {
+                    continue;
+                }
+
                 var path = ResolveLocalUploadPath(removedUrl);
                 if (path != null)
                 {
@@ -669,6 +677,39 @@ public class NotebookController : ControllerBase
         var fileName = url["/uploads/".Length..];
         if (string.IsNullOrWhiteSpace(fileName)) return null;
         return Path.Combine(GetUploadsRootPath(), fileName);
+    }
+
+    private static string GetImageFamilyKey(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return string.Empty;
+
+        var normalized = url.Replace('\\', '/').Trim();
+        if (Uri.TryCreate(normalized, UriKind.Absolute, out var absoluteUri))
+        {
+            normalized = absoluteUri.AbsolutePath;
+        }
+
+        var fileName = Path.GetFileName(normalized);
+        var extension = Path.GetExtension(fileName);
+        var withoutExtension = Path.GetFileNameWithoutExtension(fileName);
+        if (string.IsNullOrWhiteSpace(withoutExtension))
+        {
+            return fileName;
+        }
+
+        var suffixIndex = withoutExtension.LastIndexOf('_');
+        if (suffixIndex <= 0)
+        {
+            return fileName;
+        }
+
+        var suffix = withoutExtension[(suffixIndex + 1)..];
+        if (!int.TryParse(suffix, out _))
+        {
+            return fileName;
+        }
+
+        return $"{withoutExtension[..suffixIndex]}{extension}";
     }
 
     private string GetUploadsRootPath()

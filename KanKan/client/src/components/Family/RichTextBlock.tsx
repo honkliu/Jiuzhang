@@ -1,4 +1,4 @@
-import React, { useEffect, useState, Component, type ErrorInfo, type ReactNode } from 'react';
+import React, { useEffect, useState } from 'react';
 import { EditorContent, EditorContext, useEditor } from '@tiptap/react';
 import { StarterKit } from '@tiptap/starter-kit';
 import { TaskItem, TaskList } from '@tiptap/extension-list';
@@ -10,7 +10,7 @@ import { Typography } from '@tiptap/extension-typography';
 import { Selection } from '@tiptap/extensions';
 import { TextStyle, Color, FontSize, FontFamily } from '@tiptap/extension-text-style';
 import Underline from '@tiptap/extension-underline';
-import ImageResize from 'tiptap-extension-resize-image';
+import FamilyImageResize from './FamilyImageResize';
 import { Box, IconButton, Select, MenuItem, Popover } from '@mui/material';
 import { Remove as MinusIcon, Add as PlusIcon, FormatColorText as FontColorIcon } from '@mui/icons-material';
 
@@ -89,12 +89,14 @@ interface RichTextBlockProps {
   onChange: (html: string) => void;
   onFocus: () => void;
   fontSize?: number;
+  onImageLightboxRequest?: (imageIndex: number) => void;
+  onImageCycleRequest?: (imageIndex: number) => void;
 }
 
 // Global editor registry
 export const editorRegistry = new Map<string, any>();
 
-export const RichTextBlockWithRegistry: React.FC<RichTextBlockProps & { blockId: string }> = ({ blockId, html, autoFocus, onChange, onFocus }) => {
+export const RichTextBlockWithRegistry: React.FC<RichTextBlockProps & { blockId: string }> = ({ blockId, html, autoFocus, onChange, onFocus, onImageLightboxRequest, onImageCycleRequest }) => {
   const baseFontSize = 16;
 
   const editor = useEditor({
@@ -109,7 +111,7 @@ export const RichTextBlockWithRegistry: React.FC<RichTextBlockProps & { blockId:
         dropcursor: { color: '#FF0000', width: 4 },
       }),
       HorizontalRule,
-      ImageResize.configure({ inline: false }),
+      FamilyImageResize.configure({ inline: false }),
       TaskList,
       TaskItem.configure({ nested: true }),
       NodeBackground,
@@ -152,6 +154,45 @@ export const RichTextBlockWithRegistry: React.FC<RichTextBlockProps & { blockId:
       return () => { editorRegistry.delete(blockId); };
     }
   }, [editor, blockId]);
+
+  useEffect(() => {
+    if (!editor || (!onImageLightboxRequest && !onImageCycleRequest)) {
+      return;
+    }
+
+    const handleOpenLightbox = (event: Event) => {
+      const customEvent = event as CustomEvent<{ embeddedIndex?: number }>;
+      const embeddedIndex = customEvent.detail?.embeddedIndex;
+      if (typeof embeddedIndex === 'number' && embeddedIndex >= 0) {
+        onImageLightboxRequest?.(embeddedIndex);
+      }
+    };
+
+    const handleCycleImage = (event: Event) => {
+      const customEvent = event as CustomEvent<{ embeddedIndex?: number }>;
+      const embeddedIndex = customEvent.detail?.embeddedIndex;
+      if (typeof embeddedIndex === 'number' && embeddedIndex >= 0) {
+        onImageCycleRequest?.(embeddedIndex);
+      }
+    };
+
+    const dom = editor.view.dom;
+    if (onImageLightboxRequest) {
+      dom.addEventListener('kankan-open-image-lightbox', handleOpenLightbox as EventListener);
+    }
+    if (onImageCycleRequest) {
+      dom.addEventListener('kankan-cycle-image-variation', handleCycleImage as EventListener);
+    }
+
+    return () => {
+      if (onImageLightboxRequest) {
+        dom.removeEventListener('kankan-open-image-lightbox', handleOpenLightbox as EventListener);
+      }
+      if (onImageCycleRequest) {
+        dom.removeEventListener('kankan-cycle-image-variation', handleCycleImage as EventListener);
+      }
+    };
+  }, [editor, onImageCycleRequest, onImageLightboxRequest]);
 
   useEffect(() => {
     if (editor && !editor.isFocused) {
