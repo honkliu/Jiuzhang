@@ -1,5 +1,10 @@
 import apiClient from '@/utils/api';
 
+export interface StandingFileItem {
+  fileName: string;
+  imageUrl: string;
+}
+
 export interface AvatarImage {
   avatarImageId: string;
   emotion: string | null;
@@ -104,6 +109,11 @@ class AvatarService {
     const response = await apiClient.get<SelectableAvatarResponse>('/avatar/originals', {
       params: { page, pageSize, includeFull: true },
     });
+    return response.data;
+  }
+
+  async getStandingFiles(): Promise<StandingFileItem[]> {
+    const response = await apiClient.get<StandingFileItem[]>('/avatar/standing-files');
     return response.data;
   }
 

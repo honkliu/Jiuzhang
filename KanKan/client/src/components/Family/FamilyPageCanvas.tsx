@@ -70,6 +70,8 @@ export const PAGE_HEIGHT = 1056;
 const MIN_BLOCK_WIDTH = 40;
 const MIN_BLOCK_HEIGHT = 24;
 const MAX_Z_INDEX = 2147483647;
+const DEFAULT_IMAGE_INSERT_MAX_WIDTH = 320;
+const DEFAULT_IMAGE_INSERT_MAX_HEIGHT = 260;
 
 type DragState = {
   blockId: string;
@@ -78,6 +80,7 @@ type DragState = {
   originY: number;
   originWidth: number;
   originHeight: number;
+  originAspectRatio: number;
   startX: number;
   startY: number;
 } | null;
@@ -124,12 +127,66 @@ function getNextZIndex(blocks: PageElementDto[]) {
   return highest >= MAX_Z_INDEX ? MAX_Z_INDEX : highest + 1;
 }
 
+function resizeImageBlockWithAspectRatio(
+  block: PageElementDto,
+  dragState: NonNullable<DragState>,
+  dx: number,
+  dy: number,
+) {
+  const aspectRatio = dragState.originAspectRatio > 0 ? dragState.originAspectRatio : 1;
+  const widthScaleDelta = dragState.originWidth > 0 ? dx / dragState.originWidth : 0;
+
+  if (dragState.mode === 'resize-br') {
+    const heightScaleDelta = dragState.originHeight > 0 ? dy / dragState.originHeight : 0;
+    const scaleDelta = Math.abs(widthScaleDelta) >= Math.abs(heightScaleDelta) ? widthScaleDelta : heightScaleDelta;
+    const minWidth = Math.max(MIN_BLOCK_WIDTH, MIN_BLOCK_HEIGHT * aspectRatio);
+    const maxWidth = Math.min(PAGE_WIDTH - block.x, (PAGE_HEIGHT - block.y) * aspectRatio);
+    const width = clamp(dragState.originWidth * (1 + scaleDelta), minWidth, maxWidth);
+    return { ...block, width, height: width / aspectRatio };
+  }
+
+  const heightScaleDelta = dragState.originHeight > 0 ? (-dy) / dragState.originHeight : 0;
+  const scaleDelta = Math.abs(widthScaleDelta) >= Math.abs(heightScaleDelta) ? widthScaleDelta : heightScaleDelta;
+  const minWidth = Math.max(MIN_BLOCK_WIDTH, MIN_BLOCK_HEIGHT * aspectRatio);
+  const maxWidth = Math.min(PAGE_WIDTH - block.x, (dragState.originY + dragState.originHeight) * aspectRatio);
+  const width = clamp(dragState.originWidth * (1 + scaleDelta), minWidth, maxWidth);
+  const height = width / aspectRatio;
+  const y = dragState.originY + dragState.originHeight - height;
+  return { ...block, width, height, y };
+}
+
+function fitImageWithinBounds(width: number, height: number) {
+  if (!(width > 0) || !(height > 0)) {
+    return { width: DEFAULT_IMAGE_INSERT_MAX_WIDTH, height: DEFAULT_IMAGE_INSERT_MAX_HEIGHT };
+  }
+
+  const scale = Math.min(
+    DEFAULT_IMAGE_INSERT_MAX_WIDTH / width,
+    DEFAULT_IMAGE_INSERT_MAX_HEIGHT / height,
+    1,
+  );
+
+  return {
+    width: Math.max(MIN_BLOCK_WIDTH, Math.round(width * scale)),
+    height: Math.max(MIN_BLOCK_HEIGHT, Math.round(height * scale)),
+  };
+}
+
+function getImageSizeFromUrl(url: string) {
+  return new Promise<{ width: number; height: number }>((resolve, reject) => {
+    const image = new window.Image();
+    image.onload = () => resolve({ width: image.naturalWidth, height: image.naturalHeight });
+    image.onerror = () => reject(new Error('Failed to load image dimensions'));
+    image.src = url;
+  });
+}
+
 function createTextBlock(zIndex: number, left = 72, top = 72): PageElementDto {
   return { id: `pelem_${crypto.randomUUID()}`, type: 'text', x: left, y: top, width: 360, height: 52, zIndex, text: '', fontSize: 16, textAlign: 'left' };
 }
 
-function createImageBlock(zIndex: number, imageUrl: string, left = 92, top = 92): PageElementDto {
-  return { id: `pelem_${crypto.randomUUID()}`, type: 'image', x: left, y: top, width: 320, height: 260, zIndex, imageUrl, fontSize: 16, textAlign: 'left' };
+function createImageBlock(zIndex: number, imageUrl: string, width = DEFAULT_IMAGE_INSERT_MAX_WIDTH, height = DEFAULT_IMAGE_INSERT_MAX_HEIGHT, left = 92, top = 92): PageElementDto {
+  return { id: `pelem_${crypto.randomUUID()}`, type: 'image', x: left, y: top, width, height, zIndex, imageUrl, fontSize: 16, textAlign: 'left' };
 }
 
 function deriveOriginalImageUrlFromGeneratedName(url: string) {
@@ -320,7 +377,7 @@ export const FamilyPageCanvas: React.FC<FamilyPageCanvasProps> = ({
       const file = imageItem?.getAsFile();
       if (!file) return;
       event.preventDefault();
-      addPendingImageAtPoint(file, lastPointerPointRef.current);
+      void addPendingImageAtPoint(file, lastPointerPointRef.current);
     };
     window.addEventListener('paste', handlePaste);
     return () => window.removeEventListener('paste', handlePaste);
@@ -436,14 +493,25 @@ export const FamilyPageCanvas: React.FC<FamilyPageCanvasProps> = ({
     return { x: (clientX - rect.left) / zoom, y: (clientY - rect.top) / zoom };
   };
 
-  const addPendingImageAtPoint = (file: File, point?: InsertPoint | null) => {
+  const addPendingImageAtPoint = async (file: File, point?: InsertPoint | null) => {
     const objectUrl = URL.createObjectURL(file);
-    const block = createImageBlock(getNextZIndex(blocks), objectUrl,
-      clamp((point?.x ?? 252) - 160, 0, PAGE_WIDTH - 320),
-      clamp((point?.y ?? 222) - 52, 0, PAGE_HEIGHT - 260));
-    onBlocksChange([...blocks, block]);
-    setSelectedBlockId(block.id);
-    onPendingImagesChange(current => ({ ...current, [block.id]: { file, objectUrl } }));
+    try {
+      const naturalSize = await getImageSizeFromUrl(objectUrl);
+      const fittedSize = fitImageWithinBounds(naturalSize.width, naturalSize.height);
+      const block = createImageBlock(
+        getNextZIndex(blocksRef.current),
+        objectUrl,
+        fittedSize.width,
+        fittedSize.height,
+        clamp((point?.x ?? 252) - fittedSize.width / 2, 0, PAGE_WIDTH - fittedSize.width),
+        clamp((point?.y ?? 222) - fittedSize.height / 5, 0, PAGE_HEIGHT - fittedSize.height),
+      );
+      onBlocksChange([...blocksRef.current, block]);
+      setSelectedBlockId(block.id);
+      onPendingImagesChange(current => ({ ...current, [block.id]: { file, objectUrl } }));
+    } catch {
+      URL.revokeObjectURL(objectUrl);
+    }
   };
 
   const handleCanvasClick = (event: React.MouseEvent<HTMLDivElement>) => {
@@ -468,7 +536,17 @@ export const FamilyPageCanvas: React.FC<FamilyPageCanvasProps> = ({
     event.stopPropagation();
     setSelectedBlockId(block.id);
     bringToFront(block.id);
-    dragStateRef.current = { blockId: block.id, mode, originX: block.x, originY: block.y, originWidth: block.width, originHeight: block.height, startX: event.clientX, startY: event.clientY };
+    dragStateRef.current = {
+      blockId: block.id,
+      mode,
+      originX: block.x,
+      originY: block.y,
+      originWidth: block.width,
+      originHeight: block.height,
+      originAspectRatio: block.height > 0 ? block.width / block.height : 1,
+      startX: event.clientX,
+      startY: event.clientY,
+    };
 
     if ('currentTarget' in event && 'setPointerCapture' in event.currentTarget && 'pointerId' in event) {
       try { event.currentTarget.setPointerCapture(event.pointerId); } catch {}
@@ -482,6 +560,9 @@ export const FamilyPageCanvas: React.FC<FamilyPageCanvasProps> = ({
         if (b.id !== ds.blockId) return b;
         if (ds.mode === 'move') {
           return { ...b, x: clamp(ds.originX + dx, 0, PAGE_WIDTH - b.width), y: clamp(ds.originY + dy, 0, PAGE_HEIGHT - b.height) };
+        }
+        if (b.type === 'image') {
+          return resizeImageBlockWithAspectRatio(b, ds, dx, dy);
         }
         if (ds.mode === 'resize-br') {
           // Bottom-right: grow width right, grow height down
@@ -646,7 +727,7 @@ export const FamilyPageCanvas: React.FC<FamilyPageCanvasProps> = ({
             const file = Array.from(e.dataTransfer.files).find(f => f.type.startsWith('image/'));
             if (!file) return;
             const point = getPagePoint(e.clientX, e.clientY);
-            if (point) addPendingImageAtPoint(file, point);
+            if (point) void addPendingImageAtPoint(file, point);
           }}
           sx={{
             width: PAGE_WIDTH * zoom, height: PAGE_HEIGHT * zoom,
@@ -696,7 +777,7 @@ export const FamilyPageCanvas: React.FC<FamilyPageCanvasProps> = ({
                   >
                     <BoxAny component="img" src={block.imageUrl} alt="" draggable={false}
                       onDragStart={(e: React.DragEvent) => e.preventDefault()}
-                      sx={{ width: '100%', height: '100%', objectFit: 'fill', display: 'block', pointerEvents: 'none' }}
+                      sx={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block', pointerEvents: 'none' }}
                     />
                     <ResizeHandles block={block} />
                     {renderBlockToolbar(block)}
@@ -757,7 +838,7 @@ export const FamilyPageCanvas: React.FC<FamilyPageCanvasProps> = ({
       <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={(e) => {
         const file = e.target.files?.[0]; e.target.value = '';
         if (!file) return;
-        addPendingImageAtPoint(file, lastPointerPointRef.current);
+        void addPendingImageAtPoint(file, lastPointerPointRef.current);
       }} />
       {lightbox ? (
         <ImageLightbox

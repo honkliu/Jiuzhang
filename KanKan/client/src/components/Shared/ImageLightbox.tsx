@@ -11,6 +11,7 @@ import RemoveIcon from '@mui/icons-material/Remove';
 import AddIcon from '@mui/icons-material/Add';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import { imageGenerationService } from '@/services/imageGeneration.service';
+import { avatarService } from '@/services/avatar.service';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { AvatarQuickPicker } from '@/components/Avatar/AvatarQuickPicker';
 import { PromptComposer, type SelectedPrompt } from '@/components/Avatar/PromptComposer';
@@ -28,7 +29,7 @@ interface ScopedSelectableImage {
   key: string;
   url: string;
   label: string;
-  kind: 'source' | 'edit';
+  kind: 'source' | 'edit' | 'standing';
 }
 
 interface ImageLightboxProps {
@@ -61,6 +62,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
   const [selectedPrompts, setSelectedPrompts] = useState<SelectedPrompt[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedByGroup, setGeneratedByGroup] = useState<Record<string, string[]>>({});
+  const [standingImageUrls, setStandingImageUrls] = useState<string[]>([]);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isPseudoFullscreen, setIsPseudoFullscreen] = useState(false);
   const [showPromptTools, setShowPromptTools] = useState(false);
@@ -121,29 +123,33 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
 
     const seen = new Set<string>();
     const results: ScopedSelectableImage[] = [];
+    const append = (url: string, kind: 'source' | 'edit' | 'standing', scopeKey: string) => {
+      if (!url || seen.has(url)) {
+        return;
+      }
+
+      seen.add(url);
+      results.push({
+        key: `${scopeKey}:${kind}:${url}`,
+        url,
+        label: getImageDisplayName(url),
+        kind,
+      });
+    };
+
     for (const group of groups) {
-      const append = (url: string, kind: 'source' | 'edit') => {
-        if (!url || seen.has(url)) {
-          return;
-        }
-
-        seen.add(url);
-        results.push({
-          key: `${group.messageId}:${kind}:${url}`,
-          url,
-          label: getImageDisplayName(url),
-          kind,
-        });
-      };
-
-      append(group.sourceUrl, 'source');
+      append(group.sourceUrl, 'source', group.messageId);
       for (const url of generatedByGroup[group.messageId] || []) {
-        append(url, 'edit');
+        append(url, 'edit', group.messageId);
       }
     }
 
+    for (const url of standingImageUrls) {
+      append(url, 'standing', 'standing');
+    }
+
     return results;
-  }, [generatedByGroup, getImageDisplayName, groups]);
+  }, [generatedByGroup, getImageDisplayName, groups, standingImageUrls]);
 
   const activeGeneratedUrls = useMemo(() => {
     if (!activeGroup) return [];
@@ -247,6 +253,26 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
       cancelled = true;
     };
   }, [open, hasGroups, groups, generatedByGroup]);
+
+  useEffect(() => {
+    if (!open || !hasGroups || standingImageUrls.length > 0) return;
+
+    let cancelled = false;
+    avatarService.getStandingFiles()
+      .then((items) => {
+        if (cancelled) return;
+        setStandingImageUrls(items.map((item) => item.imageUrl).filter(Boolean));
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setStandingImageUrls([]);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, hasGroups, standingImageUrls.length]);
 
   const updateThumbnailScrollState = useCallback(() => {
     const strip = thumbnailStripRef.current;

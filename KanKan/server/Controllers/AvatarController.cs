@@ -12,14 +12,51 @@ namespace KanKan.API.Controllers;
 public class AvatarController : ControllerBase
 {
     private readonly IAvatarService _avatarService;
+    private readonly IWebHostEnvironment _environment;
     private readonly ILogger<AvatarController> _logger;
 
     public AvatarController(
         IAvatarService avatarService,
+        IWebHostEnvironment environment,
         ILogger<AvatarController> logger)
     {
         _avatarService = avatarService;
+        _environment = environment;
         _logger = logger;
+    }
+
+    [HttpGet("standing-files")]
+    public IActionResult GetStandingFiles()
+    {
+        try
+        {
+            var standingDirectory = Path.Combine(_environment.WebRootPath ?? string.Empty, "standing");
+            if (string.IsNullOrWhiteSpace(standingDirectory) || !Directory.Exists(standingDirectory))
+                return Ok(Array.Empty<object>());
+
+            var allowedExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ".jpg", ".jpeg", ".png", ".webp", ".gif"
+            };
+
+            var files = Directory.EnumerateFiles(standingDirectory, "*.*", SearchOption.TopDirectoryOnly)
+                .Where(path => allowedExtensions.Contains(Path.GetExtension(path)))
+                .Select(path => Path.GetFileName(path))
+                .OrderBy(fileName => fileName, StringComparer.OrdinalIgnoreCase)
+                .Select(fileName => new
+                {
+                    fileName,
+                    imageUrl = $"/standing/{fileName}",
+                })
+                .ToList();
+
+            return Ok(files);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to enumerate standing files");
+            return StatusCode(500, new { message = "Failed to enumerate standing files" });
+        }
     }
 
     [HttpPost("upload")]

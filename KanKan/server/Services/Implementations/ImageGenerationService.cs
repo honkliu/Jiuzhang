@@ -246,7 +246,12 @@ public class ImageGenerationService : IImageGenerationService
 
     private string GetUploadsPath()
     {
-        return Path.Combine(_environment.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"), "uploads");
+        return Path.Combine(GetWebRootPath(), "uploads");
+    }
+
+    private string GetWebRootPath()
+    {
+        return _environment.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
     }
 
     private static string GetFileNameFromUrl(string url)
@@ -822,13 +827,13 @@ public class ImageGenerationService : IImageGenerationService
             };
         }
 
-        var fileName = GetFileNameFromUrl(normalizedPath);
-        var filePath = Path.Combine(GetUploadsPath(), fileName);
+        var filePath = ResolveStaticAssetFilePath(normalizedPath);
         if (!File.Exists(filePath))
         {
             throw new FileNotFoundException($"Source image not found: {filePath}");
         }
 
+        var fileName = Path.GetFileName(filePath);
         var extension = Path.GetExtension(fileName);
         return new ResolvedImageSource
         {
@@ -836,6 +841,27 @@ public class ImageGenerationService : IImageGenerationService
             FileStem = Path.GetFileNameWithoutExtension(fileName),
             Extension = string.IsNullOrWhiteSpace(extension) ? ".png" : extension
         };
+    }
+
+    private string ResolveStaticAssetFilePath(string normalizedPath)
+    {
+        var trimmedPath = normalizedPath.Trim();
+        var webRootPath = GetWebRootPath();
+
+        if (trimmedPath.StartsWith("/uploads/", StringComparison.OrdinalIgnoreCase))
+        {
+            var fileName = Path.GetFileName(trimmedPath);
+            return Path.Combine(webRootPath, "uploads", fileName);
+        }
+
+        if (trimmedPath.StartsWith("/standing/", StringComparison.OrdinalIgnoreCase))
+        {
+            var fileName = Path.GetFileName(trimmedPath);
+            return Path.Combine(webRootPath, "standing", fileName);
+        }
+
+        var fallbackFileName = GetFileNameFromUrl(trimmedPath);
+        return Path.Combine(webRootPath, "uploads", fallbackFileName);
     }
 
     private static string NormalizeAssetPath(string url)

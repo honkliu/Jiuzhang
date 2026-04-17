@@ -31,6 +31,36 @@ function writeState(state: { selectedNotebookId: string | null }) {
   window.sessionStorage.setItem(STATE_KEY, JSON.stringify(state));
 }
 
+function selectPreferredNotebookId(
+  notebooks: NotebookDto[],
+  options: {
+    selectedId?: string | null;
+    persistedId?: string | null;
+    currentUserId?: string | null;
+  } = {},
+) {
+  if (notebooks.length === 0) {
+    return null;
+  }
+
+  const byId = new Set(notebooks.map((notebook) => notebook.id));
+  if (options.selectedId && byId.has(options.selectedId)) {
+    return options.selectedId;
+  }
+  if (options.persistedId && byId.has(options.persistedId)) {
+    return options.persistedId;
+  }
+
+  const ownedNotebook = options.currentUserId
+    ? notebooks.find((notebook) => notebook.ownerId === options.currentUserId)
+    : null;
+  if (ownedNotebook) {
+    return ownedNotebook.id;
+  }
+
+  return notebooks[0]?.id ?? null;
+}
+
 // ── Visibility rule helpers (same pattern as FamilyPage) ──
 
 interface VisibilityRuleRow {
@@ -110,19 +140,40 @@ export const NotebookPage: React.FC = () => {
 
   useEffect(() => { writeState({ selectedNotebookId: selectedId }); }, [selectedId]);
 
+  useEffect(() => {
+    if (notebooks.length === 0) {
+      if (selectedId !== null) {
+        setSelectedId(null);
+      }
+      return;
+    }
+
+    const preferredId = selectPreferredNotebookId(notebooks, {
+      selectedId,
+      persistedId: persistedRef.current?.selectedNotebookId ?? null,
+      currentUserId: currentUser?.id ?? null,
+    });
+
+    if (preferredId !== selectedId) {
+      setSelectedId(preferredId);
+    }
+  }, [currentUser?.id, notebooks, selectedId]);
+
   const loadNotebooks = useCallback(async (selectId?: string | null) => {
     setLoading(true); setError(null);
     try {
       const result = await notebookService.list();
       setNotebooks(result);
-      if (selectId !== undefined) {
-        setSelectedId(selectId && result.some(n => n.id === selectId) ? selectId : (result[0]?.id ?? null));
-      } else if (selectedId && !result.some(n => n.id === selectedId)) {
-        setSelectedId(result[0]?.id ?? null);
+      if (selectId !== undefined || selectedId) {
+        setSelectedId(selectPreferredNotebookId(result, {
+          selectedId: selectId !== undefined ? selectId : selectedId,
+          persistedId: persistedRef.current?.selectedNotebookId ?? null,
+          currentUserId: currentUser?.id ?? null,
+        }));
       }
     } catch (err: any) { setError(err?.message || '加载失败'); }
     setLoading(false);
-  }, [selectedId]);
+  }, [currentUser?.id, selectedId]);
 
   useEffect(() => { loadNotebooks(persistedRef.current?.selectedNotebookId); }, []); // eslint-disable-line
 

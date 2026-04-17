@@ -38,6 +38,10 @@ export default defineConfig(({ mode }) => {
           target: proxyTarget,
           changeOrigin: true,
         },
+        '/standing': {
+          target: proxyTarget,
+          changeOrigin: true,
+        },
       }
     : {}
 
