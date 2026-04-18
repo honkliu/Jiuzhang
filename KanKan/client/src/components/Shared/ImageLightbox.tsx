@@ -332,7 +332,9 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
   }, [currentIndex, hasGroups, thumbnailMode]);
 
   const handleZoomReset = () => {
-    setZoom(fitZoom);
+    const currentFit = computeFitZoom();
+    setFitZoom(currentFit);
+    setZoom(currentFit);
     setPanOffset({ x: 0, y: 0 });
   };
 
