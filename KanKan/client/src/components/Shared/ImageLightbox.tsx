@@ -401,10 +401,11 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
     return iw > containerRef.current.clientWidth || ih > containerRef.current.clientHeight;
   }, [zoom]);
 
-  const clampPanOffset = useCallback((x: number, y: number): { x: number; y: number } => {
+  const clampPanOffset = useCallback((x: number, y: number, zoomOverride?: number): { x: number; y: number } => {
     if (!imgRef.current || !containerRef.current) return { x, y };
-    const iw = imgRef.current.naturalWidth * zoom;
-    const ih = imgRef.current.naturalHeight * zoom;
+    const z = zoomOverride ?? zoom;
+    const iw = imgRef.current.naturalWidth * z;
+    const ih = imgRef.current.naturalHeight * z;
     const cw = containerRef.current.clientWidth;
     const ch = containerRef.current.clientHeight;
     // Allow panning only so that image edges stay within the viewport
@@ -510,6 +511,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
       setPanOffset(clampPanOffset(
         touchStateRef.current.offsetX + deltaX,
         touchStateRef.current.offsetY + deltaY,
+        nextZoom,
       ));
       event.preventDefault();
       event.stopPropagation();
