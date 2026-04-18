@@ -68,6 +68,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
   const [showPromptTools, setShowPromptTools] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [fitZoom, setFitZoom] = useState(1);
+  const [imageNaturalSize, setImageNaturalSize] = useState({ width: 0, height: 0 });
   const [isImageReady, setIsImageReady] = useState(false);
   const [renderedImage, setRenderedImage] = useState('');
   const [isUiHidden, setIsUiHidden] = useState(false);
@@ -98,6 +99,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
     startCenterY: 0,
   });
   const suppressTapToggleRef = useRef(false);
+  const lastZoomResetAtRef = useRef(0);
   const hasInitializedZoomRef = useRef(false);
   const wasOpenRef = useRef(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -363,12 +365,6 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
     setPanOffset({ x: 0, y: 0 });
   };
 
-  const handleZoomResetTouch = (event: React.TouchEvent) => {
-    event.preventDefault();
-    event.stopPropagation();
-    handleZoomReset();
-  };
-
   const handleZoomStep = (delta: number) => {
     setZoom((prev) => normalizeZoom(prev + delta, prev));
   };
@@ -420,6 +416,10 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
   };
 
   const stopOverlayTouchPropagation = (event: React.TouchEvent) => {
+    event.stopPropagation();
+  };
+
+  const stopOverlayPointerPropagation = (event: React.PointerEvent) => {
     event.stopPropagation();
   };
 
@@ -752,6 +752,10 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
     const commitImage = () => {
       if (cancelled) return;
       const fit = computeFitZoom(nextImage.naturalWidth || 1, nextImage.naturalHeight || 1);
+      setImageNaturalSize({
+        width: nextImage.naturalWidth || 0,
+        height: nextImage.naturalHeight || 0,
+      });
       setFitZoom(fit);
       setZoom(fit);
       setPanOffset({ x: 0, y: 0 });
@@ -766,6 +770,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
     nextImage.onload = commitImage;
     nextImage.onerror = () => {
       if (cancelled) return;
+      setImageNaturalSize({ width: 0, height: 0 });
       setRenderedImage(displayedImage);
       setPanOffset({ x: 0, y: 0 });
       setIsImageReady(true);
@@ -873,6 +878,40 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
     onClose();
   };
 
+  const triggerZoomReset = () => {
+    const now = Date.now();
+    if (now - lastZoomResetAtRef.current < 200) {
+      return;
+    }
+
+    lastZoomResetAtRef.current = now;
+    handleZoomReset();
+  };
+
+  const handleZoomResetTouch = (event: React.TouchEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    triggerZoomReset();
+  };
+
+  const handleZoomResetPointerDown = (event: React.PointerEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    triggerZoomReset();
+  };
+
+  const handleZoomResetMouseDown = (event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    triggerZoomReset();
+  };
+
+  const handleZoomResetClick = (event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    triggerZoomReset();
+  };
+
   const buildPromptText = () => {
     const parts: string[] = [];
     const typed = prompt.trim();
@@ -964,6 +1003,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
             }}
             onClick={stopOverlayPropagation}
             onMouseDown={stopOverlayPropagation}
+            onPointerDown={stopOverlayPointerPropagation}
             onTouchStart={stopOverlayTouchPropagation}
             onTouchMove={stopOverlayTouchPropagation}
             onTouchEnd={stopOverlayTouchPropagation}
@@ -975,15 +1015,17 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
             >
               <RemoveIcon sx={{ fontSize: 17 }} />
             </IconButton>
-            <Button
-              size="small"
-              onClick={handleZoomReset}
-              onTouchEnd={handleZoomResetTouch}
+            <ButtonBase
+              onClick={handleZoomResetClick}
+              onMouseDown={handleZoomResetMouseDown}
+              onPointerDown={handleZoomResetPointerDown}
+              onTouchStart={handleZoomResetTouch}
               sx={{
                 minWidth: 0,
                 width: 40,
                 px: 0.5,
                 py: 0.4,
+                minHeight: 28,
                 color: 'rgba(255,255,255,0.92)',
                 bgcolor: Math.abs(zoom - fitZoom) > 0.01 ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.06)',
                 borderRadius: 999,
@@ -991,10 +1033,11 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
                 lineHeight: 1,
                 fontVariantNumeric: 'tabular-nums',
                 textAlign: 'center',
+                touchAction: 'manipulation',
               }}
             >
               {zoomPercent}
-            </Button>
+            </ButtonBase>
             <IconButton
               size="small"
               onClick={() => handleZoomStep(0.01)}
@@ -1112,7 +1155,13 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
             ref={imgRef}
             src={renderedImage || displayedImage}
             alt={`Image ${currentIndex + 1}`}
-            onLoad={() => setIsImageReady(true)}
+            onLoad={(event: React.SyntheticEvent<HTMLImageElement>) => {
+              setImageNaturalSize({
+                width: event.currentTarget.naturalWidth || 0,
+                height: event.currentTarget.naturalHeight || 0,
+              });
+              setIsImageReady(true);
+            }}
             onError={() => setIsImageReady(true)}
             onClick={(e: React.MouseEvent) => {
               if (suppressTapToggleRef.current) {
@@ -1126,11 +1175,13 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
             sx={{
               maxWidth: effectiveMaxSize,
               maxHeight: effectiveMaxSize,
+              width: imageNaturalSize.width > 0 ? `${Math.max(1, Math.round(imageNaturalSize.width * zoom))}px` : 'auto',
+              height: imageNaturalSize.height > 0 ? `${Math.max(1, Math.round(imageNaturalSize.height * zoom))}px` : 'auto',
               objectFit: 'contain',
               borderRadius: 0,
               userSelect: 'none',
               cursor: 'default',
-              transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoom})`,
+              transform: `translate(${panOffset.x}px, ${panOffset.y}px)`,
               transformOrigin: 'center center',
               opacity: isImageReady ? 1 : 0,
               transition: isImageReady ? 'opacity 0.12s ease-out' : 'none',
