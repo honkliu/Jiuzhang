@@ -572,6 +572,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
   };
 
   const SWIPE_THRESHOLD = 50;
+  const VERTICAL_SWIPE_THRESHOLD = 60;
 
   const handleTouchEnd = (event: React.TouchEvent) => {
     if (event.touches.length >= 2) {
@@ -611,12 +612,23 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
       return;
     }
 
-    // All fingers lifted — detect swipe to navigate at fit zoom
-    if (!isDraggable && touchStateRef.current.moved && navigableImageCount > 1) {
+    // All fingers lifted — detect swipe gestures at fit zoom
+    if (!isDraggable && touchStateRef.current.moved) {
       const swipeDeltaX = (event.changedTouches[0]?.clientX ?? 0) - touchStateRef.current.startX;
-      if (swipeDeltaX < -SWIPE_THRESHOLD) {
+      const swipeDeltaY = (event.changedTouches[0]?.clientY ?? 0) - touchStateRef.current.startY;
+      const isVerticalSwipe = Math.abs(swipeDeltaY) > Math.abs(swipeDeltaX);
+      const canToggleLayerBySwipe = hasGroups && (canToggleToEdits || thumbnailMode === 'edits');
+      const canNavigateBySwipe = navigableImageCount > 1;
+
+      if (
+        isVerticalSwipe
+        && swipeDeltaY > VERTICAL_SWIPE_THRESHOLD
+        && canToggleLayerBySwipe
+      ) {
+        handleToggleLayer();
+      } else if (canNavigateBySwipe && swipeDeltaX < -SWIPE_THRESHOLD) {
         next();
-      } else if (swipeDeltaX > SWIPE_THRESHOLD) {
+      } else if (canNavigateBySwipe && swipeDeltaX > SWIPE_THRESHOLD) {
         prev();
       }
     }
