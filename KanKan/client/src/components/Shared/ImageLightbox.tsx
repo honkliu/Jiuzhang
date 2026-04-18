@@ -331,11 +331,42 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
     setPanOffset({ x: 0, y: 0 });
   }, [currentIndex, hasGroups, thumbnailMode]);
 
+  const resetInteractionState = useCallback(() => {
+    dragStateRef.current = {
+      isDragging: false,
+      moved: false,
+      startX: 0,
+      startY: 0,
+      offsetX: 0,
+      offsetY: 0,
+    };
+    touchStateRef.current = {
+      mode: 'none',
+      moved: false,
+      startX: 0,
+      startY: 0,
+      offsetX: 0,
+      offsetY: 0,
+      startDistance: 0,
+      startZoom: 1,
+      startCenterX: 0,
+      startCenterY: 0,
+    };
+    suppressTapToggleRef.current = false;
+  }, []);
+
   const handleZoomReset = () => {
     const currentFit = computeFitZoom();
+    resetInteractionState();
     setFitZoom(currentFit);
     setZoom(currentFit);
     setPanOffset({ x: 0, y: 0 });
+  };
+
+  const handleZoomResetTouch = (event: React.TouchEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    handleZoomReset();
   };
 
   const handleZoomStep = (delta: number) => {
@@ -947,6 +978,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
             <Button
               size="small"
               onClick={handleZoomReset}
+              onTouchEnd={handleZoomResetTouch}
               sx={{
                 minWidth: 0,
                 width: 40,
