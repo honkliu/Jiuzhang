@@ -458,9 +458,8 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
                         display: 'block',
                         objectFit: 'contain',
                         objectPosition: 'top center',
-                        borderRadius: 1,
-                        boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
-                        cursor: 'pointer',
+                        borderRadius: 0,
+                        border: '1px solid rgba(0,0,0,0.12)',
                         transition: 'opacity 0.15s',
                         '&:hover': { opacity: 0.85 },
                         WebkitTouchCallout: 'none',
@@ -504,7 +503,7 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
                   component="video"
                   src={segment.url}
                   controls
-                  sx={{ width: '100%', maxHeight: 180, borderRadius: 1, bgcolor: 'rgba(0,0,0,0.18)', alignSelf: 'flex-end', flexShrink: 0 }}
+                  sx={{ width: '100%', maxHeight: 180, borderRadius: 0, border: '1px solid rgba(0,0,0,0.12)', alignSelf: 'flex-end', flexShrink: 0 }}
                 />
               );
             }

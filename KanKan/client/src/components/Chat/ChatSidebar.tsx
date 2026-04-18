@@ -242,7 +242,9 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
               onClick={handleChatClick(chat)}
               onPointerUp={handleChatPointerUp(chat)}
               sx={{
-                py: 1.5,
+                py: '6px',
+                pl: 1,
+                borderRadius: '8px',
                 position: 'relative',
                 pr: 5,
                 '& .chatRowActions': {

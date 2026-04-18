@@ -467,7 +467,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
                 sx={{
                   maxWidth: '100%',
                   maxHeight: 300,
-                  borderRadius: 1,
+                  borderRadius: 0,
                   WebkitTouchCallout: 'none',
                   WebkitUserSelect: 'none',
                   userSelect: 'none',
@@ -480,7 +480,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
             component="video"
             src={message.mediaUrl}
             controls
-            sx={{ maxWidth: '100%', maxHeight: 300, borderRadius: 1 }}
+            sx={{ maxWidth: '100%', maxHeight: 300, borderRadius: 0 }}
           />
         ) : message.messageType === 'voice' ? (
           <VoiceMessageBubble

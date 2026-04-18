@@ -401,6 +401,21 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
     return iw > containerRef.current.clientWidth || ih > containerRef.current.clientHeight;
   }, [zoom]);
 
+  const clampPanOffset = useCallback((x: number, y: number): { x: number; y: number } => {
+    if (!imgRef.current || !containerRef.current) return { x, y };
+    const iw = imgRef.current.naturalWidth * zoom;
+    const ih = imgRef.current.naturalHeight * zoom;
+    const cw = containerRef.current.clientWidth;
+    const ch = containerRef.current.clientHeight;
+    // Allow panning only so that image edges stay within the viewport
+    const maxX = Math.max(0, (iw - cw) / 2);
+    const maxY = Math.max(0, (ih - ch) / 2);
+    return {
+      x: Math.max(-maxX, Math.min(maxX, x)),
+      y: Math.max(-maxY, Math.min(maxY, y)),
+    };
+  }, [zoom]);
+
   const handleDragStart = (event: React.MouseEvent) => {
     if (!isDraggable) return;
     dragStateRef.current = {
@@ -422,10 +437,10 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
     if (Math.abs(deltaX) > 2 || Math.abs(deltaY) > 2) {
       dragStateRef.current.moved = true;
     }
-    setPanOffset({
-      x: dragStateRef.current.offsetX + deltaX,
-      y: dragStateRef.current.offsetY + deltaY,
-    });
+    setPanOffset(clampPanOffset(
+      dragStateRef.current.offsetX + deltaX,
+      dragStateRef.current.offsetY + deltaY,
+    ));
     event.preventDefault();
     event.stopPropagation();
   };
@@ -492,10 +507,10 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
       }
 
       setZoom(nextZoom);
-      setPanOffset({
-        x: touchStateRef.current.offsetX + deltaX,
-        y: touchStateRef.current.offsetY + deltaY,
-      });
+      setPanOffset(clampPanOffset(
+        touchStateRef.current.offsetX + deltaX,
+        touchStateRef.current.offsetY + deltaY,
+      ));
       event.preventDefault();
       event.stopPropagation();
       return;
@@ -508,14 +523,20 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
         touchStateRef.current.moved = true;
         suppressTapToggleRef.current = true;
       }
-      setPanOffset({
-        x: touchStateRef.current.offsetX + deltaX,
-        y: touchStateRef.current.offsetY + deltaY,
-      });
-      event.preventDefault();
-      event.stopPropagation();
+      if (isDraggable) {
+        // Zoomed in: clamped panning
+        setPanOffset(clampPanOffset(
+          touchStateRef.current.offsetX + deltaX,
+          touchStateRef.current.offsetY + deltaY,
+        ));
+        event.preventDefault();
+        event.stopPropagation();
+      }
+      // At fit zoom: don't move image, swipe is handled in touchEnd
     }
   };
+
+  const SWIPE_THRESHOLD = 50;
 
   const handleTouchEnd = (event: React.TouchEvent) => {
     if (event.touches.length >= 2) {
@@ -553,6 +574,16 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
       event.preventDefault();
       event.stopPropagation();
       return;
+    }
+
+    // All fingers lifted — detect swipe to navigate at fit zoom
+    if (!isDraggable && touchStateRef.current.moved && navigableImageCount > 1) {
+      const swipeDeltaX = (event.changedTouches[0]?.clientX ?? 0) - touchStateRef.current.startX;
+      if (swipeDeltaX < -SWIPE_THRESHOLD) {
+        next();
+      } else if (swipeDeltaX > SWIPE_THRESHOLD) {
+        prev();
+      }
     }
 
     touchStateRef.current.mode = 'none';
@@ -1060,7 +1091,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
               maxWidth: effectiveMaxSize,
               maxHeight: effectiveMaxSize,
               objectFit: 'contain',
-              borderRadius: 1,
+              borderRadius: 0,
               userSelect: 'none',
               cursor: 'default',
               transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoom})`,

@@ -61,7 +61,7 @@ const theme = createTheme({
         MuiAvatar: {
           styleOverrides: {
             root: {
-              borderRadius: 12,
+              borderRadius: 5,
               border: '1px solid rgba(255, 255, 255, 0.6)',
               boxSizing: 'border-box',
               backgroundClip: 'padding-box',
