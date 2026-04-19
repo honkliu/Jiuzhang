@@ -340,11 +340,12 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
           px: message.messageType === 'image' ? 0 : 1.5,
           py: message.messageType === 'image' ? 0 : 0.75,
           position: 'relative',
+            overflow: message.messageType === 'image' ? 'hidden' : 'visible',
           bgcolor: message.messageType === 'image'
             ? 'transparent'
             : (isOwn ? '#07c160' : '#ffffff'),
           color: 'text.primary',
-          borderRadius: message.messageType === 'image' ? 0 : '4px',
+            borderRadius: '4px',
           ml: isOwn ? 'auto' : 0,
           border: message.messageType === 'image'
             ? 'none'
@@ -467,7 +468,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
                 sx={{
                   maxWidth: '100%',
                   maxHeight: 300,
-                  borderRadius: 0,
+                  borderRadius: '4px',
                   WebkitTouchCallout: 'none',
                   WebkitUserSelect: 'none',
                   userSelect: 'none',

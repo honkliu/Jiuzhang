@@ -450,15 +450,13 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
                         });
                       }}
                       sx={{
-                        width: imgStripW,
+                        maxWidth: imgStripW,
                         height: 'auto',
                         maxHeight: isMobile ? 88 : 140,
                         flexShrink: 0,
                         alignSelf: 'flex-end',
                         display: 'block',
-                        objectFit: 'contain',
-                        objectPosition: 'top center',
-                        borderRadius: 0,
+                        borderRadius: '4px',
                         border: '1px solid rgba(0,0,0,0.12)',
                         transition: 'opacity 0.15s',
                         '&:hover': { opacity: 0.85 },

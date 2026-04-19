@@ -39,7 +39,7 @@ const momentImageSx = {
   width: 'auto',
   maxWidth: '100%',
   objectFit: 'cover',
-  borderRadius: 0,
+  borderRadius: '4px',
   border: '1px solid rgba(15, 23, 42, 0.12)',
   cursor: 'pointer',
   transition: 'opacity 0.15s',
