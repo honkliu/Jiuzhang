@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import {
-  Box, Typography, Paper, Collapse, Dialog, DialogContent,
+  Box, Typography, Paper, Collapse, Dialog, DialogContent, Checkbox,
 } from '@mui/material';
 import {
   ShoppingCart as ShoppingIcon,
@@ -56,6 +56,8 @@ const currencySymbol = (currency?: string): string => {
 interface ReceiptListProps {
   receipts: ReceiptDto[];
   allReceipts: ReceiptDto[];
+  checkedIds?: Set<string>;
+  onToggleChecked?: (id: string) => void;
   onSelect: (r: ReceiptDto) => void;
 }
 
@@ -66,7 +68,7 @@ const colSx = {
   total: { width: 64, textAlign: 'right', flexShrink: 0, fontWeight: 600 } as const,
 };
 
-export const ReceiptList: React.FC<ReceiptListProps> = ({ receipts, allReceipts, onSelect }) => {
+export const ReceiptList: React.FC<ReceiptListProps> = ({ receipts, allReceipts, checkedIds, onToggleChecked, onSelect }) => {
   const { t } = useLanguage();
   const [imageOpen, setImageOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState('');
@@ -140,6 +142,14 @@ export const ReceiptList: React.FC<ReceiptListProps> = ({ receipts, allReceipts,
             }}
             onClick={() => onSelect(r)}
           >
+            {onToggleChecked && (
+              <Checkbox
+                size="small"
+                checked={checkedIds?.has(r.id) || false}
+                onClick={(e) => { e.stopPropagation(); onToggleChecked(r.id); }}
+                sx={{ p: 0, flexShrink: 0 }}
+              />
+            )}
             <BoxAny sx={{
               width: 32, height: 32, borderRadius: '50%', display: 'flex',
               alignItems: 'center', justifyContent: 'center', flexShrink: 0,

@@ -10,6 +10,7 @@ interface ChatState {
   error: string | null;
   typingUsers: Record<string, { userId: string; userName: string }[]>; // chatId -> typing users
   drafts: Record<string, Record<string, { userName: string; text: string }>>; // chatId -> userId -> draft
+  pendingMessage: string | null; // text to auto-send when ChatWindow mounts
 }
 
 const initialState: ChatState = {
@@ -20,6 +21,7 @@ const initialState: ChatState = {
   error: null,
   typingUsers: {},
   drafts: {},
+  pendingMessage: null,
 };
 
 const isWaOnlyChat = (chat: Chat): boolean => {
@@ -55,6 +57,9 @@ const chatSlice = createSlice({
   reducers: {
     setActiveChat: (state, action: PayloadAction<Chat | null>) => {
       state.activeChat = action.payload;
+    },
+    setPendingMessage: (state, action: PayloadAction<string | null>) => {
+      state.pendingMessage = action.payload;
     },
     incrementUnread: (state, action: PayloadAction<{ chatId: string; by?: number }>) => {
       const { chatId, by } = action.payload;
@@ -369,6 +374,7 @@ export const {
   startAgentMessage,
   appendAgentMessageChunk,
   finalizeAgentMessage,
+  setPendingMessage,
   setDraft,
   clearDraftForUser,
   clearMessages,

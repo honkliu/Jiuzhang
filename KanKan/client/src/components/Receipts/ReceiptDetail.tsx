@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
-  Box, Typography, IconButton, Paper,
+  Box, Typography, IconButton, Paper, Collapse,
   Dialog, DialogContent, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow,
 } from '@mui/material';
@@ -93,16 +93,34 @@ const tdCellSx = {
 
 interface ReceiptDetailProps {
   receipt: ReceiptDto;
+  allReceipts?: ReceiptDto[];
   onBack: () => void;
   onDelete: () => void;
 }
 
-export const ReceiptDetail: React.FC<ReceiptDetailProps> = ({ receipt, onBack, onDelete }) => {
+export const ReceiptDetail: React.FC<ReceiptDetailProps> = ({ receipt, allReceipts = [], onBack, onDelete }) => {
   const { t } = useLanguage();
   const [imageOpen, setImageOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState('');
+  const [expandedLab, setExpandedLab] = useState<string | null>(null);
 
   const openImage = (url: string) => { setSelectedImage(url); setImageOpen(true); };
+
+  // Build lab history map
+  const labHistoryMap = useMemo(() => {
+    const map = new Map<string, Array<{ source: string; date: string; value?: string; unit?: string; referenceRange?: string; status?: string }>>();
+    for (const r of allReceipts) {
+      const source = r.hospitalName || '';
+      const date = r.receiptDate ? new Date(r.receiptDate).toLocaleDateString('zh-CN') : '';
+      for (const lab of r.labResults) {
+        if (!map.has(lab.name)) map.set(lab.name, []);
+        map.get(lab.name)!.push({ source, date, value: lab.value, unit: lab.unit, referenceRange: lab.referenceRange, status: lab.status });
+      }
+    }
+    return map;
+  }, [allReceipts]);
+
+  const hasLabHistory = (name: string) => (labHistoryMap.get(name)?.length || 0) > 1;
   const isMedical = receipt.type === 'Medical';
   const dateStr = receipt.receiptDate ? new Date(receipt.receiptDate).toLocaleDateString('zh-CN') : '';
 
@@ -227,18 +245,76 @@ const MedicalDocument: React.FC<{
                 {receipt.labResults.map((lab, i) => {
                   const isAbnormal = lab.status && lab.status !== 'Normal';
                   const arrow = lab.status === 'High' ? '↑' : lab.status === 'Low' ? '↓' : '';
+                  const clickable = hasLabHistory(lab.name);
+                  const isExp = expandedLab === lab.name;
                   return (
-                    <TableRow key={i} sx={isAbnormal ? { bgcolor: '#fff8f8' } : undefined}>
-                      <TableCell sx={tdCellSx}>{lab.name}</TableCell>
-                      <TableCell sx={{ ...tdCellSx, fontWeight: isAbnormal ? 700 : 400, color: isAbnormal ? '#c00' : '#111' }} align="center">
-                        {lab.value || '—'}
-                      </TableCell>
-                      <TableCell sx={{ ...tdCellSx, color: '#c00', fontWeight: 700, fontSize: '1rem' }} align="center">
-                        {arrow}
-                      </TableCell>
-                      <TableCell sx={tdCellSx} align="center">{lab.unit || ''}</TableCell>
-                      <TableCell sx={tdCellSx} align="center">{lab.referenceRange || ''}</TableCell>
-                    </TableRow>
+                    <React.Fragment key={i}>
+                      <TableRow
+                        sx={{
+                          ...(isAbnormal ? { bgcolor: '#fff8f8' } : undefined),
+                          ...(clickable ? { cursor: 'pointer', '&:hover': { bgcolor: 'rgba(33,150,243,0.06)' } } : undefined),
+                        }}
+                        onClick={clickable ? () => setExpandedLab(prev => prev === lab.name ? null : lab.name) : undefined}
+                      >
+                        <TableCell sx={{
+                          ...tdCellSx,
+                          ...(clickable ? { color: '#1976d2', textDecoration: isExp ? 'underline' : 'none' } : {}),
+                        }}>
+                          {lab.name}
+                        </TableCell>
+                        <TableCell sx={{ ...tdCellSx, fontWeight: isAbnormal ? 700 : 400, color: isAbnormal ? '#c00' : '#111' }} align="center">
+                          {lab.value || '—'}
+                        </TableCell>
+                        <TableCell sx={{ ...tdCellSx, color: '#c00', fontWeight: 700, fontSize: '1rem' }} align="center">
+                          {arrow}
+                        </TableCell>
+                        <TableCell sx={tdCellSx} align="center">{lab.unit || ''}</TableCell>
+                        <TableCell sx={tdCellSx} align="center">{lab.referenceRange || ''}</TableCell>
+                      </TableRow>
+                      {clickable && (
+                        <TableRow>
+                          <TableCell colSpan={5} sx={{ p: 0, borderBottom: isExp ? undefined : 'none' }}>
+                            <Collapse in={isExp}>
+                              <BoxAny sx={{
+                                mx: 1, my: 0.5, pl: 1.5, borderLeft: '2px solid', borderColor: '#64b5f6',
+                                bgcolor: 'rgba(33,150,243,0.04)', borderRadius: '0 4px 4px 0', py: 0.5,
+                              }}>
+                                <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#555', mb: 0.3 }}>
+                                  检验趋势 ({labHistoryMap.get(lab.name)?.length || 0}次)
+                                </Typography>
+                                {(labHistoryMap.get(lab.name) || [])
+                                  .sort((a, b) => a.date.localeCompare(b.date))
+                                  .map((entry, ei) => {
+                                    const entryAbnormal = entry.status && entry.status !== 'Normal';
+                                    const entryArrow = entry.status === 'High' ? ' ↑' : entry.status === 'Low' ? ' ↓' : '';
+                                    return (
+                                      <BoxAny key={ei} sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 0.1 }}>
+                                        <Typography sx={{ fontSize: '0.75rem', color: '#888', width: 70, flexShrink: 0 }}>
+                                          {entry.date}
+                                        </Typography>
+                                        <Typography sx={{ fontSize: '0.75rem', color: '#888', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                          {entry.source}
+                                        </Typography>
+                                        <Typography sx={{
+                                          fontSize: '0.75rem', flexShrink: 0, fontWeight: 600,
+                                          color: entryAbnormal ? '#c00' : '#2e7d32',
+                                        }}>
+                                          {entry.value}{entry.unit ? ` ${entry.unit}` : ''}{entryArrow}
+                                        </Typography>
+                                        {entry.referenceRange && (
+                                          <Typography sx={{ fontSize: '0.7rem', color: '#aaa', flexShrink: 0 }}>
+                                            ({entry.referenceRange})
+                                          </Typography>
+                                        )}
+                                      </BoxAny>
+                                    );
+                                  })}
+                              </BoxAny>
+                            </Collapse>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </React.Fragment>
                   );
                 })}
               </TableBody>

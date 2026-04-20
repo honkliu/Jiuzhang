@@ -37,7 +37,7 @@ import {
 } from '@mui/icons-material';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState, AppDispatch } from '@/store';
-import { fetchMessages, addMessage, removeMessage, updateChat } from '@/store/chatSlice';
+import { fetchMessages, addMessage, removeMessage, updateChat, setPendingMessage } from '@/store/chatSlice';
 import { MessageBubble } from './MessageBubble';
 import { signalRService } from '@/services/signalr.service';
 import { chatService, type Chat, type Message } from '@/services/chat.service';
@@ -848,7 +848,7 @@ const ChatInputPanel: React.FC<ChatInputPanelProps> = React.memo(({
 
 export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar, sx }) => {
   const dispatch = useDispatch<AppDispatch>();
-  const { activeChat, messages, typingUsers, loading, drafts } = useSelector(
+  const { activeChat, messages, typingUsers, loading, drafts, pendingMessage } = useSelector(
     (state: RootState) => state.chat
   );
   const { user } = useSelector((state: RootState) => state.auth);

@@ -1081,6 +1081,7 @@ public class MongoDbInitializer : IHostedService
                 Category = MedicalCategory.LabResult, ImageUrl = placeholder,
                 HospitalName = "北京协和医院", Department = "检验科", DoctorName = "张医生",
                 PatientName = "李明", ReceiptDate = new DateTime(2025, 12, 15), VisitId = visit1.Id,
+                Notes = "血常规+CRP+血沉",
                 FhirResourceType = "Observation",
                 LabResults = new List<LabResultItem>
                 {
@@ -1413,6 +1414,7 @@ public class MongoDbInitializer : IHostedService
                 Category = MedicalCategory.LabResult, ImageUrl = placeholder,
                 HospitalName = "北京协和医院", Department = "检验科", DoctorName = "赵主任",
                 PatientName = "李明", ReceiptDate = new DateTime(2026, 3, 20), VisitId = visit3.Id,
+                Notes = "血常规+维生素B12+叶酸+同型半胱氨酸",
                 FhirResourceType = "Observation",
                 LabResults = new List<LabResultItem>
                 {

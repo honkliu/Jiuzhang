@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Box, Typography, Tabs, Tab, Fab, CircularProgress, Alert, Button,
 } from '@mui/material';
@@ -15,7 +15,7 @@ import { chatService } from '@/services/chat.service';
 import { signalRService } from '@/services/signalr.service';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { WA_USER_ID } from '@/utils/chatParticipants';
-import { setActiveChat, fetchMessages, addMessage } from '@/store/chatSlice';
+import { setActiveChat, fetchMessages } from '@/store/chatSlice';
 import type { RootState, AppDispatch } from '@/store';
 
 const BoxAny = Box as any;
@@ -96,13 +96,22 @@ const serializeReceipts = (receipts: ReceiptDto[], type: 'Shopping' | 'Medical')
   }
 };
 
+interface TimelineEvent {
+  id: string;
+  date: Date;
+  type: 'shopping' | 'medical';
+  label: string; // merchant or hospital
+  subLabel?: string; // date string
+}
+
 export const ReceiptsPage: React.FC = () => {
   const { t } = useLanguage();
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
   const chats = useSelector((state: RootState) => state.chat.chats);
   const [tab, setTab] = useState(0); // 0=Shopping, 1=Medical
-  const [receipts, setReceipts] = useState<ReceiptDto[]>([]);
+  const [shoppingReceipts, setShoppingReceipts] = useState<ReceiptDto[]>([]);
+  const [medicalReceipts, setMedicalReceipts] = useState<ReceiptDto[]>([]);
   const [allReceipts, setAllReceipts] = useState<ReceiptDto[]>([]);
   const [visits, setVisits] = useState<ReceiptVisitDto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -110,32 +119,116 @@ export const ReceiptsPage: React.FC = () => {
   const [captureOpen, setCaptureOpen] = useState(false);
   const [selectedReceipt, setSelectedReceipt] = useState<ReceiptDto | null>(null);
   const [askingWa, setAskingWa] = useState(false);
+  const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
+
+  const receipts = tab === 0 ? shoppingReceipts : medicalReceipts;
+
+  const toggleChecked = (id: string) => {
+    setCheckedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAllChecked = () => {
+    if (tab === 0) {
+      const allIds = shoppingReceipts.map(r => r.id);
+      const allSelected = allIds.every(id => checkedIds.has(id));
+      setCheckedIds(prev => {
+        const next = new Set(prev);
+        allIds.forEach(id => allSelected ? next.delete(id) : next.add(id));
+        return next;
+      });
+    } else {
+      // For medical: toggle visit IDs + unlinked receipt IDs
+      const visitIds = visits.map(v => v.id);
+      const unlinkedIds = medicalReceipts.filter(r => !r.visitId).map(r => r.id);
+      const allIds = [...visitIds, ...unlinkedIds];
+      const allSelected = allIds.every(id => checkedIds.has(id));
+      setCheckedIds(prev => {
+        const next = new Set(prev);
+        allIds.forEach(id => allSelected ? next.delete(id) : next.add(id));
+        return next;
+      });
+    }
+  };
 
   const loadData = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      // Always load all receipts for cross-referencing item history
-      const [shopping, medical] = await Promise.all([
+      const [shopping, medical, visitData] = await Promise.all([
         receiptService.list('Shopping'),
         receiptService.list('Medical'),
+        receiptService.listVisits(),
       ]);
+      setShoppingReceipts(shopping);
+      setMedicalReceipts(medical);
       setAllReceipts([...shopping, ...medical]);
-      if (tab === 0) {
-        setReceipts(shopping);
-      } else {
-        const data = await receiptService.listVisits();
-        setVisits(data);
-        setReceipts(medical);
-      }
+      setVisits(visitData);
     } catch (e: any) {
       setError(e?.message || 'Failed to load');
     } finally {
       setLoading(false);
     }
-  }, [tab]);
+  }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  // Build unified timeline events
+  const timelineEvents = useMemo((): TimelineEvent[] => {
+    const events: TimelineEvent[] = [];
+
+    // Shopping: group by receipt (each receipt = one dot)
+    for (const r of shoppingReceipts) {
+      if (!r.receiptDate) continue;
+      events.push({
+        id: r.id,
+        date: new Date(r.receiptDate),
+        type: 'shopping',
+        label: r.merchantName || '购物',
+      });
+    }
+
+    // Medical: each visit = one dot
+    for (const v of visits) {
+      if (!v.visitDate) continue;
+      events.push({
+        id: v.id,
+        date: new Date(v.visitDate),
+        type: 'medical',
+        label: v.hospitalName || '就诊',
+      });
+    }
+
+    // Unlinked medical receipts
+    for (const r of medicalReceipts) {
+      if (r.visitId) continue;
+      if (!r.receiptDate) continue;
+      events.push({
+        id: r.id,
+        date: new Date(r.receiptDate),
+        type: 'medical',
+        label: r.hospitalName || '医疗',
+      });
+    }
+
+    events.sort((a, b) => a.date.getTime() - b.date.getTime());
+    return events;
+  }, [shoppingReceipts, medicalReceipts, visits]);
+
+  const handleTimelineDotClick = (event: TimelineEvent) => {
+    if (event.type === 'shopping') {
+      setTab(0);
+      // Find and select the receipt
+      const receipt = shoppingReceipts.find(r => r.id === event.id);
+      if (receipt) setSelectedReceipt(receipt);
+    } else {
+      setTab(1);
+      // For visits, just switch tab (visit will be visible)
+    }
+  };
 
   const handleTabChange = (_: any, newVal: number) => {
     setTab(newVal);
@@ -156,13 +249,28 @@ export const ReceiptsPage: React.FC = () => {
   };
 
   const handleAskWa = async () => {
-    if (askingWa || receipts.length === 0) return;
+    if (askingWa) return;
     setAskingWa(true);
     try {
       const type = tab === 0 ? 'Shopping' : 'Medical';
-      const text = serializeReceipts(receipts, type);
+      // Filter to only checked items
+      let selectedData: ReceiptDto[];
+      if (tab === 0) {
+        selectedData = shoppingReceipts.filter(r => checkedIds.has(r.id));
+      } else {
+        // For medical: checked visits → all their receipts; checked unlinked receipts
+        const checkedVisitIds = new Set(visits.filter(v => checkedIds.has(v.id)).map(v => v.id));
+        selectedData = medicalReceipts.filter(r =>
+          (r.visitId && checkedVisitIds.has(r.visitId)) || (!r.visitId && checkedIds.has(r.id))
+        );
+      }
+      if (selectedData.length === 0) {
+        setError('请先选择要分析的票据');
+        setAskingWa(false);
+        return;
+      }
+      const text = serializeReceipts(selectedData, type);
 
-      // Find existing Wa chat or create one
       let waChat = chats.find(c =>
         c.participants?.some(p => p.userId === WA_USER_ID)
       );
@@ -173,15 +281,13 @@ export const ReceiptsPage: React.FC = () => {
         });
       }
 
-      // Navigate to chat first so SignalR joins the group
+      // Navigate to chat first, wait for ChatWindow to mount and join SignalR group, then send
       dispatch(setActiveChat(waChat));
       dispatch(fetchMessages({ chatId: waChat.id }));
       navigate('/chats');
 
-      // Wait for ChatWindow to mount and join the SignalR group
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 2000));
 
-      // Send via SignalR so the agent is triggered with the client in the group
       await signalRService.sendMessage({
         chatId: waChat.id,
         messageType: 'text',
@@ -200,7 +306,8 @@ export const ReceiptsPage: React.FC = () => {
         <AppHeader />
         <ReceiptDetail
           receipt={selectedReceipt}
-          onBack={() => { setSelectedReceipt(null); loadData(); }}
+          allReceipts={allReceipts}
+          onBack={() => { setSelectedReceipt(null); }}
           onDelete={() => handleDelete(selectedReceipt.id)}
         />
       </>
@@ -211,20 +318,81 @@ export const ReceiptsPage: React.FC = () => {
     <>
       <AppHeader />
       <BoxAny sx={{ maxWidth: 960, mx: 'auto', px: { xs: 1, sm: 2 }, pt: { xs: 9, sm: 10 }, pb: 10 }}>
-        <BoxAny sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-          <Typography variant="h5" fontWeight={700}>
-            {t('receipts.title')}
-          </Typography>
+        {/* Ask Wa + select all */}
+        <BoxAny sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1, mb: 1 }}>
+          <Button size="small" onClick={toggleAllChecked} disabled={loading}>
+            {(() => {
+              const ids = tab === 0
+                ? shoppingReceipts.map(r => r.id)
+                : [...visits.map(v => v.id), ...medicalReceipts.filter(r => !r.visitId).map(r => r.id)];
+              return ids.length > 0 && ids.every(id => checkedIds.has(id)) ? '取消全选' : '全选';
+            })()}
+          </Button>
           <Button
             variant="outlined"
             size="small"
             startIcon={<AskIcon />}
-            disabled={askingWa || loading || receipts.length === 0}
+            disabled={askingWa || loading || checkedIds.size === 0}
             onClick={handleAskWa}
           >
-            {askingWa ? '发送中...' : `Ask ${t('Wa')}`}
+            {askingWa ? '发送中...' : `Ask ${t('Wa')} (${checkedIds.size})`}
           </Button>
         </BoxAny>
+
+        {/* Unified horizontal timeline */}
+        {!loading && timelineEvents.length > 0 && (
+          <BoxAny sx={{
+            display: 'flex', alignItems: 'center', mb: 2, px: 1, py: 1,
+            overflowX: 'auto', scrollbarWidth: 'none', '&::-webkit-scrollbar': { display: 'none' },
+          }}>
+            {timelineEvents.map((evt, idx) => {
+              const dateStr = `${evt.date.getMonth() + 1}/${evt.date.getDate()}`;
+              const yearStr = `${evt.date.getFullYear()}`;
+              const showYear = idx === 0 || timelineEvents[idx - 1].date.getFullYear() !== evt.date.getFullYear();
+              const dotColor = evt.type === 'shopping' ? '#27ae60' : '#2980b9';
+              const dotBorderColor = evt.type === 'shopping' ? '#a3d9a5' : '#7ec8e3';
+              return (
+                <React.Fragment key={`${evt.type}-${evt.id}`}>
+                  {idx > 0 && (
+                    <BoxAny sx={{ flex: 1, minWidth: 20, height: 2, bgcolor: 'rgba(0,0,0,0.12)' }} />
+                  )}
+                  <BoxAny
+                    sx={{
+                      display: 'flex', flexDirection: 'column', alignItems: 'center',
+                      cursor: 'pointer', flexShrink: 0, px: 0.5,
+                      '&:hover .tl-dot': { transform: 'scale(1.3)' },
+                    }}
+                    onClick={() => handleTimelineDotClick(evt)}
+                  >
+                    {showYear && (
+                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.6rem', mb: 0.2 }}>
+                        {yearStr}
+                      </Typography>
+                    )}
+                    {!showYear && <BoxAny sx={{ height: 16 }} />}
+                    <BoxAny
+                      className="tl-dot"
+                      sx={{
+                        width: 10, height: 10, borderRadius: '50%',
+                        bgcolor: dotColor, border: '2px solid', borderColor: dotBorderColor,
+                        transition: 'transform 0.15s',
+                      }}
+                    />
+                    <Typography variant="caption" sx={{ fontSize: '0.65rem', mt: 0.2, whiteSpace: 'nowrap', color: 'text.secondary' }}>
+                      {dateStr}
+                    </Typography>
+                    <Typography variant="caption" sx={{
+                      fontSize: '0.6rem', whiteSpace: 'nowrap', color: 'text.secondary',
+                      maxWidth: 64, overflow: 'hidden', textOverflow: 'ellipsis', textAlign: 'center',
+                    }}>
+                      {evt.label}
+                    </Typography>
+                  </BoxAny>
+                </React.Fragment>
+              );
+            })}
+          </BoxAny>
+        )}
 
         <Tabs
           value={tab}
@@ -243,15 +411,19 @@ export const ReceiptsPage: React.FC = () => {
           </BoxAny>
         ) : tab === 0 ? (
           <ReceiptList
-            receipts={receipts}
+            receipts={shoppingReceipts}
             allReceipts={allReceipts}
+            checkedIds={checkedIds}
+            onToggleChecked={toggleChecked}
             onSelect={setSelectedReceipt}
           />
         ) : (
           <MedicalVisitTimeline
             visits={visits}
-            unlinkedReceipts={receipts.filter(r => !r.visitId)}
+            unlinkedReceipts={medicalReceipts.filter(r => !r.visitId)}
             allReceipts={allReceipts}
+            checkedIds={checkedIds}
+            onToggleChecked={toggleChecked}
             onSelectReceipt={setSelectedReceipt}
             onRefresh={loadData}
           />
