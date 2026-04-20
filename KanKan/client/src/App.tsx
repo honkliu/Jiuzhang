@@ -13,6 +13,7 @@ import { ProfilePage } from './components/Profile/ProfilePage';
 import { ChatRoom3DTestPage } from './components/Chat/ChatRoom3DTestPage';
 import { FamilyPage } from './components/Family/FamilyPage';
 import { NotebookPage } from './components/Notebook/NotebookPage';
+import { ReceiptsPage } from './components/Receipts/ReceiptsPage';
 import { InviteCodesPage } from './components/Admin/InviteCodesPage';
 import { authService } from './services/auth.service';
 import { contactService } from './services/contact.service';
@@ -302,6 +303,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <NotebookPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/receipts"
+                element={
+                  <ProtectedRoute>
+                    <ReceiptsPage />
                   </ProtectedRoute>
                 }
               />

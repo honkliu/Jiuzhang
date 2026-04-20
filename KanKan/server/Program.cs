@@ -236,6 +236,8 @@ if (useInMemory)
     builder.Services.AddSingleton<KanKan.API.Repositories.Interfaces.INotebookVisibilityRepository, KanKan.API.Repositories.Implementations.InMemoryNotebookRepository>();
     builder.Services.AddSingleton<KanKan.API.Repositories.Interfaces.INotebookSectionRepository, KanKan.API.Repositories.Implementations.InMemoryNotebookRepository>();
     builder.Services.AddSingleton<KanKan.API.Repositories.Interfaces.INotebookPageRepository, KanKan.API.Repositories.Implementations.InMemoryNotebookRepository>();
+    builder.Services.AddSingleton<KanKan.API.Repositories.Interfaces.IReceiptRepository, KanKan.API.Repositories.Implementations.InMemoryReceiptRepository>();
+    builder.Services.AddSingleton<KanKan.API.Repositories.Interfaces.IReceiptVisitRepository, KanKan.API.Repositories.Implementations.InMemoryReceiptRepository>();
 }
 else if (storageMode == "mongodb")
 {
@@ -257,6 +259,8 @@ else if (storageMode == "mongodb")
     builder.Services.AddScoped<KanKan.API.Repositories.Interfaces.INotebookVisibilityRepository, KanKan.API.Repositories.Implementations.NotebookVisibilityRepository>();
     builder.Services.AddScoped<KanKan.API.Repositories.Interfaces.INotebookSectionRepository, KanKan.API.Repositories.Implementations.NotebookSectionRepository>();
     builder.Services.AddScoped<KanKan.API.Repositories.Interfaces.INotebookPageRepository, KanKan.API.Repositories.Implementations.NotebookPageRepository>();
+    builder.Services.AddScoped<KanKan.API.Repositories.Interfaces.IReceiptRepository, KanKan.API.Repositories.Implementations.ReceiptRepository>();
+    builder.Services.AddScoped<KanKan.API.Repositories.Interfaces.IReceiptVisitRepository, KanKan.API.Repositories.Implementations.ReceiptVisitRepository>();
 }
 
 builder.Services.AddScoped<IEmailService, EmailService>();

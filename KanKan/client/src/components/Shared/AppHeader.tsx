@@ -42,6 +42,7 @@ const navItems = [
   { label: 'Profile', path: '/profile', adminOnly: false },
   { label: 'Contacts', path: '/contacts', adminOnly: false },
   { label: 'Notebook', path: '/notebook', adminOnly: false },
+  { label: 'Receipts', path: '/receipts', adminOnly: false },
   { label: 'FamilyTree', path: '/family', adminOnly: true },
   { label: 'admin.title', path: '/admin', adminOnly: true },
 ];
