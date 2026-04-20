@@ -176,6 +176,62 @@ const renderMarkdownWithRedTags = (input: string) => {
   return nodes;
 };
 
+/** Detect if text contains markdown formatting */
+const hasMarkdownSyntax = (text: string): boolean =>
+  /^#{1,6}\s/m.test(text) ||          // headings
+  /^[-*+]\s/m.test(text) ||            // unordered list
+  /^\d+\.\s/m.test(text) ||            // ordered list
+  /^```/m.test(text) ||                // code block
+  /\*\*.+\*\*/m.test(text) ||          // bold
+  /^>/m.test(text) ||                  // blockquote
+  /\|.+\|.+\|/m.test(text);           // table
+
+const plainTextSx = {
+  whiteSpace: 'pre-wrap' as const,
+  '& .katex-display': { margin: '0.5em 0', overflowX: 'auto', overflowY: 'hidden' },
+  '& .katex': { fontSize: '1.1em' },
+  '& table': { width: '100%', borderCollapse: 'collapse', margin: '8px 0' },
+  '& th, & td': { border: '1px solid rgba(0,0,0,0.1)', padding: '4px 8px', textAlign: 'left' },
+  '& th': { backgroundColor: 'rgba(0,0,0,0.03)', fontWeight: 600 },
+  '& code': { backgroundColor: 'rgba(0,0,0,0.05)', padding: '2px 4px', borderRadius: '3px', fontFamily: 'monospace', fontSize: '0.9em' },
+  '& pre': { backgroundColor: 'rgba(0,0,0,0.05)', padding: '8px 12px', borderRadius: '4px', overflowX: 'auto', margin: '8px 0' },
+  '& pre code': { padding: 0, backgroundColor: 'transparent' },
+};
+
+const markdownSx = {
+  whiteSpace: 'normal' as const,
+  lineHeight: 1.6,
+  '& .katex-display': { margin: '0.5em 0', overflowX: 'auto', overflowY: 'hidden' },
+  '& .katex': { fontSize: '1.1em' },
+  '& p': { margin: '0.4em 0' },
+  '& p:first-of-type': { marginTop: 0 },
+  '& p:last-of-type': { marginBottom: 0 },
+  '& h1, & h2, & h3, & h4, & h5, & h6': { margin: '0.6em 0 0.3em' },
+  '& h1': { fontSize: '1.3em' },
+  '& h2': { fontSize: '1.15em' },
+  '& h3': { fontSize: '1.05em' },
+  '& ul, & ol': { paddingLeft: '1.5em', margin: '0.3em 0' },
+  '& li': { margin: '0.15em 0' },
+  '& li > p': { margin: 0, display: 'inline' },
+  '& blockquote': { margin: '0.4em 0', paddingLeft: '0.75em', borderLeft: '3px solid rgba(0,0,0,0.15)', color: 'inherit' },
+  '& table': { width: '100%', borderCollapse: 'collapse', margin: '0.5em 0' },
+  '& th, & td': { border: '1px solid rgba(0,0,0,0.1)', padding: '4px 8px', textAlign: 'left' },
+  '& th': { backgroundColor: 'rgba(0,0,0,0.03)', fontWeight: 600 },
+  '& code': { backgroundColor: 'rgba(0,0,0,0.05)', padding: '2px 4px', borderRadius: '3px', fontFamily: 'monospace', fontSize: '0.9em' },
+  '& pre': { backgroundColor: 'rgba(0,0,0,0.05)', padding: '8px 12px', borderRadius: '4px', overflowX: 'auto', margin: '0.5em 0' },
+  '& pre code': { padding: 0, backgroundColor: 'transparent' },
+  '& hr': { border: 'none', borderTop: '1px solid rgba(0,0,0,0.1)', margin: '0.5em 0' },
+};
+
+const MarkdownOrPlainText: React.FC<{ text: string }> = ({ text }) => {
+  const isMd = hasMarkdownSyntax(text);
+  return (
+    <BoxAny sx={isMd ? markdownSx : plainTextSx}>
+      {renderMarkdownWithRedTags(text)}
+    </BoxAny>
+  );
+};
+
 interface MessageBubbleProps {
   message: Message;
   isOwn: boolean;
@@ -397,53 +453,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
             {t('chat.message.deleted')}
           </Typography>
         ) : message.messageType === 'text' ? (
-          <BoxAny
-            sx={{
-              whiteSpace: 'pre-wrap',
-              '& .katex-display': {
-                margin: '0.5em 0',
-                overflowX: 'auto',
-                overflowY: 'hidden',
-              },
-              '& .katex': {
-                fontSize: '1.1em',
-              },
-              '& table': {
-                width: '100%',
-                borderCollapse: 'collapse',
-                margin: '8px 0',
-              },
-              '& th, & td': {
-                border: '1px solid rgba(0,0,0,0.1)',
-                padding: '4px 8px',
-                textAlign: 'left',
-              },
-              '& th': {
-                backgroundColor: 'rgba(0,0,0,0.03)',
-                fontWeight: 600,
-              },
-              '& code': {
-                backgroundColor: 'rgba(0, 0, 0, 0.05)',
-                padding: '2px 4px',
-                borderRadius: '3px',
-                fontFamily: 'monospace',
-                fontSize: '0.9em',
-              },
-              '& pre': {
-                backgroundColor: 'rgba(0, 0, 0, 0.05)',
-                padding: '8px 12px',
-                borderRadius: '4px',
-                overflowX: 'auto',
-                margin: '8px 0',
-              },
-              '& pre code': {
-                padding: 0,
-                backgroundColor: 'transparent',
-              },
-            }}
-          >
-            {renderMarkdownWithRedTags(renderText)}
-          </BoxAny>
+          <MarkdownOrPlainText text={renderText} />
         ) : message.messageType === 'image' ? (
           <ImageHoverPreview
             src={imageUrl}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Box, Typography, Paper, IconButton, Chip, Collapse, Button, Dialog,
   DialogTitle, DialogContent, DialogActions, TextField,
@@ -15,6 +15,7 @@ import {
   CameraAlt as ImageIcon,
   Receipt as PayIcon,
   Description as NoteIcon,
+  TrendingDown as CheapIcon,
 } from '@mui/icons-material';
 import type { ReceiptDto, ReceiptVisitDto } from '@/services/receipt.service';
 import { receiptService } from '@/services/receipt.service';
@@ -47,22 +48,88 @@ const categoryColors: Record<string, string> = {
   DischargeNote: '#e8f5e9',
 };
 
+interface MedHistoryEntry {
+  source: string; // hospital or merchant name
+  date: string;
+  price?: number;
+  dosage?: string;
+  frequency?: string;
+  value?: string; // for lab results
+  unit?: string;
+  referenceRange?: string;
+  status?: string;
+}
+
 interface MedicalVisitTimelineProps {
   visits: ReceiptVisitDto[];
   unlinkedReceipts: ReceiptDto[];
+  allReceipts: ReceiptDto[];
   onSelectReceipt: (r: ReceiptDto) => void;
   onRefresh: () => void;
 }
 
 export const MedicalVisitTimeline: React.FC<MedicalVisitTimelineProps> = ({
-  visits, unlinkedReceipts, onSelectReceipt, onRefresh,
+  visits, unlinkedReceipts, allReceipts, onSelectReceipt, onRefresh,
 }) => {
   const { t } = useLanguage();
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [expandedMed, setExpandedMed] = useState<string | null>(null);
+  const [expandedLab, setExpandedLab] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [newVisit, setNewVisit] = useState({ hospitalName: '', department: '', patientName: '', visitDate: '' });
 
   const toggle = (id: string) => setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
+
+  // Build medication history index
+  const medHistoryMap = useMemo(() => {
+    const map = new Map<string, MedHistoryEntry[]>();
+    for (const r of allReceipts) {
+      const source = r.hospitalName || r.merchantName || '';
+      const date = r.receiptDate ? new Date(r.receiptDate).toLocaleDateString('zh-CN') : '';
+      for (const med of r.medications) {
+        const key = med.name;
+        if (!map.has(key)) map.set(key, []);
+        map.get(key)!.push({
+          source, date, price: med.price,
+          dosage: med.dosage, frequency: med.frequency,
+        });
+      }
+    }
+    return map;
+  }, [allReceipts]);
+
+  // Build lab result history index
+  const labHistoryMap = useMemo(() => {
+    const map = new Map<string, MedHistoryEntry[]>();
+    for (const r of allReceipts) {
+      const source = r.hospitalName || '';
+      const date = r.receiptDate ? new Date(r.receiptDate).toLocaleDateString('zh-CN') : '';
+      for (const lab of r.labResults) {
+        const key = lab.name;
+        if (!map.has(key)) map.set(key, []);
+        map.get(key)!.push({
+          source, date, value: lab.value, unit: lab.unit,
+          referenceRange: lab.referenceRange, status: lab.status,
+        });
+      }
+    }
+    return map;
+  }, [allReceipts]);
+
+  const hasMedHistory = (name: string) => (medHistoryMap.get(name)?.length || 0) > 1;
+  const hasLabHistory = (name: string) => (labHistoryMap.get(name)?.length || 0) > 1;
+
+  const handleMedClick = (e: React.MouseEvent, name: string) => {
+    e.stopPropagation();
+    if (!hasMedHistory(name)) return;
+    setExpandedMed(prev => prev === name ? null : name);
+  };
+
+  const handleLabClick = (e: React.MouseEvent, name: string) => {
+    e.stopPropagation();
+    if (!hasLabHistory(name)) return;
+    setExpandedLab(prev => prev === name ? null : name);
+  };
 
   const handleCreateVisit = async () => {
     try {
@@ -160,7 +227,6 @@ export const MedicalVisitTimeline: React.FC<MedicalVisitTimelineProps> = ({
                       pl: 2, py: 1, cursor: 'pointer', borderRadius: 2,
                       position: 'relative',
                       '&:hover': { bgcolor: 'rgba(0,0,0,0.03)' },
-                      // Timeline line
                       '&::before': idx < sorted.length - 1 ? {
                         content: '""', position: 'absolute', left: 10, top: 32,
                         bottom: -8, width: 2, bgcolor: 'divider',
@@ -199,18 +265,97 @@ export const MedicalVisitTimeline: React.FC<MedicalVisitTimelineProps> = ({
                           {receipt.diagnosisText}
                         </Typography>
                       )}
+
+                      {/* Medications — clickable for history */}
                       {receipt.medications.length > 0 && (
-                        <Typography variant="caption" display="block" color="text.secondary" noWrap>
-                          {receipt.medications.map(m => m.name).join('、')}
-                        </Typography>
+                        <BoxAny sx={{ mt: 0.3 }}>
+                          {receipt.medications.map((med, mi) => {
+                            const clickable = hasMedHistory(med.name);
+                            const isExp = expandedMed === med.name;
+                            return (
+                              <BoxAny key={mi}>
+                                <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                  <Typography
+                                    variant="caption"
+                                    sx={{
+                                      ...(clickable ? {
+                                        color: 'primary.main', cursor: 'pointer',
+                                        textDecoration: isExp ? 'underline' : 'none',
+                                        '&:hover': { textDecoration: 'underline' },
+                                      } : { color: 'text.secondary' }),
+                                    }}
+                                    onClick={clickable ? (e) => handleMedClick(e, med.name) : undefined}
+                                  >
+                                    {med.name}
+                                  </Typography>
+                                  {med.price != null && (
+                                    <Typography variant="caption" color="text.secondary">
+                                      ¥{med.price.toFixed(2)}
+                                    </Typography>
+                                  )}
+                                </BoxAny>
+                                <Collapse in={isExp}>
+                                  <MedHistoryPanel entries={medHistoryMap.get(med.name) || []} currentSource={receipt.hospitalName || ''} />
+                                </Collapse>
+                              </BoxAny>
+                            );
+                          })}
+                        </BoxAny>
+                      )}
+
+                      {/* Lab results — clickable for history */}
+                      {receipt.labResults.length > 0 && (
+                        <BoxAny sx={{ mt: 0.3 }}>
+                          {receipt.labResults.map((lab, li) => {
+                            const clickable = hasLabHistory(lab.name);
+                            const isExp = expandedLab === lab.name;
+                            const isAbnormal = lab.status && lab.status !== 'Normal';
+                            return (
+                              <BoxAny key={li}>
+                                <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                  <Typography
+                                    variant="caption"
+                                    sx={{
+                                      ...(clickable ? {
+                                        color: 'primary.main', cursor: 'pointer',
+                                        textDecoration: isExp ? 'underline' : 'none',
+                                        '&:hover': { textDecoration: 'underline' },
+                                      } : { color: 'text.secondary' }),
+                                    }}
+                                    onClick={clickable ? (e) => handleLabClick(e, lab.name) : undefined}
+                                  >
+                                    {lab.name}
+                                  </Typography>
+                                  <Typography variant="caption" sx={{
+                                    color: isAbnormal ? 'error.main' : 'text.secondary',
+                                    fontWeight: isAbnormal ? 600 : 400,
+                                  }}>
+                                    {lab.value}{lab.unit ? ` ${lab.unit}` : ''}
+                                    {lab.status === 'High' ? ' ↑' : lab.status === 'Low' ? ' ↓' : ''}
+                                  </Typography>
+                                </BoxAny>
+                                <Collapse in={isExp}>
+                                  <LabHistoryPanel entries={labHistoryMap.get(lab.name) || []} />
+                                </Collapse>
+                              </BoxAny>
+                            );
+                          })}
+                        </BoxAny>
                       )}
                     </BoxAny>
                     {receipt.imageUrl && (
-                      <BoxAny
-                        component="img"
-                        src={receipt.imageUrl}
-                        sx={{ width: 48, height: 48, borderRadius: 1, objectFit: 'cover', flexShrink: 0 }}
-                      />
+                      <Typography
+                        variant="caption"
+                        color="primary"
+                        sx={{ cursor: 'pointer', '&:hover': { textDecoration: 'underline' }, display: 'inline-flex', alignItems: 'center', gap: 0.3, flexShrink: 0 }}
+                        onClick={(e: React.MouseEvent) => {
+                          e.stopPropagation();
+                          window.open(receipt.imageUrl, '_blank');
+                        }}
+                      >
+                        <ImageIcon sx={{ fontSize: 14 }} />
+                        原图
+                      </Typography>
                     )}
                   </BoxAny>
                 ))}
@@ -288,6 +433,104 @@ export const MedicalVisitTimeline: React.FC<MedicalVisitTimelineProps> = ({
           <Button variant="contained" onClick={handleCreateVisit}>{t('common.confirm')}</Button>
         </DialogActions>
       </Dialog>
+    </BoxAny>
+  );
+};
+
+/** Medication history panel — shows price comparison across sources */
+const MedHistoryPanel: React.FC<{ entries: MedHistoryEntry[]; currentSource: string }> = ({ entries, currentSource }) => {
+  const sorted = [...entries].sort((a, b) => a.date.localeCompare(b.date));
+  const prices = sorted.map(e => e.price ?? Infinity);
+  const minPrice = Math.min(...prices);
+
+  return (
+    <BoxAny
+      sx={{
+        ml: 1, my: 0.3, pl: 1.5, borderLeft: '2px solid', borderColor: 'warning.light',
+        bgcolor: 'rgba(255, 152, 0, 0.04)', borderRadius: '0 4px 4px 0', py: 0.3,
+      }}
+      onClick={(e: React.MouseEvent) => e.stopPropagation()}
+    >
+      <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, mb: 0.2, display: 'block' }}>
+        用药记录 ({sorted.length}次)
+      </Typography>
+      {sorted.map((entry, i) => {
+        const isCheapest = entry.price != null && entry.price === minPrice && sorted.length > 1;
+        const isCurrent = entry.source === currentSource;
+        return (
+          <BoxAny key={i} sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 0.1 }}>
+            <Typography variant="caption" color="text.secondary" sx={{ width: 80, flexShrink: 0 }}>
+              {entry.date}
+            </Typography>
+            <Typography variant="caption" sx={{
+              flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              fontWeight: isCurrent ? 600 : 400,
+              color: isCurrent ? 'text.primary' : 'text.secondary',
+            }}>
+              {entry.source}
+            </Typography>
+            {entry.dosage && (
+              <Typography variant="caption" color="text.secondary" sx={{ flexShrink: 0 }}>
+                {entry.dosage}
+              </Typography>
+            )}
+            {entry.price != null && (
+              <Typography variant="caption" sx={{
+                flexShrink: 0, fontWeight: 600,
+                color: isCheapest ? 'success.main' : 'text.secondary',
+                display: 'inline-flex', alignItems: 'center', gap: 0.3,
+              }}>
+                {isCheapest && <CheapIcon sx={{ fontSize: 12 }} />}
+                ¥{entry.price.toFixed(2)}
+              </Typography>
+            )}
+          </BoxAny>
+        );
+      })}
+    </BoxAny>
+  );
+};
+
+/** Lab result history panel — shows value trend across visits */
+const LabHistoryPanel: React.FC<{ entries: MedHistoryEntry[] }> = ({ entries }) => {
+  const sorted = [...entries].sort((a, b) => a.date.localeCompare(b.date));
+
+  return (
+    <BoxAny
+      sx={{
+        ml: 1, my: 0.3, pl: 1.5, borderLeft: '2px solid', borderColor: 'info.light',
+        bgcolor: 'rgba(33, 150, 243, 0.04)', borderRadius: '0 4px 4px 0', py: 0.3,
+      }}
+      onClick={(e: React.MouseEvent) => e.stopPropagation()}
+    >
+      <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, mb: 0.2, display: 'block' }}>
+        检验趋势 ({sorted.length}次)
+      </Typography>
+      {sorted.map((entry, i) => {
+        const isAbnormal = entry.status && entry.status !== 'Normal';
+        const arrow = entry.status === 'High' ? ' ↑' : entry.status === 'Low' ? ' ↓' : '';
+        return (
+          <BoxAny key={i} sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 0.1 }}>
+            <Typography variant="caption" color="text.secondary" sx={{ width: 80, flexShrink: 0 }}>
+              {entry.date}
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {entry.source}
+            </Typography>
+            <Typography variant="caption" sx={{
+              flexShrink: 0, fontWeight: 600,
+              color: isAbnormal ? 'error.main' : 'success.main',
+            }}>
+              {entry.value}{entry.unit ? ` ${entry.unit}` : ''}{arrow}
+            </Typography>
+            {entry.referenceRange && (
+              <Typography variant="caption" color="text.secondary" sx={{ flexShrink: 0 }}>
+                ({entry.referenceRange})
+              </Typography>
+            )}
+          </BoxAny>
+        );
+      })}
     </BoxAny>
   );
 };

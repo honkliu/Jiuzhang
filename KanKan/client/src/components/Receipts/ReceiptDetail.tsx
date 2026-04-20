@@ -107,38 +107,50 @@ export const ReceiptDetail: React.FC<ReceiptDetailProps> = ({ receipt, onBack, o
   const dateStr = receipt.receiptDate ? new Date(receipt.receiptDate).toLocaleDateString('zh-CN') : '';
 
   return (
-    <BoxAny sx={{ maxWidth: 800, mx: 'auto', px: { xs: 1, sm: 2 }, pt: 2, pb: 4 }}>
+    <BoxAny sx={{ maxWidth: 800, mx: 'auto', px: { xs: 1, sm: 2 }, pt: { xs: 9, sm: 10 }, pb: 4 }}>
       {/* Navigation */}
       <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-        <IconButton onClick={onBack}><BackIcon /></IconButton>
+        <IconButton onClick={onBack} sx={{ bgcolor: 'rgba(0,0,0,0.04)', '&:hover': { bgcolor: 'rgba(0,0,0,0.08)' } }}>
+          <BackIcon />
+        </IconButton>
+        <Typography variant="body2" color="text.secondary" sx={{ cursor: 'pointer' }} onClick={onBack}>
+          返回
+        </Typography>
         <Typography variant="h6" fontWeight={700} sx={{ flex: 1 }}>
           {receipt.merchantName || receipt.hospitalName || t(`receipts.cat.${receipt.category}`)}
         </Typography>
         <IconButton color="error" onClick={onDelete}><DeleteIcon /></IconButton>
       </BoxAny>
 
-      {/* Original photo — tap to zoom */}
+      {/* Original photo link */}
       {receipt.imageUrl && (
-        <Paper
-          sx={{ borderRadius: 2, overflow: 'hidden', mb: 2, cursor: 'pointer', position: 'relative', boxShadow: 1 }}
-          onClick={() => openImage(receipt.imageUrl)}
-        >
-          <BoxAny component="img" src={receipt.imageUrl}
-            sx={{ width: '100%', maxHeight: 300, objectFit: 'contain', display: 'block', bgcolor: '#fafafa' }} />
-          <BoxAny sx={{ position: 'absolute', bottom: 8, right: 8, bgcolor: 'rgba(0,0,0,0.5)', borderRadius: '50%', p: 0.5 }}>
-            <ZoomIcon sx={{ color: 'white' }} fontSize="small" />
-          </BoxAny>
-        </Paper>
+        <BoxAny sx={{ mb: 1.5 }}>
+          <Typography
+            variant="body2"
+            color="primary"
+            sx={{ cursor: 'pointer', '&:hover': { textDecoration: 'underline' }, display: 'inline-flex', alignItems: 'center', gap: 0.5 }}
+            onClick={() => openImage(receipt.imageUrl)}
+          >
+            <ZoomIcon fontSize="small" />
+            查看原图
+          </Typography>
+        </BoxAny>
       )}
 
-      {/* Additional photos */}
+      {/* Additional photo links */}
       {receipt.additionalImageUrls.length > 0 && (
-        <BoxAny sx={{ display: 'flex', gap: 1, mb: 2, overflowX: 'auto' }}>
+        <BoxAny sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap' }}>
           {receipt.additionalImageUrls.map((url, i) => (
-            <BoxAny key={i} component="img" src={url}
-              sx={{ width: 72, height: 72, borderRadius: 1, objectFit: 'cover', cursor: 'pointer', flexShrink: 0, border: '1px solid #ddd' }}
+            <Typography
+              key={i}
+              variant="caption"
+              color="primary"
+              sx={{ cursor: 'pointer', '&:hover': { textDecoration: 'underline' }, display: 'inline-flex', alignItems: 'center', gap: 0.3 }}
               onClick={() => openImage(url)}
-            />
+            >
+              <ZoomIcon sx={{ fontSize: 14 }} />
+              附图{i + 1}
+            </Typography>
           ))}
         </BoxAny>
       )}

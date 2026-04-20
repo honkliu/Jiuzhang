@@ -1002,13 +1002,16 @@ public class MongoDbInitializer : IHostedService
             return;
         }
 
-        // Skip if already seeded
+        // Re-seed: delete existing receipts & visits for this user, then create fresh data
         var existingCount = await receiptsCollection.CountDocumentsAsync(
             Builders<Receipt>.Filter.Eq(r => r.OwnerId, shaol.Id), cancellationToken: cancellationToken);
         if (existingCount > 0)
         {
-            _logger.LogInformation("Receipt seed data already exists for shaol, skipping.");
-            return;
+            _logger.LogInformation("Clearing existing receipt seed data for shaol to re-seed with enriched data.");
+            await receiptsCollection.DeleteManyAsync(
+                Builders<Receipt>.Filter.Eq(r => r.OwnerId, shaol.Id), cancellationToken: cancellationToken);
+            await visitsCollection.DeleteManyAsync(
+                Builders<ReceiptVisit>.Filter.Eq(v => v.OwnerId, shaol.Id), cancellationToken: cancellationToken);
         }
 
         var ownerId = shaol.Id;
@@ -1285,10 +1288,164 @@ public class MongoDbInitializer : IHostedService
                 },
                 CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow,
             },
+            // ── Overlapping items for price comparison ──
+            new Receipt
+            {
+                Id = $"rcpt_{Guid.NewGuid():N}", OwnerId = ownerId, Type = ReceiptType.Shopping,
+                Category = ShoppingCategory.Supermarket, ImageUrl = placeholder,
+                MerchantName = "京东自营", TotalAmount = 68.60m, Currency = "CNY",
+                ReceiptDate = new DateTime(2026, 3, 22),
+                Items = new List<ReceiptLineItem>
+                {
+                    new() { Name = "海天酱油 500ml", Quantity = 2, UnitPrice = 7.90m, TotalPrice = 15.80m, Category = "调料" },
+                    new() { Name = "蒙牛纯牛奶 250ml×12", Quantity = 1, UnitPrice = 26.90m, TotalPrice = 26.90m, Category = "乳制品" },
+                    new() { Name = "卫龙辣条 大面筋", Quantity = 1, UnitPrice = 5.90m, TotalPrice = 5.90m, Category = "零食" },
+                    new() { Name = "全麦吐司面包", Quantity = 1, UnitPrice = 12.50m, TotalPrice = 12.50m, Category = "烘焙" },
+                    new() { Name = "有机鸡蛋 10枚", Quantity = 1, UnitPrice = 7.50m, TotalPrice = 7.50m, Category = "蛋类" },
+                },
+                CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow,
+            },
+            new Receipt
+            {
+                Id = $"rcpt_{Guid.NewGuid():N}", OwnerId = ownerId, Type = ReceiptType.Shopping,
+                Category = ShoppingCategory.Supermarket, ImageUrl = placeholder,
+                MerchantName = "盒马鲜生（望京店）", TotalAmount = 118.50m, Currency = "CNY",
+                ReceiptDate = new DateTime(2026, 4, 8),
+                Items = new List<ReceiptLineItem>
+                {
+                    new() { Name = "海天酱油 500ml", Quantity = 1, UnitPrice = 9.50m, TotalPrice = 9.50m, Category = "调料" },
+                    new() { Name = "有机牛奶 1L", Quantity = 2, UnitPrice = 26.90m, TotalPrice = 53.80m, Category = "乳制品" },
+                    new() { Name = "有机鸡蛋 10枚", Quantity = 1, UnitPrice = 18.90m, TotalPrice = 18.90m, Category = "蛋类" },
+                    new() { Name = "车厘子 500g", Quantity = 1, UnitPrice = 36.30m, TotalPrice = 36.30m, Category = "水果" },
+                },
+                CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow,
+            },
+            new Receipt
+            {
+                Id = $"rcpt_{Guid.NewGuid():N}", OwnerId = ownerId, Type = ReceiptType.Shopping,
+                Category = ShoppingCategory.Restaurant, ImageUrl = placeholder,
+                MerchantName = "星巴克（望京店）", TotalAmount = 108.00m, Currency = "CNY",
+                ReceiptDate = new DateTime(2026, 4, 12),
+                Items = new List<ReceiptLineItem>
+                {
+                    new() { Name = "馥芮白 Grande", Quantity = 1, UnitPrice = 38.00m, TotalPrice = 38.00m },
+                    new() { Name = "抹茶拿铁 Tall", Quantity = 1, UnitPrice = 38.00m, TotalPrice = 38.00m },
+                    new() { Name = "蛋糕卷", Quantity = 1, UnitPrice = 32.00m, TotalPrice = 32.00m },
+                },
+                CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow,
+            },
         };
         await receiptsCollection.InsertManyAsync(shoppingReceipts, cancellationToken: cancellationToken);
 
-        _logger.LogInformation("Seeded receipt data for shaol@shaol.com: 2 hospital visits + 5 shopping receipts.");
+        // ── Pharmacy purchase (medical, not shopping) ──
+        await receiptsCollection.InsertOneAsync(new Receipt
+        {
+            Id = $"rcpt_{Guid.NewGuid():N}", OwnerId = ownerId, Type = ReceiptType.Medical,
+            Category = MedicalCategory.Prescription, ImageUrl = placeholder,
+            HospitalName = "大参林药房（望京店）", TotalAmount = 86.50m, Currency = "CNY",
+            ReceiptDate = new DateTime(2026, 1, 22),
+            Notes = "自行补购常备药",
+            Medications = new List<MedicationItem>
+            {
+                new() { Name = "布洛芬缓释胶囊", Dosage = "0.3g", Quantity = 1, Price = 12.80m },
+                new() { Name = "维生素C片", Dosage = "0.1g", Quantity = 2, Price = 19.80m },
+                new() { Name = "甲钴胺片", Dosage = "0.5mg", Quantity = 1, Price = 45.00m },
+                new() { Name = "板蓝根颗粒", Dosage = "1袋", Quantity = 1, Price = 8.90m },
+            },
+            FhirResourceType = "MedicationRequest",
+            CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow,
+        }, cancellationToken: cancellationToken);
+
+        // ── 3rd medical visit with overlapping medications ──
+        var visit3 = new ReceiptVisit
+        {
+            Id = $"rvis_{Guid.NewGuid():N}", OwnerId = ownerId,
+            HospitalName = "北京协和医院", Department = "神经内科",
+            VisitDate = new DateTime(2026, 3, 20), PatientName = "李明",
+            DoctorName = "赵主任",
+            CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow,
+        };
+        await visitsCollection.InsertOneAsync(visit3, cancellationToken: cancellationToken);
+
+        var v3Receipts = new List<Receipt>
+        {
+            new Receipt
+            {
+                Id = $"rcpt_{Guid.NewGuid():N}", OwnerId = ownerId, Type = ReceiptType.Medical,
+                Category = MedicalCategory.Registration, ImageUrl = placeholder,
+                HospitalName = "北京协和医院", Department = "神经内科", DoctorName = "赵主任",
+                PatientName = "李明", TotalAmount = 80m, Currency = "CNY",
+                ReceiptDate = new DateTime(2026, 3, 20), VisitId = visit3.Id,
+                FhirResourceType = "Encounter",
+                CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow,
+            },
+            new Receipt
+            {
+                Id = $"rcpt_{Guid.NewGuid():N}", OwnerId = ownerId, Type = ReceiptType.Medical,
+                Category = MedicalCategory.Diagnosis, ImageUrl = placeholder,
+                HospitalName = "北京协和医院", Department = "神经内科", DoctorName = "赵主任",
+                PatientName = "李明", ReceiptDate = new DateTime(2026, 3, 20), VisitId = visit3.Id,
+                DiagnosisText = "1. 周围神经病变\n2. 维生素B12缺乏\n\n建议：补充甲钴胺，定期复查神经传导。",
+                FhirResourceType = "DiagnosticReport",
+                CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow,
+            },
+            new Receipt
+            {
+                Id = $"rcpt_{Guid.NewGuid():N}", OwnerId = ownerId, Type = ReceiptType.Medical,
+                Category = MedicalCategory.Prescription, ImageUrl = placeholder,
+                HospitalName = "北京协和医院", Department = "神经内科", DoctorName = "赵主任",
+                PatientName = "李明", TotalAmount = 198.00m, Currency = "CNY",
+                ReceiptDate = new DateTime(2026, 3, 20), VisitId = visit3.Id,
+                DiagnosisText = "周围神经病变",
+                FhirResourceType = "MedicationRequest",
+                Medications = new List<MedicationItem>
+                {
+                    new() { Name = "甲钴胺片", Dosage = "0.5mg", Frequency = "每日3次", Days = 30, Quantity = 90, Price = 78.00m },
+                    new() { Name = "维生素C片", Dosage = "0.2g", Frequency = "每日2次", Days = 30, Quantity = 60, Price = 18.00m },
+                    new() { Name = "维生素B1片", Dosage = "10mg", Frequency = "每日3次", Days = 30, Quantity = 90, Price = 12.00m },
+                    new() { Name = "腺苷钴胺注射液", Dosage = "1mg", Frequency = "隔日1次", Days = 14, Quantity = 7, Price = 90.00m },
+                },
+                CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow,
+            },
+            new Receipt
+            {
+                Id = $"rcpt_{Guid.NewGuid():N}", OwnerId = ownerId, Type = ReceiptType.Medical,
+                Category = MedicalCategory.LabResult, ImageUrl = placeholder,
+                HospitalName = "北京协和医院", Department = "检验科", DoctorName = "赵主任",
+                PatientName = "李明", ReceiptDate = new DateTime(2026, 3, 20), VisitId = visit3.Id,
+                FhirResourceType = "Observation",
+                LabResults = new List<LabResultItem>
+                {
+                    new() { Name = "白细胞(WBC)", Value = "6.2", Unit = "×10⁹/L", ReferenceRange = "3.5-9.5", Status = "Normal" },
+                    new() { Name = "血红蛋白(HGB)", Value = "142", Unit = "g/L", ReferenceRange = "130-175", Status = "Normal" },
+                    new() { Name = "C反应蛋白(CRP)", Value = "3.1", Unit = "mg/L", ReferenceRange = "0-10", Status = "Normal" },
+                    new() { Name = "维生素B12", Value = "128", Unit = "pg/mL", ReferenceRange = "200-900", Status = "Low" },
+                    new() { Name = "叶酸", Value = "8.5", Unit = "ng/mL", ReferenceRange = "3.0-17.0", Status = "Normal" },
+                    new() { Name = "同型半胱氨酸", Value = "18.6", Unit = "μmol/L", ReferenceRange = "5-15", Status = "High" },
+                },
+                CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow,
+            },
+            new Receipt
+            {
+                Id = $"rcpt_{Guid.NewGuid():N}", OwnerId = ownerId, Type = ReceiptType.Medical,
+                Category = MedicalCategory.PaymentReceipt, ImageUrl = placeholder,
+                HospitalName = "北京协和医院", Department = "收费处",
+                PatientName = "李明", TotalAmount = 476.00m, Currency = "CNY",
+                ReceiptDate = new DateTime(2026, 3, 20), VisitId = visit3.Id,
+                FhirResourceType = "Claim",
+                Items = new List<ReceiptLineItem>
+                {
+                    new() { Name = "挂号费", TotalPrice = 80.00m },
+                    new() { Name = "西药费", TotalPrice = 198.00m },
+                    new() { Name = "检验费", TotalPrice = 148.00m },
+                    new() { Name = "诊查费", TotalPrice = 50.00m },
+                },
+                CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow,
+            },
+        };
+        await receiptsCollection.InsertManyAsync(v3Receipts, cancellationToken: cancellationToken);
+
+        _logger.LogInformation("Seeded receipt data for shaol@shaol.com: 3 hospital visits + 9 shopping receipts.");
     }
 
     private static async Task EnsureEmailLookupAsync(
