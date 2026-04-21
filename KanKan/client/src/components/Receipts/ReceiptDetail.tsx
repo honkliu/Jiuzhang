@@ -8,7 +8,9 @@ import {
   ArrowBack as BackIcon,
   Delete as DeleteIcon,
   ZoomIn as ZoomIcon,
+  Description as InfoIcon,
 } from '@mui/icons-material';
+import ReactMarkdown from 'react-markdown';
 import type { ReceiptDto } from '@/services/receipt.service';
 import { useLanguage } from '@/i18n/LanguageContext';
 
@@ -103,6 +105,7 @@ export const ReceiptDetail: React.FC<ReceiptDetailProps> = ({ receipt, allReceip
   const [imageOpen, setImageOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState('');
   const [expandedLab, setExpandedLab] = useState<string | null>(null);
+  const [showRawText, setShowRawText] = useState(false);
 
   const openImage = (url: string) => { setSelectedImage(url); setImageOpen(true); };
 
@@ -140,19 +143,55 @@ export const ReceiptDetail: React.FC<ReceiptDetailProps> = ({ receipt, allReceip
         <IconButton color="error" onClick={onDelete}><DeleteIcon /></IconButton>
       </BoxAny>
 
-      {/* Original photo link */}
-      {receipt.imageUrl && (
-        <BoxAny sx={{ mb: 1.5 }}>
-          <Typography
-            variant="body2"
-            color="primary"
-            sx={{ cursor: 'pointer', '&:hover': { textDecoration: 'underline' }, display: 'inline-flex', alignItems: 'center', gap: 0.5 }}
-            onClick={() => openImage(receipt.imageUrl)}
-          >
-            <ZoomIcon fontSize="small" />
-            查看原图
-          </Typography>
+      {/* Original photo link + raw text link */}
+      {(receipt.imageUrl || receipt.rawText) && (
+        <BoxAny sx={{ mb: 1.5, display: 'flex', gap: 2 }}>
+          {receipt.imageUrl && (
+            <Typography
+              variant="body2"
+              color="primary"
+              sx={{ cursor: 'pointer', '&:hover': { textDecoration: 'underline' }, display: 'inline-flex', alignItems: 'center', gap: 0.5 }}
+              onClick={() => openImage(receipt.imageUrl)}
+            >
+              <ZoomIcon fontSize="small" />
+              查看原图
+            </Typography>
+          )}
+          {receipt.rawText && (
+            <Typography
+              variant="body2"
+              color="primary"
+              sx={{ cursor: 'pointer', '&:hover': { textDecoration: 'underline' }, display: 'inline-flex', alignItems: 'center', gap: 0.5 }}
+              onClick={() => setShowRawText(prev => !prev)}
+            >
+              <InfoIcon fontSize="small" />
+              {showRawText ? '收起详细信息' : '详细信息'}
+            </Typography>
+          )}
         </BoxAny>
+      )}
+
+      {/* Raw OCR text */}
+      {showRawText && receipt.rawText && (
+        <Paper sx={{ mb: 2, p: 2, bgcolor: '#fafafa', borderRadius: 2, border: '1px solid #eee', overflowX: 'auto' }}>
+          <BoxAny sx={{
+            fontSize: '0.85rem', lineHeight: 1.6,
+            '& p': { margin: '0.4em 0' },
+            '& p:first-of-type': { marginTop: 0 },
+            '& h1, & h2, & h3, & h4': { margin: '0.5em 0 0.2em' },
+            '& h1': { fontSize: '1.2em' }, '& h2': { fontSize: '1.1em' }, '& h3': { fontSize: '1em' },
+            '& ul, & ol': { paddingLeft: '1.5em', margin: '0.3em 0' },
+            '& li': { margin: '0.15em 0' },
+            '& table': { width: '100%', borderCollapse: 'collapse', margin: '0.5em 0' },
+            '& th, & td': { border: '1px solid #ddd', padding: '4px 8px', textAlign: 'left', fontSize: '0.82rem' },
+            '& th': { backgroundColor: '#f5f5f5', fontWeight: 600 },
+            '& code': { fontSize: '0.85rem', fontFamily: '"Noto Sans SC", "Microsoft YaHei", monospace' },
+            '& pre': { backgroundColor: 'rgba(0,0,0,0.03)', padding: '12px', borderRadius: '4px', overflowX: 'auto', margin: '0.5em 0' },
+            '& pre code': { padding: 0, backgroundColor: 'transparent' },
+          }}>
+            <ReactMarkdown>{receipt.rawText}</ReactMarkdown>
+          </BoxAny>
+        </Paper>
       )}
 
       {/* Additional photo links */}
@@ -175,7 +214,9 @@ export const ReceiptDetail: React.FC<ReceiptDetailProps> = ({ receipt, allReceip
 
       {/* ── Structured data rendered in hospital-document style ── */}
       {isMedical ? (
-        <MedicalDocument receipt={receipt} dateStr={dateStr} t={t} />
+        <MedicalDocument receipt={receipt} dateStr={dateStr} t={t}
+          labHistoryMap={labHistoryMap} expandedLab={expandedLab}
+          setExpandedLab={setExpandedLab} hasLabHistory={hasLabHistory} />
       ) : (
         <ShoppingDocument receipt={receipt} dateStr={dateStr} t={t} />
       )}
@@ -198,7 +239,11 @@ const MedicalDocument: React.FC<{
   receipt: ReceiptDto;
   dateStr: string;
   t: (k: string) => string;
-}> = ({ receipt, dateStr, t }) => {
+  labHistoryMap: Map<string, Array<{ source: string; date: string; value?: string; unit?: string; referenceRange?: string; status?: string }>>;
+  expandedLab: string | null;
+  setExpandedLab: (v: string | null) => void;
+  hasLabHistory: (name: string) => boolean;
+}> = ({ receipt, dateStr, t, labHistoryMap, expandedLab, setExpandedLab, hasLabHistory }) => {
   const cat = receipt.category;
 
   return (

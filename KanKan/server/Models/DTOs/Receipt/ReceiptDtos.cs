@@ -159,3 +159,34 @@ public class ReceiptStatsResponse
     public Dictionary<string, decimal> SpendingByCategory { get; set; } = new();
     public Dictionary<string, int> CountByCategory { get; set; } = new();
 }
+
+public class ExtractReceiptRequest
+{
+    public string ImageUrl { get; set; } = string.Empty;
+}
+
+public class ReceiptExtractionResult
+{
+    public string? Type { get; set; }
+    public string? Category { get; set; }
+    public string? MerchantName { get; set; }
+    public string? HospitalName { get; set; }
+    public string? Department { get; set; }
+    public string? DoctorName { get; set; }
+    public string? PatientName { get; set; }
+    public decimal? TotalAmount { get; set; }
+    public string? Currency { get; set; }
+    public string? ReceiptDate { get; set; }
+    public string? Notes { get; set; }
+    public string? DiagnosisText { get; set; }
+    public string? ImagingFindings { get; set; }
+    public List<ReceiptLineItemDto>? Items { get; set; }
+    public List<MedicationItemDto>? Medications { get; set; }
+    public List<LabResultItemDto>? LabResults { get; set; }
+}
+
+public class CheckDuplicateRequest
+{
+    public string NewOcrText { get; set; } = string.Empty;
+    public List<string> ExistingOcrTexts { get; set; } = new();
+}

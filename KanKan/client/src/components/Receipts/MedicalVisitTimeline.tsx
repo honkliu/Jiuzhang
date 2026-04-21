@@ -1,13 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import {
-  Box, Typography, Paper, IconButton, Chip, Collapse, Button, Dialog,
-  DialogTitle, DialogContent, DialogActions, TextField, Checkbox,
+  Box, Typography, Paper, IconButton, Chip, Collapse, Checkbox,
 } from '@mui/material';
 import {
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,
   LocalHospital as HospitalIcon,
-  Add as AddIcon,
   Assignment as RegIcon,
   MedicalServices as DiagIcon,
   Medication as RxIcon,
@@ -17,8 +15,7 @@ import {
   Description as NoteIcon,
   TrendingDown as CheapIcon,
 } from '@mui/icons-material';
-import type { ReceiptDto, ReceiptVisitDto } from '@/services/receipt.service';
-import { receiptService } from '@/services/receipt.service';
+import type { ReceiptDto } from '@/services/receipt.service';
 import { useLanguage } from '@/i18n/LanguageContext';
 
 const BoxAny = Box as any;
@@ -49,38 +46,66 @@ const categoryColors: Record<string, string> = {
 };
 
 interface MedHistoryEntry {
-  source: string; // hospital or merchant name
+  source: string;
   date: string;
   price?: number;
   dosage?: string;
   frequency?: string;
-  value?: string; // for lab results
-  unit?: string;
-  referenceRange?: string;
-  status?: string;
+}
+
+interface HospitalGroup {
+  key: string;
+  hospitalName: string;
+  date: string;
+  receipts: ReceiptDto[];
+  totalAmount: number;
 }
 
 interface MedicalVisitTimelineProps {
-  visits: ReceiptVisitDto[];
-  unlinkedReceipts: ReceiptDto[];
+  medicalReceipts: ReceiptDto[];
   allReceipts: ReceiptDto[];
   checkedIds?: Set<string>;
   onToggleChecked?: (id: string) => void;
   onSelectReceipt: (r: ReceiptDto) => void;
-  onRefresh: () => void;
 }
 
 export const MedicalVisitTimeline: React.FC<MedicalVisitTimelineProps> = ({
-  visits, unlinkedReceipts, allReceipts, checkedIds, onToggleChecked, onSelectReceipt, onRefresh,
+  medicalReceipts, allReceipts, checkedIds, onToggleChecked, onSelectReceipt,
 }) => {
   const { t } = useLanguage();
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [expandedMed, setExpandedMed] = useState<string | null>(null);
-  const [expandedLab, setExpandedLab] = useState<string | null>(null);
-  const [createOpen, setCreateOpen] = useState(false);
-  const [newVisit, setNewVisit] = useState({ hospitalName: '', department: '', patientName: '', visitDate: '' });
 
-  const toggle = (id: string) => setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
+  const toggle = (key: string) => setExpanded(prev => ({ ...prev, [key]: !prev[key] }));
+
+  // Group receipts by hospital+date
+  const groups = useMemo((): HospitalGroup[] => {
+    const map = new Map<string, ReceiptDto[]>();
+    for (const r of medicalReceipts) {
+      const hospital = r.hospitalName || '未知医院';
+      const date = r.receiptDate ? new Date(r.receiptDate).toLocaleDateString('zh-CN') : '';
+      const key = `${hospital}|${date}`;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(r);
+    }
+    const result: HospitalGroup[] = [];
+    for (const [key, receipts] of map) {
+      const [hospitalName, date] = key.split('|');
+      const sorted = [...receipts].sort((a, b) =>
+        categoryOrder.indexOf(a.category) - categoryOrder.indexOf(b.category)
+      );
+      result.push({
+        key,
+        hospitalName,
+        date,
+        receipts: sorted,
+        totalAmount: sorted.reduce((s, r) => s + (r.totalAmount || 0), 0),
+      });
+    }
+    // Sort groups by date descending
+    result.sort((a, b) => b.date.localeCompare(a.date));
+    return result;
+  }, [medicalReceipts]);
 
   // Build medication history index
   const medHistoryMap = useMemo(() => {
@@ -89,37 +114,14 @@ export const MedicalVisitTimeline: React.FC<MedicalVisitTimelineProps> = ({
       const source = r.hospitalName || r.merchantName || '';
       const date = r.receiptDate ? new Date(r.receiptDate).toLocaleDateString('zh-CN') : '';
       for (const med of r.medications) {
-        const key = med.name;
-        if (!map.has(key)) map.set(key, []);
-        map.get(key)!.push({
-          source, date, price: med.price,
-          dosage: med.dosage, frequency: med.frequency,
-        });
-      }
-    }
-    return map;
-  }, [allReceipts]);
-
-  // Build lab result history index
-  const labHistoryMap = useMemo(() => {
-    const map = new Map<string, MedHistoryEntry[]>();
-    for (const r of allReceipts) {
-      const source = r.hospitalName || '';
-      const date = r.receiptDate ? new Date(r.receiptDate).toLocaleDateString('zh-CN') : '';
-      for (const lab of r.labResults) {
-        const key = lab.name;
-        if (!map.has(key)) map.set(key, []);
-        map.get(key)!.push({
-          source, date, value: lab.value, unit: lab.unit,
-          referenceRange: lab.referenceRange, status: lab.status,
-        });
+        if (!map.has(med.name)) map.set(med.name, []);
+        map.get(med.name)!.push({ source, date, price: med.price, dosage: med.dosage, frequency: med.frequency });
       }
     }
     return map;
   }, [allReceipts]);
 
   const hasMedHistory = (name: string) => (medHistoryMap.get(name)?.length || 0) > 1;
-  const hasLabHistory = (name: string) => (labHistoryMap.get(name)?.length || 0) > 1;
 
   const handleMedClick = (e: React.MouseEvent, name: string) => {
     e.stopPropagation();
@@ -127,91 +129,53 @@ export const MedicalVisitTimeline: React.FC<MedicalVisitTimelineProps> = ({
     setExpandedMed(prev => prev === name ? null : name);
   };
 
-  const handleLabClick = (e: React.MouseEvent, name: string) => {
-    e.stopPropagation();
-    if (!hasLabHistory(name)) return;
-    setExpandedLab(prev => prev === name ? null : name);
-  };
-
-  const handleCreateVisit = async () => {
-    try {
-      await receiptService.createVisit({
-        hospitalName: newVisit.hospitalName || undefined,
-        department: newVisit.department || undefined,
-        patientName: newVisit.patientName || undefined,
-        visitDate: newVisit.visitDate || undefined,
-      });
-      setCreateOpen(false);
-      setNewVisit({ hospitalName: '', department: '', patientName: '', visitDate: '' });
-      onRefresh();
-    } catch { /* ignore */ }
-  };
-
-  const sortedReceipts = (receipts: ReceiptDto[]) =>
-    [...receipts].sort((a, b) =>
-      categoryOrder.indexOf(a.category) - categoryOrder.indexOf(b.category)
+  if (medicalReceipts.length === 0) {
+    return (
+      <BoxAny sx={{ textAlign: 'center', py: 8, color: 'text.secondary' }}>
+        <HospitalIcon sx={{ fontSize: 48, mb: 1, opacity: 0.5 }} />
+        <Typography>{t('receipts.medical.empty')}</Typography>
+      </BoxAny>
     );
+  }
 
   return (
     <BoxAny>
-      {visits.length === 0 && unlinkedReceipts.length === 0 && (
-        <BoxAny sx={{ textAlign: 'center', py: 8, color: 'text.secondary' }}>
-          <HospitalIcon sx={{ fontSize: 48, mb: 1, opacity: 0.5 }} />
-          <Typography>{t('receipts.medical.empty')}</Typography>
-          <Button size="small" startIcon={<AddIcon />} onClick={() => setCreateOpen(true)} sx={{ mt: 1 }}>
-            {t('receipts.medical.newVisit')}
-          </Button>
-        </BoxAny>
-      )}
-
-      {visits.map((visit) => {
-        const isOpen = expanded[visit.id] !== false; // default open
-        const sorted = sortedReceipts(visit.receipts);
-        const totalAmount = sorted.reduce((s, r) => s + (r.totalAmount || 0), 0);
+      {groups.map((group) => {
+        const isOpen = expanded[group.key] !== false; // default open
+        const allGroupIds = group.receipts.map(r => r.id);
+        const allChecked = onToggleChecked && allGroupIds.every(id => checkedIds?.has(id));
 
         return (
-          <Paper key={visit.id} sx={{ mb: 2, borderRadius: '10px', overflow: 'hidden' }}>
+          <Paper key={group.key} sx={{ mb: 2, borderRadius: '10px', overflow: 'hidden' }}>
+            {/* Hospital header */}
             <BoxAny
-              sx={{ display: 'flex', alignItems: 'center', p: 2, cursor: 'pointer',
-                bgcolor: 'rgba(7,193,96,0.06)' }}
-              onClick={() => toggle(visit.id)}
+              sx={{ display: 'flex', alignItems: 'center', p: 2, cursor: 'pointer', bgcolor: 'rgba(7,193,96,0.06)' }}
+              onClick={() => toggle(group.key)}
             >
               {onToggleChecked && (
                 <Checkbox
                   size="small"
-                  checked={checkedIds?.has(visit.id) || false}
-                  onClick={(e) => { e.stopPropagation(); onToggleChecked(visit.id); }}
+                  checked={!!allChecked}
+                  indeterminate={!allChecked && allGroupIds.some(id => checkedIds?.has(id))}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    allGroupIds.forEach(id => onToggleChecked(id));
+                  }}
                   sx={{ p: 0, mr: 1, flexShrink: 0 }}
                 />
               )}
               <HospitalIcon color="primary" sx={{ mr: 1.5 }} />
               <BoxAny sx={{ flex: 1 }}>
-                <Typography fontWeight={700}>
-                  {visit.hospitalName || t('receipts.medical.unknownHospital')}
-                </Typography>
-                <BoxAny sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                  {visit.department && (
-                    <Typography variant="caption" color="text.secondary">{visit.department}</Typography>
-                  )}
-                  {visit.visitDate && (
-                    <Typography variant="caption" color="text.secondary">
-                      {new Date(visit.visitDate).toLocaleDateString('zh-CN')}
-                    </Typography>
-                  )}
-                  {visit.patientName && (
-                    <Typography variant="caption" color="text.secondary">
-                      {t('receipts.medical.patient')}: {visit.patientName}
-                    </Typography>
-                  )}
-                </BoxAny>
+                <Typography fontWeight={700}>{group.hospitalName}</Typography>
+                <Typography variant="caption" color="text.secondary">{group.date}</Typography>
               </BoxAny>
               <BoxAny sx={{ textAlign: 'right', mr: 1 }}>
                 <Typography variant="caption" color="text.secondary">
-                  {sorted.length} {t('receipts.medical.documents')}
+                  {group.receipts.length} 份单据
                 </Typography>
-                {totalAmount > 0 && (
+                {group.totalAmount > 0 && (
                   <Typography variant="body2" color="error.main" fontWeight={600}>
-                    ¥{totalAmount.toFixed(2)}
+                    ¥{group.totalAmount.toFixed(2)}
                   </Typography>
                 )}
               </BoxAny>
@@ -220,10 +184,10 @@ export const MedicalVisitTimeline: React.FC<MedicalVisitTimelineProps> = ({
               </IconButton>
             </BoxAny>
 
+            {/* Receipts inside */}
             <Collapse in={isOpen}>
               <BoxAny sx={{ px: 2, pb: 2 }}>
-                {/* Timeline */}
-                {sorted.map((receipt, idx) => (
+                {group.receipts.map((receipt, idx) => (
                   <BoxAny
                     key={receipt.id}
                     sx={{
@@ -231,7 +195,7 @@ export const MedicalVisitTimeline: React.FC<MedicalVisitTimelineProps> = ({
                       pl: 2, py: 1, cursor: 'pointer', borderRadius: 2,
                       position: 'relative',
                       '&:hover': { bgcolor: 'rgba(0,0,0,0.03)' },
-                      '&::before': idx < sorted.length - 1 ? {
+                      '&::before': idx < group.receipts.length - 1 ? {
                         content: '""', position: 'absolute', left: 10, top: 32,
                         bottom: -8, width: 2, bgcolor: 'divider',
                       } : undefined,
@@ -274,10 +238,9 @@ export const MedicalVisitTimeline: React.FC<MedicalVisitTimelineProps> = ({
                         </Typography>
                       )}
 
-                      {/* Medications — clickable for history */}
+                      {/* Medications table */}
                       {receipt.medications.length > 0 && (
                         <BoxAny sx={{ mt: 0.3 }}>
-                          {/* Header row */}
                           <BoxAny sx={{ display: 'flex', gap: 0.5, pb: 0.2, borderBottom: '1px solid', borderColor: 'divider' }}>
                             <Typography variant="caption" color="text.secondary" sx={{ flex: 1 }}>药品名称</Typography>
                             <Typography variant="caption" color="text.secondary" sx={{ width: 50, textAlign: 'right', flexShrink: 0 }}>用量</Typography>
@@ -291,32 +254,20 @@ export const MedicalVisitTimeline: React.FC<MedicalVisitTimelineProps> = ({
                             return (
                               <BoxAny key={mi}>
                                 <BoxAny sx={{ display: 'flex', gap: 0.5, py: 0.15 }}>
-                                  <Typography
-                                    variant="caption"
-                                    sx={{
-                                      flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                                      ...(clickable ? {
-                                        color: 'primary.main', cursor: 'pointer',
-                                        textDecoration: isExp ? 'underline' : 'none',
-                                        '&:hover': { textDecoration: 'underline' },
-                                      } : { color: 'text.secondary' }),
-                                    }}
-                                    onClick={clickable ? (e) => handleMedClick(e, med.name) : undefined}
-                                  >
+                                  <Typography variant="caption" sx={{
+                                    flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                    ...(clickable ? {
+                                      color: 'primary.main', cursor: 'pointer',
+                                      textDecoration: isExp ? 'underline' : 'none',
+                                      '&:hover': { textDecoration: 'underline' },
+                                    } : { color: 'text.secondary' }),
+                                  }} onClick={clickable ? (e) => handleMedClick(e, med.name) : undefined}>
                                     {med.name}
                                   </Typography>
-                                  <Typography variant="caption" color="text.secondary" sx={{ width: 50, textAlign: 'right', flexShrink: 0 }}>
-                                    {med.dosage || ''}
-                                  </Typography>
-                                  <Typography variant="caption" color="text.secondary" sx={{ width: 70, textAlign: 'right', flexShrink: 0 }}>
-                                    {med.frequency || ''}
-                                  </Typography>
-                                  <Typography variant="caption" color="text.secondary" sx={{ width: 40, textAlign: 'right', flexShrink: 0 }}>
-                                    {med.days ? `${med.days}天` : ''}
-                                  </Typography>
-                                  <Typography variant="caption" color="text.secondary" sx={{ width: 56, textAlign: 'right', flexShrink: 0, fontWeight: 600 }}>
-                                    {med.price != null ? `¥${med.price.toFixed(2)}` : ''}
-                                  </Typography>
+                                  <Typography variant="caption" color="text.secondary" sx={{ width: 50, textAlign: 'right', flexShrink: 0 }}>{med.dosage || ''}</Typography>
+                                  <Typography variant="caption" color="text.secondary" sx={{ width: 70, textAlign: 'right', flexShrink: 0 }}>{med.frequency || ''}</Typography>
+                                  <Typography variant="caption" color="text.secondary" sx={{ width: 40, textAlign: 'right', flexShrink: 0 }}>{med.days ? `${med.days}天` : ''}</Typography>
+                                  <Typography variant="caption" color="text.secondary" sx={{ width: 56, textAlign: 'right', flexShrink: 0, fontWeight: 600 }}>{med.price != null ? `¥${med.price.toFixed(2)}` : ''}</Typography>
                                 </BoxAny>
                                 <Collapse in={isExp}>
                                   <MedHistoryPanel entries={medHistoryMap.get(med.name) || []} currentSource={receipt.hospitalName || ''} />
@@ -328,167 +279,25 @@ export const MedicalVisitTimeline: React.FC<MedicalVisitTimelineProps> = ({
                       )}
                     </BoxAny>
                     {receipt.imageUrl && (
-                      <Typography
-                        variant="caption"
-                        color="primary"
+                      <Typography variant="caption" color="primary"
                         sx={{ cursor: 'pointer', '&:hover': { textDecoration: 'underline' }, display: 'inline-flex', alignItems: 'center', gap: 0.3, flexShrink: 0 }}
-                        onClick={(e: React.MouseEvent) => {
-                          e.stopPropagation();
-                          window.open(receipt.imageUrl, '_blank');
-                        }}
-                      >
+                        onClick={(e: React.MouseEvent) => { e.stopPropagation(); window.open(receipt.imageUrl, '_blank'); }}>
                         <ImageIcon sx={{ fontSize: 14 }} />
                         原图
                       </Typography>
                     )}
                   </BoxAny>
                 ))}
-                {sorted.length === 0 && (
-                  <Typography variant="body2" color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>
-                    {t('receipts.medical.noDocuments')}
-                  </Typography>
-                )}
               </BoxAny>
             </Collapse>
           </Paper>
         );
       })}
-
-      {/* Unlinked medical receipts */}
-      {unlinkedReceipts.length > 0 && (
-        <Paper sx={{ mb: 2, borderRadius: '10px', p: 2 }}>
-          <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
-            {t('receipts.medical.unlinked')} ({unlinkedReceipts.length})
-          </Typography>
-          {unlinkedReceipts.map(r => (
-            <BoxAny
-              key={r.id}
-              sx={{ py: 0.5, cursor: 'pointer',
-                '&:hover': { bgcolor: 'rgba(0,0,0,0.03)' }, borderRadius: 1, px: 1 }}
-              onClick={() => onSelectReceipt(r)}
-            >
-              <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                {onToggleChecked && (
-                  <Checkbox
-                    size="small"
-                    checked={checkedIds?.has(r.id) || false}
-                    onClick={(e) => { e.stopPropagation(); onToggleChecked(r.id); }}
-                    sx={{ p: 0, flexShrink: 0 }}
-                  />
-                )}
-                {categoryIcons[r.category] || <NoteIcon fontSize="small" />}
-                <Typography variant="body2" sx={{ flex: 1 }}>
-                  {r.hospitalName || t(`receipts.cat.${r.category}`)}
-                </Typography>
-                {r.receiptDate && (
-                  <Typography variant="caption" color="text.secondary">
-                    {new Date(r.receiptDate).toLocaleDateString('zh-CN')}
-                  </Typography>
-                )}
-              </BoxAny>
-              {r.medications.length > 0 && (
-                <BoxAny sx={{ mt: 0.3, pl: 3.5 }}>
-                  <BoxAny sx={{ display: 'flex', gap: 0.5, pb: 0.2, borderBottom: '1px solid', borderColor: 'divider' }}>
-                    <Typography variant="caption" color="text.secondary" sx={{ flex: 1 }}>药品名称</Typography>
-                    <Typography variant="caption" color="text.secondary" sx={{ width: 50, textAlign: 'right', flexShrink: 0 }}>用量</Typography>
-                    <Typography variant="caption" color="text.secondary" sx={{ width: 70, textAlign: 'right', flexShrink: 0 }}>频次</Typography>
-                    <Typography variant="caption" color="text.secondary" sx={{ width: 40, textAlign: 'right', flexShrink: 0 }}>天数</Typography>
-                    <Typography variant="caption" color="text.secondary" sx={{ width: 56, textAlign: 'right', flexShrink: 0 }}>价格</Typography>
-                  </BoxAny>
-                  {r.medications.map((med, mi) => {
-                    const clickable = hasMedHistory(med.name);
-                    const isExp = expandedMed === med.name;
-                    return (
-                      <BoxAny key={mi}>
-                        <BoxAny sx={{ display: 'flex', gap: 0.5, py: 0.15 }}>
-                          <Typography
-                            variant="caption"
-                            sx={{
-                              flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                              ...(clickable ? {
-                                color: 'primary.main', cursor: 'pointer',
-                                textDecoration: isExp ? 'underline' : 'none',
-                                '&:hover': { textDecoration: 'underline' },
-                              } : { color: 'text.secondary' }),
-                            }}
-                            onClick={clickable ? (e) => handleMedClick(e, med.name) : undefined}
-                          >
-                            {med.name}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary" sx={{ width: 50, textAlign: 'right', flexShrink: 0 }}>
-                            {med.dosage || ''}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary" sx={{ width: 70, textAlign: 'right', flexShrink: 0 }}>
-                            {med.frequency || ''}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary" sx={{ width: 40, textAlign: 'right', flexShrink: 0 }}>
-                            {med.days ? `${med.days}天` : ''}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary" sx={{ width: 56, textAlign: 'right', flexShrink: 0, fontWeight: 600 }}>
-                            {med.price != null ? `¥${med.price.toFixed(2)}` : ''}
-                          </Typography>
-                        </BoxAny>
-                        <Collapse in={isExp}>
-                          <MedHistoryPanel entries={medHistoryMap.get(med.name) || []} currentSource={r.hospitalName || ''} />
-                        </Collapse>
-                      </BoxAny>
-                    );
-                  })}
-                  {r.totalAmount != null && (
-                    <BoxAny sx={{ display: 'flex', justifyContent: 'flex-end', mt: 0.3 }}>
-                      <Typography variant="caption" color="error.main" fontWeight={700}>
-                        合计 ¥{r.totalAmount.toFixed(2)}
-                      </Typography>
-                    </BoxAny>
-                  )}
-                </BoxAny>
-              )}
-            </BoxAny>
-          ))}
-        </Paper>
-      )}
-
-      {/* Create Visit Dialog */}
-      <Dialog open={createOpen} onClose={() => setCreateOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>{t('receipts.medical.newVisit')}</DialogTitle>
-        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: '16px !important' }}>
-          <TextField
-            label={t('receipts.medical.hospitalName')}
-            value={newVisit.hospitalName}
-            onChange={e => setNewVisit(v => ({ ...v, hospitalName: e.target.value }))}
-            fullWidth
-          />
-          <TextField
-            label={t('receipts.medical.department')}
-            value={newVisit.department}
-            onChange={e => setNewVisit(v => ({ ...v, department: e.target.value }))}
-            fullWidth
-          />
-          <TextField
-            label={t('receipts.medical.patientName')}
-            value={newVisit.patientName}
-            onChange={e => setNewVisit(v => ({ ...v, patientName: e.target.value }))}
-            fullWidth
-          />
-          <TextField
-            label={t('receipts.medical.visitDateLabel')}
-            type="date"
-            value={newVisit.visitDate}
-            onChange={e => setNewVisit(v => ({ ...v, visitDate: e.target.value }))}
-            fullWidth
-            InputLabelProps={{ shrink: true }}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setCreateOpen(false)}>{t('common.cancel')}</Button>
-          <Button variant="contained" onClick={handleCreateVisit}>{t('common.confirm')}</Button>
-        </DialogActions>
-      </Dialog>
     </BoxAny>
   );
 };
 
-/** Medication history panel — shows price comparison across sources */
+/** Medication history panel */
 const MedHistoryPanel: React.FC<{ entries: MedHistoryEntry[]; currentSource: string }> = ({ entries, currentSource }) => {
   const sorted = [...entries].sort((a, b) => a.date.localeCompare(b.date));
   const prices = sorted.map(e => e.price ?? Infinity);
@@ -496,10 +305,7 @@ const MedHistoryPanel: React.FC<{ entries: MedHistoryEntry[]; currentSource: str
 
   return (
     <BoxAny
-      sx={{
-        ml: 1, my: 0.3, pl: 1.5, borderLeft: '2px solid', borderColor: 'warning.light',
-        bgcolor: 'rgba(255, 152, 0, 0.04)', borderRadius: '0 4px 4px 0', py: 0.3,
-      }}
+      sx={{ ml: 1, my: 0.3, pl: 1.5, borderLeft: '2px solid', borderColor: 'warning.light', bgcolor: 'rgba(255, 152, 0, 0.04)', borderRadius: '0 4px 4px 0', py: 0.3 }}
       onClick={(e: React.MouseEvent) => e.stopPropagation()}
     >
       <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, mb: 0.2, display: 'block' }}>
@@ -510,73 +316,15 @@ const MedHistoryPanel: React.FC<{ entries: MedHistoryEntry[]; currentSource: str
         const isCurrent = entry.source === currentSource;
         return (
           <BoxAny key={i} sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 0.1 }}>
-            <Typography variant="caption" color="text.secondary" sx={{ width: 80, flexShrink: 0 }}>
-              {entry.date}
-            </Typography>
-            <Typography variant="caption" sx={{
-              flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-              fontWeight: isCurrent ? 600 : 400,
-              color: isCurrent ? 'text.primary' : 'text.secondary',
-            }}>
+            <Typography variant="caption" color="text.secondary" sx={{ width: 80, flexShrink: 0 }}>{entry.date}</Typography>
+            <Typography variant="caption" sx={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: isCurrent ? 600 : 400, color: isCurrent ? 'text.primary' : 'text.secondary' }}>
               {entry.source}
             </Typography>
-            {entry.dosage && (
-              <Typography variant="caption" color="text.secondary" sx={{ flexShrink: 0 }}>
-                {entry.dosage}
-              </Typography>
-            )}
+            {entry.dosage && <Typography variant="caption" color="text.secondary" sx={{ flexShrink: 0 }}>{entry.dosage}</Typography>}
             {entry.price != null && (
-              <Typography variant="caption" sx={{
-                flexShrink: 0, fontWeight: 600,
-                color: isCheapest ? 'success.main' : 'text.secondary',
-                display: 'inline-flex', alignItems: 'center', gap: 0.3,
-              }}>
+              <Typography variant="caption" sx={{ flexShrink: 0, fontWeight: 600, color: isCheapest ? 'success.main' : 'text.secondary', display: 'inline-flex', alignItems: 'center', gap: 0.3 }}>
                 {isCheapest && <CheapIcon sx={{ fontSize: 12 }} />}
                 ¥{entry.price.toFixed(2)}
-              </Typography>
-            )}
-          </BoxAny>
-        );
-      })}
-    </BoxAny>
-  );
-};
-
-/** Lab result history panel — shows value trend across visits */
-const LabHistoryPanel: React.FC<{ entries: MedHistoryEntry[] }> = ({ entries }) => {
-  const sorted = [...entries].sort((a, b) => a.date.localeCompare(b.date));
-
-  return (
-    <BoxAny
-      sx={{
-        ml: 1, my: 0.3, pl: 1.5, borderLeft: '2px solid', borderColor: 'info.light',
-        bgcolor: 'rgba(33, 150, 243, 0.04)', borderRadius: '0 4px 4px 0', py: 0.3,
-      }}
-      onClick={(e: React.MouseEvent) => e.stopPropagation()}
-    >
-      <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, mb: 0.2, display: 'block' }}>
-        检验趋势 ({sorted.length}次)
-      </Typography>
-      {sorted.map((entry, i) => {
-        const isAbnormal = entry.status && entry.status !== 'Normal';
-        const arrow = entry.status === 'High' ? ' ↑' : entry.status === 'Low' ? ' ↓' : '';
-        return (
-          <BoxAny key={i} sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 0.1 }}>
-            <Typography variant="caption" color="text.secondary" sx={{ width: 80, flexShrink: 0 }}>
-              {entry.date}
-            </Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {entry.source}
-            </Typography>
-            <Typography variant="caption" sx={{
-              flexShrink: 0, fontWeight: 600,
-              color: isAbnormal ? 'error.main' : 'success.main',
-            }}>
-              {entry.value}{entry.unit ? ` ${entry.unit}` : ''}{arrow}
-            </Typography>
-            {entry.referenceRange && (
-              <Typography variant="caption" color="text.secondary" sx={{ flexShrink: 0 }}>
-                ({entry.referenceRange})
               </Typography>
             )}
           </BoxAny>

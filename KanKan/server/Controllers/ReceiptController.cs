@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using System.Text;
+using System.Text.Json;
 using KanKan.API.Models.DTOs.Receipt;
 using KanKan.API.Models.Entities;
 using KanKan.API.Repositories.Interfaces;
@@ -15,15 +17,21 @@ public class ReceiptController : ControllerBase
     private readonly IReceiptRepository _receiptRepo;
     private readonly IReceiptVisitRepository _visitRepo;
     private readonly IWebHostEnvironment _environment;
+    private readonly IConfiguration _configuration;
+    private readonly IHttpClientFactory _httpClientFactory;
 
     public ReceiptController(
         IReceiptRepository receiptRepo,
         IReceiptVisitRepository visitRepo,
-        IWebHostEnvironment environment)
+        IWebHostEnvironment environment,
+        IConfiguration configuration,
+        IHttpClientFactory httpClientFactory)
     {
         _receiptRepo = receiptRepo;
         _visitRepo = visitRepo;
         _environment = environment;
+        _configuration = configuration;
+        _httpClientFactory = httpClientFactory;
     }
 
     private string GetUserId() => User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
@@ -277,6 +285,226 @@ public class ReceiptController : ControllerBase
             MedicalCategory.DischargeNote => "Encounter",
             _ => null,
         };
+    }
+
+    // ── Receipt Image Extraction ───────────────────────────────────────────
+
+    [HttpPost("extract")]
+    public async Task<IActionResult> ExtractFromImage([FromBody] ExtractReceiptRequest req)
+    {
+        if (string.IsNullOrWhiteSpace(req.ImageUrl))
+            return BadRequest("imageUrl is required.");
+
+        // Read image file and convert to base64
+        var imagePath = Path.Combine(_environment.WebRootPath, req.ImageUrl.TrimStart('/'));
+        if (!System.IO.File.Exists(imagePath))
+            return BadRequest("Image file not found.");
+
+        var imageBytes = await System.IO.File.ReadAllBytesAsync(imagePath);
+        var mimeType = req.ImageUrl.EndsWith(".png", StringComparison.OrdinalIgnoreCase) ? "image/png" : "image/jpeg";
+        var base64 = Convert.ToBase64String(imageBytes);
+        var dataUri = $"data:{mimeType};base64,{base64}";
+
+        // Call Qwen VL for extraction
+        var baseUrl = _configuration["Agent:BaseUrl"];
+        var apiKey = _configuration["Agent:ApiKey"] ?? string.Empty;
+        var model = _configuration["Agent:Model"] ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(baseUrl))
+            return StatusCode(500, "Agent base URL not configured.");
+
+        // Step 1: OCR — extract raw text from image
+        var ocrMessages = new object[]
+        {
+            new
+            {
+                role = "user",
+                content = new object[]
+                {
+                    new { type = "image_url", image_url = new { url = dataUri } },
+                    new { type = "text", text = "识别图像中的文字、公式或抽取票据、证件、表单中的信息，支持格式化输出文本" }
+                }
+            }
+        };
+
+        var ocrPayload = new
+        {
+            model,
+            messages = ocrMessages,
+            temperature = 0.1,
+            max_tokens = 4096,
+            chat_template_kwargs = new { enable_thinking = false }
+        };
+
+        var httpClient = _httpClientFactory.CreateClient();
+        httpClient.Timeout = TimeSpan.FromSeconds(120);
+
+        var ocrRequest = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl.TrimEnd('/')}/chat/completions");
+        ocrRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
+        ocrRequest.Content = new StringContent(JsonSerializer.Serialize(ocrPayload), Encoding.UTF8, "application/json");
+
+        string ocrText;
+        try
+        {
+            using var ocrResponse = await httpClient.SendAsync(ocrRequest);
+            var ocrBody = await ocrResponse.Content.ReadAsStringAsync();
+            if (!ocrResponse.IsSuccessStatusCode)
+                return StatusCode(502, $"OCR failed ({ocrResponse.StatusCode}): {ocrBody}");
+
+            using var ocrDoc = JsonDocument.Parse(ocrBody);
+            ocrText = ocrDoc.RootElement
+                .GetProperty("choices")[0]
+                .GetProperty("message")
+                .GetProperty("content")
+                .GetString() ?? "";
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(502, $"OCR call failed: {ex.Message}");
+        }
+
+        if (string.IsNullOrWhiteSpace(ocrText))
+            return StatusCode(502, "OCR returned empty result");
+
+        // Step 2: Map OCR text to structured JSON
+        var mapPrompt = @"将以下OCR识别的票据文本转换为JSON格式。
+
+映射规则：
+- 购物类：type=Shopping。超市/便利店→category=Supermarket，餐饮→Restaurant，网购→OnlineShopping，其他→Other
+  - 商品明细→items数组，每项含name、quantity、unit、unitPrice、totalPrice
+  - 商家/店铺名→merchantName
+- 医疗类：type=Medical
+  - 检验报告（血常规、生化、尿常规等）→category=LabResult
+    - 每个检验项目→labResults数组，含name、value（纯数值去掉↑↓）、unit、referenceRange、status（↑=High，↓=Low，无=Normal）
+    - 报告类型名称（如血常规+CRP）→notes
+  - 处方→category=Prescription，药品→medications数组
+  - 挂号→Registration，诊断→Diagnosis，影像→ImagingResult，收费→PaymentReceipt，出院→DischargeNote
+  - 医院名→hospitalName，科室→department，医生→doctorName，患者→patientName
+  - 诊断→diagnosisText
+- 日期→receiptDate（YYYY-MM-DD），金额→totalAmount（数字），币种→currency（默认CNY）
+- 一份文本可能包含多张票据，每张单独一个JSON对象
+
+返回纯JSON数组，不要```代码块：
+[{""type"":""Medical"",""category"":""LabResult"",""hospitalName"":""XX医院"",""department"":""检验科"",""receiptDate"":""2023-08-28"",""notes"":""血常规"",""labResults"":[{""name"":""白细胞"",""value"":""20.3"",""unit"":""10^9/L"",""referenceRange"":""4.0-10.0"",""status"":""High""}]}]
+
+以下是OCR识别的文本：
+" + ocrText;
+
+        var mapMessages = new object[]
+        {
+            new { role = "user", content = mapPrompt }
+        };
+
+        var mapPayload = new
+        {
+            model,
+            messages = mapMessages,
+            temperature = 0.1,
+            max_tokens = 4096,
+            chat_template_kwargs = new { enable_thinking = false }
+        };
+
+        var mapRequest = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl.TrimEnd('/')}/chat/completions");
+        mapRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
+        mapRequest.Content = new StringContent(JsonSerializer.Serialize(mapPayload), Encoding.UTF8, "application/json");
+
+        try
+        {
+            using var response = await httpClient.SendAsync(mapRequest);
+            var responseBody = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+                return StatusCode(502, $"Mapping failed ({response.StatusCode}): {responseBody}");
+
+            // Parse the response — extract content from choices[0].message.content
+            using var doc = JsonDocument.Parse(responseBody);
+            var content = doc.RootElement
+                .GetProperty("choices")[0]
+                .GetProperty("message")
+                .GetProperty("content")
+                .GetString() ?? "[]";
+
+            // Strip markdown code block markers if present
+            content = content.Trim();
+            if (content.StartsWith("```json", StringComparison.OrdinalIgnoreCase))
+                content = content["```json".Length..];
+            if (content.StartsWith("```"))
+                content = content[3..];
+            if (content.EndsWith("```"))
+                content = content[..^3];
+            content = content.Trim();
+
+            // Parse as JSON array
+            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            var extracted = JsonSerializer.Deserialize<List<ReceiptExtractionResult>>(content, options)
+                ?? new List<ReceiptExtractionResult>();
+
+            return Ok(new { ocrText, receipts = extracted });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(502, $"Vision model call failed: {ex.Message}");
+        }
+    }
+
+    [HttpPost("check-duplicate")]
+    public async Task<IActionResult> CheckDuplicate([FromBody] CheckDuplicateRequest req)
+    {
+        if (string.IsNullOrWhiteSpace(req.NewOcrText) || req.ExistingOcrTexts == null || req.ExistingOcrTexts.Count == 0)
+            return Ok(new { isDuplicate = false });
+
+        var baseUrl = _configuration["Agent:BaseUrl"];
+        var apiKey = _configuration["Agent:ApiKey"] ?? string.Empty;
+        var model = _configuration["Agent:Model"] ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(baseUrl))
+            return Ok(new { isDuplicate = false });
+
+        var prompt = $@"判断以下新票据是否与已有票据中的任何一张是同一张票据（即重复录入）。
+只需要回答一个JSON：{{""isDuplicate"": true}} 或 {{""isDuplicate"": false}}
+不要解释，只返回JSON。
+
+新票据OCR文本：
+{req.NewOcrText}
+
+已有票据OCR文本：
+{string.Join("\n---\n", req.ExistingOcrTexts)}";
+
+        var messages = new object[] { new { role = "user", content = prompt } };
+        var payload = new
+        {
+            model, messages, temperature = 0.0, max_tokens = 50,
+            chat_template_kwargs = new { enable_thinking = false }
+        };
+
+        try
+        {
+            var httpClient = _httpClientFactory.CreateClient();
+            httpClient.Timeout = TimeSpan.FromSeconds(30);
+            var request = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl.TrimEnd('/')}/chat/completions");
+            request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
+            request.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+
+            using var response = await httpClient.SendAsync(request);
+            var body = await response.Content.ReadAsStringAsync();
+            if (!response.IsSuccessStatusCode)
+                return Ok(new { isDuplicate = false });
+
+            using var doc = JsonDocument.Parse(body);
+            var content = doc.RootElement.GetProperty("choices")[0].GetProperty("message").GetProperty("content").GetString() ?? "";
+            content = content.Trim();
+            if (content.StartsWith("```")) content = content.Split('\n', 2).Length > 1 ? content.Split('\n', 2)[1] : content[3..];
+            if (content.EndsWith("```")) content = content[..^3];
+            content = content.Trim();
+
+            var result = JsonSerializer.Deserialize<JsonElement>(content);
+            var isDuplicate = result.TryGetProperty("isDuplicate", out var val) && val.GetBoolean();
+            return Ok(new { isDuplicate });
+        }
+        catch
+        {
+            return Ok(new { isDuplicate = false });
+        }
     }
 
     private static ReceiptResponse MapToResponse(Receipt r) => new()

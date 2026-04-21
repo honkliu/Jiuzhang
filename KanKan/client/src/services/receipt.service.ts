@@ -35,6 +35,25 @@ export interface LabResultItem {
   status?: string; // Normal, High, Low, Abnormal
 }
 
+export interface ReceiptExtractionResult {
+  type?: string;
+  category?: string;
+  merchantName?: string;
+  hospitalName?: string;
+  department?: string;
+  doctorName?: string;
+  patientName?: string;
+  totalAmount?: number;
+  currency?: string;
+  receiptDate?: string;
+  notes?: string;
+  diagnosisText?: string;
+  imagingFindings?: string;
+  items?: ReceiptLineItem[];
+  medications?: MedicationItem[];
+  labResults?: LabResultItem[];
+}
+
 export interface ReceiptDto {
   id: string;
   ownerId: string;
@@ -223,6 +242,18 @@ class ReceiptService {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     return res.data.url;
+  }
+
+  // Extract receipt data from image via vision model
+  async extractFromImage(imageUrl: string): Promise<{ ocrText: string; receipts: ReceiptExtractionResult[] }> {
+    const res = await apiClient.post<{ ocrText: string; receipts: ReceiptExtractionResult[] }>('/receipts/extract', { imageUrl });
+    return res.data;
+  }
+
+  // Check if a new receipt is a duplicate of existing ones
+  async checkDuplicate(newOcrText: string, existingOcrTexts: string[]): Promise<boolean> {
+    const res = await apiClient.post<{ isDuplicate: boolean }>('/receipts/check-duplicate', { newOcrText, existingOcrTexts });
+    return res.data.isDuplicate;
   }
 }
 

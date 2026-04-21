@@ -10,7 +10,7 @@ import { ReceiptList } from './ReceiptList';
 import { MedicalVisitTimeline } from './MedicalVisitTimeline';
 import { ReceiptCapture } from './ReceiptCapture';
 import { ReceiptDetail } from './ReceiptDetail';
-import { receiptService, type ReceiptDto, type ReceiptVisitDto } from '@/services/receipt.service';
+import { receiptService, type ReceiptDto } from '@/services/receipt.service';
 import { chatService } from '@/services/chat.service';
 import { signalRService } from '@/services/signalr.service';
 import { useLanguage } from '@/i18n/LanguageContext';
@@ -113,7 +113,6 @@ export const ReceiptsPage: React.FC = () => {
   const [shoppingReceipts, setShoppingReceipts] = useState<ReceiptDto[]>([]);
   const [medicalReceipts, setMedicalReceipts] = useState<ReceiptDto[]>([]);
   const [allReceipts, setAllReceipts] = useState<ReceiptDto[]>([]);
-  const [visits, setVisits] = useState<ReceiptVisitDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [captureOpen, setCaptureOpen] = useState(false);
@@ -141,10 +140,7 @@ export const ReceiptsPage: React.FC = () => {
         return next;
       });
     } else {
-      // For medical: toggle visit IDs + unlinked receipt IDs
-      const visitIds = visits.map(v => v.id);
-      const unlinkedIds = medicalReceipts.filter(r => !r.visitId).map(r => r.id);
-      const allIds = [...visitIds, ...unlinkedIds];
+      const allIds = medicalReceipts.map(r => r.id);
       const allSelected = allIds.every(id => checkedIds.has(id));
       setCheckedIds(prev => {
         const next = new Set(prev);
@@ -158,15 +154,13 @@ export const ReceiptsPage: React.FC = () => {
     setLoading(true);
     setError('');
     try {
-      const [shopping, medical, visitData] = await Promise.all([
+      const [shopping, medical] = await Promise.all([
         receiptService.list('Shopping'),
         receiptService.list('Medical'),
-        receiptService.listVisits(),
       ]);
       setShoppingReceipts(shopping);
       setMedicalReceipts(medical);
       setAllReceipts([...shopping, ...medical]);
-      setVisits(visitData);
     } catch (e: any) {
       setError(e?.message || 'Failed to load');
     } finally {
@@ -180,7 +174,6 @@ export const ReceiptsPage: React.FC = () => {
   const timelineEvents = useMemo((): TimelineEvent[] => {
     const events: TimelineEvent[] = [];
 
-    // Shopping: group by receipt (each receipt = one dot)
     for (const r of shoppingReceipts) {
       if (!r.receiptDate) continue;
       events.push({
@@ -191,32 +184,24 @@ export const ReceiptsPage: React.FC = () => {
       });
     }
 
-    // Medical: each visit = one dot
-    for (const v of visits) {
-      if (!v.visitDate) continue;
-      events.push({
-        id: v.id,
-        date: new Date(v.visitDate),
-        type: 'medical',
-        label: v.hospitalName || '就诊',
-      });
-    }
-
-    // Unlinked medical receipts
+    // Medical: deduplicate by hospital+date (one dot per group)
+    const seenMedical = new Set<string>();
     for (const r of medicalReceipts) {
-      if (r.visitId) continue;
       if (!r.receiptDate) continue;
+      const key = `${r.hospitalName || ''}|${new Date(r.receiptDate).toLocaleDateString('zh-CN')}`;
+      if (seenMedical.has(key)) continue;
+      seenMedical.add(key);
       events.push({
         id: r.id,
         date: new Date(r.receiptDate),
         type: 'medical',
-        label: r.hospitalName || '医疗',
+        label: r.hospitalName || '就诊',
       });
     }
 
     events.sort((a, b) => a.date.getTime() - b.date.getTime());
     return events;
-  }, [shoppingReceipts, medicalReceipts, visits]);
+  }, [shoppingReceipts, medicalReceipts]);
 
   const handleTimelineDotClick = (event: TimelineEvent) => {
     if (event.type === 'shopping') {
@@ -253,16 +238,11 @@ export const ReceiptsPage: React.FC = () => {
     setAskingWa(true);
     try {
       const type = tab === 0 ? 'Shopping' : 'Medical';
-      // Filter to only checked items
       let selectedData: ReceiptDto[];
       if (tab === 0) {
         selectedData = shoppingReceipts.filter(r => checkedIds.has(r.id));
       } else {
-        // For medical: checked visits → all their receipts; checked unlinked receipts
-        const checkedVisitIds = new Set(visits.filter(v => checkedIds.has(v.id)).map(v => v.id));
-        selectedData = medicalReceipts.filter(r =>
-          (r.visitId && checkedVisitIds.has(r.visitId)) || (!r.visitId && checkedIds.has(r.id))
-        );
+        selectedData = medicalReceipts.filter(r => checkedIds.has(r.id));
       }
       if (selectedData.length === 0) {
         setError('请先选择要分析的票据');
@@ -324,7 +304,7 @@ export const ReceiptsPage: React.FC = () => {
             {(() => {
               const ids = tab === 0
                 ? shoppingReceipts.map(r => r.id)
-                : [...visits.map(v => v.id), ...medicalReceipts.filter(r => !r.visitId).map(r => r.id)];
+                : medicalReceipts.map(r => r.id);
               return ids.length > 0 && ids.every(id => checkedIds.has(id)) ? '取消全选' : '全选';
             })()}
           </Button>
@@ -419,13 +399,11 @@ export const ReceiptsPage: React.FC = () => {
           />
         ) : (
           <MedicalVisitTimeline
-            visits={visits}
-            unlinkedReceipts={medicalReceipts.filter(r => !r.visitId)}
+            medicalReceipts={medicalReceipts}
             allReceipts={allReceipts}
             checkedIds={checkedIds}
             onToggleChecked={toggleChecked}
             onSelectReceipt={setSelectedReceipt}
-            onRefresh={loadData}
           />
         )}
 
@@ -440,7 +418,6 @@ export const ReceiptsPage: React.FC = () => {
         <ReceiptCapture
           open={captureOpen}
           defaultType={tab === 0 ? 'Shopping' : 'Medical'}
-          visits={visits}
           onClose={() => setCaptureOpen(false)}
           onCaptured={handleCaptured}
         />
