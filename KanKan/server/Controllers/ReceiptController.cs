@@ -296,6 +296,10 @@ public class ReceiptController : ControllerBase
     {
         if (string.IsNullOrWhiteSpace(req.ImageUrl))
             return BadRequest("imageUrl is required.");
+        if (string.IsNullOrWhiteSpace(req.OcrPrompt))
+            return BadRequest("ocrPrompt is required.");
+        if (string.IsNullOrWhiteSpace(req.MapPrompt))
+            return BadRequest("mapPrompt is required.");
 
         // Read image file and convert to base64
         var imagePath = Path.Combine(_environment.WebRootPath, req.ImageUrl.TrimStart('/'));
@@ -315,9 +319,8 @@ public class ReceiptController : ControllerBase
         if (string.IsNullOrWhiteSpace(baseUrl))
             return StatusCode(500, "Agent base URL not configured.");
 
-        // Step 1: Vision — extract both markdown and JSON from image
-        var ocrPrompt = !string.IsNullOrWhiteSpace(req.OcrPrompt) ? req.OcrPrompt
-            : "识别图像中的文字、公式或抽取票据、证件、表单中的信息。请输出两部分，用===JSON===分隔：第一部分：Markdown格式的票据内容，用于展示,格式尊重图像中的文字格式。第二部分：JSON格式的原始提取数据，忠实反映图像中识别到的所有字段和数据，不要遗漏任何信息。";
+        // Step 1: Vision — the client owns the OCR prompt.
+        var ocrPrompt = req.OcrPrompt;
 
         var ocrMessages = new object[]
         {
@@ -380,33 +383,11 @@ public class ReceiptController : ControllerBase
         if (string.IsNullOrWhiteSpace(fullContent))
             return StatusCode(502, "OCR returned empty result");
 
-        // Step 2: Map raw data to our schema (text-only, no vision)
-        // Send the entire Step 1 raw output to Step 2
-        var defaultMapPrompt = @"根据以下OCR提取的票据数据，判断这是医疗票据还是购物票据还是其他类型，然后映射到我们的数据Schema，返回纯JSON数组，不要包含代码块标记。
-
-Schema字段说明：
-{
-  type: ""Shopping"" | ""Medical"",
-  category: string,
-  merchantName: string,
-  hospitalName: string,
-  department: string,
-  doctorName: string,
-  patientName: string,
-  totalAmount: number,
-    taxAmount: number,
-  currency: string,
-  receiptDate: string,
-  notes: string,
-  diagnosisText: string,
-  items: [{ name, quantity, unit, unitPrice, totalPrice }],
-  medications: [{ name, dosage, frequency, days, quantity, price }],
-  labResults: [{ name, value, unit, referenceRange, status }]
-}
-
-以下是OCR提取的数据：
-";
-        var mapPrompt = (!string.IsNullOrWhiteSpace(req.MapPrompt) ? req.MapPrompt + "\n\n以下是OCR提取的数据：\n" : defaultMapPrompt) + fullContent;
+        // Step 2: Map raw data to our schema (text-only, no vision).
+        // The client fully owns the mapping prompt.
+        var mapPrompt = req.MapPrompt
+                + "\n\n以下是OCR提取的数据：\n"
+                + fullContent;
 
         var mapMessages = new object[]
         {

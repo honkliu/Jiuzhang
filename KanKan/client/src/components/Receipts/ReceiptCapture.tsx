@@ -17,8 +17,7 @@ import {
 } from '@/services/receipt.service';
 import { useLanguage } from '@/i18n/LanguageContext';
 
-// Prompts — edit here without restarting the server
-const OCR_PROMPT = `识别图像中的文字、公式或抽取票据、证件、表单中的信息。请输出两部分，用===JSON===分隔：第一部分是Markdown格式的票据内容，用于展示,格式尊重图像中的文字格式，放在<OMD></OMD>之间。第二部分：JSON格式的原始提取数据，忠实反映图像中识别到的所有字段和数据，不要遗漏任何信息，内容放在<JMD></JMD>之间。`;
+const OCR_PROMPT = `识别图像中的文字、公式或抽取票据、证件、表单中的信息，注意票据有可能是中国，有可能是国外的，因此要在返回的md和json中要包含货币单位和交税信息等。请输出两部分，用===JSON===分隔：第一部分是Markdown格式的票据内容，用于展示,格式尊重图像中的文字格式，放在<OMD></OMD>之间。第二部分：JSON格式的原始提取数据，忠实反映图像中识别到的所有字段和数据，不要遗漏任何信息，内容放在<JMD></JMD>之间。`;
 
 const MAP_PROMPT = `根据以下OCR提取的票据数据，判断这是医疗票据还是购物票据还是其他类型，然后映射到我们的数据Schema，返回纯JSON数组，不要包含代码块标记。
 
