@@ -71,6 +71,7 @@ public class Receipt
     // ── Common fields ──
     public string? MerchantName { get; set; }
     public decimal? TotalAmount { get; set; }
+    public decimal? TaxAmount { get; set; }
     public string Currency { get; set; } = "CNY";
     public DateTime? ReceiptDate { get; set; }
     public string? Notes { get; set; }

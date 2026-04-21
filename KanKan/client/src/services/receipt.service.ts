@@ -44,6 +44,7 @@ export interface ReceiptExtractionResult {
   doctorName?: string;
   patientName?: string;
   totalAmount?: number;
+  taxAmount?: number;
   currency?: string;
   receiptDate?: string;
   notes?: string;
@@ -68,6 +69,7 @@ export interface ReceiptDto {
   doctorName?: string;
   patientName?: string;
   totalAmount?: number;
+  taxAmount?: number;
   currency: string;
   receiptDate?: string;
   notes?: string;
@@ -117,6 +119,7 @@ export interface CreateReceiptRequest {
   doctorName?: string;
   patientName?: string;
   totalAmount?: number;
+  taxAmount?: number;
   currency?: string;
   receiptDate?: string;
   notes?: string;
@@ -137,6 +140,7 @@ export interface UpdateReceiptRequest {
   doctorName?: string;
   patientName?: string;
   totalAmount?: number;
+  taxAmount?: number;
   currency?: string;
   receiptDate?: string;
   notes?: string;

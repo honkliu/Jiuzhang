@@ -32,6 +32,7 @@ Schema字段说明：
   doctorName: string,
   patientName: string,
   totalAmount: number,
+  taxAmount: number,  // 税额；如果票据明确显示税额则填入，如果未单独显示但可由totalAmount减去商品小计推导，则填推导值，否则留空
   currency: string,  // 默认CNY
   receiptDate: string,  // YYYY-MM-DD
   notes: string,  // 报告类型名称等
@@ -104,6 +105,102 @@ const parseOcrContent = (content: string) => {
     markdown: content,
     rawJson: cleaned,
   };
+};
+
+const normalizeCurrencyCode = (value?: string) => {
+  const next = value?.trim();
+  if (!next) return undefined;
+
+  const upper = next.toUpperCase();
+  switch (upper) {
+    case '$':
+    case 'US$':
+    case 'USD':
+      return 'USD';
+    case '€':
+    case 'EUR':
+      return 'EUR';
+    case '£':
+    case 'GBP':
+      return 'GBP';
+    case '¥':
+    case 'JPY':
+    case 'JPYEN':
+      return 'JPY';
+    case '￥':
+    case 'RMB':
+    case 'CNY':
+    case 'CNYEN':
+      return 'CNY';
+    default:
+      return upper;
+  }
+};
+
+const inferCurrencyFromText = (value?: string) => {
+  const next = value?.trim();
+  if (!next) return undefined;
+
+  if (/(?:\bUSD\b|US\$|\$)/i.test(next)) return 'USD';
+  if (/(?:\bEUR\b|€)/i.test(next)) return 'EUR';
+  if (/(?:\bGBP\b|£)/i.test(next)) return 'GBP';
+  if (/(?:\bJPY\b|日元)/i.test(next)) return 'JPY';
+  if (/(?:\bCNY\b|\bRMB\b|人民币|元|￥)/i.test(next)) return 'CNY';
+
+  return undefined;
+};
+
+const currencySymbol = (currency?: string) => {
+  switch (normalizeCurrencyCode(currency)) {
+    case 'USD': return '$';
+    case 'EUR': return '€';
+    case 'GBP': return '£';
+    case 'JPY': return '¥';
+    case 'CNY':
+    default:
+      return '¥';
+  }
+};
+
+const parseAmount = (value: unknown) => {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value !== 'string') return undefined;
+  const cleaned = value.replace(/[^0-9.-]/g, '');
+  if (!cleaned) return undefined;
+  const parsed = Number(cleaned);
+  return Number.isFinite(parsed) ? parsed : undefined;
+};
+
+const roundMoney = (value: number) => Math.round(value * 100) / 100;
+
+const inferTaxAmount = (record: any) => {
+  const direct = [record.taxAmount, record.tax, record.salesTax, record.vat, record.gst]
+    .map(parseAmount)
+    .find((value): value is number => value != null && value >= 0);
+
+  if (direct != null) return direct;
+
+  const totalAmount = parseAmount(record.totalAmount);
+  const items = Array.isArray(record.items) ? record.items : [];
+  const subtotal = items.reduce((sum: number, item: any) => {
+    const totalPrice = parseAmount(item?.totalPrice);
+    if (totalPrice != null) return sum + totalPrice;
+
+    const unitPrice = parseAmount(item?.unitPrice);
+    const quantity = parseAmount(item?.quantity);
+    if (unitPrice != null && quantity != null) return sum + (unitPrice * quantity);
+    if (unitPrice != null) return sum + unitPrice;
+    return sum;
+  }, 0);
+
+  if (totalAmount == null || subtotal <= 0) return undefined;
+
+  const diff = roundMoney(totalAmount - subtotal);
+  if (diff > 0 && diff <= totalAmount * 0.25) {
+    return diff;
+  }
+
+  return undefined;
 };
 
 interface ReceiptCaptureProps {
@@ -184,6 +281,10 @@ export const ReceiptCapture: React.FC<ReceiptCaptureProps> = ({
         } catch { s1 = result.step1Raw || ''; }
 
         const parsedStep1 = parseOcrContent(s1);
+        const fallbackCurrency =
+          inferCurrencyFromText(parsedStep1.rawJson)
+          || inferCurrencyFromText(parsedStep1.markdown)
+          || inferCurrencyFromText(s1);
         setOcrText(parsedStep1.markdown);
         setRawJson(parsedStep1.rawJson);
 
@@ -237,7 +338,8 @@ export const ReceiptCapture: React.FC<ReceiptCaptureProps> = ({
             doctorName: r.doctorName ? String(r.doctorName) : undefined,
             patientName: r.patientName ? String(r.patientName) : undefined,
             totalAmount: r.totalAmount != null ? Number(r.totalAmount) : undefined,
-            currency: r.currency ? String(r.currency) : undefined,
+            taxAmount: inferTaxAmount(r),
+            currency: normalizeCurrencyCode(r.currency ? String(r.currency) : undefined) || fallbackCurrency,
             receiptDate: r.receiptDate ? String(r.receiptDate) : undefined,
             notes: r.notes ? String(r.notes) : undefined,
             diagnosisText: r.diagnosisText ? String(r.diagnosisText) : undefined,
@@ -326,7 +428,8 @@ export const ReceiptCapture: React.FC<ReceiptCaptureProps> = ({
     receiptDate: r.receiptDate || undefined,
     notes: r.notes || undefined,
     totalAmount: r.totalAmount,
-    currency: r.currency || 'CNY',
+    taxAmount: r.taxAmount,
+    currency: normalizeCurrencyCode(r.currency) || 'CNY',
     merchantName: r.merchantName || undefined,
     hospitalName: r.hospitalName || undefined,
     department: r.department || undefined,
@@ -391,7 +494,7 @@ export const ReceiptCapture: React.FC<ReceiptCaptureProps> = ({
 
   const receiptLabel = (r: ReceiptExtractionResult, i: number) => {
     const name = r.merchantName || r.hospitalName || `票据 ${i + 1}`;
-    const amt = r.totalAmount != null ? ` ¥${r.totalAmount.toFixed(2)}` : '';
+    const amt = r.totalAmount != null ? ` ${currencySymbol(r.currency)}${r.totalAmount.toFixed(2)}` : '';
     return `${name}${amt}`;
   };
 

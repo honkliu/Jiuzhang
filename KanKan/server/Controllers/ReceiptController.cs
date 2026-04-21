@@ -72,6 +72,7 @@ public class ReceiptController : ControllerBase
             DoctorName = req.DoctorName,
             PatientName = req.PatientName,
             TotalAmount = req.TotalAmount,
+            TaxAmount = req.TaxAmount,
             Currency = req.Currency ?? "CNY",
             ReceiptDate = req.ReceiptDate,
             Notes = req.Notes,
@@ -114,6 +115,7 @@ public class ReceiptController : ControllerBase
         if (req.DoctorName != null) receipt.DoctorName = req.DoctorName;
         if (req.PatientName != null) receipt.PatientName = req.PatientName;
         if (req.TotalAmount != null) receipt.TotalAmount = req.TotalAmount;
+        if (req.TaxAmount != null) receipt.TaxAmount = req.TaxAmount;
         if (req.Currency != null) receipt.Currency = req.Currency;
         if (req.ReceiptDate != null) receipt.ReceiptDate = req.ReceiptDate;
         if (req.Notes != null) receipt.Notes = req.Notes;
@@ -392,6 +394,7 @@ Schema字段说明：
   doctorName: string,
   patientName: string,
   totalAmount: number,
+    taxAmount: number,
   currency: string,
   receiptDate: string,
   notes: string,
@@ -527,6 +530,7 @@ Schema字段说明：
         DoctorName = r.DoctorName,
         PatientName = r.PatientName,
         TotalAmount = r.TotalAmount,
+        TaxAmount = r.TaxAmount,
         Currency = r.Currency,
         ReceiptDate = r.ReceiptDate,
         Notes = r.Notes,

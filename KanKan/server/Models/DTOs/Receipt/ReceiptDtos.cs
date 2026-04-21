@@ -17,6 +17,7 @@ public class CreateReceiptRequest
     public string? DoctorName { get; set; }
     public string? PatientName { get; set; }
     public decimal? TotalAmount { get; set; }
+    public decimal? TaxAmount { get; set; }
     public string? Currency { get; set; }
     public DateTime? ReceiptDate { get; set; }
     public string? Notes { get; set; }
@@ -38,6 +39,7 @@ public class UpdateReceiptRequest
     public string? DoctorName { get; set; }
     public string? PatientName { get; set; }
     public decimal? TotalAmount { get; set; }
+    public decimal? TaxAmount { get; set; }
     public string? Currency { get; set; }
     public DateTime? ReceiptDate { get; set; }
     public string? Notes { get; set; }
@@ -121,6 +123,7 @@ public class ReceiptResponse
     public string? DoctorName { get; set; }
     public string? PatientName { get; set; }
     public decimal? TotalAmount { get; set; }
+    public decimal? TaxAmount { get; set; }
     public string Currency { get; set; } = "CNY";
     public DateTime? ReceiptDate { get; set; }
     public string? Notes { get; set; }
@@ -177,6 +180,7 @@ public class ReceiptExtractionResult
     public string? DoctorName { get; set; }
     public string? PatientName { get; set; }
     public decimal? TotalAmount { get; set; }
+    public decimal? TaxAmount { get; set; }
     public string? Currency { get; set; }
     public string? ReceiptDate { get; set; }
     public string? Notes { get; set; }

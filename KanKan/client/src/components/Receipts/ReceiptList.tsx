@@ -44,12 +44,21 @@ interface ItemHistoryEntry {
 }
 
 const currencySymbol = (currency?: string): string => {
-  switch (currency) {
+  const normalized = currency?.trim().toUpperCase();
+  switch (normalized) {
+    case '$':
+    case 'US$':
     case 'USD': return '$';
+    case '€':
     case 'EUR': return '€';
+    case '£':
     case 'GBP': return '£';
+    case '￥':
     case 'JPY': return '¥';
-    case 'CNY': default: return '¥';
+    case 'RMB':
+    case 'CNY':
+    default:
+      return '¥';
   }
 };
 

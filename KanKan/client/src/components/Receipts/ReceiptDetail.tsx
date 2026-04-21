@@ -17,6 +17,25 @@ import { useLanguage } from '@/i18n/LanguageContext';
 
 const BoxAny = Box as any;
 
+const currencySymbol = (currency?: string): string => {
+  const normalized = currency?.trim().toUpperCase();
+  switch (normalized) {
+    case '$':
+    case 'US$':
+    case 'USD': return '$';
+    case '€':
+    case 'EUR': return '€';
+    case '£':
+    case 'GBP': return '£';
+    case '￥':
+    case 'JPY': return '¥';
+    case 'RMB':
+    case 'CNY':
+    default:
+      return '¥';
+  }
+};
+
 // ── Shared styles mimicking Chinese hospital document paper ────────────────
 const reportPaperSx = {
   borderRadius: 0,
@@ -625,7 +644,10 @@ const ShoppingDocument: React.FC<{
   receipt: ReceiptDto;
   dateStr: string;
   t: (k: string) => string;
-}> = ({ receipt, dateStr, t }) => (
+}> = ({ receipt, dateStr, t }) => {
+  const symbol = currencySymbol(receipt.currency);
+
+  return (
   <Paper sx={{
     borderRadius: 0, border: '1px dashed #aaa', mb: 2, boxShadow: 'none',
     bgcolor: '#fffff8', fontFamily: '"Courier New", "Noto Sans SC", monospace',
@@ -654,18 +676,18 @@ const ShoppingDocument: React.FC<{
           <BoxAny sx={{ display: 'flex', gap: 3 }}>
             <span>数量</span>
             <span>单价</span>
-            <span style={{ minWidth: 56, textAlign: 'right' }}>小计</span>
+            <BoxAny component="span" sx={{ minWidth: 56, textAlign: 'right' }}>小计</BoxAny>
           </BoxAny>
         </BoxAny>
         {receipt.items.map((item, i) => (
           <BoxAny key={i} sx={{ display: 'flex', justifyContent: 'space-between', py: 0.3, fontSize: '0.82rem' }}>
-            <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</span>
+            <BoxAny component="span" sx={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</BoxAny>
             <BoxAny sx={{ display: 'flex', gap: 2, flexShrink: 0, ml: 1 }}>
-              <span style={{ width: 32, textAlign: 'right' }}>{item.quantity ?? ''}{item.unit || ''}</span>
-              <span style={{ width: 48, textAlign: 'right' }}>{item.unitPrice != null ? `¥${item.unitPrice.toFixed(2)}` : ''}</span>
-              <span style={{ width: 56, textAlign: 'right', fontWeight: 600 }}>
-                {item.totalPrice != null ? `¥${item.totalPrice.toFixed(2)}` : ''}
-              </span>
+              <BoxAny component="span" sx={{ width: 32, textAlign: 'right' }}>{item.quantity ?? ''}{item.unit || ''}</BoxAny>
+              <BoxAny component="span" sx={{ width: 48, textAlign: 'right' }}>{item.unitPrice != null ? `${symbol}${item.unitPrice.toFixed(2)}` : ''}</BoxAny>
+              <BoxAny component="span" sx={{ width: 56, textAlign: 'right', fontWeight: 600 }}>
+                {item.totalPrice != null ? `${symbol}${item.totalPrice.toFixed(2)}` : ''}
+              </BoxAny>
             </BoxAny>
           </BoxAny>
         ))}
@@ -677,7 +699,13 @@ const ShoppingDocument: React.FC<{
     {receipt.totalAmount != null && (
       <BoxAny sx={{ display: 'flex', justifyContent: 'space-between', px: 2, py: 1, fontSize: '1.05rem', fontWeight: 800 }}>
         <span>合计</span>
-        <span>¥{receipt.totalAmount.toFixed(2)}</span>
+        <span>{symbol}{receipt.totalAmount.toFixed(2)}</span>
+      </BoxAny>
+    )}
+    {receipt.taxAmount != null && (
+      <BoxAny sx={{ display: 'flex', justifyContent: 'space-between', px: 2, pb: 0.8, fontSize: '0.86rem', color: '#555' }}>
+        <span>税额</span>
+        <span>{symbol}{receipt.taxAmount.toFixed(2)}</span>
       </BoxAny>
     )}
     <BoxAny sx={{ borderBottom: '1px dashed #aaa', mx: 2 }} />
@@ -692,7 +720,8 @@ const ShoppingDocument: React.FC<{
       * * * 谢谢惠顾 * * *
     </BoxAny>
   </Paper>
-);
+  );
+};
 
 // ── Generic info card fallback ─────────────────────────────────────────────
 
@@ -700,7 +729,10 @@ const GenericInfoCard: React.FC<{
   receipt: ReceiptDto;
   dateStr: string;
   t: (k: string) => string;
-}> = ({ receipt, dateStr }) => (
+}> = ({ receipt, dateStr }) => {
+  const symbol = currencySymbol(receipt.currency);
+
+  return (
   <Paper sx={{ ...reportPaperSx, border: '1px solid #ddd' }}>
     <BoxAny sx={{ px: 2, py: 2 }}>
       <BoxAny sx={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '4px 12px' }}>
@@ -719,7 +751,10 @@ const GenericInfoCard: React.FC<{
         <Typography sx={labelSx}>日期</Typography>
         <Typography sx={valueSx}>{dateStr || '—'}</Typography>
         {receipt.totalAmount != null && (
-          <><Typography sx={labelSx}>金额</Typography><Typography sx={{ ...valueSx, fontWeight: 700 }}>¥{receipt.totalAmount.toFixed(2)}</Typography></>
+          <><Typography sx={labelSx}>金额</Typography><Typography sx={{ ...valueSx, fontWeight: 700 }}>{symbol}{receipt.totalAmount.toFixed(2)}</Typography></>
+        )}
+        {receipt.taxAmount != null && (
+          <><Typography sx={labelSx}>税额</Typography><Typography sx={valueSx}>{symbol}{receipt.taxAmount.toFixed(2)}</Typography></>
         )}
       </BoxAny>
       {receipt.diagnosisText && (
@@ -730,4 +765,5 @@ const GenericInfoCard: React.FC<{
       )}
     </BoxAny>
   </Paper>
-);
+  );
+};
