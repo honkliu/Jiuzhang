@@ -746,6 +746,12 @@ public class ChatController : ControllerBase
 
             await _messageRepository.CreateAsync(message);
 
+            if (ShouldTriggerAgent(chat, message) && !message.ReadBy.Contains(ChatDomain.AgentUserId))
+            {
+                message.ReadBy.Add(ChatDomain.AgentUserId);
+                await _messageRepository.UpdateAsync(message);
+            }
+
             // Update chat's last message
             chat.LastMessage = new ChatLastMessage
             {

@@ -408,6 +408,14 @@ public class ChatHub : Hub
         if (ShouldTriggerAgent(chat, newMessage))
         {
             await EnsureAgentParticipantAsync(chat);
+
+            if (!newMessage.ReadBy.Contains(ChatDomain.AgentUserId))
+            {
+                newMessage.ReadBy.Add(ChatDomain.AgentUserId);
+                await _messageRepository.UpdateAsync(newMessage);
+                await Clients.Group(chat.Id).SendAsync("MessageRead", chat.Id, newMessage.Id, ChatDomain.AgentUserId);
+            }
+
             var agentMessageId = $"msg_{Guid.NewGuid()}";
             var agentUser = await _userRepository.GetByIdAsync(ChatDomain.AgentUserId);
             var agentAvatar = agentUser?.AvatarUrl ?? string.Empty;
