@@ -245,8 +245,8 @@ class ReceiptService {
   }
 
   // Extract receipt data from image via vision model
-  async extractFromImage(imageUrl: string): Promise<{ ocrText: string; receipts: ReceiptExtractionResult[] }> {
-    const res = await apiClient.post<{ ocrText: string; receipts: ReceiptExtractionResult[] }>('/receipts/extract', { imageUrl });
+  async extractFromImage(imageUrl: string, ocrPrompt?: string, mapPrompt?: string): Promise<{ step1Raw: string; step2Raw: string }> {
+    const res = await apiClient.post<{ step1Raw: string; step2Raw: string }>('/receipts/extract', { imageUrl, ocrPrompt, mapPrompt });
     return res.data;
   }
 

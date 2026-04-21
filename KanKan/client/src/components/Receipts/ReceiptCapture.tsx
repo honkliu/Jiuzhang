@@ -17,6 +17,30 @@ import {
 } from '@/services/receipt.service';
 import { useLanguage } from '@/i18n/LanguageContext';
 
+// Prompts — edit here without restarting the server
+const OCR_PROMPT = `识别图像中的文字、公式或抽取票据、证件、表单中的信息。请输出两部分，用===JSON===分隔：第一部分：Markdown格式的票据内容，用于展示,格式尊重图像中的文字格式。第二部分：JSON格式的原始提取数据，忠实反映图像中识别到的所有字段和数据，不要遗漏任何信息。`;
+
+const MAP_PROMPT = `根据以下OCR提取的票据数据，判断这是医疗票据还是购物票据还是其他类型，然后映射到我们的数据Schema，返回纯JSON数组，不要包含代码块标记。
+
+Schema字段说明：
+{
+  type: "Shopping" | "Medical",
+  category: string,  // Shopping时: Supermarket, Restaurant, OnlineShopping, Other; Medical时: Registration, Diagnosis, Prescription, LabResult, ImagingResult, PaymentReceipt, DischargeNote, Other
+  merchantName: string,
+  hospitalName: string,
+  department: string,
+  doctorName: string,
+  patientName: string,
+  totalAmount: number,
+  currency: string,  // 默认CNY
+  receiptDate: string,  // YYYY-MM-DD
+  notes: string,  // 报告类型名称等
+  diagnosisText: string,
+  items: [{ name, quantity, unit, unitPrice, totalPrice }],
+  medications: [{ name, dosage, frequency, days, quantity, price }],
+  labResults: [{ name, value, unit, referenceRange, status }]  // value为纯数值去掉↑↓，status: High/Low/Normal
+}`;
+
 const BoxAny = Box as any;
 
 const shoppingCategories = ['Supermarket', 'Restaurant', 'OnlineShopping', 'Other'];
@@ -63,7 +87,10 @@ export const ReceiptCapture: React.FC<ReceiptCaptureProps> = ({
   const [diagnosisText, setDiagnosisText] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
-  const [ocrText, setOcrText] = useState(''); // raw OCR text from extraction
+  const [ocrText, setOcrText] = useState(''); // markdown for display
+  const [rawJson, setRawJson] = useState(''); // raw JSON for dedup
+  const [step1Raw, setStep1Raw] = useState('');
+  const [step2Raw, setStep2Raw] = useState('');
 
   const categories = type === 'Shopping' ? shoppingCategories : medicalCategories;
 
@@ -73,7 +100,7 @@ export const ReceiptCapture: React.FC<ReceiptCaptureProps> = ({
     setPatientName(''); setTotalAmount(''); setReceiptDate(''); setVisitId('');
     setNotes(''); setDiagnosisText('');
     setExtractedReceipts([]); setSelectedIndices(new Set()); setEditingIndex(null);
-    setExtractError(''); setOcrText('');
+    setExtractError(''); setOcrText(''); setRawJson(''); setStep1Raw(''); setStep2Raw('');
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -89,13 +116,120 @@ export const ReceiptCapture: React.FC<ReceiptCaptureProps> = ({
       setStep(1);
       setExtracting(true);
       try {
-        const { ocrText: rawOcr, receipts: results } = await receiptService.extractFromImage(url);
-        setOcrText(rawOcr);
-        setExtractedReceipts(results);
-        setSelectedIndices(new Set(results.map((_, i) => i)));
+        const result = await receiptService.extractFromImage(url, OCR_PROMPT, MAP_PROMPT);
+        setStep1Raw(result.step1Raw || '');
+        setStep2Raw(result.step2Raw || '');
+
+        // Extract content from raw API response (step1Raw is full API JSON body)
+        let s1 = '';
+        try {
+          const apiResp = JSON.parse(result.step1Raw || '{}');
+          const msg = apiResp?.choices?.[0]?.message;
+          s1 = msg?.content || '';
+        } catch { s1 = result.step1Raw || ''; }
+
+        // Split by ===JSON=== — markdown before, JSON after
+        const jsonSep = s1.indexOf('===JSON===');
+        if (jsonSep >= 0) {
+          const mdPart = s1.substring(0, jsonSep).trim();
+          const mdClean = mdPart.replace(/^===Markdown===\s*/, '');
+          setOcrText(mdClean);
+          setRawJson(s1.substring(jsonSep + '===JSON==='.length).trim());
+        } else {
+          // No separator — content is likely just JSON code block
+          // Strip code block markers for rawJson
+          let jsonStr = s1.trim();
+          if (jsonStr.startsWith('```json')) jsonStr = jsonStr.slice(7);
+          else if (jsonStr.startsWith('```')) jsonStr = jsonStr.slice(3);
+          if (jsonStr.endsWith('```')) jsonStr = jsonStr.slice(0, -3);
+          setRawJson(jsonStr.trim());
+          setOcrText(s1);
+        }
+
+        // Parse Step 2: extract our schema JSON from mapping output
+        let s2 = result.step2Raw || '[]';
+        // Strip code block markers
+        s2 = s2.trim();
+        if (s2.startsWith('```json')) s2 = s2.slice(7);
+        else if (s2.startsWith('```')) s2 = s2.slice(3);
+        if (s2.endsWith('```')) s2 = s2.slice(0, -3);
+        s2 = s2.trim();
+
+        let parsed: ReceiptExtractionResult[] = [];
+        try {
+          const raw = JSON.parse(s2);
+          const arr = Array.isArray(raw) ? raw : [raw];
+
+          // Normalize category from Chinese to our schema values
+          const normCategory = (cat: string, type: string): string => {
+            if (type === 'Medical') {
+              const map: Record<string, string> = {
+                '检验报告单': 'LabResult', '检验报告': 'LabResult', '化验单': 'LabResult',
+                '处方': 'Prescription', '处方单': 'Prescription',
+                '挂号': 'Registration', '挂号单': 'Registration',
+                '诊断': 'Diagnosis', '诊断书': 'Diagnosis',
+                '影像': 'ImagingResult', '影像报告': 'ImagingResult', 'CT报告': 'ImagingResult',
+                '缴费': 'PaymentReceipt', '收费单': 'PaymentReceipt', '发票': 'PaymentReceipt',
+                '出院': 'DischargeNote', '出院小结': 'DischargeNote',
+              };
+              return map[cat] || (medicalCategories.includes(cat) ? cat : 'Other');
+            }
+            return shoppingCategories.includes(cat) ? cat : 'Other';
+          };
+
+          // Normalize lab result status from arrows/text to High/Low/Normal
+          const normStatus = (s: string): string => {
+            if (!s) return 'Normal';
+            const lower = s.toLowerCase();
+            if (s === '↑' || lower.includes('high') || lower.includes('偏高')) return 'High';
+            if (s === '↓' || lower.includes('low') || lower.includes('偏低')) return 'Low';
+            if (lower.includes('abnormal')) {
+              if (lower.includes('high') || lower.includes('↑')) return 'High';
+              if (lower.includes('low') || lower.includes('↓')) return 'Low';
+              return 'Abnormal';
+            }
+            if (lower === 'normal' || lower === '' || lower.includes('正常')) return 'Normal';
+            return s;
+          };
+
+          parsed = arr.map((r: any) => ({
+            type: String(r.type || ''),
+            category: normCategory(String(r.category || ''), String(r.type || '')),
+            merchantName: r.merchantName ? String(r.merchantName) : undefined,
+            hospitalName: r.hospitalName ? String(r.hospitalName) : undefined,
+            department: r.department ? String(r.department) : undefined,
+            doctorName: r.doctorName ? String(r.doctorName) : undefined,
+            patientName: r.patientName ? String(r.patientName) : undefined,
+            totalAmount: r.totalAmount != null ? Number(r.totalAmount) : undefined,
+            currency: r.currency ? String(r.currency) : undefined,
+            receiptDate: r.receiptDate ? String(r.receiptDate) : undefined,
+            notes: r.notes ? String(r.notes) : undefined,
+            diagnosisText: r.diagnosisText ? String(r.diagnosisText) : undefined,
+            items: Array.isArray(r.items) ? r.items.map((i: any) => ({
+              name: String(i.name || ''), quantity: i.quantity != null ? Number(i.quantity) : undefined,
+              unit: i.unit ? String(i.unit) : undefined, unitPrice: i.unitPrice != null ? Number(i.unitPrice) : undefined,
+              totalPrice: i.totalPrice != null ? Number(i.totalPrice) : undefined,
+            })) : undefined,
+            medications: Array.isArray(r.medications) ? r.medications.map((m: any) => ({
+              name: String(m.name || ''), dosage: m.dosage ? String(m.dosage) : undefined,
+              frequency: m.frequency ? String(m.frequency) : undefined, days: m.days != null ? Number(m.days) : undefined,
+              quantity: m.quantity != null ? Number(m.quantity) : undefined, price: m.price != null ? Number(m.price) : undefined,
+            })) : undefined,
+            labResults: Array.isArray(r.labResults) ? r.labResults.map((l: any) => ({
+              name: String(l.name || ''), value: l.value != null ? String(l.value) : undefined,
+              unit: l.unit ? String(l.unit) : undefined, referenceRange: l.referenceRange ? String(l.referenceRange) : undefined,
+              status: normStatus(l.status ? String(l.status) : ''),
+            })) : undefined,
+          }));
+        } catch {
+          setExtractError('Step 2 JSON解析失败');
+        }
+        setExtractedReceipts(parsed);
+        setSelectedIndices(new Set(parsed.map((_, i) => i)));
         setStep(2);
       } catch (err: any) {
-        setExtractError(err?.message || '识别失败，请手动填写');
+        const msg = err?.response?.data || err?.message || '识别失败，请手动填写';
+        setExtractError(typeof msg === 'string' ? msg : JSON.stringify(msg));
         // Fall back to manual entry
         setStep(2);
         setExtractedReceipts([]);
@@ -153,7 +287,8 @@ export const ReceiptCapture: React.FC<ReceiptCaptureProps> = ({
     type: (r.type as ReceiptType) || defaultType,
     category: r.category || 'Other',
     imageUrl,
-    rawText: ocrText || undefined,
+    rawText: ocrText || undefined, // markdown for display
+    // Store rawJson in notes-adjacent field — use rawText for dedup too
     receiptDate: r.receiptDate || undefined,
     notes: r.notes || undefined,
     totalAmount: r.totalAmount,
@@ -176,14 +311,14 @@ export const ReceiptCapture: React.FC<ReceiptCaptureProps> = ({
       if (extractedReceipts.length > 0) {
         const toSubmit = extractedReceipts.filter((_, i) => selectedIndices.has(i));
 
-        // Check for duplicates if we have OCR text
-        if (ocrText) {
+        // Check for duplicates using raw JSON
+        if (rawJson) {
           const allExisting = await receiptService.list();
           const existingOcrTexts = allExisting
             .map(er => er.rawText)
             .filter((t): t is string => !!t);
           if (existingOcrTexts.length > 0) {
-            const isDuplicate = await receiptService.checkDuplicate(ocrText, existingOcrTexts);
+            const isDuplicate = await receiptService.checkDuplicate(rawJson, existingOcrTexts);
             if (isDuplicate) {
               setExtractError('该票据已存在，跳过重复录入');
               setSubmitting(false);
@@ -283,6 +418,35 @@ export const ReceiptCapture: React.FC<ReceiptCaptureProps> = ({
         {step === 2 && (
           <BoxAny>
             {extractError && <Alert severity="warning" sx={{ mb: 2 }}>{extractError}</Alert>}
+
+            {/* Debug: Step 1 & 2 raw outputs */}
+            <BoxAny sx={{ mb: 2 }}>
+              <Typography variant="caption" color="text.secondary" sx={{ cursor: 'pointer' }}
+                onClick={() => {
+                  const el = document.getElementById('debug-output');
+                  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+                }}>
+                🔍 调试信息（点击展开/收起）
+              </Typography>
+              <BoxAny id="debug-output" sx={{ display: 'none' }}>
+                <BoxAny component="pre" sx={{ mt: 1, p: 1, bgcolor: '#f5f5f5', borderRadius: 1, maxHeight: 500, overflow: 'auto', fontSize: '0.7rem', whiteSpace: 'pre-wrap', m: 0 }}>
+{`===== Step 1 Input =====
+${OCR_PROMPT}
+
+===== Step 1 Output =====
+${step1Raw || ocrText || '(empty)'}
+
+===== Step 2 Input =====
+${MAP_PROMPT}
+
+以下是OCR提取的数据：
+${rawJson !== '[]' ? rawJson : ocrText}
+
+===== Step 2 Output =====
+${step2Raw || JSON.stringify(extractedReceipts, null, 2) || '(empty)'}`}
+                </BoxAny>
+              </BoxAny>
+            </BoxAny>
 
             {extractedReceipts.length > 0 ? (
               <>

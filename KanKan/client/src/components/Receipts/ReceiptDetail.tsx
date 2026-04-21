@@ -11,6 +11,7 @@ import {
   Description as InfoIcon,
 } from '@mui/icons-material';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import type { ReceiptDto } from '@/services/receipt.service';
 import { useLanguage } from '@/i18n/LanguageContext';
 
@@ -189,7 +190,7 @@ export const ReceiptDetail: React.FC<ReceiptDetailProps> = ({ receipt, allReceip
             '& pre': { backgroundColor: 'rgba(0,0,0,0.03)', padding: '12px', borderRadius: '4px', overflowX: 'auto', margin: '0.5em 0' },
             '& pre code': { padding: 0, backgroundColor: 'transparent' },
           }}>
-            <ReactMarkdown>{receipt.rawText}</ReactMarkdown>
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{receipt.rawText}</ReactMarkdown>
           </BoxAny>
         </Paper>
       )}

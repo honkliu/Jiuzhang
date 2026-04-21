@@ -163,6 +163,8 @@ public class ReceiptStatsResponse
 public class ExtractReceiptRequest
 {
     public string ImageUrl { get; set; } = string.Empty;
+    public string? OcrPrompt { get; set; }
+    public string? MapPrompt { get; set; }
 }
 
 public class ReceiptExtractionResult

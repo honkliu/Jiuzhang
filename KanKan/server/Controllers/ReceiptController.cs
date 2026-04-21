@@ -313,7 +313,10 @@ public class ReceiptController : ControllerBase
         if (string.IsNullOrWhiteSpace(baseUrl))
             return StatusCode(500, "Agent base URL not configured.");
 
-        // Step 1: OCR — extract raw text from image
+        // Step 1: Vision — extract both markdown and JSON from image
+        var ocrPrompt = !string.IsNullOrWhiteSpace(req.OcrPrompt) ? req.OcrPrompt
+            : "识别图像中的文字、公式或抽取票据、证件、表单中的信息。请输出两部分，用===JSON===分隔：第一部分：Markdown格式的票据内容，用于展示,格式尊重图像中的文字格式。第二部分：JSON格式的原始提取数据，忠实反映图像中识别到的所有字段和数据，不要遗漏任何信息。";
+
         var ocrMessages = new object[]
         {
             new
@@ -321,8 +324,8 @@ public class ReceiptController : ControllerBase
                 role = "user",
                 content = new object[]
                 {
-                    new { type = "image_url", image_url = new { url = dataUri } },
-                    new { type = "text", text = "识别图像中的文字、公式或抽取票据、证件、表单中的信息，支持格式化输出文本" }
+                    new { type = "text", text = ocrPrompt },
+                    new { type = "image_url", image_url = new { url = dataUri } }
                 }
             }
         };
@@ -331,19 +334,25 @@ public class ReceiptController : ControllerBase
         {
             model,
             messages = ocrMessages,
-            temperature = 0.1,
-            max_tokens = 4096,
+            temperature = 0.7,
+            top_p = 0.8,
+            top_k = 20,
+            min_p = 0.0,
+            presence_penalty = 1.5,
+            repetition_penalty = 1.0,
+            max_tokens = 131072,
             chat_template_kwargs = new { enable_thinking = false }
         };
 
         var httpClient = _httpClientFactory.CreateClient();
-        httpClient.Timeout = TimeSpan.FromSeconds(120);
+        httpClient.Timeout = TimeSpan.FromSeconds(300);
 
         var ocrRequest = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl.TrimEnd('/')}/chat/completions");
         ocrRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
         ocrRequest.Content = new StringContent(JsonSerializer.Serialize(ocrPayload), Encoding.UTF8, "application/json");
 
-        string ocrText;
+        string fullContent = "";
+        string step1ApiRaw = "";
         try
         {
             using var ocrResponse = await httpClient.SendAsync(ocrRequest);
@@ -351,8 +360,11 @@ public class ReceiptController : ControllerBase
             if (!ocrResponse.IsSuccessStatusCode)
                 return StatusCode(502, $"OCR failed ({ocrResponse.StatusCode}): {ocrBody}");
 
+            // Store entire raw API response
+            step1ApiRaw = ocrBody;
+
             using var ocrDoc = JsonDocument.Parse(ocrBody);
-            ocrText = ocrDoc.RootElement
+            fullContent = ocrDoc.RootElement
                 .GetProperty("choices")[0]
                 .GetProperty("message")
                 .GetProperty("content")
@@ -360,35 +372,38 @@ public class ReceiptController : ControllerBase
         }
         catch (Exception ex)
         {
-            return StatusCode(502, $"OCR call failed: {ex.Message}");
+            return StatusCode(502, $"Step 1 OCR call failed: {ex.Message}");
         }
 
-        if (string.IsNullOrWhiteSpace(ocrText))
+        if (string.IsNullOrWhiteSpace(fullContent))
             return StatusCode(502, "OCR returned empty result");
 
-        // Step 2: Map OCR text to structured JSON
-        var mapPrompt = @"将以下OCR识别的票据文本转换为JSON格式。
+        // Step 2: Map raw data to our schema (text-only, no vision)
+        // Send the entire Step 1 raw output to Step 2
+        var defaultMapPrompt = @"根据以下OCR提取的票据数据，判断这是医疗票据还是购物票据还是其他类型，然后映射到我们的数据Schema，返回纯JSON数组，不要包含代码块标记。
 
-映射规则：
-- 购物类：type=Shopping。超市/便利店→category=Supermarket，餐饮→Restaurant，网购→OnlineShopping，其他→Other
-  - 商品明细→items数组，每项含name、quantity、unit、unitPrice、totalPrice
-  - 商家/店铺名→merchantName
-- 医疗类：type=Medical
-  - 检验报告（血常规、生化、尿常规等）→category=LabResult
-    - 每个检验项目→labResults数组，含name、value（纯数值去掉↑↓）、unit、referenceRange、status（↑=High，↓=Low，无=Normal）
-    - 报告类型名称（如血常规+CRP）→notes
-  - 处方→category=Prescription，药品→medications数组
-  - 挂号→Registration，诊断→Diagnosis，影像→ImagingResult，收费→PaymentReceipt，出院→DischargeNote
-  - 医院名→hospitalName，科室→department，医生→doctorName，患者→patientName
-  - 诊断→diagnosisText
-- 日期→receiptDate（YYYY-MM-DD），金额→totalAmount（数字），币种→currency（默认CNY）
-- 一份文本可能包含多张票据，每张单独一个JSON对象
+Schema字段说明：
+{
+  type: ""Shopping"" | ""Medical"",
+  category: string,
+  merchantName: string,
+  hospitalName: string,
+  department: string,
+  doctorName: string,
+  patientName: string,
+  totalAmount: number,
+  currency: string,
+  receiptDate: string,
+  notes: string,
+  diagnosisText: string,
+  items: [{ name, quantity, unit, unitPrice, totalPrice }],
+  medications: [{ name, dosage, frequency, days, quantity, price }],
+  labResults: [{ name, value, unit, referenceRange, status }]
+}
 
-返回纯JSON数组，不要```代码块：
-[{""type"":""Medical"",""category"":""LabResult"",""hospitalName"":""XX医院"",""department"":""检验科"",""receiptDate"":""2023-08-28"",""notes"":""血常规"",""labResults"":[{""name"":""白细胞"",""value"":""20.3"",""unit"":""10^9/L"",""referenceRange"":""4.0-10.0"",""status"":""High""}]}]
-
-以下是OCR识别的文本：
-" + ocrText;
+以下是OCR提取的数据：
+";
+        var mapPrompt = (!string.IsNullOrWhiteSpace(req.MapPrompt) ? req.MapPrompt + "\n\n以下是OCR提取的数据：\n" : defaultMapPrompt) + fullContent;
 
         var mapMessages = new object[]
         {
@@ -399,8 +414,13 @@ public class ReceiptController : ControllerBase
         {
             model,
             messages = mapMessages,
-            temperature = 0.1,
-            max_tokens = 4096,
+            temperature = 0.7,
+            top_p = 0.8,
+            top_k = 20,
+            min_p = 0.0,
+            presence_penalty = 1.5,
+            repetition_penalty = 1.0,
+            max_tokens = 131072,
             chat_template_kwargs = new { enable_thinking = false }
         };
 
@@ -416,34 +436,18 @@ public class ReceiptController : ControllerBase
             if (!response.IsSuccessStatusCode)
                 return StatusCode(502, $"Mapping failed ({response.StatusCode}): {responseBody}");
 
-            // Parse the response — extract content from choices[0].message.content
             using var doc = JsonDocument.Parse(responseBody);
-            var content = doc.RootElement
+            var step2Content = doc.RootElement
                 .GetProperty("choices")[0]
                 .GetProperty("message")
                 .GetProperty("content")
-                .GetString() ?? "[]";
+                .GetString() ?? "";
 
-            // Strip markdown code block markers if present
-            content = content.Trim();
-            if (content.StartsWith("```json", StringComparison.OrdinalIgnoreCase))
-                content = content["```json".Length..];
-            if (content.StartsWith("```"))
-                content = content[3..];
-            if (content.EndsWith("```"))
-                content = content[..^3];
-            content = content.Trim();
-
-            // Parse as JSON array
-            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-            var extracted = JsonSerializer.Deserialize<List<ReceiptExtractionResult>>(content, options)
-                ?? new List<ReceiptExtractionResult>();
-
-            return Ok(new { ocrText, receipts = extracted });
+            return Ok(new { step1Raw = step1ApiRaw, step2Raw = step2Content });
         }
         catch (Exception ex)
         {
-            return StatusCode(502, $"Vision model call failed: {ex.Message}");
+            return StatusCode(502, $"Step 2 mapping failed: {ex.Message}");
         }
     }
 
@@ -473,7 +477,8 @@ public class ReceiptController : ControllerBase
         var messages = new object[] { new { role = "user", content = prompt } };
         var payload = new
         {
-            model, messages, temperature = 0.0, max_tokens = 50,
+            model, messages, temperature = 0.7, top_p = 0.8, top_k = 20, min_p = 0.0,
+            presence_penalty = 1.5, repetition_penalty = 1.0,
             chat_template_kwargs = new { enable_thinking = false }
         };
 
