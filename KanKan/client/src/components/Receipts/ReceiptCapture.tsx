@@ -18,7 +18,7 @@ import {
 import { useLanguage } from '@/i18n/LanguageContext';
 
 // Prompts — edit here without restarting the server
-const OCR_PROMPT = `识别图像中的文字、公式或抽取票据、证件、表单中的信息。请输出两部分，用===JSON===分隔：第一部分：Markdown格式的票据内容，用于展示,格式尊重图像中的文字格式。第二部分：JSON格式的原始提取数据，忠实反映图像中识别到的所有字段和数据，不要遗漏任何信息。`;
+const OCR_PROMPT = `识别图像中的文字、公式或抽取票据、证件、表单中的信息。请输出两部分，用===JSON===分隔：第一部分是Markdown格式的票据内容，用于展示,格式尊重图像中的文字格式，放在<OMD></OMD>之间。第二部分：JSON格式的原始提取数据，忠实反映图像中识别到的所有字段和数据，不要遗漏任何信息，内容放在<JMD></JMD>之间。`;
 
 const MAP_PROMPT = `根据以下OCR提取的票据数据，判断这是医疗票据还是购物票据还是其他类型，然后映射到我们的数据Schema，返回纯JSON数组，不要包含代码块标记。
 
@@ -49,6 +49,63 @@ const medicalCategories = [
   'ImagingResult', 'PaymentReceipt', 'DischargeNote', 'Other',
 ];
 
+const stripCodeFences = (value: string) => {
+  let next = value.trim();
+  if (next.startsWith('```json')) next = next.slice(7);
+  else if (next.startsWith('```')) next = next.slice(3);
+  if (next.endsWith('```')) next = next.slice(0, -3);
+  return next.trim();
+};
+
+const extractTaggedBlock = (input: string, tag: 'OMD' | 'JMD') => {
+  const openTag = `<${tag}>`;
+  const start = input.indexOf(openTag);
+  if (start < 0) return null;
+
+  const contentStart = start + openTag.length;
+  const closingTags = [`</${tag}>`, `/${tag}>`];
+  let end = -1;
+  for (const closingTag of closingTags) {
+    const candidate = input.indexOf(closingTag, contentStart);
+    if (candidate >= 0 && (end < 0 || candidate < end)) {
+      end = candidate;
+    }
+  }
+
+  if (end < 0) {
+    return input.substring(contentStart).trim();
+  }
+
+  return input.substring(contentStart, end).trim();
+};
+
+const parseOcrContent = (content: string) => {
+  const markdown = extractTaggedBlock(content, 'OMD');
+  const json = extractTaggedBlock(content, 'JMD');
+
+  if (markdown !== null || json !== null) {
+    return {
+      markdown: markdown || '',
+      rawJson: stripCodeFences(json || ''),
+    };
+  }
+
+  const jsonSep = content.indexOf('===JSON===');
+  if (jsonSep >= 0) {
+    const mdPart = content.substring(0, jsonSep).trim();
+    return {
+      markdown: mdPart.replace(/^===Markdown===\s*/, ''),
+      rawJson: stripCodeFences(content.substring(jsonSep + '===JSON==='.length)),
+    };
+  }
+
+  const cleaned = stripCodeFences(content);
+  return {
+    markdown: content,
+    rawJson: cleaned,
+  };
+};
+
 interface ReceiptCaptureProps {
   open: boolean;
   defaultType: ReceiptType;
@@ -65,7 +122,6 @@ export const ReceiptCapture: React.FC<ReceiptCaptureProps> = ({
   const [imageUrl, setImageUrl] = useState('');
   const [imagePreview, setImagePreview] = useState('');
   const [uploading, setUploading] = useState(false);
-  const [extracting, setExtracting] = useState(false);
   const [extractError, setExtractError] = useState('');
 
   // Extracted receipts (multiple from one image)
@@ -114,7 +170,6 @@ export const ReceiptCapture: React.FC<ReceiptCaptureProps> = ({
       setImageUrl(url);
       // Auto-extract
       setStep(1);
-      setExtracting(true);
       try {
         const result = await receiptService.extractFromImage(url, OCR_PROMPT, MAP_PROMPT);
         setStep1Raw(result.step1Raw || '');
@@ -128,32 +183,13 @@ export const ReceiptCapture: React.FC<ReceiptCaptureProps> = ({
           s1 = msg?.content || '';
         } catch { s1 = result.step1Raw || ''; }
 
-        // Split by ===JSON=== — markdown before, JSON after
-        const jsonSep = s1.indexOf('===JSON===');
-        if (jsonSep >= 0) {
-          const mdPart = s1.substring(0, jsonSep).trim();
-          const mdClean = mdPart.replace(/^===Markdown===\s*/, '');
-          setOcrText(mdClean);
-          setRawJson(s1.substring(jsonSep + '===JSON==='.length).trim());
-        } else {
-          // No separator — content is likely just JSON code block
-          // Strip code block markers for rawJson
-          let jsonStr = s1.trim();
-          if (jsonStr.startsWith('```json')) jsonStr = jsonStr.slice(7);
-          else if (jsonStr.startsWith('```')) jsonStr = jsonStr.slice(3);
-          if (jsonStr.endsWith('```')) jsonStr = jsonStr.slice(0, -3);
-          setRawJson(jsonStr.trim());
-          setOcrText(s1);
-        }
+        const parsedStep1 = parseOcrContent(s1);
+        setOcrText(parsedStep1.markdown);
+        setRawJson(parsedStep1.rawJson);
 
         // Parse Step 2: extract our schema JSON from mapping output
         let s2 = result.step2Raw || '[]';
-        // Strip code block markers
-        s2 = s2.trim();
-        if (s2.startsWith('```json')) s2 = s2.slice(7);
-        else if (s2.startsWith('```')) s2 = s2.slice(3);
-        if (s2.endsWith('```')) s2 = s2.slice(0, -3);
-        s2 = s2.trim();
+        s2 = stripCodeFences(s2);
 
         let parsed: ReceiptExtractionResult[] = [];
         try {
@@ -233,8 +269,6 @@ export const ReceiptCapture: React.FC<ReceiptCaptureProps> = ({
         // Fall back to manual entry
         setStep(2);
         setExtractedReceipts([]);
-      } finally {
-        setExtracting(false);
       }
     } catch {
       setExtractError('图片上传失败');
