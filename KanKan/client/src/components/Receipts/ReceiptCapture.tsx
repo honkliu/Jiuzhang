@@ -391,8 +391,12 @@ export const ReceiptCapture: React.FC<ReceiptCaptureProps> = ({
               </BoxAny>
             )}
             <input
-              ref={fileRef} type="file" accept="image/*" capture="environment"
-              style={{ display: 'none' }} onChange={handleFileChange}
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              hidden
+              aria-label={t('receipts.capture.takePhoto')}
+              onChange={handleFileChange}
             />
             <BoxAny sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
               <Button variant="contained" startIcon={<CameraIcon />}
