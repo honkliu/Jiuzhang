@@ -20,6 +20,15 @@ public class CreateReceiptRequest
     public decimal? TaxAmount { get; set; }
     public string? Currency { get; set; }
     public DateTime? ReceiptDate { get; set; }
+    public string? OutpatientNumber { get; set; }
+    public string? MedicalInsuranceNumber { get; set; }
+    public string? InsuranceType { get; set; }
+    public decimal? MedicalInsuranceFundPayment { get; set; }
+    public decimal? PersonalSelfPay { get; set; }
+    public decimal? OtherPayments { get; set; }
+    public decimal? PersonalAccountPayment { get; set; }
+    public decimal? PersonalOutOfPocket { get; set; }
+    public decimal? CashPayment { get; set; }
     public string? Notes { get; set; }
     public List<string>? Tags { get; set; }
     public string? VisitId { get; set; }
@@ -42,6 +51,15 @@ public class UpdateReceiptRequest
     public decimal? TaxAmount { get; set; }
     public string? Currency { get; set; }
     public DateTime? ReceiptDate { get; set; }
+    public string? OutpatientNumber { get; set; }
+    public string? MedicalInsuranceNumber { get; set; }
+    public string? InsuranceType { get; set; }
+    public decimal? MedicalInsuranceFundPayment { get; set; }
+    public decimal? PersonalSelfPay { get; set; }
+    public decimal? OtherPayments { get; set; }
+    public decimal? PersonalAccountPayment { get; set; }
+    public decimal? PersonalOutOfPocket { get; set; }
+    public decimal? CashPayment { get; set; }
     public string? Notes { get; set; }
     public List<string>? Tags { get; set; }
     public string? VisitId { get; set; }
@@ -126,6 +144,15 @@ public class ReceiptResponse
     public decimal? TaxAmount { get; set; }
     public string Currency { get; set; } = "CNY";
     public DateTime? ReceiptDate { get; set; }
+    public string? OutpatientNumber { get; set; }
+    public string? MedicalInsuranceNumber { get; set; }
+    public string? InsuranceType { get; set; }
+    public decimal? MedicalInsuranceFundPayment { get; set; }
+    public decimal? PersonalSelfPay { get; set; }
+    public decimal? OtherPayments { get; set; }
+    public decimal? PersonalAccountPayment { get; set; }
+    public decimal? PersonalOutOfPocket { get; set; }
+    public decimal? CashPayment { get; set; }
     public string? Notes { get; set; }
     public List<string> Tags { get; set; } = new();
     public string? VisitId { get; set; }

@@ -12,6 +12,7 @@ import {
 } from '@mui/icons-material';
 import type { ReceiptDto } from '@/services/receipt.service';
 import { useLanguage } from '@/i18n/LanguageContext';
+import { formatDateZhCN } from '@/utils/date';
 
 const BoxAny = Box as any;
 
@@ -89,7 +90,7 @@ export const ReceiptList: React.FC<ReceiptListProps> = ({ receipts, allReceipts,
     const map = new Map<string, ItemHistoryEntry[]>();
     for (const r of allReceipts) {
       const merchant = r.merchantName || r.hospitalName || '';
-      const date = r.receiptDate ? new Date(r.receiptDate).toLocaleDateString('zh-CN') : '';
+      const date = formatDateZhCN(r.receiptDate);
       for (const item of r.items) {
         const key = normalizeItemName(item.name);
         if (!map.has(key)) map.set(key, []);
@@ -190,7 +191,7 @@ export const ReceiptList: React.FC<ReceiptListProps> = ({ receipts, allReceipts,
                 </Typography>
                 {r.receiptDate && (
                   <Typography variant="caption" color="text.secondary" sx={{ flexShrink: 0 }}>
-                    {new Date(r.receiptDate).toLocaleDateString('zh-CN')}
+                    {formatDateZhCN(r.receiptDate)}
                   </Typography>
                 )}
               </BoxAny>

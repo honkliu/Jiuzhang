@@ -11,11 +11,13 @@ import {
 } from '@mui/icons-material';
 import {
   receiptService,
+  type ReceiptDto,
   type ReceiptType,
   type CreateReceiptRequest,
   type ReceiptExtractionResult,
 } from '@/services/receipt.service';
 import { useLanguage } from '@/i18n/LanguageContext';
+import { formatDateZhCN, parseDateInput } from '@/utils/date';
 
 const OCR_PROMPT = `识别图像中的文字、公式或抽取票据、证件、表单中的信息，注意票据有可能是中国，有可能是国外的，因此要在返回的md和json中要包含货币单位和交税信息等。请输出两部分，用===JSON===分隔：第一部分是Markdown格式的票据内容，用于展示,格式等于或接近图像中的文字格式，放在<OMD1></OMD1><OMD2></OMD2>之间。第二部分：JSON格式的原始提取数据，忠实反映图像中识别到的所有字段和数据，不要遗漏任何信息，内容放在<JMD1></JMD1><JMD2></JMD2>之间。因为一个照片里面可能会有多个receipts，<OMD>对应于receipt的数量。<OMD>和<JMD>要对应，内容不要翻译，要对应于原文`;
 
@@ -41,12 +43,23 @@ Schema字段说明：
   taxAmount: number,  // 税额；如果票据明确显示税额则填入，如果未单独显示但可由totalAmount减去商品小计推导，则填推导值，否则留空
   currency: string,  // 默认CNY
   receiptDate: string,  // YYYY-MM-DD
+  outpatientNumber: string,
+  medicalInsuranceNumber: string,
+  insuranceType: string,
+  medicalInsuranceFundPayment: number,
+  personalSelfPay: number,
+  otherPayments: number,
+  personalAccountPayment: number,
+  personalOutOfPocket: number,
+  cashPayment: number,
   notes: string,  // 报告类型名称等
   diagnosisText: string,
   items: [{ name, quantity, unit, unitPrice, totalPrice }],
   medications: [{ name, dosage, frequency, days, quantity, price }],
   labResults: [{ name, value, unit, referenceRange, status }]  // value为纯数值去掉↑↓，status: High/Low/Normal
 }`;
+
+const DEDUP_DATE_WINDOW_DAYS = 30;
 
 const buildDedupPrompt = (newOcrText: string, existingOcrText: string) => `判断以下两张票据是否是同一张票据（即重复录入）。
 只需要回答一个JSON：{"isDuplicate": true} 或 {"isDuplicate": false}
@@ -568,6 +581,15 @@ export const ReceiptCapture: React.FC<ReceiptCaptureProps> = ({
               taxAmount: inferTaxAmount(r),
               currency: normalizeCurrencyCode(r.currency ? String(r.currency) : undefined) || fallbackCurrency,
               receiptDate: r.receiptDate ? String(r.receiptDate) : undefined,
+              outpatientNumber: r.outpatientNumber ? String(r.outpatientNumber) : undefined,
+              medicalInsuranceNumber: r.medicalInsuranceNumber ? String(r.medicalInsuranceNumber) : undefined,
+              insuranceType: r.insuranceType ? String(r.insuranceType) : undefined,
+              medicalInsuranceFundPayment: r.medicalInsuranceFundPayment != null ? Number(r.medicalInsuranceFundPayment) : undefined,
+              personalSelfPay: r.personalSelfPay != null ? Number(r.personalSelfPay) : undefined,
+              otherPayments: r.otherPayments != null ? Number(r.otherPayments) : undefined,
+              personalAccountPayment: r.personalAccountPayment != null ? Number(r.personalAccountPayment) : undefined,
+              personalOutOfPocket: r.personalOutOfPocket != null ? Number(r.personalOutOfPocket) : undefined,
+              cashPayment: r.cashPayment != null ? Number(r.cashPayment) : undefined,
               notes: r.notes ? String(r.notes) : undefined,
               diagnosisText: r.diagnosisText ? String(r.diagnosisText) : undefined,
               items: Array.isArray(r.items) ? r.items.map((i: any) => ({
@@ -662,6 +684,15 @@ export const ReceiptCapture: React.FC<ReceiptCaptureProps> = ({
     totalAmount: r.totalAmount,
     taxAmount: r.taxAmount,
     currency: normalizeCurrencyCode(r.currency) || 'CNY',
+    outpatientNumber: r.outpatientNumber || undefined,
+    medicalInsuranceNumber: r.medicalInsuranceNumber || undefined,
+    insuranceType: r.insuranceType || undefined,
+    medicalInsuranceFundPayment: r.medicalInsuranceFundPayment,
+    personalSelfPay: r.personalSelfPay,
+    otherPayments: r.otherPayments,
+    personalAccountPayment: r.personalAccountPayment,
+    personalOutOfPocket: r.personalOutOfPocket,
+    cashPayment: r.cashPayment,
     merchantName: r.merchantName || undefined,
     hospitalName: r.hospitalName || undefined,
     department: r.department || undefined,
@@ -674,11 +705,37 @@ export const ReceiptCapture: React.FC<ReceiptCaptureProps> = ({
     labResults: r.labResults || undefined,
   });
 
+  const isWithinDedupDateWindow = (left?: string, right?: string) => {
+    const leftDate = parseDateInput(left);
+    const rightDate = parseDateInput(right);
+    if (!leftDate || !rightDate) return null;
+    const diffDays = Math.abs(leftDate.getTime() - rightDate.getTime()) / (1000 * 60 * 60 * 24);
+    return diffDays <= DEDUP_DATE_WINDOW_DAYS;
+  };
+
+  const filterDedupCandidates = (receipt: ExtractedReceiptDraft, receipts: ReceiptDto[]) => {
+    const datedCandidates: ReceiptDto[] = [];
+    const undatedCandidates: ReceiptDto[] = [];
+
+    for (const existing of receipts) {
+      if (!existing.rawText) continue;
+      const withinWindow = isWithinDedupDateWindow(receipt.receiptDate, existing.receiptDate);
+      if (withinWindow === true) {
+        datedCandidates.push(existing);
+      } else if (withinWindow === null) {
+        undatedCandidates.push(existing);
+      }
+    }
+
+    return {
+      comparedReceipts: datedCandidates.length > 0 ? [...datedCandidates, ...undatedCandidates] : receipts.filter(r => !!r.rawText),
+      datedCandidates,
+      undatedCandidates,
+    };
+  };
+
   const evaluateDedupForReceipts = async (receipts: ExtractedReceiptDraft[]): Promise<DedupEvaluationResult> => {
     const allExisting = await receiptService.list();
-    const existingOcrTexts = allExisting
-      .map(er => er.rawText)
-      .filter((t): t is string => !!t);
 
     let duplicateCount = 0;
     const toCreate: ExtractedReceiptDraft[] = [];
@@ -686,7 +743,10 @@ export const ReceiptCapture: React.FC<ReceiptCaptureProps> = ({
 
     for (const [submitIndex, r] of receipts.entries()) {
       const { text: dedupText, source: dedupSource } = getReceiptDedupCandidate(r, ocrText, rawJson);
-      const existingSnapshot = [...existingOcrTexts];
+      const { comparedReceipts, datedCandidates, undatedCandidates } = filterDedupCandidates(r, allExisting);
+      const existingSnapshot = comparedReceipts
+        .map(existing => existing.rawText)
+        .filter((text): text is string => !!text);
       let isDuplicate = false;
       let matchedExistingIndex: number | null = null;
       let matchedExistingText = '';
@@ -699,12 +759,16 @@ export const ReceiptCapture: React.FC<ReceiptCaptureProps> = ({
         llmResult: boolean;
       }> = [];
 
-      if (dedupText && existingOcrTexts.length > 0) {
-        for (const [existingIndex, existingText] of existingOcrTexts.entries()) {
+      if (dedupText && existingSnapshot.length > 0) {
+        for (const [existingIndex, existing] of comparedReceipts.entries()) {
+          if (!existing.rawText) continue;
+          const existingText = existing.rawText;
           const dedupPrompt = buildDedupPrompt(dedupText, existingText);
           const dedupResult = await receiptService.checkDuplicate(dedupText, [existingText], dedupPrompt);
           const check = {
             existingIndex,
+            existingReceiptId: existing.id,
+            existingReceiptDate: existing.receiptDate || '',
             existingText,
             dedupPrompt,
             dedupRawResponse: dedupResult.rawResponse || '',
@@ -727,16 +791,15 @@ export const ReceiptCapture: React.FC<ReceiptCaptureProps> = ({
         toCreate.push(r);
       }
 
-      if (dedupText) {
-        existingOcrTexts.push(dedupText);
-      }
-
       dedupLogs.push(JSON.stringify({
         receiptIndex: submitIndex,
         receiptLabel: receiptLabel(r, submitIndex),
         dedupSource,
         dedupText,
-        existingCountBefore: existingSnapshot.length,
+        existingCountBefore: allExisting.filter(existing => !!existing.rawText).length,
+        comparedCountAfterDateFilter: existingSnapshot.length,
+        datedCandidateCount: datedCandidates.length,
+        undatedCandidateCount: undatedCandidates.length,
         existingTextsBefore: existingSnapshot,
         dedupChecks,
         matchedExistingIndex,
@@ -744,6 +807,45 @@ export const ReceiptCapture: React.FC<ReceiptCaptureProps> = ({
         llmResult: isDuplicate,
         action: isDuplicate ? 'skip-duplicate' : 'create',
       }, null, 2));
+
+      if (!isDuplicate && dedupText) {
+        allExisting.push({
+          id: `preview-${submitIndex}`,
+          ownerId: '',
+          type: (r.type as ReceiptType) || defaultType,
+          category: r.category || 'Other',
+          imageUrl,
+          additionalImageUrls: [],
+          rawText: dedupText,
+          merchantName: r.merchantName,
+          hospitalName: r.hospitalName,
+          department: r.department,
+          doctorName: r.doctorName,
+          patientName: r.patientName,
+          totalAmount: r.totalAmount,
+          taxAmount: r.taxAmount,
+          currency: normalizeCurrencyCode(r.currency) || 'CNY',
+          receiptDate: r.receiptDate,
+          outpatientNumber: r.outpatientNumber,
+          medicalInsuranceNumber: r.medicalInsuranceNumber,
+          insuranceType: r.insuranceType,
+          medicalInsuranceFundPayment: r.medicalInsuranceFundPayment,
+          personalSelfPay: r.personalSelfPay,
+          otherPayments: r.otherPayments,
+          personalAccountPayment: r.personalAccountPayment,
+          personalOutOfPocket: r.personalOutOfPocket,
+          cashPayment: r.cashPayment,
+          notes: r.notes,
+          tags: [],
+          diagnosisText: r.diagnosisText,
+          imagingFindings: r.imagingFindings,
+          items: r.items || [],
+          medications: r.medications || [],
+          labResults: r.labResults || [],
+          createdAt: '',
+          updatedAt: '',
+        });
+      }
     }
 
     return {
@@ -1159,7 +1261,7 @@ const ManualForm: React.FC<{
               <MenuItem value="">{t('receipts.medical.noVisitLink')}</MenuItem>
               {visits.map(v => (
                 <MenuItem key={v.id} value={v.id}>
-                  {v.hospitalName || '?'} - {v.visitDate ? new Date(v.visitDate).toLocaleDateString('zh-CN') : '?'}
+                  {v.hospitalName || '?'} - {formatDateZhCN(v.visitDate) || '?'}
                 </MenuItem>
               ))}
             </TextField>

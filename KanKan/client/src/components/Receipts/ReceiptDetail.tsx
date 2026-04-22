@@ -16,6 +16,7 @@ import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import type { ReceiptDto } from '@/services/receipt.service';
 import { useLanguage } from '@/i18n/LanguageContext';
+import { formatDateZhCN } from '@/utils/date';
 
 const BoxAny = Box as any;
 
@@ -345,7 +346,7 @@ export const ReceiptDetail: React.FC<ReceiptDetailProps> = ({ receipt, allReceip
     const map = new Map<string, Array<{ source: string; date: string; value?: string; unit?: string; referenceRange?: string; status?: string }>>();
     for (const r of allReceipts) {
       const source = r.hospitalName || '';
-      const date = r.receiptDate ? new Date(r.receiptDate).toLocaleDateString('zh-CN') : '';
+      const date = formatDateZhCN(r.receiptDate);
       for (const lab of r.labResults) {
         if (!map.has(lab.name)) map.set(lab.name, []);
         map.get(lab.name)!.push({ source, date, value: lab.value, unit: lab.unit, referenceRange: lab.referenceRange, status: lab.status });
@@ -356,7 +357,7 @@ export const ReceiptDetail: React.FC<ReceiptDetailProps> = ({ receipt, allReceip
 
   const hasLabHistory = (name: string) => (labHistoryMap.get(name)?.length || 0) > 1;
   const isMedical = receipt.type === 'Medical';
-  const dateStr = receipt.receiptDate ? new Date(receipt.receiptDate).toLocaleDateString('zh-CN') : '';
+  const dateStr = formatDateZhCN(receipt.receiptDate);
 
   return (
     <BoxAny sx={{ maxWidth: 800, mx: 'auto', px: { xs: 1, sm: 2 }, pt: { xs: 9, sm: 10 }, pb: 4 }}>
@@ -779,8 +780,12 @@ const MedicalDocument: React.FC<{
             <Typography sx={valueSx}>{receipt.department || '—'}</Typography>
             <Typography sx={labelSx}>日　期</Typography>
             <Typography sx={valueSx}>{dateStr || '—'}</Typography>
-            <Typography sx={labelSx}></Typography>
-            <Typography sx={valueSx}></Typography>
+            <Typography sx={labelSx}>门诊号</Typography>
+            <Typography sx={valueSx}>{receipt.outpatientNumber || '—'}</Typography>
+            <Typography sx={labelSx}>医保类型</Typography>
+            <Typography sx={valueSx}>{receipt.insuranceType || '—'}</Typography>
+            <Typography sx={labelSx}>医保编号</Typography>
+            <Typography sx={valueSx}>{receipt.medicalInsuranceNumber || '—'}</Typography>
           </BoxAny>
 
           {/* itemized charges if available */}
@@ -812,6 +817,35 @@ const MedicalDocument: React.FC<{
               <Typography sx={{ fontSize: '1.1rem', fontWeight: 800 }}>
                 合计：¥{receipt.totalAmount.toFixed(2)}
               </Typography>
+            </BoxAny>
+          )}
+
+          {(receipt.medicalInsuranceFundPayment != null
+            || receipt.personalAccountPayment != null
+            || receipt.personalSelfPay != null
+            || receipt.personalOutOfPocket != null
+            || receipt.cashPayment != null
+            || receipt.otherPayments != null) && (
+            <BoxAny sx={{ px: 2, py: 1.5, borderTop: '1px solid #ddd' }}>
+              <Typography sx={{ fontSize: '0.92rem', fontWeight: 700, mb: 1 }}>支付拆分</Typography>
+              {receipt.medicalInsuranceFundPayment != null && (
+                <Typography sx={{ fontSize: '0.86rem', mb: 0.5 }}>医保统筹支付：¥{receipt.medicalInsuranceFundPayment.toFixed(2)}</Typography>
+              )}
+              {receipt.personalAccountPayment != null && (
+                <Typography sx={{ fontSize: '0.86rem', mb: 0.5 }}>个人账户支付：¥{receipt.personalAccountPayment.toFixed(2)}</Typography>
+              )}
+              {receipt.personalSelfPay != null && (
+                <Typography sx={{ fontSize: '0.86rem', mb: 0.5 }}>个人自付：¥{receipt.personalSelfPay.toFixed(2)}</Typography>
+              )}
+              {receipt.personalOutOfPocket != null && (
+                <Typography sx={{ fontSize: '0.86rem', mb: 0.5 }}>个人自费：¥{receipt.personalOutOfPocket.toFixed(2)}</Typography>
+              )}
+              {receipt.cashPayment != null && (
+                <Typography sx={{ fontSize: '0.86rem', mb: 0.5 }}>现金支付：¥{receipt.cashPayment.toFixed(2)}</Typography>
+              )}
+              {receipt.otherPayments != null && (
+                <Typography sx={{ fontSize: '0.86rem' }}>其他支付：¥{receipt.otherPayments.toFixed(2)}</Typography>
+              )}
             </BoxAny>
           )}
         </Paper>

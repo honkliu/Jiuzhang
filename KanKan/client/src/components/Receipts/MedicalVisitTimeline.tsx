@@ -17,6 +17,7 @@ import {
 } from '@mui/icons-material';
 import type { ReceiptDto } from '@/services/receipt.service';
 import { useLanguage } from '@/i18n/LanguageContext';
+import { formatDateZhCN } from '@/utils/date';
 
 const BoxAny = Box as any;
 
@@ -43,6 +44,46 @@ const categoryColors: Record<string, string> = {
   ImagingResult: '#f3e5f5',
   PaymentReceipt: '#fce4ec',
   DischargeNote: '#e8f5e9',
+};
+
+const paymentSummaryCellSx = {
+  minWidth: 0,
+} as const;
+
+const paymentSummaryLabelSx = {
+  fontSize: '0.72rem',
+  color: 'text.secondary',
+  lineHeight: 1.2,
+} as const;
+
+const paymentSummaryValueSx = {
+  fontSize: '0.8rem',
+  color: 'text.primary',
+  fontWeight: 600,
+  lineHeight: 1.35,
+  whiteSpace: 'nowrap',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+} as const;
+
+const renderSummaryField = (label: string, value?: string) => {
+  if (!value?.trim()) return null;
+  return (
+    <BoxAny sx={paymentSummaryCellSx}>
+      <Typography sx={paymentSummaryLabelSx}>{label}</Typography>
+      <Typography sx={paymentSummaryValueSx}>{value.trim()}</Typography>
+    </BoxAny>
+  );
+};
+
+const renderAmountField = (label: string, value?: number) => {
+  if (value == null) return null;
+  return (
+    <BoxAny sx={paymentSummaryCellSx}>
+      <Typography sx={paymentSummaryLabelSx}>{label}</Typography>
+      <Typography sx={paymentSummaryValueSx}>¥{value.toFixed(2)}</Typography>
+    </BoxAny>
+  );
 };
 
 interface MedHistoryEntry {
@@ -83,7 +124,7 @@ export const MedicalVisitTimeline: React.FC<MedicalVisitTimelineProps> = ({
     const map = new Map<string, ReceiptDto[]>();
     for (const r of medicalReceipts) {
       const hospital = r.hospitalName || '未知医院';
-      const date = r.receiptDate ? new Date(r.receiptDate).toLocaleDateString('zh-CN') : '';
+      const date = formatDateZhCN(r.receiptDate);
       const key = `${hospital}|${date}`;
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(r);
@@ -112,7 +153,7 @@ export const MedicalVisitTimeline: React.FC<MedicalVisitTimelineProps> = ({
     const map = new Map<string, MedHistoryEntry[]>();
     for (const r of allReceipts) {
       const source = r.hospitalName || r.merchantName || '';
-      const date = r.receiptDate ? new Date(r.receiptDate).toLocaleDateString('zh-CN') : '';
+      const date = formatDateZhCN(r.receiptDate);
       for (const med of r.medications) {
         if (!map.has(med.name)) map.set(med.name, []);
         map.get(med.name)!.push({ source, date, price: med.price, dosage: med.dosage, frequency: med.frequency });
@@ -232,9 +273,75 @@ export const MedicalVisitTimeline: React.FC<MedicalVisitTimelineProps> = ({
                           科室: {receipt.department}
                         </Typography>
                       )}
+                      {receipt.category === 'PaymentReceipt' && (
+                        <BoxAny sx={{
+                          mt: 0.6,
+                          p: 1,
+                          borderRadius: 1.5,
+                          bgcolor: 'rgba(192,57,43,0.04)',
+                          border: '1px solid rgba(192,57,43,0.10)',
+                        }}>
+                          <BoxAny sx={{
+                            display: 'grid',
+                            gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', sm: 'repeat(4, minmax(0, 1fr))' },
+                            gap: 1,
+                          }}>
+                            {renderSummaryField('患者', receipt.patientName)}
+                            {renderSummaryField('门诊号', receipt.outpatientNumber)}
+                            {renderSummaryField('医保类型', receipt.insuranceType)}
+                            {renderSummaryField('医保编号', receipt.medicalInsuranceNumber)}
+                            {renderAmountField('合计', receipt.totalAmount)}
+                            {renderAmountField('医保统筹', receipt.medicalInsuranceFundPayment)}
+                            {renderAmountField('个人自付', receipt.personalSelfPay)}
+                            {renderAmountField('个人自费', receipt.personalOutOfPocket)}
+                          </BoxAny>
+                          {receipt.items.length > 0 && (
+                            <BoxAny sx={{ mt: 0.8 }}>
+                              <Typography sx={{ ...paymentSummaryLabelSx, mb: 0.4 }}>收费项目</Typography>
+                              <BoxAny sx={{
+                                display: 'grid',
+                                gridTemplateColumns: 'minmax(0, 1fr) auto',
+                                columnGap: 1,
+                                rowGap: 0.25,
+                              }}>
+                                {receipt.items.slice(0, 4).map((item, itemIndex) => (
+                                  <React.Fragment key={itemIndex}>
+                                    <Typography sx={{ fontSize: '0.78rem', color: 'text.primary', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                      {item.name}
+                                    </Typography>
+                                    <Typography sx={{ fontSize: '0.78rem', color: 'text.secondary', fontWeight: 600, textAlign: 'right' }}>
+                                      {item.totalPrice != null ? `¥${item.totalPrice.toFixed(2)}` : '—'}
+                                    </Typography>
+                                  </React.Fragment>
+                                ))}
+                              </BoxAny>
+                              {receipt.items.length > 4 && (
+                                <Typography sx={{ ...paymentSummaryLabelSx, mt: 0.4 }}>
+                                  另有 {receipt.items.length - 4} 项，点击查看完整票据
+                                </Typography>
+                              )}
+                            </BoxAny>
+                          )}
+                        </BoxAny>
+                      )}
                       {receipt.diagnosisText && (
                         <Typography variant="caption" display="block" color="text.secondary" noWrap>
                           诊断: {receipt.diagnosisText}
+                        </Typography>
+                      )}
+                      {receipt.category === 'Registration' && receipt.patientName && (
+                        <Typography variant="caption" display="block" color="text.secondary" noWrap>
+                          患者: {receipt.patientName}
+                        </Typography>
+                      )}
+                      {receipt.category === 'ImagingResult' && receipt.imagingFindings && (
+                        <Typography variant="caption" display="block" color="text.secondary" noWrap>
+                          所见: {receipt.imagingFindings}
+                        </Typography>
+                      )}
+                      {(receipt.category === 'Diagnosis' || receipt.category === 'DischargeNote') && receipt.patientName && (
+                        <Typography variant="caption" display="block" color="text.secondary" noWrap>
+                          患者: {receipt.patientName}
                         </Typography>
                       )}
 

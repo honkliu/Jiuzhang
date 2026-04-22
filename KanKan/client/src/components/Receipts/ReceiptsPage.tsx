@@ -15,6 +15,7 @@ import { chatService } from '@/services/chat.service';
 import { signalRService } from '@/services/signalr.service';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { WA_USER_ID } from '@/utils/chatParticipants';
+import { formatDateZhCN, parseDateInput } from '@/utils/date';
 import { setActiveChat, fetchMessages } from '@/store/chatSlice';
 import type { RootState, AppDispatch } from '@/store';
 
@@ -39,6 +40,171 @@ const currencySymbol = (currency?: string): string => {
   }
 };
 
+const hasMeaningfulMedicalDetails = (receipt: ReceiptDto): boolean => (
+  receipt.items.length > 0
+  || receipt.medications.length > 0
+  || receipt.labResults.length > 0
+  || receipt.diagnosisText?.trim().length > 0
+  || receipt.outpatientNumber?.trim().length > 0
+  || receipt.insuranceType?.trim().length > 0
+  || receipt.medicalInsuranceNumber?.trim().length > 0
+  || receipt.medicalInsuranceFundPayment != null
+  || receipt.personalAccountPayment != null
+  || receipt.personalSelfPay != null
+  || receipt.personalOutOfPocket != null
+  || receipt.cashPayment != null
+  || receipt.otherPayments != null
+);
+
+const summarizeRawText = (rawText?: string): string[] => {
+  if (!rawText?.trim()) return [];
+  const cleaned = rawText
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!cleaned) return [];
+  return [`原始票据摘要: ${cleaned.slice(0, 400)}${cleaned.length > 400 ? '...' : ''}`];
+};
+
+const getMedicalReceiptTitle = (receipt: ReceiptDto): string => {
+  switch (receipt.category) {
+    case 'Registration':
+      return '挂号单';
+    case 'Diagnosis':
+      return '诊断证明书';
+    case 'Prescription':
+      return '处方笺';
+    case 'LabResult':
+      return '检验报告单';
+    case 'ImagingResult':
+      return '影像检查报告';
+    case 'PaymentReceipt':
+      return '门诊收费票据';
+    case 'DischargeNote':
+      return '出院小结';
+    default:
+      return receipt.category || '医疗票据';
+  }
+};
+
+const serializeMedicalReceipt = (receipt: ReceiptDto): string[] => {
+  const date = formatDateZhCN(receipt.receiptDate);
+  const sym = currencySymbol(receipt.currency);
+  const lines: string[] = [
+    `【${receipt.hospitalName || '未知医院'}】${getMedicalReceiptTitle(receipt)} ${date}`.trim(),
+  ];
+
+  const pushIfPresent = (label: string, value?: string) => {
+    if (value?.trim()) lines.push(`${label}: ${value.trim()}`);
+  };
+
+  switch (receipt.category) {
+    case 'Registration':
+      pushIfPresent('姓名', receipt.patientName);
+      pushIfPresent('科室', receipt.department);
+      pushIfPresent('医生', receipt.doctorName);
+      pushIfPresent('日期', date && date !== '—' ? date : undefined);
+      if (receipt.totalAmount != null) lines.push(`挂号费: ${sym}${receipt.totalAmount.toFixed(2)}`);
+      break;
+    case 'Diagnosis':
+    case 'DischargeNote':
+      pushIfPresent('姓名', receipt.patientName);
+      pushIfPresent('科室', receipt.department);
+      pushIfPresent('主治医师', receipt.doctorName);
+      pushIfPresent('日期', date && date !== '—' ? date : undefined);
+      pushIfPresent('诊断内容', receipt.diagnosisText);
+      break;
+    case 'Prescription':
+      pushIfPresent('姓名', receipt.patientName);
+      pushIfPresent('科室', receipt.department);
+      pushIfPresent('临床诊断', receipt.diagnosisText);
+      pushIfPresent('日期', date && date !== '—' ? date : undefined);
+      if (receipt.medications.length > 0) {
+        lines.push('处方明细:');
+        receipt.medications.forEach((med, index) => {
+          const desc = [
+            med.dosage ? `用量 ${med.dosage}` : '',
+            med.frequency || '',
+            med.days ? `${med.days}天` : '',
+            med.quantity != null ? `×${med.quantity}` : '',
+            med.price != null ? `${sym}${med.price.toFixed(2)}` : '',
+          ].filter(Boolean).join(' / ');
+          lines.push(desc ? `${index + 1}. ${med.name}: ${desc}` : `${index + 1}. ${med.name}`);
+        });
+      }
+      pushIfPresent('医师', receipt.doctorName);
+      break;
+    case 'LabResult':
+      pushIfPresent('姓名', receipt.patientName);
+      pushIfPresent('科室', receipt.department);
+      pushIfPresent('送检医生', receipt.doctorName);
+      pushIfPresent('报告日期', date && date !== '—' ? date : undefined);
+      if (receipt.labResults.length > 0) {
+        lines.push('检验结果:');
+        receipt.labResults.forEach((lab) => {
+          const arrow = lab.status === 'High' ? ' ↑' : lab.status === 'Low' ? ' ↓' : '';
+          const value = lab.value ? `${lab.value}${lab.unit ? ` ${lab.unit}` : ''}${arrow}` : '—';
+          const ref = lab.referenceRange ? ` (参考范围 ${lab.referenceRange})` : '';
+          lines.push(`- ${lab.name}: ${value}${ref}`);
+        });
+      }
+      break;
+    case 'ImagingResult':
+      pushIfPresent('姓名', receipt.patientName);
+      pushIfPresent('科室', receipt.department);
+      pushIfPresent('检查日期', date && date !== '—' ? date : undefined);
+      pushIfPresent('报告医师', receipt.doctorName);
+      pushIfPresent('检查所见', receipt.imagingFindings);
+      pushIfPresent('诊断意见', receipt.diagnosisText);
+      break;
+    case 'PaymentReceipt':
+      pushIfPresent('姓名', receipt.patientName);
+      pushIfPresent('科室', receipt.department);
+      pushIfPresent('日期', date && date !== '—' ? date : undefined);
+      pushIfPresent('门诊号', receipt.outpatientNumber);
+      pushIfPresent('医保类型', receipt.insuranceType);
+      pushIfPresent('医保编号', receipt.medicalInsuranceNumber);
+      if (receipt.items.length > 0) {
+        lines.push('收费明细:');
+        receipt.items.forEach((item) => {
+          const amount = item.totalPrice != null ? `${sym}${item.totalPrice.toFixed(2)}` : '—';
+          lines.push(`- ${item.name}: ${amount}`);
+        });
+      }
+      if (receipt.totalAmount != null) lines.push(`合计: ${sym}${receipt.totalAmount.toFixed(2)}`);
+      {
+        const paymentBreakdown = [
+          receipt.medicalInsuranceFundPayment != null ? `医保统筹支付 ${sym}${receipt.medicalInsuranceFundPayment.toFixed(2)}` : '',
+          receipt.personalAccountPayment != null ? `个人账户支付 ${sym}${receipt.personalAccountPayment.toFixed(2)}` : '',
+          receipt.personalSelfPay != null ? `个人自付 ${sym}${receipt.personalSelfPay.toFixed(2)}` : '',
+          receipt.personalOutOfPocket != null ? `个人自费 ${sym}${receipt.personalOutOfPocket.toFixed(2)}` : '',
+          receipt.cashPayment != null ? `现金支付 ${sym}${receipt.cashPayment.toFixed(2)}` : '',
+          receipt.otherPayments != null ? `其他支付 ${sym}${receipt.otherPayments.toFixed(2)}` : '',
+        ].filter(Boolean);
+        if (paymentBreakdown.length > 0) lines.push(`支付拆分: ${paymentBreakdown.join('；')}`);
+      }
+      break;
+    default:
+      pushIfPresent('姓名', receipt.patientName);
+      pushIfPresent('科室', receipt.department);
+      pushIfPresent('医生', receipt.doctorName);
+      pushIfPresent('日期', date && date !== '—' ? date : undefined);
+      pushIfPresent('诊断', receipt.diagnosisText);
+      pushIfPresent('检查所见', receipt.imagingFindings);
+      if (receipt.items.length > 0) {
+        lines.push('明细:');
+        receipt.items.forEach((item) => lines.push(`- ${item.name}`));
+      }
+      break;
+  }
+
+  if (receipt.notes?.trim()) lines.push(`备注: ${receipt.notes.trim()}`);
+  if (!hasMeaningfulMedicalDetails(receipt)) lines.push(...summarizeRawText(receipt.rawText));
+  lines.push('');
+  return lines;
+};
+
 /** Serialize receipts into structured text for Wa */
 const serializeReceipts = (receipts: ReceiptDto[], type: 'Shopping' | 'Medical'): string => {
   if (type === 'Shopping') {
@@ -51,7 +217,7 @@ const serializeReceipts = (receipts: ReceiptDto[], type: 'Shopping' | 'Medical')
       '',
     ];
     for (const r of receipts) {
-      const date = r.receiptDate ? new Date(r.receiptDate).toLocaleDateString('zh-CN') : '';
+      const date = formatDateZhCN(r.receiptDate);
       const sym = currencySymbol(r.currency);
       lines.push(`【${r.merchantName || '未知商家'}】${date}`);
       if (r.items.length > 0) {
@@ -79,27 +245,7 @@ const serializeReceipts = (receipts: ReceiptDto[], type: 'Shopping' | 'Medical')
       '',
     ];
     for (const r of receipts) {
-      const date = r.receiptDate ? new Date(r.receiptDate).toLocaleDateString('zh-CN') : '';
-      const sym = currencySymbol(r.currency);
-      lines.push(`【${r.hospitalName || '未知医院'}】${r.department || ''} ${date}`);
-      if (r.doctorName) lines.push(`医生: ${r.doctorName}`);
-      if (r.patientName) lines.push(`患者: ${r.patientName}`);
-      if (r.diagnosisText) lines.push(`诊断: ${r.diagnosisText}`);
-      if (r.medications.length > 0) {
-        lines.push('药品: ' + r.medications.map(m =>
-          `${m.name}(${[m.dosage, m.frequency, m.days ? `${m.days}天` : '', m.price != null ? `${sym}${m.price.toFixed(2)}` : ''].filter(Boolean).join(', ')})`
-        ).join('；'));
-      }
-      if (r.labResults.length > 0) {
-        lines.push('检验: ' + r.labResults.map(l => {
-          const flag = l.status === 'High' ? '↑' : l.status === 'Low' ? '↓' : '';
-          return `${l.name} ${l.value}${l.unit || ''}${flag}(参考${l.referenceRange || ''})`;
-        }).join('；'));
-      }
-      if (r.totalAmount != null) {
-        lines.push(`费用: ${sym}${r.totalAmount.toFixed(2)}`);
-      }
-      lines.push('');
+      lines.push(...serializeMedicalReceipt(r));
     }
     return lines.join('\n');
   }
@@ -128,8 +274,6 @@ export const ReceiptsPage: React.FC = () => {
   const [selectedReceipt, setSelectedReceipt] = useState<ReceiptDto | null>(null);
   const [askingWa, setAskingWa] = useState(false);
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
-
-  const receipts = tab === 0 ? shoppingReceipts : medicalReceipts;
 
   const toggleChecked = (id: string) => {
     setCheckedIds(prev => {
@@ -185,9 +329,11 @@ export const ReceiptsPage: React.FC = () => {
 
     for (const r of shoppingReceipts) {
       if (!r.receiptDate) continue;
+      const parsedDate = parseDateInput(r.receiptDate);
+      if (!parsedDate) continue;
       events.push({
         id: r.id,
-        date: new Date(r.receiptDate),
+        date: parsedDate,
         type: 'shopping',
         label: r.merchantName || '购物',
       });
@@ -197,12 +343,14 @@ export const ReceiptsPage: React.FC = () => {
     const seenMedical = new Set<string>();
     for (const r of medicalReceipts) {
       if (!r.receiptDate) continue;
-      const key = `${r.hospitalName || ''}|${new Date(r.receiptDate).toLocaleDateString('zh-CN')}`;
+      const parsedDate = parseDateInput(r.receiptDate);
+      if (!parsedDate) continue;
+      const key = `${r.hospitalName || ''}|${formatDateZhCN(r.receiptDate)}`;
       if (seenMedical.has(key)) continue;
       seenMedical.add(key);
       events.push({
         id: r.id,
-        date: new Date(r.receiptDate),
+        date: parsedDate,
         type: 'medical',
         label: r.hospitalName || '就诊',
       });

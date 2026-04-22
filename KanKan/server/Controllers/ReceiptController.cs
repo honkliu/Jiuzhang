@@ -75,6 +75,15 @@ public class ReceiptController : ControllerBase
             TaxAmount = req.TaxAmount,
             Currency = req.Currency ?? "CNY",
             ReceiptDate = req.ReceiptDate,
+            OutpatientNumber = req.OutpatientNumber,
+            MedicalInsuranceNumber = req.MedicalInsuranceNumber,
+            InsuranceType = req.InsuranceType,
+            MedicalInsuranceFundPayment = req.MedicalInsuranceFundPayment,
+            PersonalSelfPay = req.PersonalSelfPay,
+            OtherPayments = req.OtherPayments,
+            PersonalAccountPayment = req.PersonalAccountPayment,
+            PersonalOutOfPocket = req.PersonalOutOfPocket,
+            CashPayment = req.CashPayment,
             Notes = req.Notes,
             Tags = req.Tags ?? new(),
             VisitId = req.VisitId,
@@ -118,6 +127,15 @@ public class ReceiptController : ControllerBase
         if (req.TaxAmount != null) receipt.TaxAmount = req.TaxAmount;
         if (req.Currency != null) receipt.Currency = req.Currency;
         if (req.ReceiptDate != null) receipt.ReceiptDate = req.ReceiptDate;
+        if (req.OutpatientNumber != null) receipt.OutpatientNumber = req.OutpatientNumber;
+        if (req.MedicalInsuranceNumber != null) receipt.MedicalInsuranceNumber = req.MedicalInsuranceNumber;
+        if (req.InsuranceType != null) receipt.InsuranceType = req.InsuranceType;
+        if (req.MedicalInsuranceFundPayment != null) receipt.MedicalInsuranceFundPayment = req.MedicalInsuranceFundPayment;
+        if (req.PersonalSelfPay != null) receipt.PersonalSelfPay = req.PersonalSelfPay;
+        if (req.OtherPayments != null) receipt.OtherPayments = req.OtherPayments;
+        if (req.PersonalAccountPayment != null) receipt.PersonalAccountPayment = req.PersonalAccountPayment;
+        if (req.PersonalOutOfPocket != null) receipt.PersonalOutOfPocket = req.PersonalOutOfPocket;
+        if (req.CashPayment != null) receipt.CashPayment = req.CashPayment;
         if (req.Notes != null) receipt.Notes = req.Notes;
         if (req.Tags != null) receipt.Tags = req.Tags;
         if (req.VisitId != null) receipt.VisitId = req.VisitId;
@@ -511,6 +529,15 @@ public class ReceiptController : ControllerBase
         TaxAmount = r.TaxAmount,
         Currency = r.Currency,
         ReceiptDate = r.ReceiptDate,
+        OutpatientNumber = r.OutpatientNumber,
+        MedicalInsuranceNumber = r.MedicalInsuranceNumber,
+        InsuranceType = r.InsuranceType,
+        MedicalInsuranceFundPayment = r.MedicalInsuranceFundPayment,
+        PersonalSelfPay = r.PersonalSelfPay,
+        OtherPayments = r.OtherPayments,
+        PersonalAccountPayment = r.PersonalAccountPayment,
+        PersonalOutOfPocket = r.PersonalOutOfPocket,
+        CashPayment = r.CashPayment,
         Notes = r.Notes,
         Tags = r.Tags,
         VisitId = r.VisitId,
