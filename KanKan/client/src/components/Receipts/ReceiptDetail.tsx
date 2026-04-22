@@ -12,10 +12,221 @@ import {
 } from '@mui/icons-material';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
 import type { ReceiptDto } from '@/services/receipt.service';
 import { useLanguage } from '@/i18n/LanguageContext';
 
 const BoxAny = Box as any;
+
+const restorePipesInMath = () => {
+  return (tree: any) => {
+    const walk = (node: any) => {
+      if (!node) return;
+      if (node.type === 'inlineMath' || node.type === 'math') {
+        if (typeof node.value === 'string') {
+          node.value = node.value.replace(/\\\|/g, '|');
+        }
+      }
+      if (Array.isArray(node.children)) {
+        node.children.forEach(walk);
+      }
+    };
+
+    walk(tree);
+  };
+};
+
+const remarkPlugins = [remarkMath, remarkGfm, restorePipesInMath];
+const rehypePlugins = [rehypeKatex];
+const redTagPattern = /\[red\]([\s\S]*?)\[\/red\]/gi;
+
+const escapePipesInMathForGfm = (input: string): string => {
+  let out = '';
+  let i = 0;
+  let inMath = false;
+  let mathDelim: '$' | '$$' = '$';
+
+  while (i < input.length) {
+    const ch = input[i];
+    const next = input[i + 1];
+
+    if (!inMath) {
+      if (ch === '\\' && next === '$') {
+        out += input.slice(i, i + 2);
+        i += 2;
+        continue;
+      }
+
+      if (ch === '$') {
+        if (next === '$') {
+          inMath = true;
+          mathDelim = '$$';
+          out += '$$';
+          i += 2;
+          continue;
+        }
+
+        inMath = true;
+        mathDelim = '$';
+        out += '$';
+        i += 1;
+        continue;
+      }
+
+      out += ch;
+      i += 1;
+      continue;
+    }
+
+    if (ch === '\\' && next === '$') {
+      out += input.slice(i, i + 2);
+      i += 2;
+      continue;
+    }
+
+    if (mathDelim === '$$' && ch === '$' && next === '$') {
+      inMath = false;
+      out += '$$';
+      i += 2;
+      continue;
+    }
+
+    if (mathDelim === '$' && ch === '$') {
+      inMath = false;
+      out += '$';
+      i += 1;
+      continue;
+    }
+
+    if (ch === '|') {
+      out += '\\|';
+      i += 1;
+      continue;
+    }
+
+    out += ch;
+    i += 1;
+  }
+
+  return out;
+};
+
+const preserveBoundaryWhitespace = (value: string) => value.replace(/ /g, '\u00A0').replace(/\t/g, '\u00A0\u00A0\u00A0\u00A0');
+
+const renderMarkdownFragment = (key: string, text: string, sx?: Record<string, unknown>) => {
+  const leadingWhitespace = text.match(/^\s+/)?.[0] ?? '';
+  const trailingWhitespace = text.match(/\s+$/)?.[0] ?? '';
+  const startIndex = leadingWhitespace.length;
+  const endIndex = trailingWhitespace.length > 0 ? text.length - trailingWhitespace.length : text.length;
+  const coreText = text.slice(startIndex, endIndex);
+
+  return (
+    <BoxAny
+      key={key}
+      component="span"
+      sx={{ whiteSpace: 'break-spaces', '& p': { margin: 0, display: 'inline' }, ...(sx || {}) }}
+    >
+      {leadingWhitespace ? preserveBoundaryWhitespace(leadingWhitespace) : null}
+      {coreText ? (
+        <ReactMarkdown remarkPlugins={remarkPlugins} rehypePlugins={rehypePlugins}>
+          {escapePipesInMathForGfm(coreText)}
+        </ReactMarkdown>
+      ) : null}
+      {trailingWhitespace ? preserveBoundaryWhitespace(trailingWhitespace) : null}
+    </BoxAny>
+  );
+};
+
+const renderMarkdownWithRedTags = (input: string) => {
+  const matches = Array.from(input.matchAll(redTagPattern));
+  if (matches.length === 0) {
+    return (
+      <ReactMarkdown remarkPlugins={remarkPlugins} rehypePlugins={rehypePlugins}>
+        {escapePipesInMathForGfm(input)}
+      </ReactMarkdown>
+    );
+  }
+
+  const nodes: React.ReactNode[] = [];
+  let lastIndex = 0;
+
+  matches.forEach((match, index) => {
+    const matchStart = match.index ?? 0;
+    const matchEnd = matchStart + match[0].length;
+    const innerText = match[1] ?? '';
+
+    if (matchStart > lastIndex) {
+      const plainText = input.slice(lastIndex, matchStart);
+      if (plainText) {
+        nodes.push(renderMarkdownFragment(`plain-${index}-${matchStart}`, plainText));
+      }
+    }
+
+    nodes.push(renderMarkdownFragment(`red-${index}-${matchStart}`, innerText, { color: 'error.main', '& a': { color: 'inherit' } }));
+    lastIndex = matchEnd;
+  });
+
+  if (lastIndex < input.length) {
+    const trailingText = input.slice(lastIndex);
+    if (trailingText) {
+      nodes.push(renderMarkdownFragment(`plain-tail-${lastIndex}`, trailingText));
+    }
+  }
+
+  return nodes;
+};
+
+const hasMarkdownSyntax = (text: string): boolean =>
+  /^#{1,6}\s/m.test(text) ||
+  /^[-*+]\s/m.test(text) ||
+  /^\d+\.\s/m.test(text) ||
+  /^```/m.test(text) ||
+  /\*\*.+\*\*/m.test(text) ||
+  /^>/m.test(text) ||
+  /\|.+\|.+\|/m.test(text);
+
+const plainTextSx = {
+  whiteSpace: 'pre-wrap' as const,
+  '& .katex-display': { margin: '0.5em 0', overflowX: 'auto', overflowY: 'hidden' },
+  '& .katex': { fontSize: '1.1em' },
+  '& table': { width: '100%', borderCollapse: 'collapse', margin: '8px 0' },
+  '& th, & td': { border: '1px solid rgba(0,0,0,0.1)', padding: '4px 8px', textAlign: 'left' },
+  '& th': { backgroundColor: 'rgba(0,0,0,0.03)', fontWeight: 600 },
+  '& code': { backgroundColor: 'rgba(0,0,0,0.05)', padding: '2px 4px', borderRadius: '3px', fontFamily: 'monospace', fontSize: '0.9em' },
+  '& pre': { backgroundColor: 'rgba(0,0,0,0.05)', padding: '8px 12px', borderRadius: '4px', overflowX: 'auto', margin: '8px 0' },
+  '& pre code': { padding: 0, backgroundColor: 'transparent' },
+};
+
+const markdownSx = {
+  whiteSpace: 'normal' as const,
+  lineHeight: 1.6,
+  '& .katex-display': { margin: '0.5em 0', overflowX: 'auto', overflowY: 'hidden' },
+  '& .katex': { fontSize: '1.1em' },
+  '& p': { margin: '0.4em 0' },
+  '& p:first-of-type': { marginTop: 0 },
+  '& p:last-of-type': { marginBottom: 0 },
+  '& h1, & h2, & h3, & h4, & h5, & h6': { margin: '0.6em 0 0.3em' },
+  '& h1': { fontSize: '1.3em' },
+  '& h2': { fontSize: '1.15em' },
+  '& h3': { fontSize: '1.05em' },
+  '& ul, & ol': { paddingLeft: '1.5em', margin: '0.3em 0' },
+  '& li': { margin: '0.15em 0' },
+  '& li > p': { margin: 0, display: 'inline' },
+  '& blockquote': { margin: '0.4em 0', paddingLeft: '0.75em', borderLeft: '3px solid rgba(0,0,0,0.15)', color: 'inherit' },
+  '& table': { width: '100%', borderCollapse: 'collapse', margin: '0.5em 0' },
+  '& th, & td': { border: '1px solid rgba(0,0,0,0.1)', padding: '4px 8px', textAlign: 'left' },
+  '& th': { backgroundColor: 'rgba(0,0,0,0.03)', fontWeight: 600 },
+  '& code': { backgroundColor: 'rgba(0,0,0,0.05)', padding: '2px 4px', borderRadius: '3px', fontFamily: 'monospace', fontSize: '0.9em' },
+  '& pre': { backgroundColor: 'rgba(0,0,0,0.05)', padding: '8px 12px', borderRadius: '4px', overflowX: 'auto', margin: '0.5em 0' },
+  '& pre code': { padding: 0, backgroundColor: 'transparent' },
+  '& hr': { border: 'none', borderTop: '1px solid rgba(0,0,0,0.1)', margin: '0.5em 0' },
+};
+
+const MarkdownOrPlainText: React.FC<{ text: string }> = ({ text }) => {
+  const isMd = hasMarkdownSyntax(text);
+  return <BoxAny sx={isMd ? markdownSx : plainTextSx}>{renderMarkdownWithRedTags(text)}</BoxAny>;
+};
 
 const currencySymbol = (currency?: string): string => {
   const normalized = currency?.trim().toUpperCase();
@@ -196,20 +407,8 @@ export const ReceiptDetail: React.FC<ReceiptDetailProps> = ({ receipt, allReceip
         <Paper sx={{ mb: 2, p: 2, bgcolor: '#fafafa', borderRadius: 2, border: '1px solid #eee', overflowX: 'auto' }}>
           <BoxAny sx={{
             fontSize: '0.85rem', lineHeight: 1.6,
-            '& p': { margin: '0.4em 0' },
-            '& p:first-of-type': { marginTop: 0 },
-            '& h1, & h2, & h3, & h4': { margin: '0.5em 0 0.2em' },
-            '& h1': { fontSize: '1.2em' }, '& h2': { fontSize: '1.1em' }, '& h3': { fontSize: '1em' },
-            '& ul, & ol': { paddingLeft: '1.5em', margin: '0.3em 0' },
-            '& li': { margin: '0.15em 0' },
-            '& table': { width: '100%', borderCollapse: 'collapse', margin: '0.5em 0' },
-            '& th, & td': { border: '1px solid #ddd', padding: '4px 8px', textAlign: 'left', fontSize: '0.82rem' },
-            '& th': { backgroundColor: '#f5f5f5', fontWeight: 600 },
-            '& code': { fontSize: '0.85rem', fontFamily: '"Noto Sans SC", "Microsoft YaHei", monospace' },
-            '& pre': { backgroundColor: 'rgba(0,0,0,0.03)', padding: '12px', borderRadius: '4px', overflowX: 'auto', margin: '0.5em 0' },
-            '& pre code': { padding: 0, backgroundColor: 'transparent' },
           }}>
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{receipt.rawText}</ReactMarkdown>
+            <MarkdownOrPlainText text={receipt.rawText} />
           </BoxAny>
         </Paper>
       )}
@@ -319,7 +518,7 @@ const MedicalDocument: React.FC<{
                           ...(isAbnormal ? { bgcolor: '#fff8f8' } : undefined),
                           ...(clickable ? { cursor: 'pointer', '&:hover': { bgcolor: 'rgba(33,150,243,0.06)' } } : undefined),
                         }}
-                        onClick={clickable ? () => setExpandedLab(prev => prev === lab.name ? null : lab.name) : undefined}
+                        onClick={clickable ? () => setExpandedLab(isExp ? null : lab.name) : undefined}
                       >
                         <TableCell sx={{
                           ...tdCellSx,
@@ -428,7 +627,7 @@ const MedicalDocument: React.FC<{
           <BoxAny sx={{ display: 'flex', justifyContent: 'flex-end', px: 2, py: 1.5, borderTop: '1px solid #ccc' }}>
             <BoxAny sx={{ textAlign: 'center', fontSize: '0.78rem', color: '#555' }}>
               <div>医师签名：___________</div>
-              <div style={{ marginTop: 4 }}>{dateStr}</div>
+              <BoxAny sx={{ mt: 0.5 }}>{dateStr}</BoxAny>
             </BoxAny>
           </BoxAny>
         </Paper>

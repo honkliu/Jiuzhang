@@ -438,25 +438,22 @@ public class ReceiptController : ControllerBase
     [HttpPost("check-duplicate")]
     public async Task<IActionResult> CheckDuplicate([FromBody] CheckDuplicateRequest req)
     {
-        if (string.IsNullOrWhiteSpace(req.NewOcrText) || req.ExistingOcrTexts == null || req.ExistingOcrTexts.Count == 0)
-            return Ok(new { isDuplicate = false });
+        if (string.IsNullOrWhiteSpace(req.NewOcrText)
+            || req.ExistingOcrTexts == null
+            || req.ExistingOcrTexts.Count == 0
+            || string.IsNullOrWhiteSpace(req.DedupPrompt))
+        {
+            return Ok(new { isDuplicate = false, rawResponse = string.Empty, parsedResponse = string.Empty });
+        }
 
         var baseUrl = _configuration["Agent:BaseUrl"];
         var apiKey = _configuration["Agent:ApiKey"] ?? string.Empty;
         var model = _configuration["Agent:Model"] ?? string.Empty;
 
         if (string.IsNullOrWhiteSpace(baseUrl))
-            return Ok(new { isDuplicate = false });
+            return Ok(new { isDuplicate = false, rawResponse = string.Empty, parsedResponse = string.Empty });
 
-        var prompt = $@"判断以下新票据是否与已有票据中的任何一张是同一张票据（即重复录入）。
-只需要回答一个JSON：{{""isDuplicate"": true}} 或 {{""isDuplicate"": false}}
-不要解释，只返回JSON。
-
-新票据OCR文本：
-{req.NewOcrText}
-
-已有票据OCR文本：
-{string.Join("\n---\n", req.ExistingOcrTexts)}";
+        var prompt = req.DedupPrompt;
 
         var messages = new object[] { new { role = "user", content = prompt } };
         var payload = new
@@ -477,7 +474,7 @@ public class ReceiptController : ControllerBase
             using var response = await httpClient.SendAsync(request);
             var body = await response.Content.ReadAsStringAsync();
             if (!response.IsSuccessStatusCode)
-                return Ok(new { isDuplicate = false });
+                return Ok(new { isDuplicate = false, rawResponse = body, parsedResponse = string.Empty });
 
             using var doc = JsonDocument.Parse(body);
             var content = doc.RootElement.GetProperty("choices")[0].GetProperty("message").GetProperty("content").GetString() ?? "";
@@ -488,11 +485,11 @@ public class ReceiptController : ControllerBase
 
             var result = JsonSerializer.Deserialize<JsonElement>(content);
             var isDuplicate = result.TryGetProperty("isDuplicate", out var val) && val.GetBoolean();
-            return Ok(new { isDuplicate });
+            return Ok(new { isDuplicate, rawResponse = body, parsedResponse = content });
         }
         catch
         {
-            return Ok(new { isDuplicate = false });
+            return Ok(new { isDuplicate = false, rawResponse = string.Empty, parsedResponse = string.Empty });
         }
     }
 

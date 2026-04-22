@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, Button,
   Box, TextField, MenuItem, Typography, IconButton, Stepper, Step, StepLabel,
@@ -17,9 +17,16 @@ import {
 } from '@/services/receipt.service';
 import { useLanguage } from '@/i18n/LanguageContext';
 
-const OCR_PROMPT = `识别图像中的文字、公式或抽取票据、证件、表单中的信息，注意票据有可能是中国，有可能是国外的，因此要在返回的md和json中要包含货币单位和交税信息等。请输出两部分，用===JSON===分隔：第一部分是Markdown格式的票据内容，用于展示,格式尊重图像中的文字格式，放在<OMD></OMD>之间。第二部分：JSON格式的原始提取数据，忠实反映图像中识别到的所有字段和数据，不要遗漏任何信息，内容放在<JMD></JMD>之间。`;
+const OCR_PROMPT = `识别图像中的文字、公式或抽取票据、证件、表单中的信息，注意票据有可能是中国，有可能是国外的，因此要在返回的md和json中要包含货币单位和交税信息等。请输出两部分，用===JSON===分隔：第一部分是Markdown格式的票据内容，用于展示,格式等于或接近图像中的文字格式，放在<OMD1></OMD1><OMD2></OMD2>之间。第二部分：JSON格式的原始提取数据，忠实反映图像中识别到的所有字段和数据，不要遗漏任何信息，内容放在<JMD1></JMD1><JMD2></JMD2>之间。因为一个照片里面可能会有多个receipts，<OMD>对应于receipt的数量。<OMD>和<JMD>要对应，内容不要翻译，要对应于原文`;
 
 const MAP_PROMPT = `根据以下OCR提取的票据数据，判断这是医疗票据还是购物票据还是其他类型，然后映射到我们的数据Schema，返回纯JSON数组，不要包含代码块标记。
+
+OCR部分可能会按 <OMD1></OMD1><JMD1></JMD1><OMD2></OMD2><JMD2></JMD2> 这样的编号结构返回多张票据。你必须把每个 JMDn 当作一张独立 receipt 来理解，并输出顶层 JSON 数组，数组顺序必须与 JMD 的编号顺序一致。
+绝对不要把不同 JMD 编号的内容合并成一个对象。即使是同一家医院、同一个病案号、同一个人，只要是不同日期、不同页块、不同 receipt，也必须拆成不同对象。
+
+如果一张照片里包含多张票据、多个日期、多个就诊记录、多个文档页块，必须按“每一张独立票据/每一个独立就诊日期”拆成数组里的多条记录，绝对不要把不同日期或不同票据内容合并到同一个对象里。
+如果原始OCR里已经有 visits、documents、receipts、pages 等多条结构，也必须展开成顶层 JSON 数组后再返回。
+同一家医院、同一个病案号也不能合并，只要 receiptDate / visit_date / 就诊日期 不同，就必须拆成不同对象。
 
 Schema字段说明：
 {
@@ -40,6 +47,16 @@ Schema字段说明：
   medications: [{ name, dosage, frequency, days, quantity, price }],
   labResults: [{ name, value, unit, referenceRange, status }]  // value为纯数值去掉↑↓，status: High/Low/Normal
 }`;
+
+const buildDedupPrompt = (newOcrText: string, existingOcrText: string) => `判断以下两张票据是否是同一张票据（即重复录入）。
+只需要回答一个JSON：{"isDuplicate": true} 或 {"isDuplicate": false}
+不要解释，只返回JSON。
+
+新票据OCR文本：
+${newOcrText}
+
+已有票据OCR文本：
+${existingOcrText}`;
 
 const BoxAny = Box as any;
 
@@ -79,7 +96,48 @@ const extractTaggedBlock = (input: string, tag: 'OMD' | 'JMD') => {
   return input.substring(contentStart, end).trim();
 };
 
+const extractNumberedTaggedBlocks = (input: string, tag: 'OMD' | 'JMD') => {
+  const pattern = new RegExp(`<${tag}(\\d+)>([\\s\\S]*?)<\/${tag}\\1>`, 'g');
+  const blocks: Array<{ index: number; content: string }> = [];
+  let match: RegExpExecArray | null;
+
+  while ((match = pattern.exec(input)) !== null) {
+    const index = Number(match[1]);
+    const content = match[2]?.trim() || '';
+    if (Number.isFinite(index)) {
+      blocks.push({ index, content });
+    }
+  }
+
+  return blocks.sort((left, right) => left.index - right.index);
+};
+
+const combineRawJsonBlocks = (blocks: string[]) => {
+  if (blocks.length === 0) return '';
+
+  try {
+    const parsed = blocks.map(block => JSON.parse(stripCodeFences(block)));
+    return JSON.stringify(parsed, null, 2);
+  } catch {
+    return blocks.map(block => stripCodeFences(block)).join('\n\n');
+  }
+};
+
 const parseOcrContent = (content: string) => {
+  const numberedMarkdownBlocks = extractNumberedTaggedBlocks(content, 'OMD');
+  const numberedJsonBlocks = extractNumberedTaggedBlocks(content, 'JMD');
+
+  if (numberedMarkdownBlocks.length > 0 || numberedJsonBlocks.length > 0) {
+    const markdownBlocks = numberedMarkdownBlocks.map(block => block.content);
+    const rawJsonBlocks = numberedJsonBlocks.map(block => stripCodeFences(block.content));
+    return {
+      markdown: markdownBlocks.join('\n\n---\n\n'),
+      rawJson: combineRawJsonBlocks(rawJsonBlocks),
+      markdownBlocks,
+      rawJsonBlocks,
+    };
+  }
+
   const markdown = extractTaggedBlock(content, 'OMD');
   const json = extractTaggedBlock(content, 'JMD');
 
@@ -87,6 +145,8 @@ const parseOcrContent = (content: string) => {
     return {
       markdown: markdown || '',
       rawJson: stripCodeFences(json || ''),
+      markdownBlocks: markdown ? [markdown] : [],
+      rawJsonBlocks: json ? [stripCodeFences(json)] : [],
     };
   }
 
@@ -96,6 +156,8 @@ const parseOcrContent = (content: string) => {
     return {
       markdown: mdPart.replace(/^===Markdown===\s*/, ''),
       rawJson: stripCodeFences(content.substring(jsonSep + '===JSON==='.length)),
+      markdownBlocks: [mdPart.replace(/^===Markdown===\s*/, '')],
+      rawJsonBlocks: [stripCodeFences(content.substring(jsonSep + '===JSON==='.length))],
     };
   }
 
@@ -103,6 +165,8 @@ const parseOcrContent = (content: string) => {
   return {
     markdown: content,
     rawJson: cleaned,
+    markdownBlocks: content.trim() ? [content] : [],
+    rawJsonBlocks: cleaned ? [cleaned] : [],
   };
 };
 
@@ -202,6 +266,157 @@ const inferTaxAmount = (record: any) => {
   return undefined;
 };
 
+const toText = (value: unknown): string | undefined => {
+  if (Array.isArray(value)) {
+    const parts: string[] = value
+      .map(item => toText(item))
+      .filter((item): item is string => !!item);
+    return parts.length > 0 ? parts.join('\n') : undefined;
+  }
+  if (typeof value === 'string') {
+    const next = value.trim();
+    return next || undefined;
+  }
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+  return undefined;
+};
+
+const unwrapMappedRecords = (value: any): any[] => {
+  if (Array.isArray(value)) {
+    return value.flatMap(item => unwrapMappedRecords(item));
+  }
+
+  if (!value || typeof value !== 'object') {
+    return [];
+  }
+
+  if (Array.isArray(value.visits)) {
+    const header = value.document_header ?? {};
+    return value.visits.map((visit: any) => {
+      const visitHeader = visit?.document_header ?? header;
+      const visitInfo = visit?.visit_info ?? {};
+      const clinical = visit?.clinical_data ?? {};
+      const diagnosisText = toText(clinical.diagnosis);
+      const treatmentText = toText(clinical.treatment_plan);
+      const presentIllness = toText(clinical.present_illness);
+      const chiefComplaint = toText(clinical.chief_complaint);
+      const auxiliary = toText(clinical.auxiliary_examination);
+      const notes = [
+        toText(visitHeader.document_type),
+        chiefComplaint,
+        presentIllness,
+        auxiliary,
+        treatmentText,
+      ].filter((item): item is string => !!item).join('\n');
+
+      return {
+        type: 'Medical',
+        category: 'Diagnosis',
+        hospitalName: toText(visitHeader.hospital_name),
+        department: toText(visitInfo.department),
+        doctorName: toText(clinical.physician_signature),
+        patientName: toText(visitHeader.patient_name),
+        currency: toText(value.currency),
+        receiptDate: toText(visitInfo.visit_date),
+        notes: notes || undefined,
+        diagnosisText,
+      };
+    });
+  }
+
+  return [value];
+};
+
+const splitMarkdownReceipts = (markdown: string): string[] => {
+  const normalized = markdown.trim();
+  if (!normalized) return [];
+
+  const blocks = normalized
+    .split(/\n\s*---+\s*\n/g)
+    .map(block => block.trim())
+    .filter(Boolean);
+
+  return blocks.length > 0 ? blocks : [normalized];
+};
+
+const normalizeMatchText = (value?: string) => value?.replace(/\s+/g, '').trim();
+
+const pickMarkdownBlock = (blocks: string[], record: ReceiptExtractionResult, index: number, expectedCount: number): string | undefined => {
+  if (blocks.length === 0) return undefined;
+  if (blocks.length === 1) return expectedCount === 1 || index === 0 ? blocks[0] : undefined;
+  if (blocks.length < expectedCount && index >= blocks.length) return undefined;
+
+  const date = normalizeMatchText(record.receiptDate);
+  const hospital = normalizeMatchText(record.hospitalName);
+  const department = normalizeMatchText(record.department);
+  const patient = normalizeMatchText(record.patientName);
+
+  const scored = blocks.map((block, blockIndex) => {
+    const compact = normalizeMatchText(block) || '';
+    let score = 0;
+    if (date && compact.includes(date)) score += 5;
+    if (hospital && compact.includes(hospital)) score += 2;
+    if (department && compact.includes(department)) score += 2;
+    if (patient && compact.includes(patient)) score += 1;
+    return { block, blockIndex, score };
+  });
+
+  const best = scored
+    .sort((left, right) => right.score - left.score || left.blockIndex - right.blockIndex)[0];
+
+  if (best && best.score > 0) return best.block;
+  return blocks[index] || blocks[0];
+};
+
+const pickRawJsonBlock = (blocks: string[], index: number, record: any): string | undefined => {
+  if (blocks.length === 0) {
+    try {
+      return JSON.stringify(record, null, 2);
+    } catch {
+      return undefined;
+    }
+  }
+
+  return blocks[index] || blocks[0];
+};
+
+type ExtractedReceiptDraft = ReceiptExtractionResult & {
+  rawText?: string;
+  rawJson?: string;
+};
+
+type DedupTextCandidate = {
+  text: string;
+  source: 'receipt.rawText' | 'ocrText' | 'receipt.rawJson' | 'rawJson' | 'none';
+};
+
+type DedupEvaluationResult = {
+  selectedCount: number;
+  duplicateCount: number;
+  toCreate: ExtractedReceiptDraft[];
+  debugOutput: string;
+};
+
+const getReceiptDedupCandidate = (receipt: ExtractedReceiptDraft, fallbackRawText: string, fallbackRawJson: string): DedupTextCandidate => {
+  const values: Array<{ text?: string; source: DedupTextCandidate['source'] }> = [
+    { text: receipt.rawText, source: 'receipt.rawText' },
+    { text: receipt.rawJson, source: 'receipt.rawJson' },
+    { text: fallbackRawText, source: 'ocrText' },
+    { text: fallbackRawJson, source: 'rawJson' },
+  ];
+
+  for (const value of values) {
+    const trimmed = value.text?.trim();
+    if (trimmed) {
+      return { text: trimmed, source: value.source };
+    }
+  }
+
+  return { text: '', source: 'none' };
+};
+
 interface ReceiptCaptureProps {
   open: boolean;
   defaultType: ReceiptType;
@@ -221,7 +436,7 @@ export const ReceiptCapture: React.FC<ReceiptCaptureProps> = ({
   const [extractError, setExtractError] = useState('');
 
   // Extracted receipts (multiple from one image)
-  const [extractedReceipts, setExtractedReceipts] = useState<ReceiptExtractionResult[]>([]);
+  const [extractedReceipts, setExtractedReceipts] = useState<ExtractedReceiptDraft[]>([]);
   const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
 
   // Manual form (for single receipt editing or manual entry)
@@ -243,6 +458,10 @@ export const ReceiptCapture: React.FC<ReceiptCaptureProps> = ({
   const [rawJson, setRawJson] = useState(''); // raw JSON for dedup
   const [step1Raw, setStep1Raw] = useState('');
   const [step2Raw, setStep2Raw] = useState('');
+  const [showDebugOutput, setShowDebugOutput] = useState(false);
+  const [dedupDebugOutput, setDedupDebugOutput] = useState('');
+  const [dedupDebugLoading, setDedupDebugLoading] = useState(false);
+  const [dedupEvaluation, setDedupEvaluation] = useState<DedupEvaluationResult | null>(null);
 
   const categories = type === 'Shopping' ? shoppingCategories : medicalCategories;
 
@@ -253,6 +472,8 @@ export const ReceiptCapture: React.FC<ReceiptCaptureProps> = ({
     setNotes(''); setDiagnosisText('');
     setExtractedReceipts([]); setSelectedIndices(new Set()); setEditingIndex(null);
     setExtractError(''); setOcrText(''); setRawJson(''); setStep1Raw(''); setStep2Raw('');
+    setShowDebugOutput(false); setDedupDebugOutput(''); setDedupDebugLoading(false);
+    setDedupEvaluation(null);
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -261,6 +482,8 @@ export const ReceiptCapture: React.FC<ReceiptCaptureProps> = ({
     setImagePreview(URL.createObjectURL(file));
     setUploading(true);
     setExtractError('');
+    setDedupDebugOutput('');
+    setDedupEvaluation(null);
     try {
       const url = await receiptService.uploadImage(file);
       setImageUrl(url);
@@ -291,10 +514,14 @@ export const ReceiptCapture: React.FC<ReceiptCaptureProps> = ({
         let s2 = result.step2Raw || '[]';
         s2 = stripCodeFences(s2);
 
-        let parsed: ReceiptExtractionResult[] = [];
+        let parsed: ExtractedReceiptDraft[] = [];
         try {
           const raw = JSON.parse(s2);
-          const arr = Array.isArray(raw) ? raw : [raw];
+          const arr = unwrapMappedRecords(raw);
+          const markdownBlocks = parsedStep1.markdownBlocks.length > 0
+            ? parsedStep1.markdownBlocks
+            : splitMarkdownReceipts(parsedStep1.markdown);
+          const rawJsonBlocks = parsedStep1.rawJsonBlocks;
 
           // Normalize category from Chinese to our schema values
           const normCategory = (cat: string, type: string): string => {
@@ -328,36 +555,42 @@ export const ReceiptCapture: React.FC<ReceiptCaptureProps> = ({
             return s;
           };
 
-          parsed = arr.map((r: any) => ({
-            type: String(r.type || ''),
-            category: normCategory(String(r.category || ''), String(r.type || '')),
-            merchantName: r.merchantName ? String(r.merchantName) : undefined,
-            hospitalName: r.hospitalName ? String(r.hospitalName) : undefined,
-            department: r.department ? String(r.department) : undefined,
-            doctorName: r.doctorName ? String(r.doctorName) : undefined,
-            patientName: r.patientName ? String(r.patientName) : undefined,
-            totalAmount: r.totalAmount != null ? Number(r.totalAmount) : undefined,
-            taxAmount: inferTaxAmount(r),
-            currency: normalizeCurrencyCode(r.currency ? String(r.currency) : undefined) || fallbackCurrency,
-            receiptDate: r.receiptDate ? String(r.receiptDate) : undefined,
-            notes: r.notes ? String(r.notes) : undefined,
-            diagnosisText: r.diagnosisText ? String(r.diagnosisText) : undefined,
-            items: Array.isArray(r.items) ? r.items.map((i: any) => ({
-              name: String(i.name || ''), quantity: i.quantity != null ? Number(i.quantity) : undefined,
-              unit: i.unit ? String(i.unit) : undefined, unitPrice: i.unitPrice != null ? Number(i.unitPrice) : undefined,
-              totalPrice: i.totalPrice != null ? Number(i.totalPrice) : undefined,
-            })) : undefined,
-            medications: Array.isArray(r.medications) ? r.medications.map((m: any) => ({
-              name: String(m.name || ''), dosage: m.dosage ? String(m.dosage) : undefined,
-              frequency: m.frequency ? String(m.frequency) : undefined, days: m.days != null ? Number(m.days) : undefined,
-              quantity: m.quantity != null ? Number(m.quantity) : undefined, price: m.price != null ? Number(m.price) : undefined,
-            })) : undefined,
-            labResults: Array.isArray(r.labResults) ? r.labResults.map((l: any) => ({
-              name: String(l.name || ''), value: l.value != null ? String(l.value) : undefined,
-              unit: l.unit ? String(l.unit) : undefined, referenceRange: l.referenceRange ? String(l.referenceRange) : undefined,
-              status: normStatus(l.status ? String(l.status) : ''),
-            })) : undefined,
-          }));
+          parsed = arr.map((r: any, index: number) => {
+            const mapped: ExtractedReceiptDraft = {
+              type: String(r.type || ''),
+              category: normCategory(String(r.category || ''), String(r.type || '')),
+              merchantName: r.merchantName ? String(r.merchantName) : undefined,
+              hospitalName: r.hospitalName ? String(r.hospitalName) : undefined,
+              department: r.department ? String(r.department) : undefined,
+              doctorName: r.doctorName ? String(r.doctorName) : undefined,
+              patientName: r.patientName ? String(r.patientName) : undefined,
+              totalAmount: r.totalAmount != null ? Number(r.totalAmount) : undefined,
+              taxAmount: inferTaxAmount(r),
+              currency: normalizeCurrencyCode(r.currency ? String(r.currency) : undefined) || fallbackCurrency,
+              receiptDate: r.receiptDate ? String(r.receiptDate) : undefined,
+              notes: r.notes ? String(r.notes) : undefined,
+              diagnosisText: r.diagnosisText ? String(r.diagnosisText) : undefined,
+              items: Array.isArray(r.items) ? r.items.map((i: any) => ({
+                name: String(i.name || ''), quantity: i.quantity != null ? Number(i.quantity) : undefined,
+                unit: i.unit ? String(i.unit) : undefined, unitPrice: i.unitPrice != null ? Number(i.unitPrice) : undefined,
+                totalPrice: i.totalPrice != null ? Number(i.totalPrice) : undefined,
+              })) : undefined,
+              medications: Array.isArray(r.medications) ? r.medications.map((m: any) => ({
+                name: String(m.name || ''), dosage: m.dosage ? String(m.dosage) : undefined,
+                frequency: m.frequency ? String(m.frequency) : undefined, days: m.days != null ? Number(m.days) : undefined,
+                quantity: m.quantity != null ? Number(m.quantity) : undefined, price: m.price != null ? Number(m.price) : undefined,
+              })) : undefined,
+              labResults: Array.isArray(r.labResults) ? r.labResults.map((l: any) => ({
+                name: String(l.name || ''), value: l.value != null ? String(l.value) : undefined,
+                unit: l.unit ? String(l.unit) : undefined, referenceRange: l.referenceRange ? String(l.referenceRange) : undefined,
+                status: normStatus(l.status ? String(l.status) : ''),
+              })) : undefined,
+            };
+
+            mapped.rawText = pickMarkdownBlock(markdownBlocks, mapped, index, arr.length);
+            mapped.rawJson = pickRawJsonBlock(rawJsonBlocks, index, r);
+            return mapped;
+          });
         } catch {
           setExtractError('Step 2 JSON解析失败');
         }
@@ -386,7 +619,7 @@ export const ReceiptCapture: React.FC<ReceiptCaptureProps> = ({
     });
   };
 
-  const loadToForm = (r: ReceiptExtractionResult, idx: number) => {
+  const loadToForm = (r: ExtractedReceiptDraft, idx: number) => {
     setEditingIndex(idx);
     setType((r.type as ReceiptType) || defaultType);
     setCategory(r.category || '');
@@ -418,11 +651,11 @@ export const ReceiptCapture: React.FC<ReceiptCaptureProps> = ({
     setStep(2);
   };
 
-  const buildRequest = (r: ReceiptExtractionResult): CreateReceiptRequest => ({
+  const buildRequest = (r: ExtractedReceiptDraft): CreateReceiptRequest => ({
     type: (r.type as ReceiptType) || defaultType,
     category: r.category || 'Other',
     imageUrl,
-    rawText: ocrText || undefined, // markdown for display
+    rawText: r.rawText || ocrText || undefined,
     // Store rawJson in notes-adjacent field — use rawText for dedup too
     receiptDate: r.receiptDate || undefined,
     notes: r.notes || undefined,
@@ -441,30 +674,177 @@ export const ReceiptCapture: React.FC<ReceiptCaptureProps> = ({
     labResults: r.labResults || undefined,
   });
 
+  const evaluateDedupForReceipts = async (receipts: ExtractedReceiptDraft[]): Promise<DedupEvaluationResult> => {
+    const allExisting = await receiptService.list();
+    const existingOcrTexts = allExisting
+      .map(er => er.rawText)
+      .filter((t): t is string => !!t);
+
+    let duplicateCount = 0;
+    const toCreate: ExtractedReceiptDraft[] = [];
+    const dedupLogs: string[] = [];
+
+    for (const [submitIndex, r] of receipts.entries()) {
+      const { text: dedupText, source: dedupSource } = getReceiptDedupCandidate(r, ocrText, rawJson);
+      const existingSnapshot = [...existingOcrTexts];
+      let isDuplicate = false;
+      let matchedExistingIndex: number | null = null;
+      let matchedExistingText = '';
+      const dedupChecks: Array<{
+        existingIndex: number;
+        existingText: string;
+        dedupPrompt: string;
+        dedupRawResponse: string;
+        dedupParsedResponse: string;
+        llmResult: boolean;
+      }> = [];
+
+      if (dedupText && existingOcrTexts.length > 0) {
+        for (const [existingIndex, existingText] of existingOcrTexts.entries()) {
+          const dedupPrompt = buildDedupPrompt(dedupText, existingText);
+          const dedupResult = await receiptService.checkDuplicate(dedupText, [existingText], dedupPrompt);
+          const check = {
+            existingIndex,
+            existingText,
+            dedupPrompt,
+            dedupRawResponse: dedupResult.rawResponse || '',
+            dedupParsedResponse: dedupResult.parsedResponse || '',
+            llmResult: dedupResult.isDuplicate,
+          };
+          dedupChecks.push(check);
+          if (dedupResult.isDuplicate) {
+            isDuplicate = true;
+            matchedExistingIndex = existingIndex;
+            matchedExistingText = existingText;
+            break;
+          }
+        }
+      }
+
+      if (isDuplicate) {
+        duplicateCount += 1;
+      } else {
+        toCreate.push(r);
+      }
+
+      if (dedupText) {
+        existingOcrTexts.push(dedupText);
+      }
+
+      dedupLogs.push(JSON.stringify({
+        receiptIndex: submitIndex,
+        receiptLabel: receiptLabel(r, submitIndex),
+        dedupSource,
+        dedupText,
+        existingCountBefore: existingSnapshot.length,
+        existingTextsBefore: existingSnapshot,
+        dedupChecks,
+        matchedExistingIndex,
+        matchedExistingText,
+        llmResult: isDuplicate,
+        action: isDuplicate ? 'skip-duplicate' : 'create',
+      }, null, 2));
+    }
+
+    return {
+      selectedCount: receipts.length,
+      duplicateCount,
+      toCreate,
+      debugOutput: [
+        `selectedCount: ${receipts.length}`,
+        `predictedCreateCount: ${toCreate.length}`,
+        `duplicateCount: ${duplicateCount}`,
+        '',
+        ...dedupLogs.map((entry, index) => `--- Receipt ${index + 1} ---\n${entry}`),
+      ].join('\n'),
+    };
+  };
+
+  useEffect(() => {
+    if (step !== 2 || extractedReceipts.length === 0) {
+      setDedupEvaluation(null);
+      setDedupDebugOutput('');
+      setDedupDebugLoading(false);
+      return;
+    }
+
+    const toSubmit = extractedReceipts.filter((_, i) => selectedIndices.has(i));
+    if (toSubmit.length === 0) {
+      setDedupEvaluation({ selectedCount: 0, duplicateCount: 0, toCreate: [], debugOutput: 'selectedCount: 0' });
+      setDedupDebugOutput('selectedCount: 0');
+      setDedupDebugLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setDedupDebugLoading(true);
+    setDedupEvaluation(null);
+
+    (async () => {
+      try {
+        const result = await evaluateDedupForReceipts(toSubmit);
+        if (cancelled) return;
+        setDedupEvaluation(result);
+        setDedupDebugOutput(result.debugOutput);
+      } finally {
+        if (!cancelled) {
+          setDedupDebugLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [step, extractedReceipts, selectedIndices, ocrText, rawJson]);
+
+  const handleToggleDebugOutput = () => {
+    const next = !showDebugOutput;
+    setShowDebugOutput(next);
+  };
+
   const handleSubmitAll = async () => {
     setSubmitting(true);
     try {
       if (extractedReceipts.length > 0) {
-        const toSubmit = extractedReceipts.filter((_, i) => selectedIndices.has(i));
-
-        // Check for duplicates using raw JSON
-        if (rawJson) {
-          const allExisting = await receiptService.list();
-          const existingOcrTexts = allExisting
-            .map(er => er.rawText)
-            .filter((t): t is string => !!t);
-          if (existingOcrTexts.length > 0) {
-            const isDuplicate = await receiptService.checkDuplicate(rawJson, existingOcrTexts);
-            if (isDuplicate) {
-              setExtractError('该票据已存在，跳过重复录入');
-              setSubmitting(false);
-              return;
-            }
-          }
+        if (dedupDebugLoading) {
+          setExtractError('正在执行去重，请稍候');
+          setSubmitting(false);
+          return;
         }
 
-        for (const r of toSubmit) {
-          await receiptService.create(buildRequest(r));
+        if (!dedupEvaluation) {
+          setExtractError('去重结果尚未就绪，请稍候');
+          setSubmitting(false);
+          return;
+        }
+
+        let savedCount = 0;
+        for (const receipt of dedupEvaluation.toCreate) {
+          await receiptService.create(buildRequest(receipt));
+          savedCount += 1;
+        }
+
+        if (savedCount === 0 && dedupEvaluation.duplicateCount > 0) {
+          setShowDebugOutput(true);
+          setExtractError('所选票据都已存在，已跳过重复录入');
+          setSubmitting(false);
+          return;
+        }
+
+        if (dedupEvaluation.duplicateCount > 0) {
+          setShowDebugOutput(true);
+          setExtractError(`已跳过 ${dedupEvaluation.duplicateCount} 张重复票据，保存 ${savedCount} 张新票据`);
+          onCaptured();
+          setSubmitting(false);
+          return;
+        }
+
+        if (showDebugOutput) {
+          setExtractError(`已保存 ${savedCount} 张票据，去重调试信息已更新`);
+          onCaptured();
+          setSubmitting(false);
+          return;
         }
       } else {
         // Manual entry (no extraction results)
@@ -562,13 +942,10 @@ export const ReceiptCapture: React.FC<ReceiptCaptureProps> = ({
             {/* Debug: Step 1 & 2 raw outputs */}
             <BoxAny sx={{ mb: 2 }}>
               <Typography variant="caption" color="text.secondary" sx={{ cursor: 'pointer' }}
-                onClick={() => {
-                  const el = document.getElementById('debug-output');
-                  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
-                }}>
+                onClick={handleToggleDebugOutput}>
                 🔍 调试信息（点击展开/收起）
               </Typography>
-              <BoxAny id="debug-output" sx={{ display: 'none' }}>
+              <BoxAny sx={{ display: showDebugOutput ? 'block' : 'none' }}>
                 <BoxAny component="pre" sx={{ mt: 1, p: 1, bgcolor: '#f5f5f5', borderRadius: 1, maxHeight: 500, overflow: 'auto', fontSize: '0.7rem', whiteSpace: 'pre-wrap', m: 0 }}>
 {`===== Step 1 Input =====
 ${OCR_PROMPT}
@@ -583,7 +960,10 @@ ${MAP_PROMPT}
 ${rawJson !== '[]' ? rawJson : ocrText}
 
 ===== Step 2 Output =====
-${step2Raw || JSON.stringify(extractedReceipts, null, 2) || '(empty)'}`}
+${step2Raw || JSON.stringify(extractedReceipts, null, 2) || '(empty)'}
+
+===== Dedup Output =====
+${dedupDebugLoading ? '(running...)' : (dedupDebugOutput || '(not run yet)')}`}
                 </BoxAny>
               </BoxAny>
             </BoxAny>
@@ -700,7 +1080,7 @@ ${step2Raw || JSON.stringify(extractedReceipts, null, 2) || '(empty)'}`}
           <Button
             variant="contained"
             onClick={handleSubmitAll}
-            disabled={submitting || (extractedReceipts.length > 0 ? selectedIndices.size === 0 : !category)}
+            disabled={submitting || dedupDebugLoading || (extractedReceipts.length > 0 ? selectedIndices.size === 0 : !category)}
           >
             {submitting ? t('common.loading') : (
               extractedReceipts.length > 0

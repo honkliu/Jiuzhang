@@ -195,4 +195,5 @@ public class CheckDuplicateRequest
 {
     public string NewOcrText { get; set; } = string.Empty;
     public List<string> ExistingOcrTexts { get; set; } = new();
+    public string DedupPrompt { get; set; } = string.Empty;
 }

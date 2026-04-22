@@ -174,6 +174,12 @@ export interface UpdateVisitRequest {
   tags?: string[];
 }
 
+export interface DedupCheckResult {
+  isDuplicate: boolean;
+  rawResponse?: string;
+  parsedResponse?: string;
+}
+
 // ─── Service ────────────────────────────────────────────────────────────────
 
 class ReceiptService {
@@ -255,9 +261,9 @@ class ReceiptService {
   }
 
   // Check if a new receipt is a duplicate of existing ones
-  async checkDuplicate(newOcrText: string, existingOcrTexts: string[]): Promise<boolean> {
-    const res = await apiClient.post<{ isDuplicate: boolean }>('/receipts/check-duplicate', { newOcrText, existingOcrTexts });
-    return res.data.isDuplicate;
+  async checkDuplicate(newOcrText: string, existingOcrTexts: string[], dedupPrompt: string): Promise<DedupCheckResult> {
+    const res = await apiClient.post<DedupCheckResult>('/receipts/check-duplicate', { newOcrText, existingOcrTexts, dedupPrompt });
+    return res.data;
   }
 }
 
