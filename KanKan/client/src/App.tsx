@@ -14,6 +14,7 @@ import { ChatRoom3DTestPage } from './components/Chat/ChatRoom3DTestPage';
 import { FamilyPage } from './components/Family/FamilyPage';
 import { NotebookPage } from './components/Notebook/NotebookPage';
 import { ReceiptsPage } from './components/Receipts/ReceiptsPage';
+import PhotoAlbumPage from './components/Photos/PhotoAlbumPage';
 import { InviteCodesPage } from './components/Admin/InviteCodesPage';
 import { authService } from './services/auth.service';
 import { contactService } from './services/contact.service';
@@ -311,6 +312,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <ReceiptsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/photos"
+                element={
+                  <ProtectedRoute>
+                    <PhotoAlbumPage />
                   </ProtectedRoute>
                 }
               />

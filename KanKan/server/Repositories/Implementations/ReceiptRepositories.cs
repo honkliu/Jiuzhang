@@ -172,3 +172,88 @@ public class InMemoryReceiptRepository : IReceiptRepository, IReceiptVisitReposi
         return Task.CompletedTask;
     }
 }
+
+public class MedicalRecordIndexRepository : IMedicalRecordIndexRepository
+{
+    private readonly IMongoCollection<MedicalRecordIndex> _collection;
+
+    public MedicalRecordIndexRepository(IMongoClient mongoClient, IConfiguration configuration)
+    {
+        var db = mongoClient.GetDatabase(configuration["MongoDB:DatabaseName"] ?? "KanKanDB");
+        _collection = db.GetCollection<MedicalRecordIndex>(configuration["MongoDB:Collections:MedicalRecordIndex"] ?? "MedicalRecordIndex");
+    }
+
+    public async Task<List<MedicalRecordIndex>> GetByOwnerIdAsync(string ownerId)
+    {
+        var filter = Builders<MedicalRecordIndex>.Filter.Eq(i => i.OwnerId, ownerId);
+        return await _collection.Find(filter).SortByDescending(i => i.UpdatedAt).ToListAsync();
+    }
+
+    public async Task<MedicalRecordIndex?> GetByIdAsync(string id)
+        => await _collection.Find(Builders<MedicalRecordIndex>.Filter.Eq(i => i.Id, id)).FirstOrDefaultAsync();
+
+    public async Task<MedicalRecordIndex?> GetByOwnerIdAndNumberAsync(string ownerId, string medicalRecordNumber)
+    {
+        var filter = Builders<MedicalRecordIndex>.Filter.And(
+            Builders<MedicalRecordIndex>.Filter.Eq(i => i.OwnerId, ownerId),
+            Builders<MedicalRecordIndex>.Filter.Eq(i => i.MedicalRecordNumber, medicalRecordNumber)
+        );
+        return await _collection.Find(filter).FirstOrDefaultAsync();
+    }
+
+    public async Task<MedicalRecordIndex> CreateAsync(MedicalRecordIndex index)
+    {
+        index.CreatedAt = DateTime.UtcNow;
+        index.UpdatedAt = DateTime.UtcNow;
+        await _collection.InsertOneAsync(index);
+        return index;
+    }
+
+    public async Task<MedicalRecordIndex> UpdateAsync(MedicalRecordIndex index)
+    {
+        index.UpdatedAt = DateTime.UtcNow;
+        await _collection.ReplaceOneAsync(Builders<MedicalRecordIndex>.Filter.Eq(i => i.Id, index.Id), index);
+        return index;
+    }
+
+    public async Task DeleteAsync(string id)
+        => await _collection.DeleteOneAsync(Builders<MedicalRecordIndex>.Filter.Eq(i => i.Id, id));
+}
+
+// ── InMemory stubs for MedicalRecordIndex (dev mode) ──────────────────────
+
+public class InMemoryMedicalRecordIndexRepository : IMedicalRecordIndexRepository
+{
+    private readonly List<MedicalRecordIndex> _records = new();
+
+    public Task<List<MedicalRecordIndex>> GetByOwnerIdAsync(string ownerId)
+        => Task.FromResult(_records.Where(r => r.OwnerId == ownerId).OrderByDescending(r => r.UpdatedAt).ToList());
+
+    Task<MedicalRecordIndex?> IMedicalRecordIndexRepository.GetByIdAsync(string id)
+        => Task.FromResult(_records.FirstOrDefault(r => r.Id == id));
+
+    public Task<MedicalRecordIndex?> GetByOwnerIdAndNumberAsync(string ownerId, string medicalRecordNumber)
+        => Task.FromResult(_records.FirstOrDefault(r => r.OwnerId == ownerId && r.MedicalRecordNumber == medicalRecordNumber));
+
+    public Task<MedicalRecordIndex> CreateAsync(MedicalRecordIndex index)
+    {
+        index.CreatedAt = DateTime.UtcNow;
+        index.UpdatedAt = DateTime.UtcNow;
+        _records.Add(index);
+        return Task.FromResult(index);
+    }
+
+    public Task<MedicalRecordIndex> UpdateAsync(MedicalRecordIndex index)
+    {
+        index.UpdatedAt = DateTime.UtcNow;
+        var idx = _records.FindIndex(r => r.Id == index.Id);
+        if (idx >= 0) _records[idx] = index;
+        return Task.FromResult(index);
+    }
+
+    Task IMedicalRecordIndexRepository.DeleteAsync(string id)
+    {
+        _records.RemoveAll(r => r.Id == id);
+        return Task.CompletedTask;
+    }
+}

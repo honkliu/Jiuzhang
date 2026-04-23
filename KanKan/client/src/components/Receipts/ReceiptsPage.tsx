@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Box, Typography, Tabs, Tab, Fab, CircularProgress, Alert, Button,
+  Dialog, DialogTitle, DialogContent, DialogActions, List, ListItem,
+  ListItemButton, ListItemText, ListItemIcon, Checkbox, Chip,
 } from '@mui/material';
-import { Add as AddIcon, AutoAwesome as AskIcon } from '@mui/icons-material';
+import { Add as AddIcon, Photo as PhotoIcon, AutoAwesome } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppHeader } from '@/components/Shared/AppHeader';
@@ -10,7 +12,9 @@ import { ReceiptList } from './ReceiptList';
 import { MedicalVisitTimeline } from './MedicalVisitTimeline';
 import { ReceiptCapture } from './ReceiptCapture';
 import { ReceiptDetail } from './ReceiptDetail';
+import { BatchExtractDialog } from './BatchExtractDialog';
 import { receiptService, type ReceiptDto } from '@/services/receipt.service';
+import { photoService, type PhotoDto } from '@/services/photo.service';
 import { chatService } from '@/services/chat.service';
 import { signalRService } from '@/services/signalr.service';
 import { useLanguage } from '@/i18n/LanguageContext';
@@ -41,13 +45,13 @@ const currencySymbol = (currency?: string): string => {
 };
 
 const hasMeaningfulMedicalDetails = (receipt: ReceiptDto): boolean => (
-  receipt.items.length > 0
-  || receipt.medications.length > 0
-  || receipt.labResults.length > 0
-  || receipt.diagnosisText?.trim().length > 0
-  || receipt.outpatientNumber?.trim().length > 0
-  || receipt.insuranceType?.trim().length > 0
-  || receipt.medicalInsuranceNumber?.trim().length > 0
+  (receipt.items?.length ?? 0) > 0
+  || (receipt.medications?.length ?? 0) > 0
+  || (receipt.labResults?.length ?? 0) > 0
+  || (receipt.diagnosisText ?? '').trim().length > 0
+  || (receipt.outpatientNumber ?? '').trim().length > 0
+  || (receipt.insuranceType ?? '').trim().length > 0
+  || (receipt.medicalInsuranceNumber ?? '').trim().length > 0
   || receipt.medicalInsuranceFundPayment != null
   || receipt.personalAccountPayment != null
   || receipt.personalSelfPay != null
@@ -275,6 +279,13 @@ export const ReceiptsPage: React.FC = () => {
   const [askingWa, setAskingWa] = useState(false);
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
 
+  // Batch extract from photo album
+  const [batchPhotoSelectOpen, setBatchPhotoSelectOpen] = useState(false);
+  const [allPhotos, setAllPhotos] = useState<PhotoDto[]>([]);
+  const [batchSelectedPhotoIds, setBatchSelectedPhotoIds] = useState<Set<string>>(new Set());
+  const [batchSelectedPhotos, setBatchSelectedPhotos] = useState<PhotoDto[]>([]);
+  const [batchExtractOpen, setBatchExtractOpen] = useState(false);
+
   const toggleChecked = (id: string) => {
     setCheckedIds(prev => {
       const next = new Set(prev);
@@ -390,6 +401,42 @@ export const ReceiptsPage: React.FC = () => {
     } catch { /* ignore */ }
   };
 
+  // Batch extract photo selection handlers
+  const handleBatchPhotoSelect = useCallback(async () => {
+    try {
+      const photos = await photoService.list();
+      // Filter out photos that already have associated receipts
+      const unassociated = photos.filter(p => !p.associatedReceiptIds || p.associatedReceiptIds.length === 0);
+      setAllPhotos(unassociated);
+      setBatchPhotoSelectOpen(true);
+    } catch (e) {
+      console.error('Failed to load photos:', e);
+    }
+  }, []);
+
+  const handleBatchPhotoToggle = useCallback((photoId: string) => {
+    setBatchSelectedPhotoIds(prev => {
+      const next = new Set(prev);
+      if (next.has(photoId)) next.delete(photoId);
+      else next.add(photoId);
+      return next;
+    });
+  }, []);
+
+  const handleBatchPhotoStartExtract = useCallback(() => {
+    setBatchPhotoSelectOpen(false);
+    const selected = allPhotos.filter(p => batchSelectedPhotoIds.has(p.id));
+    setBatchSelectedPhotos(selected);
+    setBatchExtractOpen(true);
+  }, [allPhotos, batchSelectedPhotoIds]);
+
+  const handleBatchExtractSaved = useCallback(() => {
+    setBatchExtractOpen(false);
+    setBatchSelectedPhotoIds(new Set());
+    setBatchSelectedPhotos([]);
+    loadData();
+  }, [loadData]);
+
   const handleAskWa = async () => {
     if (askingWa) return;
     setAskingWa(true);
@@ -466,9 +513,18 @@ export const ReceiptsPage: React.FC = () => {
             })()}
           </Button>
           <Button
+            size="small"
+            variant="outlined"
+            startIcon={<PhotoIcon />}
+            onClick={handleBatchPhotoSelect}
+            disabled={loading}
+          >
+            批量提取
+          </Button>
+          <Button
             variant="outlined"
             size="small"
-            startIcon={<AskIcon />}
+            startIcon={<AutoAwesome />}
             disabled={askingWa || loading || checkedIds.size === 0}
             onClick={handleAskWa}
           >
@@ -577,6 +633,83 @@ export const ReceiptsPage: React.FC = () => {
           defaultType={tab === 0 ? 'Shopping' : 'Medical'}
           onClose={() => setCaptureOpen(false)}
           onCaptured={handleCaptured}
+        />
+
+        {/* Batch Photo Select Dialog */}
+        <Dialog open={batchPhotoSelectOpen} onClose={() => setBatchPhotoSelectOpen(false)} maxWidth="md" fullWidth>
+          <DialogTitle>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <PhotoIcon />
+              选择照片进行 OCR 提取
+              {batchSelectedPhotoIds.size > 0 && (
+                <Chip label={`${batchSelectedPhotoIds.size} 已选`} color="primary" size="small" />
+              )}
+            </Box>
+          </DialogTitle>
+          <DialogContent>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              请选择要提取票据的照片（已关联票据的照片已过滤）
+            </Typography>
+            {allPhotos.length === 0 ? (
+              <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
+                没有可提取的照片
+              </Typography>
+            ) : (
+              <List sx={{ maxHeight: 400, overflow: 'auto' }}>
+                {allPhotos.map((photo) => (
+                  <ListItem key={photo.id} disablePadding>
+                    <ListItemButton
+                      onClick={() => handleBatchPhotoToggle(photo.id)}
+                      sx={{ gap: 1.5 }}
+                    >
+                      <ListItemIcon>
+                        <Checkbox
+                          edge="start"
+                          checked={batchSelectedPhotoIds.has(photo.id)}
+                          tabIndex={-1}
+                          disableRipple
+                        />
+                      </ListItemIcon>
+                      {/* Thumbnail */}
+                      <Box sx={{ width: 48, height: 48, borderRadius: 1, overflow: 'hidden', flexShrink: 0 }}>
+                        <img
+                          src={`/api/photos/download/${photo.id}`}
+                          alt={photo.fileName}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
+                      </Box>
+                      <ListItemText
+                        primary={photo.fileName}
+                        secondary={`${(photo.fileSize / 1024).toFixed(0)} KB`}
+                      />
+                    </ListItemButton>
+                  </ListItem>
+                ))}
+              </List>
+            )}
+          </DialogContent>
+          <DialogActions sx={{ p: 2 }}>
+            <Button onClick={() => setBatchPhotoSelectOpen(false)}>取消</Button>
+            <Button variant="contained"
+              onClick={handleBatchPhotoStartExtract}
+              disabled={batchSelectedPhotoIds.size === 0}
+              startIcon={<AutoAwesome />}>
+              开始提取 ({batchSelectedPhotoIds.size})
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Batch Extract Dialog */}
+        <BatchExtractDialog
+          open={batchExtractOpen}
+          selectedPhotoIds={Array.from(batchSelectedPhotoIds)}
+          selectedPhotos={batchSelectedPhotos}
+          onClose={() => {
+            setBatchExtractOpen(false);
+            setBatchSelectedPhotoIds(new Set());
+            setBatchSelectedPhotos([]);
+          }}
+          onSaved={handleBatchExtractSaved}
         />
       </BoxAny>
     </>

@@ -330,12 +330,8 @@ export const ContactsPage: React.FC = () => {
                       />
                     </ListItemAvatar>
                     <ListItemText
-                      primary={<Typography fontWeight={600} variant="body2">{req.fromUser.displayName}</Typography>}
-                      secondary={req.fromUser.domain || ''}
-                      slotProps={{
-                        primary: { noWrap: true },
-                        secondary: { noWrap: true, sx: { fontSize: 12, lineHeight: 1.2 } },
-                      }}
+                      primary={<Typography fontWeight={600} variant="body2" noWrap>{req.fromUser.displayName}</Typography>}
+                      secondary={<Typography noWrap sx={{ fontSize: 12, lineHeight: 1.2 }}>{req.fromUser.domain || ''}</Typography>}
                     />
                   </ListItem>
                 ))}
@@ -366,7 +362,6 @@ export const ContactsPage: React.FC = () => {
                     </BoxAny>
                   }
                   secondary={null}
-                  slotProps={{ primary: { sx: { my: 0 } } }}
                 />
               </ListItem>
             </List>
@@ -434,13 +429,9 @@ export const ContactsPage: React.FC = () => {
                       }
                       secondary={
                         user.domain
-                          ? `${user.domain} · ${t('contacts.friend')}`
-                          : t('contacts.friend')
+                          ? <Typography noWrap sx={{ fontSize: 12, lineHeight: 1.2 }}>{`${user.domain} · ${t('contacts.friend')}`}</Typography>
+                          : <Typography sx={{ fontSize: 12, lineHeight: 1.2 }}>{t('contacts.friend')}</Typography>
                       }
-                      slotProps={{
-                        primary: { sx: { my: 0 } },
-                        secondary: { noWrap: true, sx: { fontSize: 12, lineHeight: 1.2 } },
-                      }}
                     />
                   </ListItem>
                 ))}
@@ -508,11 +499,7 @@ export const ContactsPage: React.FC = () => {
                           {user.isDisabled && <Typography variant="caption" sx={{ color: 'warning.main', whiteSpace: 'nowrap' }}>{t('contacts.disabled')}</Typography>}
                         </BoxAny>
                       }
-                      secondary={user.domain || ''}
-                      slotProps={{
-                        primary: { sx: { my: 0 } },
-                        secondary: { noWrap: true, sx: { fontSize: 12, lineHeight: 1.2 } },
-                      }}
+                      secondary={user.domain ? <Typography noWrap sx={{ fontSize: 12, lineHeight: 1.2 }}>{user.domain}</Typography> : null}
                     />
                   </ListItem>
                 ))}

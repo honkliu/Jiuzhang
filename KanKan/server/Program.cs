@@ -238,6 +238,8 @@ if (useInMemory)
     builder.Services.AddSingleton<KanKan.API.Repositories.Interfaces.INotebookPageRepository, KanKan.API.Repositories.Implementations.InMemoryNotebookRepository>();
     builder.Services.AddSingleton<KanKan.API.Repositories.Interfaces.IReceiptRepository, KanKan.API.Repositories.Implementations.InMemoryReceiptRepository>();
     builder.Services.AddSingleton<KanKan.API.Repositories.Interfaces.IReceiptVisitRepository, KanKan.API.Repositories.Implementations.InMemoryReceiptRepository>();
+    // Phase 5: MedicalRecordIndex repository
+    builder.Services.AddSingleton<KanKan.API.Repositories.Interfaces.IMedicalRecordIndexRepository, KanKan.API.Repositories.Implementations.InMemoryMedicalRecordIndexRepository>();
 }
 else if (storageMode == "mongodb")
 {
@@ -261,6 +263,13 @@ else if (storageMode == "mongodb")
     builder.Services.AddScoped<KanKan.API.Repositories.Interfaces.INotebookPageRepository, KanKan.API.Repositories.Implementations.NotebookPageRepository>();
     builder.Services.AddScoped<KanKan.API.Repositories.Interfaces.IReceiptRepository, KanKan.API.Repositories.Implementations.ReceiptRepository>();
     builder.Services.AddScoped<KanKan.API.Repositories.Interfaces.IReceiptVisitRepository, KanKan.API.Repositories.Implementations.ReceiptVisitRepository>();
+    // Phase 5: MedicalRecordIndex repository
+    builder.Services.AddScoped<KanKan.API.Repositories.Interfaces.IMedicalRecordIndexRepository, KanKan.API.Repositories.Implementations.MedicalRecordIndexRepository>();
+    // Photo album services (MongoDB only)
+    builder.Services.AddScoped<IPhotoRepository, PhotoRepository>();
+    builder.Services.AddScoped<PhotoService>();
+    builder.Services.AddScoped<IAutoAssociateService, AutoAssociateService>();
+    builder.Services.AddScoped<IVisitStatsService, VisitStatsService>();
 }
 
 builder.Services.AddScoped<IEmailService, EmailService>();

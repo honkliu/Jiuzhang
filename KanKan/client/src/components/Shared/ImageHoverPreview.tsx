@@ -313,6 +313,7 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
     <>
       {open && isTouchDevice && (
         <Box
+          // @ts-expect-error - TS2590 union type complexity
           onClick={() => closePreview(true)}
           onTouchStart={stopTouchPropagation}
           sx={{

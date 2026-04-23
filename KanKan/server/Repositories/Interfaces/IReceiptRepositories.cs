@@ -21,3 +21,16 @@ public interface IReceiptVisitRepository
     Task<ReceiptVisit> UpdateAsync(ReceiptVisit visit);
     Task DeleteAsync(string id);
 }
+
+/// <summary>
+/// Phase 5 新增: 病案号索引仓库接口.
+/// </summary>
+public interface IMedicalRecordIndexRepository
+{
+    Task<List<MedicalRecordIndex>> GetByOwnerIdAsync(string ownerId);
+    Task<MedicalRecordIndex?> GetByIdAsync(string id);
+    Task<MedicalRecordIndex?> GetByOwnerIdAndNumberAsync(string ownerId, string medicalRecordNumber);
+    Task<MedicalRecordIndex> CreateAsync(MedicalRecordIndex index);
+    Task<MedicalRecordIndex> UpdateAsync(MedicalRecordIndex index);
+    Task DeleteAsync(string id);
+}

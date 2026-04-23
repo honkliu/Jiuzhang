@@ -99,8 +99,20 @@ public class Receipt
     public List<LabResultItem> LabResults { get; set; } = new();
     public string? ImagingFindings { get; set; }
 
-    /// <summary>Groups related hospital receipts by visit</summary>
+/// <summary>Photo-First: primary photo ID from which this receipt was extracted</summary>
+    public string SourcePhotoId { get; set; } = string.Empty;
+
+    /// <summary>Photo-First: additional page photos for multi-page receipts</summary>
+    public List<string> AdditionalPhotoIds { get; set; } = new();
+
+    /// <summary>Medical record number (病案号/住院号) for cross-visit grouping</summary>
+    public string? MedicalRecordNumber { get; set; }
+
+    /// <summary>关联的 ReceiptVisit Id (用于旧版/非病案号查询模式)</summary>
     public string? VisitId { get; set; }
+
+    /// <summary>医保编号 (与 ReceiptVisit.InsuranceNumber 同步)</summary>
+    public string? InsuranceNumber { get; set; }
 
     /// <summary>HL7 FHIR resource type hint for interoperability</summary>
     public string? FhirResourceType { get; set; }
@@ -152,6 +164,7 @@ public class LabResultItem
 
 /// <summary>
 /// Groups related hospital receipts into a single visit/encounter.
+/// Phase 5 增强: 新增 MedicalRecordNumber 和 InsuranceNumber 字段.
 /// </summary>
 [BsonIgnoreExtraElements]
 public class ReceiptVisit
@@ -164,7 +177,52 @@ public class ReceiptVisit
     public string? PatientName { get; set; }
     public string? DoctorName { get; set; }
     public string? Notes { get; set; }
+
+    // ── Phase 5 新增字段 ──
+
+    /// <summary>病案号/住院号 — 核心关联键, 用于跨就诊历史查询</summary>
+    public string? MedicalRecordNumber { get; set; }
+
+    /// <summary>医保编号</summary>
+    public string? InsuranceNumber { get; set; }
+
     public List<string> Tags { get; set; } = new();
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
+}
+
+/// <summary>
+/// Medical Record Index — 病案号索引实体.
+/// 一个病案号对应一个患者在一家医院的完整就诊周期, 聚合该病案号下的所有就诊ID和关联收据.
+/// Phase 5 新增实体.
+/// </summary>
+[BsonIgnoreExtraElements]
+public class MedicalRecordIndex
+{
+    public string Id { get; set; } = string.Empty;
+    public string OwnerId { get; set; } = string.Empty;
+
+    // 核心关联键
+    /// <summary>病案号/住院号</summary>
+    public string MedicalRecordNumber { get; set; } = string.Empty;
+
+    /// <summary>医院名称</summary>
+    public string HospitalName { get; set; } = string.Empty;
+
+    // 聚合的患者数据 (从首个遇到的 receipt 提取)
+    /// <summary>患者姓名</summary>
+    public string PatientName { get; set; } = string.Empty;
+
+    /// <summary>医保类型</summary>
+    public string? InsuranceType { get; set; }
+
+    // 所有关联的就诊 ID
+    /// <summary>关联的 ReceiptVisit IDs</summary>
+    public List<string> VisitIds { get; set; } = new();
+
+    /// <summary>直接关联的 Receipt IDs</summary>
+    public List<string> ReceiptIds { get; set; } = new();
+
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 }

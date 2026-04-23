@@ -531,6 +531,7 @@ public class ReceiptController : ControllerBase
         ReceiptDate = r.ReceiptDate,
         OutpatientNumber = r.OutpatientNumber,
         MedicalInsuranceNumber = r.MedicalInsuranceNumber,
+        InsuranceNumber = r.InsuranceNumber,
         InsuranceType = r.InsuranceType,
         MedicalInsuranceFundPayment = r.MedicalInsuranceFundPayment,
         PersonalSelfPay = r.PersonalSelfPay,

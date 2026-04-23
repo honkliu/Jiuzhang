@@ -84,10 +84,9 @@ export const ForgotPassword: React.FC = () => {
     }
   };
 
-
   return (
     <Container component="main" maxWidth="sm">
-      <Box sx={{ marginTop: 8, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         <Paper elevation={3} sx={{ p: 4, width: '100%' }}>
           <Typography component="h1" variant="h4" align="center" gutterBottom>
             {t('auth.forgot.title')}
@@ -141,14 +140,14 @@ export const ForgotPassword: React.FC = () => {
                 {loading ? <CircularProgress size={24} /> : t('auth.forgot.send')}
               </Button>
 
-              <Box sx={{ textAlign: 'center', mt: 2 }}>
+              <div style={{ textAlign: 'center', marginTop: 8 }}>
                 <Typography variant="body2" color="text.secondary">
                   {t('auth.forgot.remembered')}{' '}
                   <Link to="/login" style={{ color: '#1976d2', textDecoration: 'none' }}>
                     {t('auth.login.signIn')}
                   </Link>
                 </Typography>
-              </Box>
+              </div>
             </form>
           ) : (
             <form onSubmit={handleResetPassword}>
@@ -220,7 +219,7 @@ export const ForgotPassword: React.FC = () => {
             </form>
           )}
         </Paper>
-      </Box>
+      </div>
     </Container>
   );
 };
