@@ -9,7 +9,7 @@ import {
   type UpdateReceiptRequest,
 } from '@/services/receipt.service';
 
-export const RECEIPT_OCR_PROMPT = `仔细识别图像中的文字、公式或抽取票据、证件、表单中的信息，注意这些票据你应该认识，因此你要根据你的知识来判断和提取正确的信息。注意票据有可能是中国，有可能是国外的，因此要在返回的md和json中要包含货币单位和交税信息等。请输出两部分，用===JSON===分隔：第一部分是Markdown格式的票据内容，用于展示,格式等于或接近图像中的文字格式，放在<OMD1></OMD1><OMD2></OMD2>之间。第二部分：JSON格式的原始提取数据，忠实反映图像中识别到的所有字段和数据，不要遗漏任何信息，内容放在<JMD1></JMD1><JMD2></JMD2>之间。因为一个照片里面可能会有多个receipts，<OMD>对应于receipt的数量。<OMD>和<JMD>要对应，内容不要翻译，要对应于原文。`;
+export const RECEIPT_OCR_PROMPT = `仔细识别图像中的文字、公式或抽取票据、证件、表单中的信息，注意这些票据你应该认识，因此你要根据你的知识来判断和提取正确的信息。注意票据有可能是中国，有可能是国外的，因此要在返回的md和json中要包含货币单位和交税信息等。请输出两部分，用===JSON===分隔：第一部分是Markdown格式的票据内容，用于展示,格式等于或接近图像中的文字格式，放在<OMD1></OMD1><OMD2></OMD2>...之间。第二部分：JSON格式的原始提取数据，忠实反映图像中识别到的所有字段和数据，不要遗漏任何信息，内容放在<JMD1></JMD1><JMD2></JMD2>...之间。因为一个照片里面可能会有多个receipts，<OMD>对应于receipt的数量。如果只有一个收据，则只有一个<OMD1></OMD1><JMD1></JMD1>，依次类推<OMD>和<JMD>要对应，内容不要翻译，要对应于原文。`;
 
 export const RECEIPT_MAP_PROMPT = `根据以下OCR提取的票据数据，判断这是医疗票据还是购物票据还是其他类型，然后映射到我们的数据Schema，返回纯JSON数组，不要包含代码块标记。
 
@@ -446,6 +446,18 @@ const filterDedupCandidates = (receipt: ExtractedReceiptDraft, receipts: Receipt
   return datedCandidates.length > 0 ? [...datedCandidates, ...undatedCandidates] : receipts.filter(r => !!r.rawText);
 };
 
+const normalizeReceiptDateForApi = (value?: string) => {
+  const parsed = parseDateInput(value);
+  if (!parsed) {
+    return undefined;
+  }
+
+  const year = parsed.getFullYear();
+  const month = String(parsed.getMonth() + 1).padStart(2, '0');
+  const day = String(parsed.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}T00:00:00`;
+};
+
 export const buildCreateReceiptRequestFromDraft = (
   imageUrl: string,
   receipt: ExtractedReceiptDraft,
@@ -457,7 +469,7 @@ export const buildCreateReceiptRequestFromDraft = (
   sourcePhotoId: options?.sourcePhotoId,
   additionalPhotoIds: options?.additionalPhotoIds,
   rawText: receipt.rawText || undefined,
-  receiptDate: receipt.receiptDate || undefined,
+  receiptDate: normalizeReceiptDateForApi(receipt.receiptDate),
   notes: receipt.notes || undefined,
   totalAmount: receipt.totalAmount,
   taxAmount: receipt.taxAmount,
@@ -493,7 +505,7 @@ const buildUpdateRequest = (receipt: ExtractedReceiptDraft): UpdateReceiptReques
   totalAmount: receipt.totalAmount,
   taxAmount: receipt.taxAmount,
   currency: normalizeCurrencyCode(receipt.currency) || 'CNY',
-  receiptDate: receipt.receiptDate || undefined,
+  receiptDate: normalizeReceiptDateForApi(receipt.receiptDate),
   outpatientNumber: receipt.outpatientNumber || undefined,
   medicalInsuranceNumber: receipt.medicalInsuranceNumber || undefined,
   insuranceType: receipt.insuranceType || undefined,
