@@ -43,7 +43,6 @@ const navItems = [
   { label: 'Contacts', path: '/contacts', adminOnly: false },
   { label: 'Notebook', path: '/notebook', adminOnly: false },
   { label: 'Receipts', path: '/receipts', adminOnly: false },
-  { label: 'PhotoAlbum', path: '/photos', adminOnly: false },
   { label: 'FamilyTree', path: '/family', adminOnly: true },
   { label: 'admin.title', path: '/admin', adminOnly: true },
 ];

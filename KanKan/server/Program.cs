@@ -607,7 +607,8 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseWhen(
-    context => context.Request.Path.StartsWithSegments("/uploads"),
+    context => context.Request.Path.StartsWithSegments("/uploads")
+        && !context.Request.Path.StartsWithSegments("/uploads/receipts"),
     uploadBranch =>
     {
         uploadBranch.UseAuthentication();

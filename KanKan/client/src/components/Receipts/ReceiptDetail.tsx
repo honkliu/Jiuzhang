@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import {
   Box, Typography, IconButton, Paper, Collapse,
-  Dialog, DialogContent, Table, TableBody, TableCell, TableContainer,
+  Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow,
 } from '@mui/material';
 import {
@@ -17,8 +17,11 @@ import rehypeKatex from 'rehype-katex';
 import type { ReceiptDto } from '@/services/receipt.service';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { formatDateZhCN } from '@/utils/date';
+import { ImageLightbox } from '@/components/Shared/ImageLightbox';
 
 const BoxAny = Box as any;
+
+const shouldShowMedicalAmount = (receipt: ReceiptDto) => receipt.category === 'PaymentReceipt';
 
 const restorePipesInMath = () => {
   return (tree: any) => {
@@ -178,15 +181,6 @@ const renderMarkdownWithRedTags = (input: string) => {
   return nodes;
 };
 
-const hasMarkdownSyntax = (text: string): boolean =>
-  /^#{1,6}\s/m.test(text) ||
-  /^[-*+]\s/m.test(text) ||
-  /^\d+\.\s/m.test(text) ||
-  /^```/m.test(text) ||
-  /\*\*.+\*\*/m.test(text) ||
-  /^>/m.test(text) ||
-  /\|.+\|.+\|/m.test(text);
-
 const plainTextSx = {
   whiteSpace: 'pre-wrap' as const,
   '& .katex-display': { margin: '0.5em 0', overflowX: 'auto', overflowY: 'hidden' },
@@ -225,8 +219,7 @@ const markdownSx = {
 };
 
 const MarkdownOrPlainText: React.FC<{ text: string }> = ({ text }) => {
-  const isMd = hasMarkdownSyntax(text);
-  return <BoxAny sx={isMd ? markdownSx : plainTextSx}>{renderMarkdownWithRedTags(text)}</BoxAny>;
+  return <BoxAny sx={markdownSx}>{renderMarkdownWithRedTags(text)}</BoxAny>;
 };
 
 const currencySymbol = (currency?: string): string => {
@@ -334,12 +327,15 @@ interface ReceiptDetailProps {
 
 export const ReceiptDetail: React.FC<ReceiptDetailProps> = ({ receipt, allReceipts = [], onBack, onDelete }) => {
   const { t } = useLanguage();
-  const [imageOpen, setImageOpen] = useState(false);
-  const [selectedImage, setSelectedImage] = useState('');
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [expandedLab, setExpandedLab] = useState<string | null>(null);
-  const [showRawText, setShowRawText] = useState(false);
+  const [showRawText, setShowRawText] = useState(Boolean(receipt.rawText));
 
-  const openImage = (url: string) => { setSelectedImage(url); setImageOpen(true); };
+  const receiptImages = useMemo(() => [receipt.imageUrl, ...receipt.additionalImageUrls].filter(Boolean), [receipt.additionalImageUrls, receipt.imageUrl]);
+  const openImage = (url: string) => {
+    const index = receiptImages.findIndex((item) => item === url);
+    setLightboxIndex(index >= 0 ? index : 0);
+  };
 
   // Build lab history map
   const labHistoryMap = useMemo(() => {
@@ -441,12 +437,14 @@ export const ReceiptDetail: React.FC<ReceiptDetailProps> = ({ receipt, allReceip
         <ShoppingDocument receipt={receipt} dateStr={dateStr} t={t} />
       )}
 
-      {/* Image zoom dialog */}
-      <Dialog open={imageOpen} onClose={() => setImageOpen(false)} maxWidth="lg">
-        <DialogContent sx={{ p: 0 }}>
-          <BoxAny component="img" src={selectedImage} sx={{ width: '100%', display: 'block' }} />
-        </DialogContent>
-      </Dialog>
+      {lightboxIndex !== null && receiptImages.length > 0 && (
+        <ImageLightbox
+          images={receiptImages}
+          initialIndex={lightboxIndex}
+          open
+          onClose={() => setLightboxIndex(null)}
+        />
+      )}
     </BoxAny>
   );
 };
@@ -465,6 +463,12 @@ const MedicalDocument: React.FC<{
   hasLabHistory: (name: string) => boolean;
 }> = ({ receipt, dateStr, t, labHistoryMap, expandedLab, setExpandedLab, hasLabHistory }) => {
   const cat = receipt.category;
+  const hasPaymentBreakdown = receipt.medicalInsuranceFundPayment != null
+    || receipt.personalAccountPayment != null
+    || receipt.personalSelfPay != null
+    || receipt.personalOutOfPocket != null
+    || receipt.cashPayment != null
+    || receipt.otherPayments != null;
 
   return (
     <>
@@ -750,7 +754,7 @@ const MedicalDocument: React.FC<{
             <Typography sx={valueSx}>{receipt.doctorName || '—'}</Typography>
             <Typography sx={labelSx}>日　期</Typography>
             <Typography sx={valueSx}>{dateStr || '—'}</Typography>
-            {receipt.totalAmount != null && (
+            {shouldShowMedicalAmount(receipt) && receipt.totalAmount != null && (
               <>
                 <Typography sx={labelSx}>挂号费</Typography>
                 <Typography sx={{ ...valueSx, fontWeight: 700 }}>¥{receipt.totalAmount.toFixed(2)}</Typography>
@@ -820,12 +824,7 @@ const MedicalDocument: React.FC<{
             </BoxAny>
           )}
 
-          {(receipt.medicalInsuranceFundPayment != null
-            || receipt.personalAccountPayment != null
-            || receipt.personalSelfPay != null
-            || receipt.personalOutOfPocket != null
-            || receipt.cashPayment != null
-            || receipt.otherPayments != null) && (
+          {hasPaymentBreakdown && (
             <BoxAny sx={{ px: 2, py: 1.5, borderTop: '1px solid #ddd' }}>
               <Typography sx={{ fontSize: '0.92rem', fontWeight: 700, mb: 1 }}>支付拆分</Typography>
               {receipt.medicalInsuranceFundPayment != null && (
@@ -983,7 +982,7 @@ const GenericInfoCard: React.FC<{
         )}
         <Typography sx={labelSx}>日期</Typography>
         <Typography sx={valueSx}>{dateStr || '—'}</Typography>
-        {receipt.totalAmount != null && (
+        {shouldShowMedicalAmount(receipt) && receipt.totalAmount != null && (
           <><Typography sx={labelSx}>金额</Typography><Typography sx={{ ...valueSx, fontWeight: 700 }}>{symbol}{receipt.totalAmount.toFixed(2)}</Typography></>
         )}
         {receipt.taxAmount != null && (

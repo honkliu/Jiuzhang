@@ -130,6 +130,8 @@ export interface CreateReceiptRequest {
   category: string;
   imageUrl: string;
   additionalImageUrls?: string[];
+  sourcePhotoId?: string;
+  additionalPhotoIds?: string[];
   rawText?: string;
   merchantName?: string;
   hospitalName?: string;

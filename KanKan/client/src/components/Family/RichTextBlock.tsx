@@ -108,7 +108,7 @@ export const RichTextBlockWithRegistry: React.FC<RichTextBlockProps & { blockId:
         link: { openOnClick: false, enableClickSelection: true },
         bulletList: { keepMarks: true, keepAttributes: true },
         orderedList: { keepMarks: true, keepAttributes: true },
-        dropcursor: { color: '#FF0000', width: 4 },
+        dropcursor: { color: 'rgba(15, 23, 42, 0.18)', width: 2 },
       }),
       HorizontalRule,
       FamilyImageResize.configure({ inline: false }),

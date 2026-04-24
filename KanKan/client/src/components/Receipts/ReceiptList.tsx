@@ -110,6 +110,9 @@ export const ReceiptList: React.FC<ReceiptListProps> = ({ receipts, allReceipts,
 
   const handleItemClick = (e: React.MouseEvent, receiptId: string, itemIndex: number, itemName: string) => {
     e.stopPropagation();
+    const selectedText = window.getSelection()?.toString().trim();
+    if (selectedText) return;
+
     const normalized = normalizeItemName(itemName);
     const history = itemHistoryMap.get(normalized);
     if (!history || history.length <= 1) return;
@@ -128,10 +131,12 @@ export const ReceiptList: React.FC<ReceiptListProps> = ({ receipts, allReceipts,
     return (itemHistoryMap.get(key)?.length || 0) > 1;
   };
 
+  const shouldIgnoreSelectionClick = () => !!window.getSelection()?.toString().trim();
+
   if (receipts.length === 0) {
     return (
       <BoxAny sx={{ textAlign: 'center', py: 8, color: 'text.secondary' }}>
-        <Typography>{t('receipts.empty')}</Typography>
+        <Typography>暂无票据</Typography>
       </BoxAny>
     );
   }
@@ -150,7 +155,10 @@ export const ReceiptList: React.FC<ReceiptListProps> = ({ receipts, allReceipts,
               borderColor: 'divider',
               '&:hover': { bgcolor: 'rgba(0,0,0,0.03)' },
             }}
-            onClick={() => onSelect(r)}
+            onClick={() => {
+              if (shouldIgnoreSelectionClick()) return;
+              onSelect(r);
+            }}
           >
             {onToggleChecked && (
               <Checkbox

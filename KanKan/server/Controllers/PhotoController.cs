@@ -27,6 +27,14 @@ public class PhotoController : ControllerBase
         return CreatedAtAction(nameof(GetById), new { id = photo.Id }, photo);
     }
 
+    [HttpPost("upload")]
+    [RequestSizeLimit(50 * 1024 * 1024)]
+    public async Task<IActionResult> UploadForm([FromForm] PhotoUploadFormRequest request)
+    {
+        var photo = await _photoService.UploadFormAsync(GetUserId(), request);
+        return CreatedAtAction(nameof(GetById), new { id = photo.Id }, photo);
+    }
+
     [HttpPost("batch")]
     public async Task<IActionResult> UploadBatch([FromBody] PhotoUploadBatchRequest request)
     {

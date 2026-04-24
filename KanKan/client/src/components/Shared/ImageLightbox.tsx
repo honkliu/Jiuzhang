@@ -19,7 +19,7 @@ import { ImageHoverPreview } from '@/components/Shared/ImageHoverPreview';
 
 const BoxAny = Box as any;
 
-interface LightboxGroup {
+export interface LightboxGroup {
   sourceUrl: string;
   messageId: string;
   canEdit: boolean;
@@ -108,15 +108,19 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
   const thumbnailStripRef = useRef<HTMLDivElement | null>(null);
   const suppressSelectedImageClearUntilRef = useRef(0);
   const isIos = /iP(ad|hone|od)/i.test(navigator.userAgent);
+  const selectableImageKindLabels: Record<ScopedSelectableImage['kind'], string> = {
+    source: '原图',
+    edit: '编辑图',
+    standing: '参考图',
+  };
 
   const hasGroups = Boolean(groups && groups.length > 0);
   const activeGroup = hasGroups ? groups![Math.min(activeGroupIndex, groups!.length - 1)] : null;
   const sourceImages = useMemo(() => (hasGroups ? groups!.map((group) => group.sourceUrl) : images), [groups, hasGroups, images]);
-  const getImageDisplayName = useCallback((url: string) => {
-    const fileName = url.split('?')[0].split('/').filter(Boolean).pop() ?? url;
-    const decoded = decodeURIComponent(fileName);
-    return decoded.replace(/\.[^.]+$/, '');
-  }, []);
+  const getSelectableImageLabel = useCallback((kind: ScopedSelectableImage['kind'], index: number) => {
+    const baseLabel = selectableImageKindLabels[kind];
+    return `${baseLabel} ${index + 1}`;
+  }, [selectableImageKindLabels]);
 
   const scopedSelectableImages = useMemo(() => {
     if (!groups?.length) {
@@ -125,16 +129,23 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
 
     const seen = new Set<string>();
     const results: ScopedSelectableImage[] = [];
+    const counters: Record<ScopedSelectableImage['kind'], number> = {
+      source: 0,
+      edit: 0,
+      standing: 0,
+    };
     const append = (url: string, kind: 'source' | 'edit' | 'standing', scopeKey: string) => {
       if (!url || seen.has(url)) {
         return;
       }
 
       seen.add(url);
+      const kindIndex = counters[kind];
+      counters[kind] += 1;
       results.push({
         key: `${scopeKey}:${kind}:${url}`,
         url,
-        label: getImageDisplayName(url),
+        label: getSelectableImageLabel(kind, kindIndex),
         kind,
       });
     };
@@ -151,7 +162,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
     }
 
     return results;
-  }, [generatedByGroup, getImageDisplayName, groups, standingImageUrls]);
+  }, [generatedByGroup, getSelectableImageLabel, groups, standingImageUrls]);
 
   const activeGeneratedUrls = useMemo(() => {
     if (!activeGroup) return [];
@@ -180,6 +191,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
     : currentIndex;
   const thumbnailBottomInset = 'env(safe-area-inset-bottom)';
   const thumbnailCornerRadius = '2px';
+  const groupedThumbnailCornerRadius = '10px';
   const groupedThumbnailSize = isMobile ? 40 : 48;
   const plainThumbnailSize = isMobile ? 46 : 54;
   const thumbnailStripButtonSize = 28;
@@ -1537,7 +1549,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
                                 flexShrink: 0,
                                 width: groupedThumbnailSize,
                                 height: groupedThumbnailSize,
-                                borderRadius: thumbnailCornerRadius,
+                                borderRadius: groupedThumbnailCornerRadius,
                                 overflow: 'hidden',
                                 cursor: 'pointer',
                                 scrollSnapAlign: isMobile ? 'center' : 'none',
@@ -1585,7 +1597,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
                               flexShrink: 0,
                               width: groupedThumbnailSize,
                               height: groupedThumbnailSize,
-                              borderRadius: thumbnailCornerRadius,
+                              borderRadius: groupedThumbnailCornerRadius,
                               overflow: 'hidden',
                               cursor: 'pointer',
                               scrollSnapAlign: isMobile ? 'center' : 'none',
@@ -1620,7 +1632,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
                                       flexShrink: 0,
                                       width: groupedThumbnailSize,
                                       height: groupedThumbnailSize,
-                                      borderRadius: thumbnailCornerRadius,
+                                      borderRadius: groupedThumbnailCornerRadius,
                                       overflow: 'hidden',
                                       cursor: 'pointer',
                                       scrollSnapAlign: isMobile ? 'center' : 'none',

@@ -26,6 +26,9 @@ public class PhotoAlbum
     /// <summary>Relative storage path for files stored on disk</summary>
     public string? FilePath { get; set; }
 
+    /// <summary>Public relative URL for direct image rendering</summary>
+    public string? ImageUrl { get; set; }
+
     /// <summary>Original upload date (UTC)</summary>
     public DateTime UploadedAt { get; set; }
 

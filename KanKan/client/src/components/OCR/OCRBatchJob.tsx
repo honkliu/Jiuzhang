@@ -5,7 +5,8 @@ import {
   CircularProgress, Button, Stack,
 } from '@mui/material';
 import { ExpandMore } from '@mui/icons-material';
-import { photoService, type BatchExtractResult } from '@/services/photo.service';
+import { photoService, type BatchExtractResult, type PhotoDto } from '@/services/photo.service';
+import { runLegacyReceiptExtractionForPhoto } from '@/services/legacyReceiptExtraction.service';
 
 interface OCRBatchJobProps {
   photoIds: string[];
@@ -20,8 +21,32 @@ const OCRBatchJob: React.FC<OCRBatchJobProps> = ({ photoIds }) => {
     setLoading(true);
     setActiveStep(1);
     try {
-      const response = await photoService.batchExtract(photoIds);
-      setResults(response.results);
+      const photos = await photoService.list();
+      const photoMap = new Map<string, PhotoDto>(photos.map(photo => [photo.id, photo]));
+      const nextResults: BatchExtractResult[] = [];
+
+      for (const photoId of photoIds) {
+        const photo = photoMap.get(photoId);
+        if (!photo) {
+          nextResults.push({
+            photoId,
+            status: 'Failed',
+            error: 'Photo not found',
+            savedReceiptCount: 0,
+            newReceiptCount: 0,
+            overwrittenReceiptCount: 0,
+            savedReceiptIds: [],
+            parsedReceipts: [],
+          });
+          continue;
+        }
+
+        const result = await runLegacyReceiptExtractionForPhoto(photo);
+        nextResults.push(result);
+        setResults([...nextResults]);
+      }
+
+      setResults(nextResults);
       setActiveStep(2);
     } catch (e) {
       console.error('Failed to start OCR:', e);
@@ -112,6 +137,7 @@ const ReceiptPreview: React.FC<{
   photoId: string;
   photoImageUrl?: string;
 }> = ({ receipt, photoId: _photoId }) => {
+  const shouldShowAmount = receipt.type !== 'Medical' || receipt.category === 'PaymentReceipt';
   return (
     <Box sx={{ p: 1.5, bgcolor: 'rgba(0,0,0,0.02)', borderRadius: 1 }}>
       <Box sx={{ display: 'flex', gap: 0.5, mb: 0.5 }}>
@@ -120,7 +146,7 @@ const ReceiptPreview: React.FC<{
       </Box>
       <Typography variant="body2">{receipt.merchantName || receipt.hospitalName || '未识别'}</Typography>
       <Typography variant="caption" color="text.secondary">
-        {receipt.totalAmount != null ? `${receipt.currency || 'CNY'} ${receipt.totalAmount}` : ''}
+        {shouldShowAmount && receipt.totalAmount != null ? `${receipt.currency || 'CNY'} ${receipt.totalAmount}` : ''}
       </Typography>
       {receipt.items && receipt.items.length > 0 && (
         <Typography variant="caption" color="text.secondary">

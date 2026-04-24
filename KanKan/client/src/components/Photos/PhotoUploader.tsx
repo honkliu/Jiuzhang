@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Box, Typography, LinearProgress, List, ListItem, ListItemText, Chip } from '@mui/material';
 import { CloudUpload, CheckCircle, Error as ErrorIcon } from '@mui/icons-material';
+import * as exifr from 'exifr';
 import { photoService, type PhotoDto } from '@/services/photo.service';
 
 interface PhotoUploaderProps {
@@ -23,7 +24,7 @@ const PhotoUploader: React.FC<PhotoUploaderProps> = ({ onComplete, maxFiles = 20
   };
 
   const uploadAll = async (fileList: typeof files) => {
-    const items: Array<{ fileName: string; contentType: string; fileSize: number; base64Data: string }> = [];
+    const uploadedPhotos: PhotoDto[] = [];
 
     for (const f of fileList) {
       if (f.status === 'done') continue;
@@ -31,13 +32,13 @@ const PhotoUploader: React.FC<PhotoUploaderProps> = ({ onComplete, maxFiles = 20
       setFiles([...fileList]);
 
       try {
-        const base64 = await readFileAsBase64(f.file);
-        items.push({
-          fileName: f.file.name,
-          contentType: f.file.type || 'image/jpeg',
-          fileSize: f.file.size,
-          base64Data: base64,
+        const metadata = await readImageMetadata(f.file);
+        const uploaded = await photoService.upload(f.file, {
+          capturedDate: metadata.capturedDate,
+          width: metadata.width,
+          height: metadata.height,
         });
+        uploadedPhotos.push(uploaded);
         f.status = 'done';
         setProgress(Math.round((fileList.filter(x => x.status === 'done').length / fileList.length) * 100));
       } catch (e: unknown) {
@@ -47,29 +48,51 @@ const PhotoUploader: React.FC<PhotoUploaderProps> = ({ onComplete, maxFiles = 20
       setFiles([...fileList]);
     }
 
-    if (items.length > 0) {
-      try {
-        const result = await photoService.uploadBatch(items);
-        if (onComplete) onComplete(result.photos);
-      } catch (e: unknown) {
-        for (const f of fileList) {
-          if (f.status === 'done') {
-            f.status = 'error';
-            f.error = (e as Error).message;
-          }
-        }
-        setFiles([...fileList]);
-      }
+    if (uploadedPhotos.length > 0 && onComplete) {
+      onComplete(uploadedPhotos);
     }
   };
 
-  const readFileAsBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
+  const readImageMetadata = (file: File): Promise<{ capturedDate?: string; width?: number; height?: number }> => {
+    const fallbackCapturedDate = file.lastModified ? new Date(file.lastModified).toISOString() : undefined;
+    const readDimensions = new Promise<{ width?: number; height?: number }>((resolve) => {
+      const objectUrl = URL.createObjectURL(file);
+      const image = new Image();
+
+      image.onload = () => {
+        URL.revokeObjectURL(objectUrl);
+        resolve({
+          width: image.naturalWidth,
+          height: image.naturalHeight,
+        });
+      };
+
+      image.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        resolve({});
+      };
+
+      image.src = objectUrl;
     });
+
+    const readCapturedDate = (async () => {
+      try {
+        const metadata = await exifr.parse(file, ['DateTimeOriginal', 'CreateDate', 'ModifyDate']);
+        const rawDate = metadata?.DateTimeOriginal ?? metadata?.CreateDate ?? metadata?.ModifyDate;
+        if (rawDate instanceof Date && !Number.isNaN(rawDate.getTime())) {
+          return rawDate.toISOString();
+        }
+      } catch {
+        // Fall back to the file timestamp when EXIF metadata is missing or unreadable.
+      }
+
+      return fallbackCapturedDate;
+    })();
+
+    return Promise.all([readDimensions, readCapturedDate]).then(([dimensions, capturedDate]) => ({
+      ...dimensions,
+      capturedDate,
+    }));
   };
 
   const handleDrop = (e: React.DragEvent) => {

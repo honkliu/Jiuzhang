@@ -17,6 +17,10 @@ public class BatchExtractResult
     public string? PhotoImageUrl { get; set; } // URL path to the photo for receipt.ImageUrl
     public string Status { get; set; } = "Pending"; // Pending, Completed, Failed
     public string? Error { get; set; }
+    public int SavedReceiptCount { get; set; }
+    public int NewReceiptCount { get; set; }
+    public int OverwrittenReceiptCount { get; set; }
+    public List<string> SavedReceiptIds { get; set; } = new();
 
     // ── Extraction results (filled when Status == Completed) ──
     /// <summary>Step 1: raw OCR output from vision model (markdown + JSON blocks).</summary>

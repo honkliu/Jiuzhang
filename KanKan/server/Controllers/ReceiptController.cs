@@ -6,6 +6,7 @@ using System.Text.Json;
 using KanKan.API.Models.DTOs.Receipt;
 using KanKan.API.Models.Entities;
 using KanKan.API.Repositories.Interfaces;
+using KanKan.API.Repositories.Implementations;
 
 namespace KanKan.API.Controllers;
 
@@ -16,6 +17,7 @@ public class ReceiptController : ControllerBase
 {
     private readonly IReceiptRepository _receiptRepo;
     private readonly IReceiptVisitRepository _visitRepo;
+    private readonly IPhotoRepository _photoRepo;
     private readonly IWebHostEnvironment _environment;
     private readonly IConfiguration _configuration;
     private readonly IHttpClientFactory _httpClientFactory;
@@ -23,12 +25,14 @@ public class ReceiptController : ControllerBase
     public ReceiptController(
         IReceiptRepository receiptRepo,
         IReceiptVisitRepository visitRepo,
+        IPhotoRepository photoRepo,
         IWebHostEnvironment environment,
         IConfiguration configuration,
         IHttpClientFactory httpClientFactory)
     {
         _receiptRepo = receiptRepo;
         _visitRepo = visitRepo;
+        _photoRepo = photoRepo;
         _environment = environment;
         _configuration = configuration;
         _httpClientFactory = httpClientFactory;
@@ -65,6 +69,8 @@ public class ReceiptController : ControllerBase
             Category = req.Category,
             ImageUrl = req.ImageUrl,
             AdditionalImageUrls = req.AdditionalImageUrls ?? new(),
+            SourcePhotoId = req.SourcePhotoId ?? string.Empty,
+            AdditionalPhotoIds = req.AdditionalPhotoIds ?? new(),
             RawText = req.RawText,
             MerchantName = req.MerchantName,
             HospitalName = req.HospitalName,
@@ -108,6 +114,7 @@ public class ReceiptController : ControllerBase
         };
 
         var created = await _receiptRepo.CreateAsync(receipt);
+        await SyncPhotoAssociationsAsync(GetUserId(), null, created);
         return CreatedAtAction(nameof(GetReceipt), new { id = created.Id }, MapToResponse(created));
     }
 
@@ -172,13 +179,78 @@ public class ReceiptController : ControllerBase
         var receipt = await _receiptRepo.GetByIdAsync(id);
         if (receipt == null || receipt.OwnerId != GetUserId()) return NotFound();
 
-        // Delete associated image files
-        DeleteImageFile(receipt.ImageUrl);
-        foreach (var url in receipt.AdditionalImageUrls)
-            DeleteImageFile(url);
+        var ownsIndependentImages = string.IsNullOrWhiteSpace(receipt.SourcePhotoId)
+            && !(receipt.AdditionalPhotoIds?.Any() ?? false);
+
+        // Only delete files owned by the receipt itself. Photo-backed receipts must not remove source photos.
+        if (ownsIndependentImages)
+        {
+            DeleteImageFile(receipt.ImageUrl);
+            foreach (var url in receipt.AdditionalImageUrls)
+                DeleteImageFile(url);
+        }
 
         await _receiptRepo.DeleteAsync(id);
+        await SyncPhotoAssociationsAsync(GetUserId(), receipt, null);
         return NoContent();
+    }
+
+    private async Task SyncPhotoAssociationsAsync(string ownerId, Receipt? previousReceipt, Receipt? currentReceipt)
+    {
+        var affectedPhotoIds = new HashSet<string>(StringComparer.Ordinal);
+
+        void CollectPhotoIds(Receipt? receipt)
+        {
+            if (receipt == null)
+            {
+                return;
+            }
+
+            if (!string.IsNullOrWhiteSpace(receipt.SourcePhotoId))
+            {
+                affectedPhotoIds.Add(receipt.SourcePhotoId);
+            }
+
+            foreach (var photoId in receipt.AdditionalPhotoIds ?? new List<string>())
+            {
+                if (!string.IsNullOrWhiteSpace(photoId))
+                {
+                    affectedPhotoIds.Add(photoId);
+                }
+            }
+        }
+
+        CollectPhotoIds(previousReceipt);
+        CollectPhotoIds(currentReceipt);
+
+        if (affectedPhotoIds.Count == 0)
+        {
+            return;
+        }
+
+        var allReceipts = await _receiptRepo.GetByOwnerIdAsync(ownerId);
+
+        foreach (var photoId in affectedPhotoIds)
+        {
+            var photo = await _photoRepo.GetByIdAsync(photoId);
+            if (photo == null || photo.OwnerId != ownerId)
+            {
+                continue;
+            }
+
+            var associatedReceiptIds = allReceipts
+                .Where(receipt => receipt.SourcePhotoId == photoId || (receipt.AdditionalPhotoIds?.Contains(photoId) ?? false))
+                .Select(receipt => receipt.Id)
+                .Distinct(StringComparer.Ordinal)
+                .ToList();
+
+            photo.AssociatedReceiptIds = associatedReceiptIds;
+            photo.ExtractedReceiptCount = associatedReceiptIds.Count;
+            photo.LastOcrStatus = associatedReceiptIds.Count > 0 ? "Completed" : "Pending";
+            photo.UpdatedAt = DateTime.UtcNow;
+
+            await _photoRepo.UpdateAsync(photo);
+        }
     }
 
     // ── Visits CRUD ─────────────────────────────────────────────────────────
@@ -357,8 +429,8 @@ public class ReceiptController : ControllerBase
         {
             model,
             messages = ocrMessages,
-            temperature = 0.7,
-            top_p = 0.8,
+            temperature = 0.1,
+            top_p = 0.2,
             top_k = 20,
             min_p = 0.0,
             presence_penalty = 1.5,
@@ -416,8 +488,8 @@ public class ReceiptController : ControllerBase
         {
             model,
             messages = mapMessages,
-            temperature = 0.7,
-            top_p = 0.8,
+            temperature = 0.1,
+            top_p = 0.2,
             top_k = 20,
             min_p = 0.0,
             presence_penalty = 1.5,
@@ -544,6 +616,8 @@ public class ReceiptController : ControllerBase
         VisitId = r.VisitId,
         DiagnosisText = r.DiagnosisText,
         ImagingFindings = r.ImagingFindings,
+        SourcePhotoId = r.SourcePhotoId,
+        AdditionalPhotoIds = r.AdditionalPhotoIds,
         FhirResourceType = r.FhirResourceType,
         Items = r.Items.Select(i => new ReceiptLineItemDto
         {

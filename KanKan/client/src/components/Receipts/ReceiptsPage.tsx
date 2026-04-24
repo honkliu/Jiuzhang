@@ -1,18 +1,18 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
-  Box, Typography, Tabs, Tab, Fab, CircularProgress, Alert, Button,
+  Box, Typography, Tabs, Tab, CircularProgress, Alert, Button,
   Dialog, DialogTitle, DialogContent, DialogActions, List, ListItem,
-  ListItemButton, ListItemText, ListItemIcon, Checkbox, Chip,
+  ListItemButton, ListItemText, ListItemIcon, Checkbox, Chip, Paper,
 } from '@mui/material';
-import { Add as AddIcon, Photo as PhotoIcon, AutoAwesome } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
+import { Photo as PhotoIcon, AutoAwesome } from '@mui/icons-material';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppHeader } from '@/components/Shared/AppHeader';
 import { ReceiptList } from './ReceiptList';
 import { MedicalVisitTimeline } from './MedicalVisitTimeline';
-import { ReceiptCapture } from './ReceiptCapture';
 import { ReceiptDetail } from './ReceiptDetail';
 import { BatchExtractDialog } from './BatchExtractDialog';
+import PhotoAlbumPage from '../Photos/PhotoAlbumPage';
 import { receiptService, type ReceiptDto } from '@/services/receipt.service';
 import { photoService, type PhotoDto } from '@/services/photo.service';
 import { chatService } from '@/services/chat.service';
@@ -24,6 +24,72 @@ import { setActiveChat, fetchMessages } from '@/store/chatSlice';
 import type { RootState, AppDispatch } from '@/store';
 
 const BoxAny = Box as any;
+
+const shouldShowMedicalAmount = (receipt: ReceiptDto) => receipt.category === 'PaymentReceipt';
+
+const BatchPhotoListItem: React.FC<{
+  photo: PhotoDto;
+  selected: boolean;
+  onToggle: (photoId: string) => void;
+}> = ({ photo, selected, onToggle }) => {
+  const imageUrl = photoService.getImageUrl(photo);
+  const photoLabel = photoService.getDisplayLabel(photo);
+
+  return (
+    <ListItem disablePadding>
+      <ListItemButton
+        onClick={() => onToggle(photo.id)}
+        sx={{
+          gap: 1.5,
+          py: 1.25,
+          px: 1.5,
+          borderRadius: '10px',
+          mb: 1,
+          alignItems: 'center',
+          border: selected ? '1px solid rgba(7,193,96,0.4)' : '1px solid rgba(15,23,42,0.08)',
+          background: selected ? 'rgba(7,193,96,0.08)' : 'rgba(255,255,255,0.92)',
+          '&:hover': {
+            background: selected ? 'rgba(7,193,96,0.12)' : 'rgba(15,23,42,0.03)',
+          },
+        }}
+      >
+        <ListItemIcon sx={{ minWidth: 36 }}>
+          <Checkbox
+            edge="start"
+            checked={selected}
+            tabIndex={-1}
+            disableRipple
+          />
+        </ListItemIcon>
+        <Box sx={{ width: 64, height: 64, borderRadius: 2, overflow: 'hidden', flexShrink: 0, bgcolor: 'rgba(15,23,42,0.06)' }}>
+          {imageUrl ? (
+            <img
+              src={imageUrl}
+              alt={photoLabel}
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            />
+          ) : null}
+        </Box>
+        <ListItemText
+          primary={
+            <Typography variant="body2" fontWeight={600} noWrap>
+              {photoLabel}
+            </Typography>
+          }
+          secondary={
+            <Box sx={{ mt: 0.5, display: 'flex', gap: 0.75, flexWrap: 'wrap', alignItems: 'center' }}>
+              <Chip size="small" label={`${Math.max(1, Math.round(photo.fileSize / 1024))} KB`} variant="outlined" />
+              <Chip size="small" label="待提取" color="warning" variant="outlined" />
+              <Typography variant="caption" color="text.secondary">
+                上传于 {new Date(photo.uploadedAt).toLocaleDateString('zh-CN')}
+              </Typography>
+            </Box>
+          }
+        />
+      </ListItemButton>
+    </ListItem>
+  );
+};
 
 const currencySymbol = (currency?: string): string => {
   const normalized = currency?.trim().toUpperCase();
@@ -109,7 +175,6 @@ const serializeMedicalReceipt = (receipt: ReceiptDto): string[] => {
       pushIfPresent('科室', receipt.department);
       pushIfPresent('医生', receipt.doctorName);
       pushIfPresent('日期', date && date !== '—' ? date : undefined);
-      if (receipt.totalAmount != null) lines.push(`挂号费: ${sym}${receipt.totalAmount.toFixed(2)}`);
       break;
     case 'Diagnosis':
     case 'DischargeNote':
@@ -176,7 +241,7 @@ const serializeMedicalReceipt = (receipt: ReceiptDto): string[] => {
           lines.push(`- ${item.name}: ${amount}`);
         });
       }
-      if (receipt.totalAmount != null) lines.push(`合计: ${sym}${receipt.totalAmount.toFixed(2)}`);
+      if (shouldShowMedicalAmount(receipt) && receipt.totalAmount != null) lines.push(`合计: ${sym}${receipt.totalAmount.toFixed(2)}`);
       {
         const paymentBreakdown = [
           receipt.medicalInsuranceFundPayment != null ? `医保统筹支付 ${sym}${receipt.medicalInsuranceFundPayment.toFixed(2)}` : '',
@@ -266,15 +331,15 @@ interface TimelineEvent {
 export const ReceiptsPage: React.FC = () => {
   const { t } = useLanguage();
   const navigate = useNavigate();
+  const location = useLocation();
   const dispatch = useDispatch<AppDispatch>();
   const chats = useSelector((state: RootState) => state.chat.chats);
-  const [tab, setTab] = useState(0); // 0=Shopping, 1=Medical
+  const [tab, setTab] = useState(0); // 0=Shopping, 1=Medical, 2=Photos
   const [shoppingReceipts, setShoppingReceipts] = useState<ReceiptDto[]>([]);
   const [medicalReceipts, setMedicalReceipts] = useState<ReceiptDto[]>([]);
   const [allReceipts, setAllReceipts] = useState<ReceiptDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [captureOpen, setCaptureOpen] = useState(false);
   const [selectedReceipt, setSelectedReceipt] = useState<ReceiptDto | null>(null);
   const [askingWa, setAskingWa] = useState(false);
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
@@ -285,6 +350,21 @@ export const ReceiptsPage: React.FC = () => {
   const [batchSelectedPhotoIds, setBatchSelectedPhotoIds] = useState<Set<string>>(new Set());
   const [batchSelectedPhotos, setBatchSelectedPhotos] = useState<PhotoDto[]>([]);
   const [batchExtractOpen, setBatchExtractOpen] = useState(false);
+  const [hasOpenedPhotoAlbum, setHasOpenedPhotoAlbum] = useState(false);
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const view = searchParams.get('view');
+    if (view === 'photos') {
+      setTab(2);
+    }
+  }, [location.search]);
+
+  useEffect(() => {
+    if (tab === 2) {
+      setHasOpenedPhotoAlbum(true);
+    }
+  }, [tab]);
 
   const toggleChecked = (id: string) => {
     setCheckedIds(prev => {
@@ -388,11 +468,6 @@ export const ReceiptsPage: React.FC = () => {
     setSelectedReceipt(null);
   };
 
-  const handleCaptured = () => {
-    setCaptureOpen(false);
-    loadData();
-  };
-
   const handleDelete = async (id: string) => {
     try {
       await receiptService.delete(id);
@@ -405,9 +480,7 @@ export const ReceiptsPage: React.FC = () => {
   const handleBatchPhotoSelect = useCallback(async () => {
     try {
       const photos = await photoService.list();
-      // Filter out photos that already have associated receipts
-      const unassociated = photos.filter(p => !p.associatedReceiptIds || p.associatedReceiptIds.length === 0);
-      setAllPhotos(unassociated);
+      setAllPhotos(photos);
       setBatchPhotoSelectOpen(true);
     } catch (e) {
       console.error('Failed to load photos:', e);
@@ -501,39 +574,74 @@ export const ReceiptsPage: React.FC = () => {
   return (
     <>
       <AppHeader />
-      <BoxAny sx={{ maxWidth: 960, mx: 'auto', px: { xs: 1, sm: 2 }, pt: { xs: 9, sm: 10 }, pb: 10 }}>
-        {/* Ask Wa + select all */}
-        <BoxAny sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1, mb: 1 }}>
-          <Button size="small" onClick={toggleAllChecked} disabled={loading}>
-            {(() => {
-              const ids = tab === 0
-                ? shoppingReceipts.map(r => r.id)
-                : medicalReceipts.map(r => r.id);
-              return ids.length > 0 && ids.every(id => checkedIds.has(id)) ? '取消全选' : '全选';
-            })()}
-          </Button>
-          <Button
-            size="small"
-            variant="outlined"
-            startIcon={<PhotoIcon />}
-            onClick={handleBatchPhotoSelect}
-            disabled={loading}
+      <BoxAny sx={{ maxWidth: 960, mx: 'auto', px: { xs: 1, sm: 2 }, pt: { xs: 8, sm: 9 }, pb: 10 }}>
+        <Paper sx={{
+          p: { xs: 0.25, sm: 0.5 },
+          mb: tab === 2 ? 0 : 1.25,
+          borderRadius: tab === 2 ? '10px 10px 0 0' : '10px',
+          background: '#ffffff',
+          position: 'sticky',
+          top: { xs: 64, sm: 72 },
+          zIndex: 6,
+          boxShadow: '0 8px 24px rgba(15,23,42,0.08)',
+        }}>
+          <Tabs
+            value={tab}
+            onChange={handleTabChange}
+            variant="fullWidth"
+            sx={{
+              minHeight: 36,
+              borderBottom: 1,
+              borderColor: 'divider',
+              '& .MuiTabs-flexContainer': {
+                minHeight: 36,
+              },
+            }}
           >
-            批量提取
-          </Button>
-          <Button
-            variant="outlined"
-            size="small"
-            startIcon={<AutoAwesome />}
-            disabled={askingWa || loading || checkedIds.size === 0}
-            onClick={handleAskWa}
-          >
-            {askingWa ? '发送中...' : `Ask ${t('Wa')} (${checkedIds.size})`}
-          </Button>
-        </BoxAny>
+            <Tab
+              label={t('receipts.shopping')}
+              sx={{ minHeight: 36, py: 0, px: 1, textTransform: 'none' }}
+            />
+            <Tab
+              label={t('receipts.medical')}
+              sx={{ minHeight: 36, py: 0, px: 1, textTransform: 'none' }}
+            />
+            <Tab
+              icon={<PhotoIcon fontSize="small" />}
+              iconPosition="start"
+              label="图片集合"
+              sx={{ minHeight: 36, py: 0, px: 1, textTransform: 'none', '& .MuiTab-iconWrapper': { mr: 0.5 } }}
+            />
+          </Tabs>
+
+          {tab !== 2 && (
+            <BoxAny sx={{ pt: 0.5, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0.75, flexWrap: 'wrap' }}>
+              <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
+                <Button size="small" sx={{ minHeight: 28, px: 1.1 }} onClick={toggleAllChecked} disabled={loading}>
+                  {(() => {
+                    const ids = tab === 0
+                      ? shoppingReceipts.map(r => r.id)
+                      : medicalReceipts.map(r => r.id);
+                    return ids.length > 0 && ids.every(id => checkedIds.has(id)) ? '取消全选' : '全选';
+                  })()}
+                </Button>
+                <Button
+                  variant="contained"
+                  size="small"
+                  startIcon={<AutoAwesome />}
+                  sx={{ minHeight: 28, px: 1.1 }}
+                  disabled={askingWa || loading || checkedIds.size === 0}
+                  onClick={handleAskWa}
+                >
+                  {askingWa ? '发送中...' : `Ask ${t('Wa')} (${checkedIds.size})`}
+                </Button>
+              </BoxAny>
+            </BoxAny>
+          )}
+        </Paper>
 
         {/* Unified horizontal timeline */}
-        {!loading && timelineEvents.length > 0 && (
+        {!loading && tab !== 2 && timelineEvents.length > 0 && (
           <BoxAny sx={{
             display: 'flex', alignItems: 'center', mb: 2, px: 1, py: 1,
             overflowX: 'auto', scrollbarWidth: 'none', '&::-webkit-scrollbar': { display: 'none' },
@@ -587,53 +695,39 @@ export const ReceiptsPage: React.FC = () => {
           </BoxAny>
         )}
 
-        <Tabs
-          value={tab}
-          onChange={handleTabChange}
-          sx={{ mb: 2, borderBottom: 1, borderColor: 'divider' }}
-        >
-          <Tab label={t('receipts.shopping')} />
-          <Tab label={t('receipts.medical')} />
-        </Tabs>
-
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
         {loading ? (
           <BoxAny sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
             <CircularProgress />
           </BoxAny>
-        ) : tab === 0 ? (
-          <ReceiptList
-            receipts={shoppingReceipts}
-            allReceipts={allReceipts}
-            checkedIds={checkedIds}
-            onToggleChecked={toggleChecked}
-            onSelect={setSelectedReceipt}
-          />
         ) : (
-          <MedicalVisitTimeline
-            medicalReceipts={medicalReceipts}
-            allReceipts={allReceipts}
-            checkedIds={checkedIds}
-            onToggleChecked={toggleChecked}
-            onSelectReceipt={setSelectedReceipt}
-          />
+          <>
+            <BoxAny sx={{ display: tab === 0 ? 'block' : 'none' }}>
+              <ReceiptList
+                receipts={shoppingReceipts}
+                allReceipts={allReceipts}
+                checkedIds={checkedIds}
+                onToggleChecked={toggleChecked}
+                onSelect={setSelectedReceipt}
+              />
+            </BoxAny>
+            <BoxAny sx={{ display: tab === 1 ? 'block' : 'none' }}>
+              <MedicalVisitTimeline
+                medicalReceipts={medicalReceipts}
+                allReceipts={allReceipts}
+                checkedIds={checkedIds}
+                onToggleChecked={toggleChecked}
+                onSelectReceipt={setSelectedReceipt}
+              />
+            </BoxAny>
+            {hasOpenedPhotoAlbum && (
+              <BoxAny sx={{ display: tab === 2 ? 'block' : 'none' }}>
+                <PhotoAlbumPage embedded title="票夹图片集合" onOpenReceipt={setSelectedReceipt} onReceiptsChanged={loadData} />
+              </BoxAny>
+            )}
+          </>
         )}
-
-        <Fab
-          color="primary"
-          sx={{ position: 'fixed', bottom: 24, right: 24 }}
-          onClick={() => setCaptureOpen(true)}
-        >
-          <AddIcon />
-        </Fab>
-
-        <ReceiptCapture
-          open={captureOpen}
-          defaultType={tab === 0 ? 'Shopping' : 'Medical'}
-          onClose={() => setCaptureOpen(false)}
-          onCaptured={handleCaptured}
-        />
 
         {/* Batch Photo Select Dialog */}
         <Dialog open={batchPhotoSelectOpen} onClose={() => setBatchPhotoSelectOpen(false)} maxWidth="md" fullWidth>
@@ -648,7 +742,7 @@ export const ReceiptsPage: React.FC = () => {
           </DialogTitle>
           <DialogContent>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              请选择要提取票据的照片（已关联票据的照片已过滤）
+              请选择要提取的原始照片。已提取过的照片也可以再次提取；一对一场景下会覆盖原票据。
             </Typography>
             {allPhotos.length === 0 ? (
               <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
@@ -657,33 +751,12 @@ export const ReceiptsPage: React.FC = () => {
             ) : (
               <List sx={{ maxHeight: 400, overflow: 'auto' }}>
                 {allPhotos.map((photo) => (
-                  <ListItem key={photo.id} disablePadding>
-                    <ListItemButton
-                      onClick={() => handleBatchPhotoToggle(photo.id)}
-                      sx={{ gap: 1.5 }}
-                    >
-                      <ListItemIcon>
-                        <Checkbox
-                          edge="start"
-                          checked={batchSelectedPhotoIds.has(photo.id)}
-                          tabIndex={-1}
-                          disableRipple
-                        />
-                      </ListItemIcon>
-                      {/* Thumbnail */}
-                      <Box sx={{ width: 48, height: 48, borderRadius: 1, overflow: 'hidden', flexShrink: 0 }}>
-                        <img
-                          src={`/api/photos/download/${photo.id}`}
-                          alt={photo.fileName}
-                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                        />
-                      </Box>
-                      <ListItemText
-                        primary={photo.fileName}
-                        secondary={`${(photo.fileSize / 1024).toFixed(0)} KB`}
-                      />
-                    </ListItemButton>
-                  </ListItem>
+                  <BatchPhotoListItem
+                    key={photo.id}
+                    photo={photo}
+                    selected={batchSelectedPhotoIds.has(photo.id)}
+                    onToggle={handleBatchPhotoToggle}
+                  />
                 ))}
               </List>
             )}

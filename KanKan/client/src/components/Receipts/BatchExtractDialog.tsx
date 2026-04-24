@@ -1,13 +1,13 @@
-import React, { useState, useCallback } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions,
   Box, Button, Typography, Paper, IconButton, CircularProgress,
   Alert, Step, StepLabel, Stepper,
-  Chip, TextField, Tabs, Tab,
+  Chip,
 } from '@mui/material';
 import {
   Close as CloseIcon, CheckCircle as CheckIcon,
-  AutoAwesome as ExtractIcon, ExpandMore as ExpandIcon,
+  AutoAwesome as ExtractIcon,
   Restore as RestoreIcon,
 } from '@mui/icons-material';
 import {
@@ -15,33 +15,7 @@ import {
   type BatchExtractResult,
   type PhotoDto,
 } from '@/services/photo.service';
-
-/** Receipt item in the confirmation step — user can edit these fields */
-interface ConfirmReceipt {
-  photoId: string;
-  photoImageUrl?: string;
-  type: string;
-  category: string;
-  merchantName?: string;
-  hospitalName?: string;
-  department?: string;
-  doctorName?: string;
-  patientName?: string;
-  sourcePhotoId?: string; // Phase 5: primary photo ID
-  additionalPhotoIds?: string[]; // Phase 5: additional page photos
-  medicalRecordNumber?: string; // Phase 5: 病案号
-  insuranceType?: string; // Phase 5: 医保类型
-  diagnosisText?: string; // Phase 5: 诊断文本
-  outpatientNumber?: string;
-  totalAmount?: number;
-  currency?: string;
-  receiptDate?: string;
-  notes?: string;
-  rawText?: string;
-  items?: Array<{ name: string; quantity?: number; unit?: string; unitPrice?: number; totalPrice?: number; category?: string }>;
-  medications?: Array<{ name: string; dosage?: string; frequency?: string; days?: number; quantity?: number; price?: number }>;
-  labResults?: Array<{ name: string; value?: string; unit?: string; referenceRange?: string; status?: string }>;
-}
+import { runLegacyReceiptExtractionForPhoto } from '@/services/legacyReceiptExtraction.service';
 
 interface BatchExtractDialogProps {
   open: boolean;
@@ -54,130 +28,138 @@ interface BatchExtractDialogProps {
 export const BatchExtractDialog: React.FC<BatchExtractDialogProps> = ({
   open, selectedPhotoIds, selectedPhotos, onClose, onSaved,
 }) => {
-  const [step, setStep] = useState(0); // 0=preview, 1=extracting, 2=confirm, 3=done
+  const dialogPaperSx = {
+    bgcolor: '#ffffff',
+    backgroundImage: 'none',
+  } as const;
+  const [step, setStep] = useState(0); // 0=preview, 1=extracting, 2=done
   const [results, setResults] = useState<BatchExtractResult[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
-  const [confirmReceipts, setConfirmReceipts] = useState<ConfirmReceipt[]>([]);
-  const [activeTab, setActiveTab] = useState(0);
-  const [editingReceipt, setEditingReceipt] = useState<number | null>(null);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
-  const steps = ['选择照片', 'OCR 识别', '确认票据', '完成'];
+  const steps = ['选择照片', '同步提取', '完成'];
+
+  useEffect(() => {
+    if (!open) {
+      abortControllerRef.current = null;
+      setStep(0);
+      setResults([]);
+      setErrors([]);
+      setCurrentIndex(0);
+    }
+  }, [open]);
+
+  const savedReceiptCount = useMemo(
+    () => results.reduce((sum, result) => sum + (result.savedReceiptCount ?? 0), 0),
+    [results],
+  );
+
+  const newReceiptCount = useMemo(
+    () => results.reduce((sum, result) => sum + (result.newReceiptCount ?? 0), 0),
+    [results],
+  );
+
+  const overwrittenReceiptCount = useMemo(
+    () => results.reduce((sum, result) => sum + (result.overwrittenReceiptCount ?? 0), 0),
+    [results],
+  );
+
+  const failedResults = useMemo(
+    () => results.filter((result) => result.status === 'Failed' || result.status === 'Partial'),
+    [results],
+  );
+
+  const isAbortError = (error: unknown) => {
+    const candidate = error as { code?: string; name?: string; message?: string } | undefined;
+    return candidate?.code === 'ERR_CANCELED' || candidate?.name === 'CanceledError' || candidate?.message === 'canceled';
+  };
 
   const handleStart = useCallback(async () => {
     if (selectedPhotoIds.length === 0) return;
+
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
     setStep(1);
+    setResults([]);
     setErrors([]);
+    setCurrentIndex(0);
 
     try {
-      const response = await photoService.batchExtract(selectedPhotoIds);
-      setResults(response.results);
+      const nextResults: BatchExtractResult[] = [];
 
-      // Flatten all parsed receipts into the confirm list
-      const allReceipts: ConfirmReceipt[] = [];
-      for (const r of response.results) {
-        if (r.parsedReceipts) {
-          for (const pr of r.parsedReceipts) {
-            allReceipts.push({
-              photoId: r.photoId,
-              photoImageUrl: r.photoImageUrl,
-              type: pr.type || 'Shopping',
-              category: pr.category || '',
-              merchantName: pr.merchantName,
-              hospitalName: pr.hospitalName,
-              department: pr.department,
-              doctorName: pr.doctorName,
-              patientName: pr.patientName,
-              sourcePhotoId: r.photoId, // Phase 5: default to photoId
-              medicalRecordNumber: pr.medicalRecordNumber, // Phase 5
-              insuranceType: pr.insuranceType, // Phase 5
-              diagnosisText: pr.diagnosisText, // Phase 5
-              totalAmount: pr.totalAmount,
-              currency: pr.currency || 'CNY',
-              receiptDate: pr.receiptDate,
-              notes: pr.notes,
-              rawText: pr.rawText,
-              items: pr.items,
-              medications: pr.medications,
-              labResults: pr.labResults,
-            });
-          }
+      for (const [index, photoId] of selectedPhotoIds.entries()) {
+        setCurrentIndex(index + 1);
+
+        const photo = selectedPhotos.find((item) => item.id === photoId);
+        if (!photo) {
+          nextResults.push({
+            photoId,
+            status: 'Failed',
+            error: 'Photo not found',
+            savedReceiptCount: 0,
+            newReceiptCount: 0,
+            overwrittenReceiptCount: 0,
+            savedReceiptIds: [],
+            parsedReceipts: [],
+          });
+          setResults([...nextResults]);
+          continue;
         }
-      }
-      setConfirmReceipts(allReceipts);
-      setStep(2);
-    } catch (e: any) {
-      setErrors([e?.message || 'Batch extract failed']);
-      setStep(0);
-    }
-  }, [selectedPhotoIds]);
 
-  const handleSave = async () => {
-    try {
-      const savedReceipts = confirmReceipts.filter(r => r.totalAmount != null && r.totalAmount! > 0);
-      if (savedReceipts.length === 0) {
-        setErrors(['没有有效的票据可以保存']);
+        const result = await runLegacyReceiptExtractionForPhoto(photo, abortController.signal);
+        nextResults.push(result);
+        setResults([...nextResults]);
+      }
+
+      setStep(2);
+    } catch (e: unknown) {
+      if (isAbortError(e)) {
         return;
       }
 
-      await photoService.saveConfirmed(savedReceipts);
-      setStep(3);
-    } catch (e: any) {
-      setErrors([e?.message || 'Save failed']);
+      const message = (e as { message?: string } | undefined)?.message || 'Batch extract failed';
+      setErrors([message]);
+      setStep(0);
+    } finally {
+      setCurrentIndex(0);
+      abortControllerRef.current = null;
     }
-  };
+  }, [selectedPhotoIds, selectedPhotos]);
 
-  const handleReset = () => {
-    setStep(0);
-    setResults([]);
-    setErrors([]);
-    setConfirmReceipts([]);
-    setActiveTab(0);
-    setEditingReceipt(null);
-  };
+  const currentPhoto = useMemo(
+    () => (currentIndex > 0 ? selectedPhotos[currentIndex - 1] : null),
+    [currentIndex, selectedPhotos],
+  );
 
-  const handleUpdateReceipt = (index: number, field: string, value: any) => {
-    setConfirmReceipts(prev => {
-      const next = [...prev];
-      (next[index] as any)[field] = value;
-      return next;
-    });
-  };
+  const handleCancel = () => {
+    if (step === 1) {
+      abortControllerRef.current?.abort();
+      onSaved();
+      return;
+    }
 
-  const handleDiscardReceipt = (index: number) => {
-    setConfirmReceipts(prev => prev.filter((_, i) => i !== index));
-    if (editingReceipt === index) setEditingReceipt(null);
-    else if (editingReceipt! > index) setEditingReceipt(editingReceipt! - 1);
-  };
+    if (step === 2) {
+      onSaved();
+      return;
+    }
 
-  const handlePhotoName = (photoId: string): string => {
-    const photo = selectedPhotos.find(p => p.id === photoId);
-    return photo?.fileName || photoId.slice(0, 12);
+    onClose();
   };
-
-  // Group receipts by photo for tab display
-  const receiptsByPhoto: Record<string, Array<{ receipt: ConfirmReceipt; index: number }>> = {};
-  confirmReceipts.forEach((r, i) => {
-    if (!receiptsByPhoto[r.photoId]) receiptsByPhoto[r.photoId] = [];
-    receiptsByPhoto[r.photoId].push({ receipt: r, index: i });
-  });
 
   const handleClose = () => {
-    if (step === 3) {
-      onSaved();
-    } else {
-      onClose();
-    }
+    handleCancel();
   };
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
+    <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth PaperProps={{ sx: dialogPaperSx }}>
       <DialogTitle>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <ExtractIcon color="primary" />
-            <Typography variant="h6">批量 OCR 提取</Typography>
+            <Typography variant="h6">同步提取票据</Typography>
           </Box>
-          <IconButton onClick={onClose} size="small">
+          <IconButton onClick={handleClose} size="small">
             <CloseIcon />
           </IconButton>
         </Box>
@@ -196,14 +178,18 @@ export const BatchExtractDialog: React.FC<BatchExtractDialogProps> = ({
         {step === 0 && (
           <Box>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              已选择 {selectedPhotoIds.length} 张照片,点击"开始提取"启动 OCR。
+              已选择 {selectedPhotoIds.length} 张照片。系统会按顺序一张张处理，每张处理完成后立即写回数据库，再继续下一张。
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              如果中途取消，已经处理并落库的照片不会丢失；尚未开始的照片不会继续处理。
             </Typography>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-              {selectedPhotos.map((p) => (
+              {selectedPhotos.map((p, index) => (
                 <Chip
                   key={p.id}
-                  label={p.fileName}
+                  label={`${photoService.getDisplayLabel(p, index)}${(p.extractedReceiptCount ?? 0) > 0 ? ' · 再次提取' : ' · 首次提取'}`}
                   size="small"
+                  color={(p.extractedReceiptCount ?? 0) > 0 ? 'warning' : 'default'}
                   variant="outlined"
                   sx={{ borderRadius: 1 }}
                 />
@@ -216,14 +202,34 @@ export const BatchExtractDialog: React.FC<BatchExtractDialogProps> = ({
         {step === 1 && (
           <Box sx={{ textAlign: 'center', py: 4 }}>
             <CircularProgress size={50} sx={{ mb: 2 }} />
-            <Typography variant="h6" sx={{ mb: 1 }}>OCR 识别中...</Typography>
-            <Typography variant="body2" color="text.secondary">
-              正在分析 {selectedPhotoIds.length} 张照片，请稍候...
+            <Typography variant="h6" sx={{ mb: 1 }}>
+              {currentIndex > 0 ? `${currentIndex}/${selectedPhotoIds.length} 提取中...` : '同步提取中...'}
             </Typography>
+            <Typography variant="body2" color="text.secondary">
+              后端正在按顺序逐张处理 {selectedPhotoIds.length} 张照片。当前请求结束前，客户端会一直等待。
+            </Typography>
+            {currentPhoto ? (
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>
+                当前照片：{photoService.getDisplayLabel(currentPhoto, currentIndex - 1)}
+              </Typography>
+            ) : null}
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>
+              现在取消时，已经完成的照片仍会保留在数据库中。
+            </Typography>
+            {results.length > 0 ? (
+              <Box sx={{ mt: 1.5 }}>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                  已完成 {results.length}/{selectedPhotoIds.length}
+                </Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                  新写入 {newReceiptCount} 条，覆盖 {overwrittenReceiptCount} 条
+                </Typography>
+              </Box>
+            ) : null}
           </Box>
         )}
 
-        {/* Step 2: Confirm receipts */}
+        {/* Step 2: Done */}
         {step === 2 && (
           <Box>
             {errors.length > 0 && (
@@ -232,64 +238,42 @@ export const BatchExtractDialog: React.FC<BatchExtractDialogProps> = ({
               </Alert>
             )}
 
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-              <Typography variant="subtitle2" color="text.secondary">
-                共提取 {confirmReceipts.length} 条票据
-              </Typography>
-              {editingReceipt !== null && (
-                <Chip label="编辑中" size="small" color="info" />
-              )}
-            </Box>
+            <Alert severity={failedResults.length === 0 ? 'success' : 'warning'} sx={{ mb: 2 }}>
+              已处理 {results.length} 张照片，写回 {savedReceiptCount} 条票据。
+              其中新写入 {newReceiptCount} 条，覆盖 {overwrittenReceiptCount} 条。
+              {failedResults.length > 0 ? ` 其中 ${failedResults.length} 张存在失败或部分失败。` : ''}
+            </Alert>
 
-            {/* Tabs by photo */}
-            {Object.keys(receiptsByPhoto).length > 1 && (
-              <Tabs value={activeTab} onChange={(_, v) => setActiveTab(v)} sx={{ mb: 2 }}>
-                {Object.keys(receiptsByPhoto).map((photoId) => (
-                  <Tab
-                    key={photoId}
-                    label={handlePhotoName(photoId)}
-                    data-photo-id={photoId}
-                  />
-                ))}
-              </Tabs>
-            )}
+            <Box sx={{ display: 'grid', gap: 1.25 }}>
+              {results.map((result) => {
+                const photoIndex = selectedPhotos.findIndex((item) => item.id === result.photoId);
+                const photo = photoIndex >= 0 ? selectedPhotos[photoIndex] : undefined;
+                const label = photo ? photoService.getDisplayLabel(photo, photoIndex) : '照片';
 
-            {/* Receipt accordion */}
-            <Box sx={{ maxHeight: 600, overflow: 'auto' }}>
-              {(() => {
-                const photoIds = Object.keys(receiptsByPhoto);
-                const currentPhotoId = Object.keys(receiptsByPhoto)[activeTab] || photoIds[0];
-                const currentReceipts = receiptsByPhoto[currentPhotoId] || [];
-
-                if (currentReceipts.length === 0) return (
-                  <Typography variant="body2" color="text.secondary">该照片无提取结果</Typography>
+                return (
+                  <Paper key={result.photoId} sx={{ p: 1.5, borderRadius: 2 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5, flexWrap: 'wrap' }}>
+                      <Box>
+                        <Typography variant="body2" fontWeight={600}>{label}</Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          状态: {result.status} · 识别 {result.parsedReceipts?.length ?? 0} 条 · 写回 {result.savedReceiptCount ?? 0} 条 · 新写入 {result.newReceiptCount ?? 0} 条 · 覆盖 {result.overwrittenReceiptCount ?? 0} 条
+                        </Typography>
+                      </Box>
+                      <Chip
+                        size="small"
+                        color={result.status === 'Completed' ? 'success' : result.status === 'Partial' ? 'warning' : 'error'}
+                        label={result.status === 'Completed' ? '完成' : result.status === 'Partial' ? '部分完成' : '失败'}
+                      />
+                    </Box>
+                    {result.error ? (
+                      <Typography variant="caption" color="error" sx={{ display: 'block', mt: 1 }}>
+                        {result.error}
+                      </Typography>
+                    ) : null}
+                  </Paper>
                 );
-
-                return currentReceipts.map(({ receipt, index }) => (
-                  <ReceiptEditItem
-                    key={index}
-                    receipt={receipt}
-                    isEditing={editingReceipt === index}
-                    onToggleEdit={() => editingReceipt === index ? setEditingReceipt(null) : setEditingReceipt(index)}
-                    onUpdate={(field: string, value: any) => handleUpdateReceipt(index, field, value)}
-                    onDiscard={() => handleDiscardReceipt(index)}
-                    photoName={handlePhotoName(receipt.photoId)}
-                    photoImageUrl={receipt.photoImageUrl}
-                  />
-                ));
-              })()}
+              })}
             </Box>
-          </Box>
-        )}
-
-        {/* Step 3: Done */}
-        {step === 3 && (
-          <Box sx={{ textAlign: 'center', py: 4 }}>
-            <CheckIcon color="success" sx={{ fontSize: 60, mb: 2 }} />
-            <Typography variant="h6" sx={{ mb: 1 }}>票据已保存</Typography>
-            <Typography variant="body2" color="text.secondary">
-              成功保存 {confirmReceipts.length} 条票据到数据库
-            </Typography>
           </Box>
         )}
       </DialogContent>
@@ -297,212 +281,20 @@ export const BatchExtractDialog: React.FC<BatchExtractDialogProps> = ({
       <DialogActions sx={{ px: 3, py: 2 }}>
         {step === 0 && (
           <>
-            <Button onClick={onClose}>取消</Button>
+            <Button onClick={handleCancel}>取消</Button>
             <Button variant="contained" startIcon={<ExtractIcon />} onClick={handleStart}>
               开始提取
             </Button>
           </>
         )}
         {step === 1 && (
-          <Button onClick={handleReset}>取消</Button>
+          <Button color="warning" startIcon={<RestoreIcon />} onClick={handleCancel}>取消并刷新</Button>
         )}
         {step === 2 && (
-          <>
-            <Button onClick={handleReset}>重新提取</Button>
-            <Button variant="contained" startIcon={<CheckIcon />} onClick={handleSave}>
-              确认保存 ({confirmReceipts.filter(r => r.totalAmount != null && r.totalAmount! > 0).length} 条)
-            </Button>
-          </>
-        )}
-        {step === 3 && (
-          <Button variant="contained" onClick={onSaved}>完成</Button>
+          <Button variant="contained" startIcon={<CheckIcon />} onClick={onSaved}>完成</Button>
         )}
       </DialogActions>
     </Dialog>
-  );
-};
-
-/** Individual receipt edit item */
-const ReceiptEditItem: React.FC<{
-  receipt: ConfirmReceipt;
-  isEditing: boolean;
-  onToggleEdit: () => void;
-  onUpdate: (field: string, value: any) => void;
-  onDiscard: () => void;
-  photoName: string;
-  photoImageUrl?: string;
-}> = ({ receipt, isEditing, onToggleEdit, onUpdate, onDiscard, photoName, photoImageUrl }) => {
-  return (
-    <Paper sx={{ mb: 1, borderRadius: 2, overflow: 'hidden' }}>
-      <Box
-        sx={{
-          p: 2, display: 'flex', alignItems: 'center', gap: 2, cursor: 'pointer',
-          bgcolor: receipt.totalAmount != null && receipt.totalAmount! > 0 ? 'rgba(7,193,96,0.03)' : 'rgba(255,0,0,0.03)',
-        }}
-        onClick={onToggleEdit}
-      >
-        {/* Photo thumbnail */}
-        {photoImageUrl && (
-          <img
-            src={photoImageUrl}
-            alt={photoName}
-            style={{ width: 50, height: 50, objectFit: 'cover', borderRadius: 4 }}
-          />
-        )}
-        <Box sx={{ flex: 1 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-            <Chip size="small" label={receipt.type} color="primary" variant="outlined" />
-            {receipt.merchantName && (
-              <Typography variant="body2" fontWeight={500}>{receipt.merchantName}</Typography>
-            )}
-            {receipt.hospitalName && (
-              <Typography variant="body2" fontWeight={500}>{receipt.hospitalName}</Typography>
-            )}
-          </Box>
-          <Typography variant="caption" color="text.secondary">
-            {photoName}
-            {receipt.totalAmount != null && ` • ¥${receipt.totalAmount}`}
-            {receipt.receiptDate && ` • ${receipt.receiptDate}`}
-          </Typography>
-        </Box>
-        <IconButton size="small" onClick={(e) => { e.stopPropagation(); onToggleEdit(); }}>
-          <ExpandIcon />
-        </IconButton>
-      </Box>
-
-      {/* Expanded edit form */}
-      {isEditing && (
-        <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider' }}>
-          <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-            <Chip size="small" label={receipt.type} color="primary" />
-            {receipt.category && <Chip size="small" label={receipt.category} variant="outlined" />}
-            {receipt.type === 'Medical' && (
-              <Chip size="small" label="医疗票据" color="warning" variant="outlined" />
-            )}
-          </Box>
-
-          <TextField
-            fullWidth label="类型" size="small"
-            value={receipt.type}
-            onChange={(e) => onUpdate('type', e.target.value)}
-            sx={{ mb: 1 }}
-          />
-
-          <TextField
-            fullWidth label="商户名称" size="small"
-            value={receipt.merchantName || ''}
-            onChange={(e) => onUpdate('merchantName', e.target.value)}
-            sx={{ mb: 1 }}
-          />
-
-          <TextField
-            fullWidth label="医院名称" size="small"
-            value={receipt.hospitalName || ''}
-            onChange={(e) => onUpdate('hospitalName', e.target.value)}
-            sx={{ mb: 1 }}
-          />
-
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <TextField
-              fullWidth label="金额" size="small" type="number"
-              value={receipt.totalAmount ?? ''}
-              onChange={(e) => onUpdate('totalAmount', parseFloat(e.target.value) || 0)}
-            />
-            <TextField
-              fullWidth label="日期" size="small" type="date"
-              value={receipt.receiptDate || ''}
-              onChange={(e) => onUpdate('receiptDate', e.target.value)}
-              InputLabelProps={{ shrink: true }}
-            />
-          </Box>
-
-          {/* Phase 5: 医疗票据字段 */}
-          {receipt.type === 'Medical' && (
-            <Box sx={{ mt: 2 }}>
-              <Typography variant="subtitle2" sx={{ mb: 1, color: 'primary.main' }}>医疗字段</Typography>
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                <TextField
-                  fullWidth label="科室" size="small"
-                  value={receipt.department || ''}
-                  onChange={(e) => onUpdate('department', e.target.value)}
-                />
-                <TextField
-                  fullWidth label="患者" size="small"
-                  value={receipt.patientName || ''}
-                  onChange={(e) => onUpdate('patientName', e.target.value)}
-                />
-              </Box>
-              <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-                <TextField
-                  fullWidth label="医生" size="small"
-                  value={receipt.doctorName || ''}
-                  onChange={(e) => onUpdate('doctorName', e.target.value)}
-                />
-                <TextField
-                  fullWidth label="挂号号/就诊号" size="small"
-                  value={receipt.outpatientNumber || ''}
-                  onChange={(e) => onUpdate('outpatientNumber', e.target.value)}
-                />
-              </Box>
-              <TextField
-                fullWidth label="病案号" size="small"
-                value={receipt.medicalRecordNumber || ''}
-                onChange={(e) => onUpdate('medicalRecordNumber', e.target.value)}
-                sx={{ mt: 1 }}
-                helperText="病案号/住院号, 格式如 B2026001"
-              />
-              <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-                <TextField
-                  fullWidth label="医保类型" size="small"
-                  value={receipt.insuranceType || ''}
-                  onChange={(e) => onUpdate('insuranceType', e.target.value)}
-                  placeholder="城镇职工/居民/新农合/自费"
-                />
-              </Box>
-              <TextField
-                fullWidth label="诊断文本" size="small"
-                multiline
-                rows={2}
-                value={receipt.diagnosisText || ''}
-                onChange={(e) => onUpdate('diagnosisText', e.target.value)}
-                sx={{ mt: 1 }}
-              />
-            </Box>
-          )}
-
-          {receipt.items && receipt.items.length > 0 && (
-            <Box sx={{ mt: 2 }}>
-              <Typography variant="caption" fontWeight={600}>商品明细 ({receipt.items.length})</Typography>
-              <Box sx={{ maxHeight: 100, overflow: 'auto' }}>
-                {receipt.items.map((item, i) => (
-                  <Typography key={i} variant="caption" color="text.secondary" display="block">
-                    - {item.name} {item.totalPrice != null ? `¥${item.totalPrice}` : ''}
-                  </Typography>
-                ))}
-              </Box>
-            </Box>
-          )}
-
-          {receipt.medications && receipt.medications.length > 0 && (
-            <Box sx={{ mt: 2 }}>
-              <Typography variant="caption" fontWeight={600}>药品明细 ({receipt.medications.length})</Typography>
-              <Box sx={{ maxHeight: 100, overflow: 'auto' }}>
-                {receipt.medications.map((med, i) => (
-                  <Typography key={i} variant="caption" color="text.secondary" display="block">
-                    - {med.name} {med.dosage ? `(${med.dosage})` : ''}
-                  </Typography>
-                ))}
-              </Box>
-            </Box>
-          )}
-
-          <Box sx={{ display: 'flex', gap: 1, mt: 2, justifyContent: 'flex-end' }}>
-            <Button size="small" color="error" onClick={onDiscard}>丢弃</Button>
-            <Button size="small" variant="contained" onClick={onToggleEdit}>完成编辑</Button>
-          </Box>
-        </Box>
-      )}
-    </Paper>
   );
 };
 

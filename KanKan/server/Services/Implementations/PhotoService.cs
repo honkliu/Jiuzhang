@@ -11,27 +11,89 @@ namespace KanKan.API.Services.Implementations;
 public class PhotoService
 {
     private readonly IPhotoRepository _repository;
-    private readonly IWebHostEnvironment _environment;
+    private readonly string _webRootPath;
     private readonly string _uploadFolder;
 
     public PhotoService(IPhotoRepository repository, IWebHostEnvironment environment)
     {
         _repository = repository;
-        _environment = environment;
-        _uploadFolder = environment.ContentRootPath switch
-        {
-            var p when p.EndsWith("/server") => Path.Combine(p, "..", "..", "wwwroot", "photos"),
-            _ => Path.Combine(environment.ContentRootPath, "wwwroot", "photos")
-        };
+        _webRootPath = environment.WebRootPath ?? Path.Combine(environment.ContentRootPath, "wwwroot");
+        _uploadFolder = Path.Combine(_webRootPath, "uploads", "receipts");
 
         if (!Directory.Exists(_uploadFolder))
             Directory.CreateDirectory(_uploadFolder);
+    }
+
+    private static string BuildPublicImageUrl(string fileName)
+        => $"/uploads/receipts/{Uri.EscapeDataString(fileName)}";
+
+    private async Task<(string storedFileName, string filePath, string imageUrl)> SaveImageBytesAsync(string originalFileName, byte[] imageBytes)
+    {
+        var safeFileName = Path.GetFileName(originalFileName);
+        var extension = Path.GetExtension(safeFileName);
+        if (string.IsNullOrWhiteSpace(extension))
+        {
+            extension = ".jpg";
+        }
+
+        var storedFileName = $"{Guid.NewGuid():N}{extension.ToLowerInvariant()}";
+        var filePath = Path.Combine(_uploadFolder, storedFileName);
+        await System.IO.File.WriteAllBytesAsync(filePath, imageBytes);
+        return (storedFileName, filePath, BuildPublicImageUrl(storedFileName));
+    }
+
+    public async Task<PhotoResponse> UploadFormAsync(string ownerId, PhotoUploadFormRequest request)
+    {
+        if (request.File == null || request.File.Length == 0)
+        {
+            throw new ArgumentException("No file provided.");
+        }
+
+        byte[] imageBytes;
+        await using (var stream = request.File.OpenReadStream())
+        await using (var memoryStream = new MemoryStream())
+        {
+            await stream.CopyToAsync(memoryStream);
+            imageBytes = memoryStream.ToArray();
+        }
+
+        var saved = await SaveImageBytesAsync(request.File.FileName, imageBytes);
+
+        var photo = new PhotoAlbum
+        {
+            Id = $"photo_{Guid.NewGuid():N}",
+            OwnerId = ownerId,
+            FileName = saved.storedFileName,
+            ContentType = request.File.ContentType,
+            FileSize = request.File.Length,
+            Base64Data = null,
+            FilePath = saved.filePath,
+            ImageUrl = saved.imageUrl,
+            UploadedAt = DateTime.UtcNow,
+            CapturedDate = request.CapturedDate,
+            Latitude = request.Latitude,
+            Longitude = request.Longitude,
+            LocationName = request.LocationName,
+            CameraModel = request.CameraModel,
+            Width = request.Width,
+            Height = request.Height,
+            AssociatedReceiptIds = request.AssociatedReceiptIds ?? new(),
+            Tags = request.Tags ?? new(),
+            Notes = request.Notes,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+        };
+
+        await _repository.CreateAsync(photo);
+        return PhotoDtosMapper.ToResponse(photo);
     }
 
     public async Task<PhotoResponse> UploadAsync(string ownerId, PhotoCreateRequest request)
     {
         string? base64Data = request.Base64Data;
         string? filePath = null;
+        string? imageUrl = request.ImageUrl;
+        string? storedFileName = null;
 
         if (!string.IsNullOrEmpty(base64Data))
         {
@@ -47,22 +109,25 @@ public class PhotoService
                 throw new ArgumentException("Invalid base64 data.");
             }
 
-            var fileName = string.IsNullOrEmpty(request.FileName)
-                ? $"{Guid.NewGuid():N}{Path.GetExtension(request.ContentType)}"
-                : request.FileName;
-            filePath = Path.Combine(_uploadFolder, fileName);
-            await System.IO.File.WriteAllBytesAsync(filePath, imageBytes);
+            var saved = await SaveImageBytesAsync(
+                string.IsNullOrEmpty(request.FileName) ? $"photo{Path.GetExtension(request.ContentType)}" : request.FileName,
+                imageBytes);
+            storedFileName = saved.storedFileName;
+            filePath = saved.filePath;
+            imageUrl = saved.imageUrl;
+            base64Data = null;
         }
 
         var photo = new PhotoAlbum
         {
             Id = $"photo_{Guid.NewGuid():N}",
             OwnerId = ownerId,
-            FileName = request.FileName ?? $"{Guid.NewGuid():N}.jpg",
+            FileName = storedFileName ?? $"{Guid.NewGuid():N}.jpg",
             ContentType = request.ContentType,
             FileSize = request.FileSize,
-            Base64Data = request.Base64Data,
+            Base64Data = base64Data,
             FilePath = filePath,
+            ImageUrl = imageUrl,
             UploadedAt = DateTime.UtcNow,
             CapturedDate = request.CapturedDate,
             Latitude = request.Latitude,
@@ -158,7 +223,6 @@ public class PhotoService
         if (photo == null || photo.OwnerId != ownerId)
             throw new KeyNotFoundException("Photo not found.");
 
-        if (request.FileName != null) photo.FileName = request.FileName;
         if (request.AssociatedReceiptIds != null) photo.AssociatedReceiptIds = request.AssociatedReceiptIds;
         if (request.Tags != null) photo.Tags = request.Tags;
         if (request.Notes != null) photo.Notes = request.Notes;

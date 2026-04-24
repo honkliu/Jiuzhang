@@ -7,6 +7,7 @@ export interface PhotoDto {
   contentType: string;
   fileSize: number;
   filePath?: string;
+  imageUrl?: string;
   uploadedAt: string;
   capturedDate?: string;
   latitude?: number;
@@ -84,6 +85,10 @@ export interface BatchExtractResult {
   photoImageUrl?: string; // URL path to the photo for receipt.ImageUrl
   status: string; // Pending, Completed, Failed
   error?: string;
+  savedReceiptCount?: number;
+  newReceiptCount?: number;
+  overwrittenReceiptCount?: number;
+  savedReceiptIds?: string[];
   step1RawOcr?: string; // raw OCR output from vision model
   step2MappedJson?: string; // mapped schema JSON array
   parsedReceipts?: Array<{
@@ -94,6 +99,9 @@ export interface BatchExtractResult {
     department?: string;
     doctorName?: string;
     patientName?: string;
+    medicalRecordNumber?: string;
+    insuranceType?: string;
+    diagnosisText?: string;
     totalAmount?: number;
     currency?: string;
     receiptDate?: string;
@@ -142,8 +150,61 @@ export interface ConfirmedReceiptResponse {
 }
 
 class PhotoService {
+  getDisplayLabel(photo: Pick<PhotoDto, 'id' | 'capturedDate' | 'uploadedAt'>, fallbackIndex?: number): string {
+    const sequenceLabel = fallbackIndex != null ? `照片 ${fallbackIndex + 1}` : '照片';
+    const dateSource = photo.capturedDate ?? photo.uploadedAt;
+
+    if (!dateSource) {
+      return sequenceLabel;
+    }
+
+    const date = new Date(dateSource);
+    if (Number.isNaN(date.getTime())) {
+      return sequenceLabel;
+    }
+
+    const suffix = date.toLocaleDateString('zh-CN');
+    return `${sequenceLabel} · ${suffix}`;
+  }
+
   async list(): Promise<PhotoDto[]> {
     const res = await apiClient.get<PhotoDto[]>('/photos');
+    return res.data;
+  }
+
+  async upload(file: File, metadata?: {
+    capturedDate?: string;
+    latitude?: number;
+    longitude?: number;
+    locationName?: string;
+    cameraModel?: string;
+    width?: number;
+    height?: number;
+    associatedReceiptIds?: string[];
+    tags?: string[];
+    notes?: string;
+  }): Promise<PhotoDto> {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (metadata?.capturedDate) formData.append('capturedDate', metadata.capturedDate);
+    if (metadata?.latitude != null) formData.append('latitude', String(metadata.latitude));
+    if (metadata?.longitude != null) formData.append('longitude', String(metadata.longitude));
+    if (metadata?.locationName) formData.append('locationName', metadata.locationName);
+    if (metadata?.cameraModel) formData.append('cameraModel', metadata.cameraModel);
+    if (metadata?.width != null) formData.append('width', String(metadata.width));
+    if (metadata?.height != null) formData.append('height', String(metadata.height));
+    metadata?.associatedReceiptIds?.forEach((id) => formData.append('associatedReceiptIds', id));
+    metadata?.tags?.forEach((tag) => formData.append('tags', tag));
+    if (metadata?.notes) formData.append('notes', metadata.notes);
+
+    const res = await apiClient.post<PhotoDto>('/photos/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return res.data;
+  }
+
+  async downloadBlob(id: string): Promise<Blob> {
+    const res = await apiClient.get<Blob>(`/photos/download/${id}`, { responseType: 'blob' });
     return res.data;
   }
 
@@ -211,6 +272,23 @@ class PhotoService {
     return `/api/photos/download/${id}`;
   }
 
+  getImageUrl(photo: Pick<PhotoDto, 'imageUrl' | 'filePath' | 'fileName'>): string | undefined {
+    if (photo.imageUrl) {
+      return photo.imageUrl;
+    }
+
+    if (photo.filePath) {
+      const normalized = photo.filePath.replace(/\\/g, '/');
+      const marker = '/wwwroot/';
+      const markerIndex = normalized.toLowerCase().lastIndexOf(marker);
+      if (markerIndex >= 0) {
+        return '/' + normalized.slice(markerIndex + marker.length);
+      }
+    }
+
+    return photo.fileName ? `/photos/${encodeURIComponent(photo.fileName)}` : undefined;
+  }
+
   // Visit stats
   async getVisitStats(startDate?: string, endDate?: string): Promise<VisitStatsResponse> {
     const params: Record<string, string> = {};
@@ -233,8 +311,8 @@ class PhotoService {
   }
 
   // Batch extract
-  async batchExtract(photoIds: string[]): Promise<BatchExtractResponse> {
-    const res = await apiClient.post<BatchExtractResponse>('/visits/batch-extract', { photoIds });
+  async batchExtract(photoIds: string[], signal?: AbortSignal): Promise<BatchExtractResponse> {
+    const res = await apiClient.post<BatchExtractResponse>('/visits/batch-extract', { photoIds }, { signal });
     return res.data;
   }
 

@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using KanKan.API.Models.DTOs.Photo;
 using KanKan.API.Models.DTOs.Receipt;
 using KanKan.API.Models.Entities;
 using KanKan.API.Repositories.Interfaces;
@@ -14,6 +15,11 @@ namespace KanKan.API.Controllers;
 [Route("api/visits")]
 public class VisitController : ControllerBase
 {
+    private const string BatchOcrPrompt = "识别图像中的文字、公式或抽取票据、证件、表单中的信息，注意票据有可能是中国，有可能是国外的，因此要在返回的md和json中要包含货币单位和交税信息等。请输出两部分，用===JSON===分隔：第一部分是Markdown格式的票据内容，用于展示,格式等于或接近图像中的文字格式，放在<OMD1></OMD1><OMD2></OMD2>之间。第二部分：JSON格式的原始提取数据，忠实反映图像中识别到的所有字段和数据，不要遗漏任何信息，内容放在<JMD1></JMD1><JMD2></JMD2>之间。因为一个照片里面可能会有多个receipts，<OMD>对应于receipt的数量。<OMD>和<JMD>要对应，内容不要翻译，要对应于原文";
+    private const int DedupDateWindowDays = 30;
+
+    private const string BatchMapPrompt = "根据以下OCR提取的票据数据，判断这是医疗票据还是购物票据还是其他类型，然后映射到我们的数据Schema，返回纯JSON数组，不要包含代码块标记。\n\nOCR部分可能会按 <OMD1></OMD1><JMD1></JMD1><OMD2></OMD2><JMD2></JMD2> 这样的编号结构返回多张票据。你必须把每个 JMDn 当作一张独立 receipt 来理解，并输出顶层 JSON 数组，数组顺序必须与 JMD 的编号顺序一致。\n绝对不要把不同 JMD 编号的内容合并成一个对象。即使是同一家医院、同一个病案号、同一个人，只要是不同日期、不同页块、不同 receipt，也必须拆成不同对象。\n\n如果一张照片里包含多张票据、多个日期、多个就诊记录、多个文档页块，必须按“每一张独立票据/每一个独立就诊日期”拆成数组里的多条记录，绝对不要把不同日期或不同票据内容合并到同一个对象里。\n如果原始OCR里已经有 visits、documents、receipts、pages 等多条结构，也必须展开成顶层 JSON 数组后再返回。\n同一家医院、同一个病案号也不能合并，只要 receiptDate / visit_date / 就诊日期 不同，就必须拆成不同对象。\n\nSchema字段说明：\n{\n  type: \"Shopping\" | \"Medical\",\n  category: string,  // Shopping时: Supermarket, Restaurant, OnlineShopping, Other; Medical时: Registration, Diagnosis, Prescription, LabResult, ImagingResult, PaymentReceipt, DischargeNote, Other\n  merchantName: string,\n  hospitalName: string,\n  department: string,\n  doctorName: string,\n  patientName: string,\n  totalAmount: number,\n  taxAmount: number,  // 税额；如果票据明确显示税额则填入，如果未单独显示但可由totalAmount减去商品小计推导，则填推导值，否则留空\n  currency: string,  // 默认CNY\n  receiptDate: string,  // YYYY-MM-DD\n  outpatientNumber: string,\n  medicalInsuranceNumber: string,\n  insuranceType: string,\n  medicalInsuranceFundPayment: number,\n  personalSelfPay: number,\n  otherPayments: number,\n  personalAccountPayment: number,\n  personalOutOfPocket: number,\n  cashPayment: number,\n  notes: string,  // 报告类型名称等\n  diagnosisText: string,\n  items: [{ name, quantity, unit, unitPrice, totalPrice }],\n  medications: [{ name, dosage, frequency, days, quantity, price }],\n  labResults: [{ name, value, unit, referenceRange, status }]  // value为纯数值去掉↑↓，status: High/Low/Normal\n}";
+
     private readonly IReceiptRepository _receiptRepo;
     private readonly IReceiptVisitRepository _visitRepo;
     private readonly IAutoAssociateService _autoAssociateService;
@@ -92,6 +98,7 @@ public class VisitController : ControllerBase
             return BadRequest("At least one photo ID is required.");
 
         var userId = GetUserId();
+        var cancellationToken = HttpContext.RequestAborted;
         var baseUrl = _configuration["Agent:BaseUrl"] ?? string.Empty;
         var apiKey = _configuration["Agent:ApiKey"] ?? string.Empty;
         var model = _configuration["Agent:Model"] ?? string.Empty;
@@ -106,6 +113,11 @@ public class VisitController : ControllerBase
 
         foreach (var photoId in request.PhotoIds)
         {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                break;
+            }
+
             var result = new BatchExtractResult { PhotoId = photoId, Status = "Pending" };
 
             var photo = await _photoRepo.GetByIdAsync(photoId);
@@ -123,7 +135,7 @@ public class VisitController : ControllerBase
 
             if (!string.IsNullOrEmpty(photo.FilePath) && System.IO.File.Exists(photo.FilePath))
             {
-                imageBytes = await System.IO.File.ReadAllBytesAsync(photo.FilePath);
+                imageBytes = await System.IO.File.ReadAllBytesAsync(photo.FilePath, cancellationToken);
                 mimeType = photo.ContentType switch
                 {
                     "image/png" => "image/png",
@@ -160,16 +172,11 @@ public class VisitController : ControllerBase
             var base64 = Convert.ToBase64String(imageBytes);
             var dataUri = $"data:{mimeType};base64,{base64}";
 
-            // Store photo URL for receipt.ImageUrl mapping
-            // Photo files are stored in wwwroot/photos/, so URL = /photos/{fileName}
-            result.PhotoImageUrl = $"/photos/{photo.FileName}";
+            result.PhotoImageUrl = PhotoDtosMapper.ToImageUrl(photo);
 
             // Step 1: Vision OCR — extract text & structure from image (Phase 5: 场景感知多步 prompt)
             try
             {
-                // Phase 5: 根据照片文件名和标签进行场景预判
-                var scenarioPrompt = GetScenarioAwarePrompt(photo);
-
                 var ocrPayload = new
                 {
                     model,
@@ -180,7 +187,7 @@ public class VisitController : ControllerBase
                             role = "user",
                             content = new object[]
                             {
-                                new { type = "text", text = scenarioPrompt },
+                                new { type = "text", text = BatchOcrPrompt },
                                 new { type = "image_url", image_url = new { url = dataUri } }
                             }
                         }
@@ -201,7 +208,7 @@ public class VisitController : ControllerBase
                     System.Text.Json.JsonSerializer.Serialize(ocrPayload),
                     System.Text.Encoding.UTF8, "application/json");
 
-                using var ocrResponse = await httpClient.SendAsync(ocrRequest);
+                using var ocrResponse = await httpClient.SendAsync(ocrRequest, cancellationToken);
                 var ocrBody = await ocrResponse.Content.ReadAsStringAsync();
                 if (!ocrResponse.IsSuccessStatusCode)
                 {
@@ -229,50 +236,9 @@ public class VisitController : ControllerBase
                 }
 
                 // Step 2: Map raw OCR data to our receipt schema (Phase 5: 增强版 schema mapping)
-                var mapPrompt = @"根据以下OCR提取的票据数据，判断这是医疗票据还是购物票据还是其他类型，然后映射到我们的数据Schema，返回纯JSON数组，不要包含代码块标记。
+                                var parsedStep1 = ParseOcrContent(step1Content);
 
-如果一张照片里包含多张票据、多个日期、多个就诊记录、多个文档页块，必须按""每一张独立票据/每一个独立就诊日期""拆成数组里的多条记录，绝对不要把不同日期或不同票据内容合并到同一个对象里。
-
-Schema字段说明（所有字段均为可选，只输出OCR能确认的字段）：
-{
-  type: ""Shopping"" | ""Medical"",
-  category: string,  // Shopping时: Supermarket, Restaurant, OnlineShopping, Other; Medical时: Registration, Diagnosis, Prescription, LabResult, ImagingResult, PaymentReceipt, DischargeNote, Other
-  merchantName: string, // 商户/超市/餐厅名称
-  hospitalName: string, // 医院名称 (医疗票据)
-  department: string, // 科室 (医疗票据)
-  doctorName: string, // 医生姓名
-  patientName: string, // 患者姓名
-  medicalRecordNumber: string, // 病案号/住院号 (Phase 5 新增: 医疗票据中最重要的关联键!)
-  diagnosisText: string, // 诊断文本 (Phase 5 新增: 从诊断单/出院小结提取)
-  insuranceType: string, // 医保类型 (Phase 5 新增: 城镇职工/居民/新农合/自费)
-  totalAmount: number,
-  taxAmount: number,
-  currency: string,  // 默认CNY
-  receiptDate: string,  // YYYY-MM-DD
-  outpatientNumber: string, // 挂号号/就诊号
-  medicalInsuranceNumber: string, // 医保编号
-  medicalInsuranceFundPayment: number, // 医保统筹支付
-  personalSelfPay: number, // 个人自付
-  otherPayments: number, // 其他支付
-  personalAccountPayment: number, // 个人账户支付
-  personalOutOfPocket: number, // 个人现金支付
-  cashPayment: number,
-  notes: string,
-  items: [{ name, quantity, unit, unitPrice, totalPrice }],
-  medications: [{ name, dosage, frequency, days, quantity, price }],
-  labResults: [{ name, value, unit, referenceRange, status }]
-}
-
-Phase 5 增强提取指令:
-1. 医疗票据: 必须仔细识别病案号 (常见格式: B+数字, Z+数字, ""病案号:"" 后的数字, ""住院号:"" 后的数字)
-2. 诊断报告: 提取诊断结论到 diagnosisText
-3. 处方: 完整提取药品名、剂量、用法、频次、天数
-4. 收费单: 提取医保统筹支付、个人自付、个人账户支付等支付明细
-5. 购物小票: 提取商品名、单价、数量、总价
-
-请输出纯 JSON 数组, 不要包含代码块标记。";
-
-                var mapMessages = new object[] { new { role = "user", content = mapPrompt + "\n\n以下是OCR提取的数据：\n" + step1Content } };
+                                var mapMessages = new object[] { new { role = "user", content = BatchMapPrompt + "\n\n以下是OCR提取的数据：\n" + step1Content } };
 
                 var mapPayload = new
                 {
@@ -287,7 +253,7 @@ Phase 5 增强提取指令:
                     System.Text.Json.JsonSerializer.Serialize(mapPayload),
                     System.Text.Encoding.UTF8, "application/json");
 
-                using var mapResponse = await httpClient.SendAsync(mapRequest);
+                using var mapResponse = await httpClient.SendAsync(mapRequest, cancellationToken);
                 var mapBody = await mapResponse.Content.ReadAsStringAsync();
                 if (!mapResponse.IsSuccessStatusCode)
                 {
@@ -319,6 +285,12 @@ Phase 5 增强提取指令:
                     var arr = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(stripped);
                     if (arr.ValueKind == System.Text.Json.JsonValueKind.Array)
                     {
+                        var markdownBlocks = parsedStep1.MarkdownBlocks.Count > 0
+                            ? parsedStep1.MarkdownBlocks
+                            : SplitMarkdownReceipts(parsedStep1.Markdown);
+                        var expectedCount = arr.GetArrayLength();
+                        var receiptIndex = 0;
+
                         foreach (var el in arr.EnumerateArray())
                         {
                             var mapped = new ParsedExtractedReceipt();
@@ -331,7 +303,7 @@ Phase 5 增强提取指令:
                             TryGetString(el, "currency", out v); mapped.Currency = v ?? "CNY";
                             TryGetString(el, "receiptDate", out v); mapped.ReceiptDate = v;
                             TryGetString(el, "notes", out v); mapped.Notes = v;
-                            TryGetString(el, "type", out v); mapped.Type = v ?? "Shopping";
+                            TryGetString(el, "type", out v); mapped.Type = v ?? ReceiptType.Shopping;
                             TryGetString(el, "category", out v); mapped.Category = v ?? string.Empty;
                             // Phase 5 新增字段解析
                             TryGetString(el, "medicalRecordNumber", out v); mapped.MedicalRecordNumber = v;
@@ -371,7 +343,12 @@ Phase 5 增强提取指令:
                                     Status = GetPropString(lab, "status"),
                                 }).ToList();
 
+                            mapped.Type = NormalizeReceiptType(mapped);
+                            mapped.Category = NormalizeReceiptCategory(mapped.Type, mapped.Category);
+                            mapped.RawText = PickMarkdownBlock(markdownBlocks, mapped, receiptIndex, expectedCount);
+
                             result.ParsedReceipts.Add(mapped);
+                            receiptIndex++;
                         }
                     }
                 }
@@ -381,8 +358,53 @@ Phase 5 增强提取指令:
                     result.Error = $"Parsed receipt parsing error: {parseEx.Message}";
                 }
 
-                result.Status = result.ParsedReceipts.Count > 0 ? "Completed" : "Completed";
+                var confirmedReceipts = BuildConfirmedReceipts(photo, result);
+                var saveErrors = new List<string>();
 
+                foreach (var confirmedReceipt in confirmedReceipts)
+                {
+                    if (cancellationToken.IsCancellationRequested)
+                    {
+                        break;
+                    }
+
+                    if (string.IsNullOrWhiteSpace(confirmedReceipt.ReceiptId))
+                    {
+                        confirmedReceipt.ReceiptId = await FindDuplicateReceiptIdAsync(userId, confirmedReceipt, cancellationToken);
+                    }
+
+                    var saveResult = await SaveConfirmedReceiptAsync(confirmedReceipt, userId);
+                    if (saveResult.Success && !string.IsNullOrEmpty(saveResult.ReceiptId))
+                    {
+                        result.SavedReceiptIds.Add(saveResult.ReceiptId);
+                        if (saveResult.WasOverwrite)
+                            result.OverwrittenReceiptCount++;
+                        else
+                            result.NewReceiptCount++;
+                    }
+                    else if (!string.IsNullOrWhiteSpace(saveResult.Error))
+                    {
+                        saveErrors.Add(saveResult.Error);
+                    }
+                }
+
+                result.SavedReceiptCount = result.SavedReceiptIds.Count;
+                result.Status = saveErrors.Count switch
+                {
+                    0 => "Completed",
+                    _ when result.SavedReceiptCount > 0 => "Partial",
+                    _ => "Failed",
+                };
+
+                if (saveErrors.Count > 0)
+                {
+                    result.Error = string.Join("; ", saveErrors);
+                }
+
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                break;
             }
             catch (Exception ex)
             {
@@ -434,6 +456,520 @@ Phase 5 增强提取指令:
         return null;
     }
 
+    private sealed record ParsedOcrContent(string Markdown, List<string> MarkdownBlocks);
+
+    private static ParsedOcrContent ParseOcrContent(string content)
+    {
+        var numberedMarkdownBlocks = ExtractNumberedTaggedBlocks(content, "OMD");
+        if (numberedMarkdownBlocks.Count > 0)
+        {
+            return new ParsedOcrContent(
+                string.Join("\n\n---\n\n", numberedMarkdownBlocks.Select(block => block.Content)),
+                numberedMarkdownBlocks.Select(block => block.Content).ToList());
+        }
+
+        var markdown = ExtractTaggedBlock(content, "OMD");
+        if (!string.IsNullOrWhiteSpace(markdown))
+        {
+            return new ParsedOcrContent(markdown, new List<string> { markdown });
+        }
+
+        var jsonSep = content.IndexOf("===JSON===", StringComparison.Ordinal);
+        if (jsonSep >= 0)
+        {
+            var mdPart = content[..jsonSep].Trim();
+            var normalized = System.Text.RegularExpressions.Regex.Replace(mdPart, @"^===Markdown===\s*", string.Empty);
+            return new ParsedOcrContent(normalized, string.IsNullOrWhiteSpace(normalized) ? new List<string>() : new List<string> { normalized });
+        }
+
+        var trimmed = content.Trim();
+        return new ParsedOcrContent(trimmed, string.IsNullOrWhiteSpace(trimmed) ? new List<string>() : new List<string> { trimmed });
+    }
+
+    private static List<(int Index, string Content)> ExtractNumberedTaggedBlocks(string input, string tag)
+    {
+        var pattern = $@"<{tag}(\d+)>([\s\S]*?)</{tag}\1>";
+        var matches = System.Text.RegularExpressions.Regex.Matches(input, pattern);
+        return matches
+            .Select(match => (
+                Index: int.TryParse(match.Groups[1].Value, out var index) ? index : int.MaxValue,
+                Content: match.Groups[2].Value.Trim()))
+            .Where(match => match.Index != int.MaxValue)
+            .OrderBy(match => match.Index)
+            .ToList();
+    }
+
+    private static string? ExtractTaggedBlock(string input, string tag)
+    {
+        var openTag = $"<{tag}>";
+        var start = input.IndexOf(openTag, StringComparison.Ordinal);
+        if (start < 0)
+        {
+            return null;
+        }
+
+        var contentStart = start + openTag.Length;
+        var closingTags = new[] { $"</{tag}>", $"/{tag}>" };
+        var end = -1;
+        foreach (var closingTag in closingTags)
+        {
+            var candidate = input.IndexOf(closingTag, contentStart, StringComparison.Ordinal);
+            if (candidate >= 0 && (end < 0 || candidate < end))
+            {
+                end = candidate;
+            }
+        }
+
+        return end < 0 ? input[contentStart..].Trim() : input.Substring(contentStart, end - contentStart).Trim();
+    }
+
+    private static List<string> SplitMarkdownReceipts(string markdown)
+    {
+        var normalized = markdown.Trim();
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            return new List<string>();
+        }
+
+        var blocks = System.Text.RegularExpressions.Regex
+            .Split(normalized, "\\n\\s*---+\\s*\\n")
+            .Select(block => block.Trim())
+            .Where(block => !string.IsNullOrWhiteSpace(block))
+            .ToList();
+
+        return blocks.Count > 0 ? blocks : new List<string> { normalized };
+    }
+
+    private static string? PickMarkdownBlock(List<string> blocks, ParsedExtractedReceipt record, int index, int expectedCount)
+    {
+        if (blocks.Count == 0) return null;
+        if (blocks.Count == 1) return expectedCount == 1 || index == 0 ? blocks[0] : null;
+        if (blocks.Count < expectedCount && index >= blocks.Count) return null;
+
+        var date = NormalizeMatchText(record.ReceiptDate);
+        var hospital = NormalizeMatchText(record.HospitalName);
+        var department = NormalizeMatchText(record.Department);
+        var patient = NormalizeMatchText(record.PatientName);
+
+        var best = blocks
+            .Select((block, blockIndex) =>
+            {
+                var compact = NormalizeMatchText(block) ?? string.Empty;
+                var score = 0;
+                if (!string.IsNullOrWhiteSpace(date) && compact.Contains(date, StringComparison.Ordinal)) score += 5;
+                if (!string.IsNullOrWhiteSpace(hospital) && compact.Contains(hospital, StringComparison.Ordinal)) score += 2;
+                if (!string.IsNullOrWhiteSpace(department) && compact.Contains(department, StringComparison.Ordinal)) score += 2;
+                if (!string.IsNullOrWhiteSpace(patient) && compact.Contains(patient, StringComparison.Ordinal)) score += 1;
+                return new { block, blockIndex, score };
+            })
+            .OrderByDescending(item => item.score)
+            .ThenBy(item => item.blockIndex)
+            .FirstOrDefault();
+
+        if (best != null && best.score > 0) return best.block;
+        return index < blocks.Count ? blocks[index] : blocks[0];
+    }
+
+    private static string? NormalizeMatchText(string? value) => value?.Replace(" ", string.Empty).Replace("\r", string.Empty).Replace("\n", string.Empty).Trim();
+
+    private static bool HasSavableContent(ParsedExtractedReceipt receipt)
+    {
+        return !string.IsNullOrWhiteSpace(receipt.MerchantName)
+            || !string.IsNullOrWhiteSpace(receipt.HospitalName)
+            || !string.IsNullOrWhiteSpace(receipt.PatientName)
+            || !string.IsNullOrWhiteSpace(receipt.ReceiptDate)
+            || !string.IsNullOrWhiteSpace(receipt.RawText)
+            || receipt.TotalAmount.HasValue
+            || (receipt.Items?.Count > 0)
+            || (receipt.Medications?.Count > 0)
+            || (receipt.LabResults?.Count > 0);
+    }
+
+    private static string NormalizeReceiptType(ParsedExtractedReceipt receipt)
+    {
+        var type = receipt.Type?.Trim();
+        if (string.Equals(type, ReceiptType.Shopping, StringComparison.OrdinalIgnoreCase))
+        {
+            return ReceiptType.Shopping;
+        }
+
+        if (string.Equals(type, ReceiptType.Medical, StringComparison.OrdinalIgnoreCase))
+        {
+            return ReceiptType.Medical;
+        }
+
+        if (!string.IsNullOrWhiteSpace(type))
+        {
+            if (type.Contains("医", StringComparison.OrdinalIgnoreCase)
+                || type.Contains("诊", StringComparison.OrdinalIgnoreCase)
+                || type.Contains("药", StringComparison.OrdinalIgnoreCase)
+                || type.Contains("medical", StringComparison.OrdinalIgnoreCase)
+                || type.Contains("hospital", StringComparison.OrdinalIgnoreCase))
+            {
+                return ReceiptType.Medical;
+            }
+
+            if (type.Contains("购", StringComparison.OrdinalIgnoreCase)
+                || type.Contains("餐", StringComparison.OrdinalIgnoreCase)
+                || type.Contains("shop", StringComparison.OrdinalIgnoreCase)
+                || type.Contains("receipt", StringComparison.OrdinalIgnoreCase)
+                || type.Contains("shopping", StringComparison.OrdinalIgnoreCase))
+            {
+                return ReceiptType.Shopping;
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(receipt.HospitalName)
+            || !string.IsNullOrWhiteSpace(receipt.Department)
+            || !string.IsNullOrWhiteSpace(receipt.DoctorName)
+            || !string.IsNullOrWhiteSpace(receipt.PatientName)
+            || !string.IsNullOrWhiteSpace(receipt.MedicalRecordNumber)
+            || !string.IsNullOrWhiteSpace(receipt.DiagnosisText)
+            || !string.IsNullOrWhiteSpace(receipt.InsuranceType)
+            || (receipt.Medications?.Count > 0)
+            || (receipt.LabResults?.Count > 0))
+        {
+            return ReceiptType.Medical;
+        }
+
+        return ReceiptType.Shopping;
+    }
+
+    private static string NormalizeReceiptCategory(string type, string? category)
+    {
+        var next = category?.Trim();
+        if (string.IsNullOrWhiteSpace(next))
+        {
+            return type == ReceiptType.Medical ? MedicalCategory.Other : ShoppingCategory.Other;
+        }
+
+        if (type == ReceiptType.Medical)
+        {
+            if (string.Equals(next, MedicalCategory.Registration, StringComparison.OrdinalIgnoreCase)) return MedicalCategory.Registration;
+            if (string.Equals(next, MedicalCategory.Diagnosis, StringComparison.OrdinalIgnoreCase)) return MedicalCategory.Diagnosis;
+            if (string.Equals(next, MedicalCategory.Prescription, StringComparison.OrdinalIgnoreCase)) return MedicalCategory.Prescription;
+            if (string.Equals(next, MedicalCategory.LabResult, StringComparison.OrdinalIgnoreCase)) return MedicalCategory.LabResult;
+            if (string.Equals(next, MedicalCategory.ImagingResult, StringComparison.OrdinalIgnoreCase)) return MedicalCategory.ImagingResult;
+            if (string.Equals(next, MedicalCategory.PaymentReceipt, StringComparison.OrdinalIgnoreCase)) return MedicalCategory.PaymentReceipt;
+            if (string.Equals(next, MedicalCategory.DischargeNote, StringComparison.OrdinalIgnoreCase)) return MedicalCategory.DischargeNote;
+            if (next.Contains("检验", StringComparison.OrdinalIgnoreCase) || next.Contains("化验", StringComparison.OrdinalIgnoreCase)) return MedicalCategory.LabResult;
+            if (next.Contains("处方", StringComparison.OrdinalIgnoreCase) || next.Contains("药", StringComparison.OrdinalIgnoreCase)) return MedicalCategory.Prescription;
+            if (next.Contains("挂号", StringComparison.OrdinalIgnoreCase)) return MedicalCategory.Registration;
+            if (next.Contains("诊断", StringComparison.OrdinalIgnoreCase)) return MedicalCategory.Diagnosis;
+            if (next.Contains("影像", StringComparison.OrdinalIgnoreCase) || next.Contains("CT", StringComparison.OrdinalIgnoreCase) || next.Contains("B超", StringComparison.OrdinalIgnoreCase) || next.Contains("X光", StringComparison.OrdinalIgnoreCase)) return MedicalCategory.ImagingResult;
+            if (next.Contains("收费", StringComparison.OrdinalIgnoreCase) || next.Contains("缴费", StringComparison.OrdinalIgnoreCase) || next.Contains("发票", StringComparison.OrdinalIgnoreCase)) return MedicalCategory.PaymentReceipt;
+            if (next.Contains("出院", StringComparison.OrdinalIgnoreCase)) return MedicalCategory.DischargeNote;
+            return MedicalCategory.Other;
+        }
+
+        if (string.Equals(next, ShoppingCategory.Supermarket, StringComparison.OrdinalIgnoreCase)) return ShoppingCategory.Supermarket;
+        if (string.Equals(next, ShoppingCategory.Restaurant, StringComparison.OrdinalIgnoreCase)) return ShoppingCategory.Restaurant;
+        if (string.Equals(next, ShoppingCategory.OnlineShopping, StringComparison.OrdinalIgnoreCase)) return ShoppingCategory.OnlineShopping;
+        if (next.Contains("超市", StringComparison.OrdinalIgnoreCase)) return ShoppingCategory.Supermarket;
+        if (next.Contains("餐", StringComparison.OrdinalIgnoreCase) || next.Contains("饭", StringComparison.OrdinalIgnoreCase)) return ShoppingCategory.Restaurant;
+        if (next.Contains("网购", StringComparison.OrdinalIgnoreCase) || next.Contains("电商", StringComparison.OrdinalIgnoreCase) || next.Contains("online", StringComparison.OrdinalIgnoreCase)) return ShoppingCategory.OnlineShopping;
+        return ShoppingCategory.Other;
+    }
+
+    private static List<ConfirmedReceipt> BuildConfirmedReceipts(PhotoAlbum photo, BatchExtractResult result)
+    {
+        var overwriteReceiptId = photo.AssociatedReceiptIds.Count == 1 && result.ParsedReceipts.Count == 1
+            ? photo.AssociatedReceiptIds[0]
+            : null;
+
+        return result.ParsedReceipts
+            .Where(HasSavableContent)
+            .Select(parsed => new ConfirmedReceipt
+            {
+                PhotoId = photo.Id,
+                PhotoImageUrl = result.PhotoImageUrl,
+                SourcePhotoId = photo.Id,
+                ReceiptId = overwriteReceiptId,
+                Type = parsed.Type,
+                Category = parsed.Category,
+                MerchantName = parsed.MerchantName,
+                HospitalName = parsed.HospitalName,
+                Department = parsed.Department,
+                DoctorName = parsed.DoctorName,
+                PatientName = parsed.PatientName,
+                MedicalRecordNumber = parsed.MedicalRecordNumber,
+                InsuranceType = parsed.InsuranceType,
+                DiagnosisText = parsed.DiagnosisText,
+                TotalAmount = parsed.TotalAmount,
+                Currency = parsed.Currency,
+                ReceiptDate = parsed.ReceiptDate,
+                Notes = parsed.Notes,
+                RawText = parsed.RawText,
+                Items = parsed.Items,
+                Medications = parsed.Medications,
+                LabResults = parsed.LabResults,
+            })
+            .ToList();
+    }
+
+    private async Task<ConfirmedReceiptResponse> SaveConfirmedReceiptAsync(ConfirmedReceipt r, string userId)
+    {
+        try
+        {
+            Receipt? existingReceipt = null;
+            if (!string.IsNullOrEmpty(r.ReceiptId))
+            {
+                existingReceipt = await _receiptRepo.GetByIdAsync(r.ReceiptId);
+                if (existingReceipt == null || existingReceipt.OwnerId != userId)
+                {
+                    return new ConfirmedReceiptResponse
+                    {
+                        ReceiptId = null,
+                        PhotoId = r.PhotoId,
+                        Success = false,
+                        Error = "Receipt not found or not owned.",
+                    };
+                }
+            }
+
+            var dt = string.IsNullOrEmpty(r.ReceiptDate) ? (DateTime?)null : DateTime.TryParse(r.ReceiptDate, out var d) ? d : null;
+            var sourcePhotoId = !string.IsNullOrEmpty(r.SourcePhotoId) ? r.SourcePhotoId : r.PhotoId;
+
+            var receipt = new Receipt
+            {
+                Id = existingReceipt?.Id ?? $"rcpt_{Guid.NewGuid():N}",
+                OwnerId = userId,
+                Type = r.Type,
+                Category = r.Category,
+                ImageUrl = r.PhotoImageUrl ?? (existingReceipt?.ImageUrl ?? "/photos/placeholder"),
+                SourcePhotoId = sourcePhotoId,
+                AdditionalPhotoIds = r.AdditionalPhotoIds ?? (existingReceipt?.AdditionalPhotoIds ?? new()),
+                RawText = r.RawText,
+                MerchantName = r.MerchantName,
+                HospitalName = r.HospitalName,
+                Department = r.Department,
+                DoctorName = r.DoctorName,
+                PatientName = r.PatientName,
+                MedicalRecordNumber = r.MedicalRecordNumber,
+                DiagnosisText = r.DiagnosisText,
+                InsuranceType = r.InsuranceType,
+                OutpatientNumber = r.OutpatientNumber,
+                TotalAmount = r.TotalAmount,
+                Currency = r.Currency ?? "CNY",
+                ReceiptDate = dt,
+                Notes = r.Notes,
+                Items = r.Items?.Select(i => new ReceiptLineItem
+                {
+                    Name = i.Name,
+                    Quantity = i.Quantity,
+                    Unit = i.Unit,
+                    UnitPrice = i.UnitPrice,
+                    TotalPrice = i.TotalPrice,
+                    Category = i.Category
+                }).ToList() ?? new(),
+                Medications = r.Medications?.Select(m => new MedicationItem
+                {
+                    Name = m.Name,
+                    Dosage = m.Dosage,
+                    Frequency = m.Frequency,
+                    Days = m.Days,
+                    Quantity = m.Quantity,
+                    Price = m.Price
+                }).ToList() ?? new(),
+                LabResults = r.LabResults?.Select(l => new LabResultItem
+                {
+                    Name = l.Name,
+                    Value = l.Value,
+                    Unit = l.Unit,
+                    ReferenceRange = l.ReferenceRange,
+                    Status = l.Status
+                }).ToList() ?? new(),
+                CreatedAt = existingReceipt?.CreatedAt ?? DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+            };
+
+            Receipt saved;
+            if (existingReceipt != null)
+                saved = await _receiptRepo.UpdateAsync(receipt);
+            else
+                saved = await _receiptRepo.CreateAsync(receipt);
+
+            var photo = await _photoRepo.GetByIdAsync(r.PhotoId);
+            if (photo != null && !photo.AssociatedReceiptIds.Contains(saved.Id))
+            {
+                photo.AssociatedReceiptIds.Add(saved.Id);
+                photo.ExtractedReceiptCount = photo.AssociatedReceiptIds.Count;
+                photo.LastOcrStatus = "Completed";
+                photo.UpdatedAt = DateTime.UtcNow;
+                await _photoRepo.UpdateAsync(photo);
+            }
+
+            if (r.Type == ReceiptType.Medical && !string.IsNullOrEmpty(r.MedicalRecordNumber))
+            {
+                await UpdateMedicalRecordIndexAsync(saved, userId);
+            }
+
+            return new ConfirmedReceiptResponse
+            {
+                ReceiptId = saved.Id,
+                PhotoId = r.PhotoId,
+                Success = true,
+                WasOverwrite = existingReceipt != null,
+            };
+        }
+        catch (Exception ex)
+        {
+            return new ConfirmedReceiptResponse
+            {
+                ReceiptId = null,
+                PhotoId = r.PhotoId,
+                Success = false,
+                Error = ex.Message,
+            };
+        }
+    }
+
+    private async Task<string?> FindDuplicateReceiptIdAsync(string ownerId, ConfirmedReceipt receipt, CancellationToken cancellationToken)
+    {
+        var dedupText = receipt.RawText?.Trim();
+        if (string.IsNullOrWhiteSpace(dedupText))
+        {
+            return null;
+        }
+
+        var existingReceipts = await _receiptRepo.GetByOwnerIdAsync(ownerId, receipt.Type);
+        var candidates = FilterDedupCandidates(receipt, existingReceipts);
+
+        foreach (var existing in candidates)
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                break;
+            }
+
+            if (string.IsNullOrWhiteSpace(existing.RawText))
+            {
+                continue;
+            }
+
+            var isDuplicate = await CheckDuplicateAsync(dedupText, existing.RawText, cancellationToken);
+            if (isDuplicate)
+            {
+                return existing.Id;
+            }
+        }
+
+        return null;
+    }
+
+    private List<Receipt> FilterDedupCandidates(ConfirmedReceipt receipt, List<Receipt> receipts)
+    {
+        var datedCandidates = new List<Receipt>();
+        var undatedCandidates = new List<Receipt>();
+
+        foreach (var existing in receipts)
+        {
+            if (string.IsNullOrWhiteSpace(existing.RawText))
+            {
+                continue;
+            }
+
+            var withinWindow = IsWithinDedupDateWindow(receipt.ReceiptDate, existing.ReceiptDate?.ToString("yyyy-MM-dd"));
+            if (withinWindow == true)
+            {
+                datedCandidates.Add(existing);
+            }
+            else if (withinWindow == null)
+            {
+                undatedCandidates.Add(existing);
+            }
+        }
+
+        return datedCandidates.Count > 0
+            ? datedCandidates.Concat(undatedCandidates).ToList()
+            : receipts.Where(existing => !string.IsNullOrWhiteSpace(existing.RawText)).ToList();
+    }
+
+    private static bool? IsWithinDedupDateWindow(string? left, string? right)
+    {
+        if (!DateTime.TryParse(left, out var leftDate) || !DateTime.TryParse(right, out var rightDate))
+        {
+            return null;
+        }
+
+        var diffDays = Math.Abs((leftDate - rightDate).TotalDays);
+        return diffDays <= DedupDateWindowDays;
+    }
+
+    private async Task<bool> CheckDuplicateAsync(string newOcrText, string existingOcrText, CancellationToken cancellationToken)
+    {
+        var baseUrl = _configuration["Agent:BaseUrl"];
+        var apiKey = _configuration["Agent:ApiKey"] ?? string.Empty;
+        var model = _configuration["Agent:Model"] ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(baseUrl) || string.IsNullOrWhiteSpace(newOcrText) || string.IsNullOrWhiteSpace(existingOcrText))
+        {
+            return false;
+        }
+
+        var prompt = BuildDedupPrompt(newOcrText, existingOcrText);
+        var messages = new object[] { new { role = "user", content = prompt } };
+        var payload = new
+        {
+            model,
+            messages,
+            temperature = 0.7,
+            top_p = 0.8,
+            top_k = 20,
+            min_p = 0.0,
+            presence_penalty = 1.5,
+            repetition_penalty = 1.0,
+            chat_template_kwargs = new { enable_thinking = false }
+        };
+
+        try
+        {
+            var httpClient = _httpClientFactory.CreateClient();
+            httpClient.Timeout = TimeSpan.FromSeconds(30);
+            var request = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl.TrimEnd('/')}/chat/completions");
+            request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
+            request.Content = new System.Net.Http.StringContent(
+                System.Text.Json.JsonSerializer.Serialize(payload),
+                System.Text.Encoding.UTF8,
+                "application/json");
+
+            using var response = await httpClient.SendAsync(request, cancellationToken);
+            var body = await response.Content.ReadAsStringAsync(cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                return false;
+            }
+
+            using var doc = System.Text.Json.JsonDocument.Parse(body);
+            var content = doc.RootElement
+                .GetProperty("choices")[0]
+                .GetProperty("message")
+                .GetProperty("content")
+                .GetString();
+
+            if (string.IsNullOrWhiteSpace(content))
+            {
+                return false;
+            }
+
+            var cleaned = content.Trim();
+            if (cleaned.StartsWith("```json", StringComparison.OrdinalIgnoreCase)) cleaned = cleaned[7..];
+            else if (cleaned.StartsWith("```", StringComparison.OrdinalIgnoreCase)) cleaned = cleaned[3..];
+            if (cleaned.EndsWith("```", StringComparison.OrdinalIgnoreCase)) cleaned = cleaned[..^3];
+            cleaned = cleaned.Trim();
+
+            using var result = System.Text.Json.JsonDocument.Parse(cleaned);
+            return result.RootElement.TryGetProperty("isDuplicate", out var val) && val.GetBoolean();
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static string BuildDedupPrompt(string newOcrText, string existingOcrText) =>
+        $"判断以下两张票据是否是同一张票据（即重复录入）。\n只需要回答一个JSON：{{\"isDuplicate\": true}} 或 {{\"isDuplicate\": false}}\n不要解释，只返回JSON。\n\n新票据OCR文本：\n{newOcrText}\n\n已有票据OCR文本：\n{existingOcrText}";
+
     [HttpPost("save-confirmed")]
     public async Task<IActionResult> SaveConfirmed([FromBody] SaveConfirmedRequest request)
     {
@@ -442,107 +978,7 @@ Phase 5 增强提取指令:
 
         foreach (var r in request.Receipts)
         {
-            try
-            {
-                Receipt? existingReceipt = null;
-                if (!string.IsNullOrEmpty(r.ReceiptId))
-                {
-                    existingReceipt = await _receiptRepo.GetByIdAsync(r.ReceiptId);
-                    if (existingReceipt == null || existingReceipt.OwnerId != userId)
-                        continue;
-                }
-
-                var dt = string.IsNullOrEmpty(r.ReceiptDate) ? (DateTime?)null : DateTime.TryParse(r.ReceiptDate, out var d) ? d : null;
-
-                // Phase 5: 确定 SourcePhotoId (优先使用 DTO 中的 SourcePhotoId, 否则回退到 PhotoId)
-                var sourcePhotoId = !string.IsNullOrEmpty(r.SourcePhotoId) ? r.SourcePhotoId : r.PhotoId;
-
-                var receipt = new Receipt
-                {
-                    Id = existingReceipt?.Id ?? $"rcpt_{Guid.NewGuid():N}",
-                    OwnerId = userId,
-                    Type = r.Type,
-                    Category = r.Category,
-                    ImageUrl = r.PhotoImageUrl ?? (existingReceipt?.ImageUrl ?? "/photos/placeholder"),
-                    // Phase 5: 保存主照片ID和额外照片ID
-                    SourcePhotoId = sourcePhotoId,
-                    AdditionalPhotoIds = r.AdditionalPhotoIds ?? (existingReceipt?.AdditionalPhotoIds ?? new()),
-                    RawText = r.RawText,
-                    MerchantName = r.MerchantName,
-                    HospitalName = r.HospitalName,
-                    Department = r.Department,
-                    DoctorName = r.DoctorName,
-                    PatientName = r.PatientName,
-                    // Phase 5: 保存医疗字段
-                    MedicalRecordNumber = r.MedicalRecordNumber,
-                    DiagnosisText = r.DiagnosisText,
-                    InsuranceType = r.InsuranceType,
-                    OutpatientNumber = r.OutpatientNumber,
-                    TotalAmount = r.TotalAmount,
-                    Currency = r.Currency ?? "CNY",
-                    ReceiptDate = dt,
-                    Notes = r.Notes,
-                    Items = r.Items?.Select(i => new ReceiptLineItem
-                    {
-                        Name = i.Name, Quantity = i.Quantity, Unit = i.Unit,
-                        UnitPrice = i.UnitPrice, TotalPrice = i.TotalPrice, Category = i.Category
-                    }).ToList() ?? new(),
-                    Medications = r.Medications?.Select(m => new MedicationItem
-                    {
-                        Name = m.Name, Dosage = m.Dosage, Frequency = m.Frequency,
-                        Days = m.Days, Quantity = m.Quantity, Price = m.Price
-                    }).ToList() ?? new(),
-                    LabResults = r.LabResults?.Select(l => new LabResultItem
-                    {
-                        Name = l.Name, Value = l.Value, Unit = l.Unit,
-                        ReferenceRange = l.ReferenceRange, Status = l.Status
-                    }).ToList() ?? new(),
-                    CreatedAt = existingReceipt?.CreatedAt ?? DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow,
-                };
-
-                Receipt saved;
-                if (existingReceipt != null)
-                    saved = await _receiptRepo.UpdateAsync(receipt);
-                else
-                    saved = await _receiptRepo.CreateAsync(receipt);
-
-                // Associate the photo with this receipt
-                var photo = await _photoRepo.GetByIdAsync(r.PhotoId);
-                if (photo != null && !photo.AssociatedReceiptIds.Contains(saved.Id))
-                {
-                    photo.AssociatedReceiptIds.Add(saved.Id);
-
-                    // Phase 5: 更新 PhotoAlbum 派生字段
-                    photo.ExtractedReceiptCount = photo.AssociatedReceiptIds.Count;
-                    photo.LastOcrStatus = "Completed";
-                    photo.UpdatedAt = DateTime.UtcNow;
-                    await _photoRepo.UpdateAsync(photo);
-                }
-
-                // Phase 5: 医疗类型 receipt 且有病案号时, 自动创建/关联 ReceiptVisit 和 MedicalRecordIndex
-                if (r.Type == ReceiptType.Medical && !string.IsNullOrEmpty(r.MedicalRecordNumber))
-                {
-                    await UpdateMedicalRecordIndexAsync(saved, userId);
-                }
-
-                results.Add(new ConfirmedReceiptResponse
-                {
-                    ReceiptId = saved.Id,
-                    PhotoId = r.PhotoId,
-                    Success = true,
-                });
-            }
-            catch (Exception ex)
-            {
-                results.Add(new ConfirmedReceiptResponse
-                {
-                    ReceiptId = null,
-                    PhotoId = r.PhotoId,
-                    Success = false,
-                    Error = ex.Message,
-                });
-            }
+            results.Add(await SaveConfirmedReceiptAsync(r, userId));
         }
 
         return Ok(results);
@@ -561,9 +997,8 @@ Phase 5 增强提取指令:
     /// </summary>
     private string GetScenarioAwarePrompt(PhotoAlbum photo)
     {
-        var fileName = photo.FileName.ToLower();
         var tags = photo.Tags ?? new List<string>();
-        var allText = fileName + " " + string.Join(" ", tags);
+        var allText = string.Join(" ", tags);
 
         // 医疗关键词列表
         var medicalKeywords = new[]
@@ -874,6 +1309,7 @@ Phase 5 增强提取指令:
         public string? ReceiptId { get; set; }
         public string PhotoId { get; set; } = string.Empty;
         public bool Success { get; set; }
+        public bool WasOverwrite { get; set; }
         public string? Error { get; set; }
     }
 }

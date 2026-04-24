@@ -110,12 +110,16 @@ interface MedicalVisitTimelineProps {
   onSelectReceipt: (r: ReceiptDto) => void;
 }
 
+const shouldShowMedicalAmount = (receipt: ReceiptDto) => receipt.category === 'PaymentReceipt';
+
 export const MedicalVisitTimeline: React.FC<MedicalVisitTimelineProps> = ({
   medicalReceipts, allReceipts, checkedIds, onToggleChecked, onSelectReceipt,
 }) => {
   const { t } = useLanguage();
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [expandedMed, setExpandedMed] = useState<string | null>(null);
+
+  const shouldIgnoreSelectionClick = () => !!window.getSelection()?.toString().trim();
 
   const toggle = (key: string) => setExpanded(prev => ({ ...prev, [key]: !prev[key] }));
 
@@ -140,7 +144,9 @@ export const MedicalVisitTimeline: React.FC<MedicalVisitTimelineProps> = ({
         hospitalName,
         date,
         receipts: sorted,
-        totalAmount: sorted.reduce((s, r) => s + (r.totalAmount || 0), 0),
+        totalAmount: sorted.reduce((sum, receipt) => (
+          shouldShowMedicalAmount(receipt) ? sum + (receipt.totalAmount || 0) : sum
+        ), 0),
       });
     }
     // Sort groups by date descending
@@ -173,8 +179,7 @@ export const MedicalVisitTimeline: React.FC<MedicalVisitTimelineProps> = ({
   if (medicalReceipts.length === 0) {
     return (
       <BoxAny sx={{ textAlign: 'center', py: 8, color: 'text.secondary' }}>
-        <HospitalIcon sx={{ fontSize: 48, mb: 1, opacity: 0.5 }} />
-        <Typography>{t('receipts.medical.empty')}</Typography>
+        <Typography>暂无票据</Typography>
       </BoxAny>
     );
   }
@@ -241,7 +246,10 @@ export const MedicalVisitTimeline: React.FC<MedicalVisitTimelineProps> = ({
                         bottom: -8, width: 2, bgcolor: 'divider',
                       } : undefined,
                     }}
-                    onClick={() => onSelectReceipt(receipt)}
+                    onClick={() => {
+                      if (shouldIgnoreSelectionClick()) return;
+                      onSelectReceipt(receipt);
+                    }}
                   >
                     <BoxAny sx={{
                       width: 32, height: 32, borderRadius: '50%', display: 'flex',
@@ -262,7 +270,7 @@ export const MedicalVisitTimeline: React.FC<MedicalVisitTimelineProps> = ({
                           size="small"
                           sx={{ bgcolor: categoryColors[receipt.category] || '#f5f5f5' }}
                         />
-                        {receipt.totalAmount != null && (
+                        {shouldShowMedicalAmount(receipt) && receipt.totalAmount != null && (
                           <Typography variant="body2" color="error.main" fontWeight={600}>
                             ¥{receipt.totalAmount.toFixed(2)}
                           </Typography>

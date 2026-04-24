@@ -92,8 +92,13 @@ a {
   overflow: visible !important;
 }
 
-/* Drop cursor — visible for inline drops */
-.ProseMirror-dropcursor { background: #FF0000 !important; width: 4px !important; z-index: 9999 !important; }
+/* Drop cursor — keep drag feedback without the persistent red bar */
+.ProseMirror-dropcursor {
+  background: rgba(15, 23, 42, 0.18) !important;
+  width: 2px !important;
+  border-radius: 999px;
+  z-index: 9999 !important;
+}
 
 /* Make dragged elements semi-transparent so drop cursor is visible */
 .tiptap [draggable="true"]:active,
