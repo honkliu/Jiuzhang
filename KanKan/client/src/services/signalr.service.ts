@@ -95,7 +95,7 @@ class SignalRService {
       }
     }
 
-    const hubUrl = import.meta.env.VITE_SIGNALR_URL || '/hub/chat';
+    const hubUrl = '/hub/chat';
 
     if (!this.connection) {
       this.connection = new signalR.HubConnectionBuilder()

@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { authService } from '@/services/auth.service';
 
-const API_URL = import.meta.env.VITE_API_URL || '/api';
+const API_URL = '/api';
 
 // Create axios instance
 const apiClient = axios.create({
