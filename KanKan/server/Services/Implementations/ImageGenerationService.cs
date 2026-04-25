@@ -13,6 +13,8 @@ public class ImageGenerationService : IImageGenerationService
         public byte[] Bytes { get; init; } = Array.Empty<byte>();
         public string FileStem { get; init; } = string.Empty;
         public string Extension { get; init; } = ".png";
+        public string DirectoryPath { get; init; } = string.Empty;
+        public string UrlDirectory { get; init; } = "/uploads";
     }
 
     private readonly IMongoCollection<ImageGenerationJob> _generationJobs;
@@ -207,7 +209,6 @@ public class ImageGenerationService : IImageGenerationService
             return new List<string>();
         }
 
-        var uploadsPath = GetUploadsPath();
         var sourceFileName = GetFileNameFromUrl(sourceUrl);
         var baseName = Path.GetFileNameWithoutExtension(sourceFileName);
         var extension = Path.GetExtension(sourceFileName);
@@ -220,11 +221,8 @@ public class ImageGenerationService : IImageGenerationService
             ? $"{baseName}_*"
             : $"{baseName}_*{extension}";
 
-        var results = new List<string>();
-        results.AddRange(FindGeneratedFiles(uploadsPath, searchPattern, baseName, "/uploads/"));
-
-        var legacyGeneratedPath = Path.Combine(uploadsPath, "generated");
-        results.AddRange(FindGeneratedFiles(legacyGeneratedPath, searchPattern, baseName, "/uploads/generated/"));
+        var (folderPath, urlPrefix) = GetGeneratedOutputLocation(sourceUrl);
+        var results = FindGeneratedFiles(folderPath, searchPattern, baseName, urlPrefix);
 
         return results
             .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -256,7 +254,41 @@ public class ImageGenerationService : IImageGenerationService
 
     private static string GetFileNameFromUrl(string url)
     {
-        return Path.GetFileName(url.TrimStart('/').Replace("uploads/", ""));
+        var path = NormalizeAssetPath(url);
+        return Path.GetFileName(path.TrimEnd('/'));
+    }
+
+    private (string folderPath, string urlPrefix) GetGeneratedOutputLocation(string sourceUrl)
+    {
+        var normalizedPath = NormalizeAssetPath(sourceUrl);
+        if (TryExtractAvatarImageId(normalizedPath, out _))
+        {
+            return (GetUploadsPath(), "/uploads/");
+        }
+
+        var sourceFilePath = ResolveStaticAssetFilePath(normalizedPath);
+        var folderPath = Path.GetDirectoryName(sourceFilePath) ?? GetUploadsPath();
+        var urlDirectory = GetUrlDirectoryFromFilePath(folderPath);
+        return (folderPath, urlDirectory.TrimEnd('/') + "/");
+    }
+
+    private string GetUrlDirectoryFromFilePath(string folderPath)
+    {
+        var webRootPath = Path.GetFullPath(GetWebRootPath());
+        var fullFolderPath = Path.GetFullPath(folderPath);
+        var relativePath = Path.GetRelativePath(webRootPath, fullFolderPath);
+        if (relativePath.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal)
+            || string.Equals(relativePath, "..", StringComparison.Ordinal))
+        {
+            return "/uploads";
+        }
+
+        if (string.Equals(relativePath, ".", StringComparison.Ordinal))
+        {
+            return "/";
+        }
+
+        return "/" + relativePath.Replace(Path.DirectorySeparatorChar, '/').Trim('/');
     }
 
     private static int ExtractSuffixIndex(string fileName, string baseName)
@@ -616,10 +648,8 @@ public class ImageGenerationService : IImageGenerationService
             }
 
             var inputUrl = request.MediaUrl ?? sourceUrl;
-            var uploadsPath = GetUploadsPath();
-            Directory.CreateDirectory(uploadsPath);
-
             var sourceImage = await ResolveImageSourceAsync(sourceUrl);
+            Directory.CreateDirectory(sourceImage.DirectoryPath);
             var inputImage = string.Equals(inputUrl, sourceUrl, StringComparison.OrdinalIgnoreCase)
                 ? sourceImage
                 : await ResolveImageSourceAsync(inputUrl);
@@ -664,15 +694,15 @@ public class ImageGenerationService : IImageGenerationService
                     var generatedBase64 = await _comfyUIService.GenerateImageAsync(imageBase64, fullPrompt, secondaryImageBase64);
 
                     // Save to file system
-                    var nextIndex = GetNextGeneratedIndex(uploadsPath, filePrefix, fileExtension);
+                    var nextIndex = GetNextGeneratedIndex(sourceImage.DirectoryPath, filePrefix, fileExtension);
                     var generatedFileName = $"{filePrefix}_{nextIndex}{fileExtension}";
-                    var generatedFilePath = Path.Combine(uploadsPath, generatedFileName);
+                    var generatedFilePath = Path.Combine(sourceImage.DirectoryPath, generatedFileName);
 
                     var generatedBytes = Convert.FromBase64String(generatedBase64);
                     generatedBytes = ImageResizer.ResizeToExact(generatedBytes, targetWidth, targetHeight, fileExtension);
                     await File.WriteAllBytesAsync(generatedFilePath, generatedBytes);
 
-                    var generatedUrl = $"/uploads/{generatedFileName}";
+                    var generatedUrl = $"{sourceImage.UrlDirectory.TrimEnd('/')}/{Uri.EscapeDataString(generatedFileName)}";
                     generatedUrls.Add(generatedUrl);
 
                     // Update progress
@@ -823,7 +853,9 @@ public class ImageGenerationService : IImageGenerationService
             {
                 Bytes = avatarImage.ImageData,
                 FileStem = avatarImageId,
-                Extension = GetExtensionFromContentType(avatarImage.ContentType)
+                Extension = GetExtensionFromContentType(avatarImage.ContentType),
+                DirectoryPath = GetUploadsPath(),
+                UrlDirectory = "/uploads"
             };
         }
 
@@ -835,11 +867,14 @@ public class ImageGenerationService : IImageGenerationService
 
         var fileName = Path.GetFileName(filePath);
         var extension = Path.GetExtension(fileName);
+        var directoryPath = Path.GetDirectoryName(filePath) ?? GetUploadsPath();
         return new ResolvedImageSource
         {
             Bytes = await File.ReadAllBytesAsync(filePath),
             FileStem = Path.GetFileNameWithoutExtension(fileName),
-            Extension = string.IsNullOrWhiteSpace(extension) ? ".png" : extension
+            Extension = string.IsNullOrWhiteSpace(extension) ? ".png" : extension,
+            DirectoryPath = directoryPath,
+            UrlDirectory = GetUrlDirectoryFromFilePath(directoryPath)
         };
     }
 
@@ -850,18 +885,45 @@ public class ImageGenerationService : IImageGenerationService
 
         if (trimmedPath.StartsWith("/uploads/", StringComparison.OrdinalIgnoreCase))
         {
-            var fileName = Path.GetFileName(trimmedPath);
-            return Path.Combine(webRootPath, "uploads", fileName);
+            return ResolveWebRootSubPath(webRootPath, trimmedPath, "/uploads/");
         }
 
         if (trimmedPath.StartsWith("/standing/", StringComparison.OrdinalIgnoreCase))
         {
-            var fileName = Path.GetFileName(trimmedPath);
-            return Path.Combine(webRootPath, "standing", fileName);
+            return ResolveWebRootSubPath(webRootPath, trimmedPath, "/standing/");
+        }
+
+        if (trimmedPath.StartsWith("/photos/", StringComparison.OrdinalIgnoreCase))
+        {
+            var fileName = GetFileNameFromUrl(trimmedPath);
+            return Path.Combine(webRootPath, "uploads", "receipts", fileName);
         }
 
         var fallbackFileName = GetFileNameFromUrl(trimmedPath);
         return Path.Combine(webRootPath, "uploads", fallbackFileName);
+    }
+
+    private static string ResolveWebRootSubPath(string webRootPath, string normalizedPath, string routePrefix)
+    {
+        var relativePath = normalizedPath.Substring(routePrefix.Length).TrimStart('/', '\\');
+        var queryIndex = relativePath.IndexOfAny(new[] { '?', '#' });
+        if (queryIndex >= 0)
+        {
+            relativePath = relativePath.Substring(0, queryIndex);
+        }
+
+        relativePath = Uri.UnescapeDataString(relativePath).Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar);
+        var rootFolder = routePrefix.Trim('/');
+        var combinedPath = Path.GetFullPath(Path.Combine(webRootPath, rootFolder, relativePath));
+        var allowedRoot = Path.GetFullPath(Path.Combine(webRootPath, rootFolder));
+
+        if (!combinedPath.StartsWith(allowedRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(combinedPath, allowedRoot, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("Invalid image path.");
+        }
+
+        return combinedPath;
     }
 
     private static string NormalizeAssetPath(string url)
@@ -871,7 +933,8 @@ public class ImageGenerationService : IImageGenerationService
             return absoluteUri.AbsolutePath;
         }
 
-        return url;
+        var queryIndex = url.IndexOfAny(new[] { '?', '#' });
+        return queryIndex >= 0 ? url.Substring(0, queryIndex) : url;
     }
 
     private static bool TryExtractAvatarImageId(string path, out string avatarImageId)

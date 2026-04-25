@@ -77,32 +77,34 @@ const PhotoCard: React.FC<PhotoCardProps> = ({ photo, onClick, onDelete, onExtra
           </IconButton>
         </Box>
         <Box sx={{ position: 'absolute', left: 8, right: 8, bottom: 8, zIndex: 2, display: 'flex', gap: 0.75 }}>
-          <Button
-            size="small"
-            variant="contained"
-            startIcon={<ExtractIcon sx={{ fontSize: 15 }} />}
-            onClick={(e) => {
-              e.stopPropagation();
-              onExtract?.(photo);
-            }}
-            sx={{
-              height: 20,
-              minHeight: 20,
-              maxHeight: 20,
-              minWidth: 0,
-              px: '6px',
-              py: '2px',
-              borderRadius: '999px',
-              textTransform: 'none',
-              boxShadow: 'none',
-              fontSize: '0.72rem',
-              lineHeight: 1,
-              '& .MuiButton-startIcon': { mr: 0.25 },
-            }}
-          >
-            提取
-          </Button>
-          {hasReceipt && (
+          {onExtract && (
+            <Button
+              size="small"
+              variant="contained"
+              startIcon={<ExtractIcon sx={{ fontSize: 15 }} />}
+              onClick={(e) => {
+                e.stopPropagation();
+                onExtract(photo);
+              }}
+              sx={{
+                height: 20,
+                minHeight: 20,
+                maxHeight: 20,
+                minWidth: 0,
+                px: '6px',
+                py: '2px',
+                borderRadius: '999px',
+                textTransform: 'none',
+                boxShadow: 'none',
+                fontSize: '0.72rem',
+                lineHeight: 1,
+                '& .MuiButton-startIcon': { mr: 0.25 },
+              }}
+            >
+              提取
+            </Button>
+          )}
+          {hasReceipt && onOpenReceipt && (
             <Button
               size="small"
               variant="outlined"

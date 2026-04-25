@@ -241,10 +241,60 @@ public class PhotoService
         if (photo == null || photo.OwnerId != ownerId)
             throw new KeyNotFoundException("Photo not found.");
 
-        if (!string.IsNullOrEmpty(photo.FilePath) && System.IO.File.Exists(photo.FilePath))
-            System.IO.File.Delete(photo.FilePath);
+        DeletePhotoFileAndGeneratedSiblings(photo.FilePath);
 
         await _repository.DeleteAsync(photoId);
+    }
+
+    private static void DeletePhotoFileAndGeneratedSiblings(string? filePath)
+    {
+        if (string.IsNullOrWhiteSpace(filePath))
+        {
+            return;
+        }
+
+        var directory = Path.GetDirectoryName(filePath);
+        var fileName = Path.GetFileName(filePath);
+        var baseName = Path.GetFileNameWithoutExtension(fileName);
+        var extension = Path.GetExtension(fileName);
+
+        if (System.IO.File.Exists(filePath))
+        {
+            System.IO.File.Delete(filePath);
+        }
+
+        if (string.IsNullOrWhiteSpace(directory)
+            || string.IsNullOrWhiteSpace(baseName)
+            || string.IsNullOrWhiteSpace(extension)
+            || !Directory.Exists(directory))
+        {
+            return;
+        }
+
+        var searchPattern = $"{baseName}_*{extension}";
+        foreach (var generatedPath in Directory.EnumerateFiles(directory, searchPattern, SearchOption.TopDirectoryOnly))
+        {
+            var generatedBaseName = Path.GetFileNameWithoutExtension(generatedPath);
+            if (!IsGeneratedDescendantName(generatedBaseName, baseName))
+            {
+                continue;
+            }
+
+            System.IO.File.Delete(generatedPath);
+        }
+    }
+
+    private static bool IsGeneratedDescendantName(string generatedBaseName, string sourceBaseName)
+    {
+        if (!generatedBaseName.StartsWith(sourceBaseName + "_", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var suffix = generatedBaseName.Substring(sourceBaseName.Length + 1);
+        var parts = suffix.Split('_', StringSplitOptions.None);
+        return parts.Length > 0
+            && parts.All(part => int.TryParse(part, out var index) && index > 0);
     }
 
     public async Task<byte[]> DownloadAsync(string photoId)

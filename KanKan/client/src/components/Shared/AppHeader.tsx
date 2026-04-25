@@ -44,6 +44,7 @@ const navItems = [
   { label: 'Notebook', path: '/notebook', adminOnly: false },
   { label: 'Receipts', path: '/receipts', adminOnly: false },
   { label: 'FamilyTree', path: '/family', adminOnly: true },
+  { label: 'Gallery', path: '/gallery', adminOnly: true, superOnly: true },
   { label: 'admin.title', path: '/admin', adminOnly: true },
 ];
 
@@ -106,6 +107,7 @@ export const AppHeader: React.FC<AppHeaderProps> = () => {
   const measureButtonRefs = React.useRef<Array<HTMLButtonElement | null>>([]);
   const availableNavItems = navItems.filter((item) => {
     if (item.path === '/family') return Boolean(user?.canViewFamilyTree);
+    if ('superOnly' in item && item.superOnly) return Boolean(user?.isAdmin && user?.domain === 'kankan');
     return !item.adminOnly || user?.isAdmin;
   });
   const [compactVisibleCount, setCompactVisibleCount] = React.useState(0);
