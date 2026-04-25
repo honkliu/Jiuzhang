@@ -30,6 +30,7 @@ interface PhotoAlbumPageProps {
   viewModes?: ViewMode[];
   emptyTitle?: string;
   emptyDescription?: string;
+  organizeGeneratedImages?: boolean;
 }
 
 type ViewMode = 'grid' | 'uploaded' | 'captured' | 'receiptDate';
@@ -39,7 +40,33 @@ type PhotoCollectionLightboxState = {
   initialIndex: number;
   groups: LightboxGroup[];
   initialGroupIndex: number;
+  initialGeneratedUrl?: string | null;
 } | null;
+
+const getImagePath = (url: string) => {
+  try {
+    return new URL(url, window.location.origin).pathname;
+  } catch {
+    return url.split(/[?#]/)[0];
+  }
+};
+
+const getImmediateGeneratedParentPath = (url: string) => {
+  const path = getImagePath(url);
+  const slashIndex = path.lastIndexOf('/');
+  const directory = slashIndex >= 0 ? path.slice(0, slashIndex + 1) : '';
+  const fileName = slashIndex >= 0 ? path.slice(slashIndex + 1) : path;
+  const dotIndex = fileName.lastIndexOf('.');
+  const stem = dotIndex >= 0 ? fileName.slice(0, dotIndex) : fileName;
+  const extension = dotIndex >= 0 ? fileName.slice(dotIndex) : '';
+  const parentStem = stem.replace(/_\d+$/, '');
+
+  if (parentStem === stem) {
+    return null;
+  }
+
+  return `${directory}${parentStem}${extension}`;
+};
 
 const sortPhotosDesc = (items: PhotoDto[], accessor: (photo: PhotoDto) => string | undefined) => {
   return [...items].sort((left, right) => {
@@ -204,6 +231,7 @@ const PhotoAlbumPage: React.FC<PhotoAlbumPageProps> = ({
   viewModes,
   emptyTitle = '还没有照片',
   emptyDescription = '把票据照片先收进票夹，后面才能做提取、整理和按时间归档',
+  organizeGeneratedImages = false,
 }) => {
   const [photos, setPhotos] = useState<PhotoDto[]>([]);
   const [receipts, setReceipts] = useState<ReceiptDto[]>([]);
@@ -362,11 +390,35 @@ const PhotoAlbumPage: React.FC<PhotoAlbumPageProps> = ({
       return;
     }
 
-    const images = contextPhotos
+    const photoByPath = new Map<string, PhotoDto>();
+    for (const contextPhoto of contextPhotos) {
+      const imageUrl = photoService.getImageUrl(contextPhoto);
+      if (imageUrl) {
+        photoByPath.set(getImagePath(imageUrl), contextPhoto);
+      }
+    }
+
+    const selectedImageUrl = photoService.getImageUrl(photo);
+    const selectedParentPath = selectedImageUrl ? getImmediateGeneratedParentPath(selectedImageUrl) : null;
+    const selectedParentPhoto = organizeGeneratedImages && selectedParentPath
+      ? photoByPath.get(selectedParentPath)
+      : undefined;
+    const selectedGroupPhoto = selectedParentPhoto ?? photo;
+    const initialGeneratedUrl = selectedParentPhoto ? selectedImageUrl : null;
+
+    const lightboxPhotos = organizeGeneratedImages
+      ? contextPhotos.filter((contextPhoto) => {
+        const imageUrl = photoService.getImageUrl(contextPhoto);
+        const parentPath = imageUrl ? getImmediateGeneratedParentPath(imageUrl) : null;
+        return !parentPath || !photoByPath.has(parentPath);
+      })
+      : contextPhotos;
+
+    const images = lightboxPhotos
       .map((contextPhoto) => photoService.getImageUrl(contextPhoto))
       .filter((url): url is string => Boolean(url));
     const groups: LightboxGroup[] = [];
-    contextPhotos.forEach((contextPhoto) => {
+    lightboxPhotos.forEach((contextPhoto) => {
       const sourceUrl = photoService.getImageUrl(contextPhoto);
       if (!sourceUrl) {
         return;
@@ -383,14 +435,15 @@ const PhotoAlbumPage: React.FC<PhotoAlbumPageProps> = ({
       return;
     }
 
-    const selectedImageUrl = photoService.getImageUrl(photo);
+    const selectedGroupUrl = photoService.getImageUrl(selectedGroupPhoto);
     setLightbox({
       images,
-      initialIndex: Math.max(0, selectedImageUrl ? images.findIndex((item) => item === selectedImageUrl) : 0),
+      initialIndex: Math.max(0, selectedGroupUrl ? images.findIndex((item) => item === selectedGroupUrl) : 0),
       groups,
-      initialGroupIndex: Math.max(0, groups.findIndex((item) => item.messageId === photo.id)),
+      initialGroupIndex: Math.max(0, groups.findIndex((item) => item.messageId === selectedGroupPhoto.id)),
+      initialGeneratedUrl,
     });
-  }, [displayPhotos]);
+  }, [displayPhotos, organizeGeneratedImages]);
 
   // Selection helpers
   const toggleSelect = useCallback((id: string) => {
@@ -915,6 +968,7 @@ const PhotoAlbumPage: React.FC<PhotoAlbumPageProps> = ({
           initialIndex={lightbox.initialIndex}
           groups={lightbox.groups}
           initialGroupIndex={lightbox.initialGroupIndex}
+          initialGeneratedUrl={lightbox.initialGeneratedUrl}
           open
           onClose={closeLightbox}
         />

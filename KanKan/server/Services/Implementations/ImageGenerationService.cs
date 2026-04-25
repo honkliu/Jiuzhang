@@ -3,6 +3,7 @@ using KanKan.API.Models.Entities;
 using KanKan.API.Utils;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using System.Text;
 
 namespace KanKan.API.Services.Implementations;
 
@@ -206,6 +207,11 @@ public class ImageGenerationService : IImageGenerationService
 
         if (string.IsNullOrWhiteSpace(sourceUrl))
         {
+            sourceUrl = ResolveSourceUrlFromIdentifier(messageId);
+        }
+
+        if (string.IsNullOrWhiteSpace(sourceUrl))
+        {
             return new List<string>();
         }
 
@@ -270,6 +276,51 @@ public class ImageGenerationService : IImageGenerationService
         var folderPath = Path.GetDirectoryName(sourceFilePath) ?? GetUploadsPath();
         var urlDirectory = GetUrlDirectoryFromFilePath(folderPath);
         return (folderPath, urlDirectory.TrimEnd('/') + "/");
+    }
+
+    private static string? ResolveSourceUrlFromIdentifier(string sourceId)
+    {
+        if (string.IsNullOrWhiteSpace(sourceId))
+        {
+            return null;
+        }
+
+        if (sourceId.StartsWith("/uploads/", StringComparison.OrdinalIgnoreCase)
+            || sourceId.StartsWith("/photos/", StringComparison.OrdinalIgnoreCase)
+            || sourceId.StartsWith("/standing/", StringComparison.OrdinalIgnoreCase))
+        {
+            return sourceId;
+        }
+
+        var decodedRelativePath = DecodeBase64Url(sourceId);
+        if (string.IsNullOrWhiteSpace(decodedRelativePath))
+        {
+            return null;
+        }
+
+        decodedRelativePath = decodedRelativePath.Replace('\\', '/').TrimStart('/');
+        if (decodedRelativePath.StartsWith("uploads/", StringComparison.OrdinalIgnoreCase)
+            || decodedRelativePath.StartsWith("photos/", StringComparison.OrdinalIgnoreCase)
+            || decodedRelativePath.StartsWith("standing/", StringComparison.OrdinalIgnoreCase))
+        {
+            return "/" + decodedRelativePath;
+        }
+
+        return null;
+    }
+
+    private static string? DecodeBase64Url(string value)
+    {
+        try
+        {
+            var base64 = value.Replace('-', '+').Replace('_', '/');
+            base64 = base64.PadRight(base64.Length + (4 - base64.Length % 4) % 4, '=');
+            return Encoding.UTF8.GetString(Convert.FromBase64String(base64));
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     private string GetUrlDirectoryFromFilePath(string folderPath)

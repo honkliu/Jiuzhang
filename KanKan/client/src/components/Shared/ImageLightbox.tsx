@@ -39,6 +39,7 @@ interface ImageLightboxProps {
   onClose: () => void;
   groups?: LightboxGroup[];
   initialGroupIndex?: number;
+  initialGeneratedUrl?: string | null;
 }
 
 export const ImageLightbox: React.FC<ImageLightboxProps> = ({
@@ -48,6 +49,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
   onClose,
   groups,
   initialGroupIndex,
+  initialGeneratedUrl,
 }) => {
   const { t, language } = useLanguage();
   const theme = useTheme();
@@ -228,7 +230,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
     setActiveGroupIndex(initialGroupIndex ?? 0);
     // zoom will be set when the image loads to reflect fit-to-view vs natural size
     setIsUiHidden(false);
-    setThumbnailMode('sources');
+    setThumbnailMode(initialGeneratedUrl ? 'edits' : 'sources');
     setPanOffset({ x: 0, y: 0 });
     if (hasGroups) {
       setCurrentIndex(0);
@@ -238,7 +240,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
     setShowSourceInEdits(true);
     setImagePickerOpen(false);
     setSelectedReferenceImageUrl(null);
-  }, [open, initialIndex, initialGroupIndex, hasGroups]);
+  }, [open, initialIndex, initialGroupIndex, hasGroups, initialGeneratedUrl]);
 
   useEffect(() => {
     if (!open || !hasGroups || !groups) return;
@@ -267,6 +269,16 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
       cancelled = true;
     };
   }, [open, hasGroups, groups, generatedByGroup]);
+
+  useEffect(() => {
+    if (!open || !initialGeneratedUrl || !activeGroup) return;
+    const generatedIndex = activeGeneratedUrls.findIndex((url) => url === initialGeneratedUrl);
+    if (generatedIndex < 0) return;
+
+    setSelectedEditIndexByGroup((prev) => ({ ...prev, [activeGroup.messageId]: generatedIndex + 1 }));
+    setThumbnailMode('edits');
+    setShowSourceInEdits(false);
+  }, [activeGeneratedUrls, activeGroup, initialGeneratedUrl, open]);
 
   useEffect(() => {
     if (!open || !hasGroups || standingImageUrls.length > 0) return;
@@ -981,11 +993,15 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
 
   useEffect(() => {
     if (thumbnailMode === 'edits' && activeGeneratedUrls.length === 0) {
+      if (initialGeneratedUrl && activeGroup && generatedByGroup[activeGroup.messageId] === undefined) {
+        return;
+      }
+
       setThumbnailMode('sources');
       setCurrentIndex(0);
       setShowSourceInEdits(true);
     }
-  }, [activeGeneratedUrls.length, thumbnailMode]);
+  }, [activeGeneratedUrls.length, activeGroup, generatedByGroup, initialGeneratedUrl, thumbnailMode]);
 
   return (
     <Modal

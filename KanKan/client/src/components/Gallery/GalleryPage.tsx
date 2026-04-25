@@ -25,6 +25,7 @@ export const GalleryPage: React.FC = () => {
             viewModes={['grid', 'uploaded']}
             emptyTitle="还没有可浏览图片"
             emptyDescription="uploads 和 uploads/receipts 目录下还没有图片。"
+            organizeGeneratedImages
           />
         </Container>
       </Box>
