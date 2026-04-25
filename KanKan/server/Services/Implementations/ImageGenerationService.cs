@@ -387,9 +387,32 @@ public class ImageGenerationService : IImageGenerationService
 
         return Directory.GetFiles(folderPath, searchPattern)
             .Select(path => Path.GetFileName(path))
+            .Where(name => IsGeneratedDescendantName(Path.GetFileNameWithoutExtension(name), baseName))
             .OrderBy(name => ExtractSuffixIndex(name, baseName))
             .Select(name => $"{urlPrefix}{name}")
             .ToList();
+    }
+
+    private static bool IsGeneratedDescendantName(string generatedBaseName, string sourceBaseName)
+    {
+        if (!generatedBaseName.StartsWith(sourceBaseName + "_", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var suffix = generatedBaseName.Substring(sourceBaseName.Length + 1);
+        var parts = suffix.Split('_', StringSplitOptions.None);
+        return parts.Length > 0
+            && parts.All(part => int.TryParse(part, out var index) && index > 0);
+    }
+
+    private static string CombineFileStems(params string[] stems)
+    {
+        var invalidChars = Path.GetInvalidFileNameChars();
+        return string.Join("_", stems
+            .Where(stem => !string.IsNullOrWhiteSpace(stem))
+            .Select(stem => new string(stem.Select(ch => invalidChars.Contains(ch) ? '_' : ch).ToArray()).Trim('_'))
+            .Where(stem => !string.IsNullOrWhiteSpace(stem)));
     }
 
     private async Task ProcessAvatarGenerationAsync(string jobId, GenerationRequest request)
@@ -710,10 +733,11 @@ public class ImageGenerationService : IImageGenerationService
             var normalizedPrimaryBytes = ImageResizer.NormalizeToPng(imageBytes);
             var imageBase64 = Convert.ToBase64String(normalizedPrimaryBytes);
             string? secondaryImageBase64 = null;
+            ResolvedImageSource? secondarySource = null;
 
             if (!string.IsNullOrWhiteSpace(request.SecondaryMediaUrl))
             {
-                var secondarySource = await ResolveImageSourceAsync(request.SecondaryMediaUrl);
+                secondarySource = await ResolveImageSourceAsync(request.SecondaryMediaUrl);
                 var secondaryImageBytes = secondarySource.Bytes;
                 var normalizedSecondaryBytes = ImageResizer.NormalizeToPng(secondaryImageBytes);
                 secondaryImageBase64 = Convert.ToBase64String(normalizedSecondaryBytes);
@@ -722,7 +746,13 @@ public class ImageGenerationService : IImageGenerationService
             // Determine prompts
             var prompts = GetPrompts(request.GenerationType, request.CustomPrompts, null, BaseEmotionTypes);
             var generatedUrls = new List<string>();
-            var filePrefix = sourceImage.FileStem;
+            var filePrefix = secondarySource == null
+                ? sourceImage.FileStem
+                : CombineFileStems(sourceImage.FileStem, secondarySource.FileStem);
+            if (string.IsNullOrWhiteSpace(filePrefix))
+            {
+                filePrefix = sourceImage.FileStem;
+            }
             var fileExtension = sourceImage.Extension;
             var totalCount = prompts.Count;
             var failureMessages = new List<string>();
