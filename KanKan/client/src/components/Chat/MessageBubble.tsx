@@ -15,6 +15,15 @@ import { VoiceMessageBubble } from '@/components/Chat/VoiceMessageBubble';
 
 // Work around TS2590 ("union type too complex") from MUI Box typings in some TS versions.
 const BoxAny = Box as any;
+const chatImageCacheBust = Date.now().toString(36);
+
+const withChatImageCacheBust = (url: string) => {
+  if (!url.startsWith('/uploads/')) {
+    return url;
+  }
+
+  return `${url}${url.includes('?') ? '&' : '?'}v=${chatImageCacheBust}`;
+};
 
 const restorePipesInMath = () => {
   return (tree: any) => {
@@ -320,6 +329,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
     (message as any)?.content?.mediaUrl ||
     (message as any)?.content?.thumbnailUrl ||
     '';
+  const displayedImageUrl = withChatImageCacheBust(imageUrl);
 
   if (message.messageType === 'system' || message.senderId === '__system__') {
     return (
@@ -456,7 +466,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
           <MarkdownOrPlainText text={renderText} />
         ) : message.messageType === 'image' ? (
           <ImageHoverPreview
-            src={imageUrl}
+            src={displayedImageUrl}
             alt={t('chat.message.image')}
             openOnHover={isHoverCapable}
             openOnLongPress={!isHoverCapable}
@@ -466,7 +476,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
               <BoxAny
                 {...previewProps}
                 component="img"
-                src={imageUrl}
+                src={displayedImageUrl}
                 alt={t('chat.message.image')}
                 tabIndex={0}
                 onContextMenu={(event: React.MouseEvent<HTMLElement>) => {
