@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Box, Typography, Paper, Container, Button, Chip,
+  Box as MuiBox, Typography, Paper, Container, Button, Chip,
   Dialog, DialogTitle, DialogContent, DialogActions,
   Pagination, Checkbox, CircularProgress, Table, TableBody, TableCell, TableContainer, TableRow,
 } from '@mui/material';
@@ -15,6 +15,10 @@ import PhotoCard from './PhotoCard';
 import { BatchExtractDialog } from '../Receipts/BatchExtractDialog';
 import PhotoReceiptGroupedView, { type ReceiptDateGroup } from './PhotoReceiptGroupedView';
 import { ImageLightbox, type LightboxGroup } from '../Shared/ImageLightbox';
+
+// Work around TS2590 (“union type too complex”) from MUI Box typings in some TS versions.
+const Box = MuiBox as any;
+const BoxAny = Box;
 
 interface PhotoAlbumPageProps {
   embedded?: boolean;
@@ -66,6 +70,27 @@ const getImmediateGeneratedParentPath = (url: string) => {
   }
 
   return `${directory}${parentStem}${extension}`;
+};
+
+const buildPhotoPathMap = (items: PhotoDto[]) => {
+  const photoByPath = new Map<string, PhotoDto>();
+  for (const photo of items) {
+    const imageUrl = photoService.getImageUrl(photo);
+    if (imageUrl) {
+      photoByPath.set(getImagePath(imageUrl), photo);
+    }
+  }
+
+  return photoByPath;
+};
+
+const getFirstLayerPhotos = (items: PhotoDto[], allItems: PhotoDto[] = items) => {
+  const photoByPath = buildPhotoPathMap(allItems);
+  return items.filter((photo) => {
+    const imageUrl = photoService.getImageUrl(photo);
+    const parentPath = imageUrl ? getImmediateGeneratedParentPath(imageUrl) : null;
+    return !parentPath || !photoByPath.has(parentPath);
+  });
 };
 
 const sortPhotosDesc = (items: PhotoDto[], accessor: (photo: PhotoDto) => string | undefined) => {
@@ -370,8 +395,8 @@ const PhotoAlbumPage: React.FC<PhotoAlbumPageProps> = ({
     }
   }, [onOpenReceipt, receipts]);
 
-  // Flat display list (computed here so callbacks can reference it)
-  const displayPhotos = viewMode === 'grid'
+  // Flat source list keeps all photos so ImageLightbox can build generation trees.
+  const sourceDisplayPhotos = viewMode === 'grid'
     ? photos
     : viewMode === 'receiptDate' && showReceiptGrouping
       ? Array.from(new Map(
@@ -379,13 +404,21 @@ const PhotoAlbumPage: React.FC<PhotoAlbumPageProps> = ({
           .map(photo => [photo.id, photo]),
       ).values())
       : grouped.flatMap(group => group.photos);
+  const displayPhotos = organizeGeneratedImages
+    ? getFirstLayerPhotos(sourceDisplayPhotos, photos)
+    : sourceDisplayPhotos;
+  const visibleGrouped = organizeGeneratedImages
+    ? grouped
+      .map(group => ({ ...group, photos: getFirstLayerPhotos(group.photos, photos) }))
+      .filter(group => group.photos.length > 0)
+    : grouped;
 
   const closeLightbox = useCallback(() => {
     setLightbox(null);
   }, []);
 
   const openLightbox = useCallback((photo: PhotoDto) => {
-    const contextPhotos = displayPhotos;
+    const contextPhotos = sourceDisplayPhotos;
     if (contextPhotos.length === 0) {
       return;
     }
@@ -443,7 +476,7 @@ const PhotoAlbumPage: React.FC<PhotoAlbumPageProps> = ({
       initialGroupIndex: Math.max(0, groups.findIndex((item) => item.messageId === selectedGroupPhoto.id)),
       initialGeneratedUrl,
     });
-  }, [displayPhotos, organizeGeneratedImages]);
+  }, [sourceDisplayPhotos, organizeGeneratedImages, photos]);
 
   // Selection helpers
   const toggleSelect = useCallback((id: string) => {
@@ -848,7 +881,7 @@ const PhotoAlbumPage: React.FC<PhotoAlbumPageProps> = ({
             />
           )
         ) : viewMode !== 'grid' ? (
-          grouped.map((group) => {
+          visibleGrouped.map((group) => {
             return (
               <Paper key={group.id} sx={{ mb: '3px', borderRadius: groupedSectionBorderRadius, overflow: 'hidden' }}>
                 <Box sx={{ px: 3, py: groupedSectionHeaderVerticalPadding, borderBottom: '1px solid rgba(0,0,0,0.08)' }}>
@@ -988,15 +1021,15 @@ const PhotoAlbumPage: React.FC<PhotoAlbumPageProps> = ({
   );
 
   return embedded ? (
-    <Box sx={{ backgroundColor: '#ffffff', borderRadius: '0 0 10px 10px', px: { xs: 0.75, sm: 1 }, pb: 1.25 }}>
+    <BoxAny sx={{ backgroundColor: '#ffffff', borderRadius: '0 0 10px 10px', px: { xs: 0.75, sm: 1 }, pb: 1.25 }}>
       {content}
-    </Box>
+    </BoxAny>
   ) : (
-    <Box sx={{ minHeight: '100vh', bgcolor: 'rgba(244, 247, 251, 0.5)', py: 4 }}>
+    <BoxAny sx={{ minHeight: '100vh', bgcolor: 'rgba(244, 247, 251, 0.5)', py: 4 }}>
       <Container maxWidth="lg">
         {content}
       </Container>
-    </Box>
+    </BoxAny>
   );
 };
 
