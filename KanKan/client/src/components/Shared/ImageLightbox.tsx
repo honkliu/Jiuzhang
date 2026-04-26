@@ -242,6 +242,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
     setShowSourceInEdits(true);
     setImagePickerOpen(false);
     setSelectedReferenceImageUrl(null);
+    setGeneratedByGroup({});
 
     if (hasGroups && groups?.length) {
       const targetGroupIndex = Math.min(Math.max(initialGroupIndex ?? 0, 0), groups.length - 1);
