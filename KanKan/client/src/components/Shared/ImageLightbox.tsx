@@ -242,7 +242,6 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
     setShowSourceInEdits(true);
     setImagePickerOpen(false);
     setSelectedReferenceImageUrl(null);
-    setGeneratedByGroup({});
 
     if (hasGroups && groups?.length) {
       const targetGroupIndex = Math.min(Math.max(initialGroupIndex ?? 0, 0), groups.length - 1);
@@ -254,6 +253,11 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
             const urls = Array.isArray(result.results) ? (result.results as string[]) : [];
             if (!cancelled) {
               setGeneratedByGroup((prev) => ({ ...prev, [targetGroup.messageId]: urls }));
+              if (!initialGeneratedUrl && urls.length > 0) {
+                setSelectedEditIndexByGroup((prev) => ({ ...prev, [targetGroup.messageId]: 1 }));
+                setThumbnailMode('edits');
+                setShowSourceInEdits(false);
+              }
             }
           } catch {
             if (!cancelled) {
