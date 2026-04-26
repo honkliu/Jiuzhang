@@ -37,12 +37,14 @@ public class ImageGenerationService : IImageGenerationService
 
     public ImageGenerationService(
         IMongoDatabase database,
+        IConfiguration configuration,
         IComfyUIService comfyUIService,
         IWebHostEnvironment environment,
         ILogger<ImageGenerationService> logger)
     {
+        var messagesCollectionName = configuration["MongoDB:Collections:Messages"] ?? "Messages";
         _generationJobs = database.GetCollection<ImageGenerationJob>("imageGenerationJobs");
-        _messages = database.GetCollection<Message>("messages");
+        _messages = database.GetCollection<Message>(messagesCollectionName);
         _avatarImages = database.GetCollection<AvatarImage>("avatarImages");
         _comfyUIService = comfyUIService;
         _environment = environment;
