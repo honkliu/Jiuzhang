@@ -44,7 +44,7 @@ const navItems = [
   { label: 'Notebook', path: '/notebook', adminOnly: false },
   { label: 'Receipts', path: '/receipts', adminOnly: false },
   { label: 'FamilyTree', path: '/family', adminOnly: true },
-  { label: 'Gallery', path: '/gallery', adminOnly: true, superOnly: true },
+  { label: 'Gallery', path: '/gallery', adminOnly: false },
   { label: 'admin.title', path: '/admin', adminOnly: true },
 ];
 

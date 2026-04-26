@@ -31,6 +31,7 @@ interface PhotoAlbumPageProps {
   showExtraction?: boolean;
   showReceiptGrouping?: boolean;
   showStats?: boolean;
+  showDelete?: boolean;
   viewModes?: ViewMode[];
   emptyTitle?: string;
   emptyDescription?: string;
@@ -253,6 +254,7 @@ const PhotoAlbumPage: React.FC<PhotoAlbumPageProps> = ({
   showExtraction = true,
   showReceiptGrouping = true,
   showStats = true,
+  showDelete = true,
   viewModes,
   emptyTitle = '还没有照片',
   emptyDescription = '把票据照片先收进票夹，后面才能做提取、整理和按时间归档',
@@ -873,7 +875,7 @@ const PhotoAlbumPage: React.FC<PhotoAlbumPageProps> = ({
               groups={receiptDateGroups}
               ungroupedPhotos={receiptUngroupedPhotos}
               onPhotoClick={openLightbox}
-              onDelete={(id) => handleDelete(id)}
+              onDelete={showDelete ? (id) => handleDelete(id) : undefined}
               onExtract={handleExtractPhoto}
               onOpenReceipt={handleOpenPhotoReceipt}
               selectedPhotoIds={selectedIds}
@@ -895,7 +897,7 @@ const PhotoAlbumPage: React.FC<PhotoAlbumPageProps> = ({
                       key={photo.id}
                       photo={photo}
                       onClick={() => openLightbox(photo)}
-                      onDelete={() => handleDelete(photo.id)}
+                      onDelete={showDelete ? () => handleDelete(photo.id) : undefined}
                       onExtract={showExtraction ? handleExtractPhoto : undefined}
                       onOpenReceipt={showReceiptGrouping ? handleOpenPhotoReceipt : undefined}
                       isSelected={selectMode && selectedIds.has(photo.id)}
@@ -913,7 +915,7 @@ const PhotoAlbumPage: React.FC<PhotoAlbumPageProps> = ({
                 key={photo.id}
                 photo={photo}
                 onClick={() => openLightbox(photo)}
-                onDelete={() => handleDelete(photo.id)}
+                onDelete={showDelete ? () => handleDelete(photo.id) : undefined}
                 onExtract={showExtraction ? handleExtractPhoto : undefined}
                 onOpenReceipt={showReceiptGrouping ? handleOpenPhotoReceipt : undefined}
                 isSelected={selectMode && selectedIds.has(photo.id)}
