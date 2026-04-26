@@ -253,11 +253,6 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
             const urls = Array.isArray(result.results) ? (result.results as string[]) : [];
             if (!cancelled) {
               setGeneratedByGroup((prev) => ({ ...prev, [targetGroup.messageId]: urls }));
-              if (!initialGeneratedUrl && urls.length > 0) {
-                setSelectedEditIndexByGroup((prev) => ({ ...prev, [targetGroup.messageId]: 1 }));
-                setThumbnailMode('edits');
-                setShowSourceInEdits(false);
-              }
             }
           } catch {
             if (!cancelled) {
