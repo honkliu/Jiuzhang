@@ -77,7 +77,6 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
   const [thumbnailMode, setThumbnailMode] = useState<'sources' | 'edits'>('sources');
   const [selectedEditIndexByGroup, setSelectedEditIndexByGroup] = useState<Record<string, number | null>>({});
   const [showSourceInEdits, setShowSourceInEdits] = useState(true);
-  const [openRefreshKey, setOpenRefreshKey] = useState(0);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const [canScrollThumbnailsLeft, setCanScrollThumbnailsLeft] = useState(false);
   const [canScrollThumbnailsRight, setCanScrollThumbnailsRight] = useState(false);
@@ -119,7 +118,6 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
 
   const hasGroups = Boolean(groups && groups.length > 0);
   const activeGroup = hasGroups ? groups![Math.min(activeGroupIndex, groups!.length - 1)] : null;
-  const activeGroupMessageId = activeGroup?.messageId;
   const sourceImages = useMemo(() => (hasGroups ? groups!.map((group) => group.sourceUrl) : images), [groups, hasGroups, images]);
   const getSelectableImageLabel = useCallback((kind: ScopedSelectableImage['kind'], index: number) => {
     const baseLabel = selectableImageKindLabels[kind];
@@ -216,6 +214,8 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
   };
 
   useEffect(() => {
+    let cancelled = false;
+
     if (!open) {
       wasOpenRef.current = false;
       return;
@@ -242,32 +242,33 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
     setShowSourceInEdits(true);
     setImagePickerOpen(false);
     setSelectedReferenceImageUrl(null);
-    setOpenRefreshKey((value) => value + 1);
-  }, [open, initialIndex, initialGroupIndex, hasGroups, initialGeneratedUrl]);
 
-  useEffect(() => {
-    if (!open || !hasGroups || !activeGroupMessageId || openRefreshKey === 0) return;
+    if (hasGroups && groups?.length) {
+      const targetGroupIndex = Math.min(Math.max(initialGroupIndex ?? 0, 0), groups.length - 1);
+      const targetGroup = groups[targetGroupIndex];
+      if (targetGroup) {
+        const refreshOpeningGroup = async () => {
+          try {
+            const result = await imageGenerationService.getResults(targetGroup.messageId, 'chat_image');
+            const urls = Array.isArray(result.results) ? (result.results as string[]) : [];
+            if (!cancelled) {
+              setGeneratedByGroup((prev) => ({ ...prev, [targetGroup.messageId]: urls }));
+            }
+          } catch {
+            if (!cancelled) {
+              setGeneratedByGroup((prev) => ({ ...prev, [targetGroup.messageId]: prev[targetGroup.messageId] ?? [] }));
+            }
+          }
+        };
 
-    let cancelled = false;
-    const refreshActiveGroup = async () => {
-      try {
-        const result = await imageGenerationService.getResults(activeGroupMessageId, 'chat_image');
-        const urls = Array.isArray(result.results) ? (result.results as string[]) : [];
-        if (!cancelled) {
-          setGeneratedByGroup((prev) => ({ ...prev, [activeGroupMessageId]: urls }));
-        }
-      } catch {
-        if (!cancelled) {
-          setGeneratedByGroup((prev) => ({ ...prev, [activeGroupMessageId]: prev[activeGroupMessageId] ?? [] }));
-        }
+        refreshOpeningGroup();
       }
-    };
+    }
 
-    refreshActiveGroup();
     return () => {
       cancelled = true;
     };
-  }, [activeGroupMessageId, hasGroups, open, openRefreshKey]);
+  }, [open, initialIndex, initialGroupIndex, hasGroups, initialGeneratedUrl, groups]);
 
   useEffect(() => {
     if (!open || !hasGroups || !groups) return;
