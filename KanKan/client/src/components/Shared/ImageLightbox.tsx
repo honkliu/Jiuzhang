@@ -19,6 +19,24 @@ import { ImageHoverPreview } from '@/components/Shared/ImageHoverPreview';
 
 const BoxAny = Box as any;
 
+function toGeneratedLookupId(sourceUrl: string, fallbackId: string) {
+  const path = (() => {
+    try {
+      return new URL(sourceUrl, window.location.origin).pathname;
+    } catch {
+      return sourceUrl.split(/[?#]/)[0];
+    }
+  })();
+
+  const normalized = path.replace(/\\/g, '/').replace(/^\/+/, '');
+  if (!/^(uploads|photos|standing)\//i.test(normalized)) {
+    return fallbackId;
+  }
+
+  const utf8 = unescape(encodeURIComponent(normalized));
+  return btoa(utf8).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+}
+
 export interface LightboxGroup {
   sourceUrl: string;
   messageId: string;
@@ -249,7 +267,8 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
       if (targetGroup) {
         const refreshOpeningGroup = async () => {
           try {
-            const result = await imageGenerationService.getResults(targetGroup.messageId, 'chat_image');
+            const lookupId = toGeneratedLookupId(targetGroup.sourceUrl, targetGroup.messageId);
+            const result = await imageGenerationService.getResults(lookupId, 'chat_image');
             const urls = Array.isArray(result.results) ? (result.results as string[]) : [];
             if (!cancelled) {
               setGeneratedByGroup((prev) => ({ ...prev, [targetGroup.messageId]: urls }));
@@ -279,7 +298,8 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
     const fetchAll = async () => {
       await Promise.all(pending.map(async (group) => {
         try {
-          const result = await imageGenerationService.getResults(group.messageId, 'chat_image');
+          const lookupId = toGeneratedLookupId(group.sourceUrl, group.messageId);
+          const result = await imageGenerationService.getResults(lookupId, 'chat_image');
           const urls = Array.isArray(result.results) ? (result.results as string[]) : [];
           if (!cancelled) {
             setGeneratedByGroup((prev) => ({ ...prev, [group.messageId]: urls }));
@@ -291,7 +311,6 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
         }
       }));
     };
-
     fetchAll();
     return () => {
       cancelled = true;
@@ -1004,7 +1023,8 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
       });
 
       await imageGenerationService.pollJobUntilComplete(response.jobId);
-      const result = await imageGenerationService.getResults(activeGroup.messageId, 'chat_image');
+      const lookupId = toGeneratedLookupId(activeGroup.sourceUrl, activeGroup.messageId);
+      const result = await imageGenerationService.getResults(lookupId, 'chat_image');
       const urls = Array.isArray(result.results) ? (result.results as string[]) : [];
       setGeneratedByGroup((prev) => ({ ...prev, [activeGroup.messageId]: urls }));
       if (urls.length > 0) {

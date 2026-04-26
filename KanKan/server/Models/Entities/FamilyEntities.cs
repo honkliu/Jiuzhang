@@ -140,6 +140,7 @@ public class FamilyDocument
 
 // ─── Sections & Pages (OneNote-like) ────────────────────────────────────────
 
+[BsonIgnoreExtraElements]
 public class PageElement
 {
     public string Id { get; set; } = string.Empty;
