@@ -24,6 +24,41 @@ const BoxAny = Box as any;
 
 function clamp(v: number, min: number, max: number) { return Math.min(Math.max(v, min), max); }
 
+function extensionFromMimeType(mimeType: string) {
+  if (mimeType.includes('png')) return 'png';
+  if (mimeType.includes('webp')) return 'webp';
+  if (mimeType.includes('gif')) return 'gif';
+  return 'jpg';
+}
+
+async function uploadInlineNotebookImage(src: string) {
+  const response = await fetch(src);
+  const blob = await response.blob();
+  const extension = extensionFromMimeType(blob.type || 'image/jpeg');
+  const formData = new FormData();
+  formData.append('file', blob, `notebook-inline-image.${extension}`);
+  const res = await apiClient.post<{ url: string }>('/media/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+  return res.data.url;
+}
+
+async function persistEmbeddedNotebookImages(html: string | undefined) {
+  if (!html || typeof window === 'undefined') return html ?? '';
+  const container = window.document.createElement('div');
+  container.innerHTML = html;
+  const images = Array.from(container.querySelectorAll('img'));
+  let changed = false;
+
+  for (const image of images) {
+    const src = image.getAttribute('src') || '';
+    if (!src.startsWith('blob:') && !src.startsWith('data:image/')) continue;
+    const uploadedUrl = await uploadInlineNotebookImage(src);
+    image.setAttribute('src', uploadedUrl);
+    changed = true;
+  }
+
+  return changed ? container.innerHTML : html;
+}
+
 interface NotebookProps {
   notebookId: string;
   canEdit: boolean;
@@ -203,9 +238,16 @@ export const Notebook: React.FC<NotebookProps> = ({ notebookId, canEdit }) => {
       // Clean up empty text blocks before saving
       const isEmptyText = (b: PageElementDto) => b.type === 'text' && (!b.text || b.text === '' || b.text === '<p></p>');
       const cleanedBlocks = draftBlocks.filter(b => !isEmptyText(b));
-      const finalBlocks = normalizeBlocks(cleanedBlocks).map(b =>
-        b.type === 'image' && uploadedUrls[b.id] ? { ...b, imageUrl: uploadedUrls[b.id], text: undefined } : b
-      );
+      const normalizedBlocks = normalizeBlocks(cleanedBlocks);
+      const finalBlocks = await Promise.all(normalizedBlocks.map(async (b) => {
+        if (b.type === 'image' && uploadedUrls[b.id]) {
+          return { ...b, imageUrl: uploadedUrls[b.id], text: undefined };
+        }
+        if (b.type === 'text') {
+          return { ...b, text: await persistEmbeddedNotebookImages(b.text) };
+        }
+        return b;
+      }));
       setDraftBlocks(finalBlocks);
       const updated = await notebookService.updatePage(notebookId, activePageId, { elements: finalBlocks });
       setActivePage(updated);

@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text;
+using System.Text.RegularExpressions;
 using KanKan.API.Domain;
 using KanKan.API.Models.DTOs.Photo;
 using KanKan.API.Models.Entities;
@@ -229,7 +230,7 @@ public class AdminGalleryController : ControllerBase
             foreach (var section in sections)
             {
                 var pages = await _familyPageRepository.GetBySectionIdAsync(section.Id);
-                urls.AddRange(pages.SelectMany(page => page.Elements.Select(element => element.ImageUrl)));
+                urls.AddRange(pages.SelectMany(page => ExtractPageElementImageUrls(page.Elements)));
             }
         }
 
@@ -284,7 +285,7 @@ public class AdminGalleryController : ControllerBase
             foreach (var section in sections)
             {
                 var pages = await _notebookPageRepository.GetBySectionIdAsync(section.Id);
-                urls.AddRange(pages.SelectMany(page => page.Elements.Select(element => element.ImageUrl)));
+                urls.AddRange(pages.SelectMany(page => ExtractPageElementImageUrls(page.Elements)));
             }
         }
 
@@ -332,6 +333,31 @@ public class AdminGalleryController : ControllerBase
             if (!string.IsNullOrWhiteSpace(value))
             {
                 urls.Add(value);
+            }
+        }
+    }
+
+    private static IEnumerable<string?> ExtractPageElementImageUrls(IEnumerable<PageElement> elements)
+    {
+        foreach (var element in elements)
+        {
+            if (!string.IsNullOrWhiteSpace(element.ImageUrl))
+            {
+                yield return element.ImageUrl;
+            }
+
+            if (string.IsNullOrWhiteSpace(element.Text))
+            {
+                continue;
+            }
+
+            foreach (Match match in Regex.Matches(element.Text, "<img\\b[^>]*?\\bsrc\\s*=\\s*(?:\"(?<url>[^\"]+)\"|'(?<url>[^']+)'|(?<url>[^\\s>]+))", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
+            {
+                var url = match.Groups["url"].Value;
+                if (!string.IsNullOrWhiteSpace(url))
+                {
+                    yield return System.Net.WebUtility.HtmlDecode(url);
+                }
             }
         }
     }
