@@ -200,7 +200,27 @@ function deriveOriginalImageUrlFromGeneratedName(url: string) {
   }
 
   const [, directory = '', baseName, , , extension = '', query = '', hash = ''] = match;
+
   return `${directory}${baseName}${extension}${query}${hash}`;
+}
+
+function toGeneratedLookupId(sourceUrl: string, fallbackId: string) {
+  const originalUrl = deriveOriginalImageUrlFromGeneratedName(sourceUrl);
+  const path = (() => {
+    try {
+      return new URL(originalUrl, window.location.origin).pathname;
+    } catch {
+      return originalUrl.split(/[?#]/)[0];
+    }
+  })();
+
+  const normalized = path.replace(/\\/g, '/').replace(/^\/+/, '');
+  if (!/^(uploads|photos|standing)\//i.test(normalized)) {
+    return fallbackId;
+  }
+
+  const utf8 = unescape(encodeURIComponent(normalized));
+  return btoa(utf8).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
 }
 
 export interface FamilyPageCanvasProps {
@@ -306,7 +326,8 @@ export const FamilyPageCanvas: React.FC<FamilyPageCanvasProps> = ({
   const resolveLightboxPayload = useCallback(async () => {
     const resolvedEntries = await Promise.all(pageLightboxEntries.map(async (entry) => {
       try {
-        const result = await imageGenerationService.getResults(entry.messageId, 'chat_image');
+        const lookupId = toGeneratedLookupId(entry.sourceUrl, entry.messageId);
+        const result = await imageGenerationService.getResults(lookupId, 'chat_image');
         const generatedUrls = Array.isArray(result.results) ? (result.results as string[]) : [];
         const sourceUrl = generatedUrls.includes(entry.sourceUrl)
           ? deriveOriginalImageUrlFromGeneratedName(entry.sourceUrl)
@@ -428,7 +449,8 @@ export const FamilyPageCanvas: React.FC<FamilyPageCanvasProps> = ({
     }
 
     try {
-      const result = await imageGenerationService.getResults(entry.messageId, 'chat_image');
+      const lookupId = toGeneratedLookupId(block.imageUrl, entry.messageId);
+      const result = await imageGenerationService.getResults(lookupId, 'chat_image');
       const generatedUrls = Array.isArray(result.results) ? (result.results as string[]) : [];
       const originalSourceUrl = generatedUrls.includes(block.imageUrl)
         ? deriveOriginalImageUrlFromGeneratedName(block.imageUrl)
@@ -461,7 +483,8 @@ export const FamilyPageCanvas: React.FC<FamilyPageCanvasProps> = ({
     }
 
     try {
-      const result = await imageGenerationService.getResults(entry.messageId, 'chat_image');
+      const lookupId = toGeneratedLookupId(currentUrl, entry.messageId);
+      const result = await imageGenerationService.getResults(lookupId, 'chat_image');
       const generatedUrls = Array.isArray(result.results) ? (result.results as string[]) : [];
       const originalSourceUrl = generatedUrls.includes(currentUrl)
         ? deriveOriginalImageUrlFromGeneratedName(currentUrl)
