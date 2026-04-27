@@ -336,7 +336,7 @@ const TetrisGame: React.FC = () => {
     <Grid container spacing={2.2}>
       <Grid item xs={12} md={7} lg={6}>
         <Card sx={{ position: 'relative', p: { xs: 1, sm: 1.5 }, background: 'linear-gradient(145deg, #3a2116, #6b3d25)', border: '1px solid rgba(255,236,200,0.28)', boxShadow: '0 30px 90px rgba(62,35,19,0.38)' }}>
-          <BoxAny sx={{ position: 'relative', mx: 'auto', width: 'min(100%, 360px)', aspectRatio: `${BOARD_WIDTH}/${BOARD_HEIGHT}`, p: 1, borderRadius: 0, background: 'linear-gradient(180deg, #2b1a13, #4c2b1c)', boxShadow: 'inset 0 8px 24px rgba(0,0,0,0.45), 0 16px 35px rgba(0,0,0,0.28)' }}>
+          <BoxAny sx={{ position: 'relative', mx: 'auto', width: { xs: 'calc((100% - 82px) * 0.8)', sm: 'min(100%, 360px)' }, aspectRatio: `${BOARD_WIDTH}/${BOARD_HEIGHT}`, p: 1, borderRadius: 0, background: 'linear-gradient(180deg, #2b1a13, #4c2b1c)', boxShadow: 'inset 0 8px 24px rgba(0,0,0,0.45), 0 16px 35px rgba(0,0,0,0.28)' }}>
             <BoxAny sx={{ display: 'grid', gridTemplateColumns: `repeat(${BOARD_WIDTH}, 1fr)`, gap: '3px', width: '100%', height: '100%' }}>
               {display.flatMap((row, rowIndex) => row.map((cell, colIndex) => (
                 <BoxAny
@@ -363,10 +363,16 @@ const TetrisGame: React.FC = () => {
               <BoxAny sx={{ position: 'absolute', inset: 8, borderRadius: 0, display: 'grid', placeItems: 'center', background: 'rgba(20,10,6,0.68)', color: '#fff', textAlign: 'center', backdropFilter: 'blur(4px)' }}>
                 <BoxAny>
                   <Typography variant="h5" fontWeight={900}>{gameOver ? '方块堆满了' : '已暂停'}</Typography>
-                  <Typography variant="body2" sx={{ mt: 0.5, color: 'rgba(255,255,255,0.78)' }}>{gameOver ? '重新开始一局解压挑战' : '点击继续恢复游戏'}</Typography>
+                  <Typography variant="body2" sx={{ mt: 0.5, color: 'rgba(255,255,255,0.78)' }}>{gameOver ? '重新开始一局' : '点击继续恢复游戏'}</Typography>
                 </BoxAny>
               </BoxAny>
             )}
+          </BoxAny>
+          <BoxAny sx={{ position: 'absolute', left: { xs: 12, sm: 16 }, top: '50%', transform: 'translateY(-50%)', minWidth: 40, textAlign: 'center', color: 'rgba(255,236,204,0.9)', fontSize: { xs: 18, sm: 22 }, fontWeight: 900, fontVariantNumeric: 'tabular-nums', textShadow: '0 2px 10px rgba(0,0,0,0.45)' }}>
+            {score}
+          </BoxAny>
+          <BoxAny sx={{ position: 'absolute', right: { xs: 18, sm: 22 }, bottom: { xs: 12, sm: 16 }, minWidth: 40, textAlign: 'center', color: 'rgba(255,236,204,0.9)', fontSize: { xs: 18, sm: 22 }, fontWeight: 900, fontVariantNumeric: 'tabular-nums', textShadow: '0 2px 10px rgba(0,0,0,0.45)' }}>
+            {lines}
           </BoxAny>
           <BoxAny
             sx={{
@@ -393,32 +399,23 @@ const TetrisGame: React.FC = () => {
               })}
             </BoxAny>
           </BoxAny>
+          <BoxAny sx={{ mt: { xs: 0.75, sm: 1 }, display: 'flex', justifyContent: 'center' }}>
+            <ButtonGroup variant="outlined" sx={{ flexWrap: 'wrap', '& .MuiButton-root': { minWidth: { xs: 52, sm: 62 }, px: { xs: 0.75, sm: 1.25 } } }}>
+              <Button onClick={() => move(-1, 0)}>左</Button>
+              <Button onClick={rotate}>旋转</Button>
+              <Button onClick={() => move(1, 0)}>右</Button>
+              <Button onClick={hardDrop}>落下</Button>
+            </ButtonGroup>
+          </BoxAny>
         </Card>
       </Grid>
       <Grid item xs={12} md={5} lg={6}>
         <Stack spacing={2}>
           <Card><CardContent>
-            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-              <Chip label={`得分 ${score}`} color="primary" />
-              <Chip label={`消行 ${lines}`} />
-              <Chip label="固定速度" variant="outlined" />
-            </Stack>
-            <Typography variant="h5" sx={{ mt: 2, fontWeight: 900 }}>泥土块解压俄罗斯方块</Typography>
-            <Typography color="text.secondary" sx={{ mt: 1 }}>传统规则，中等速度。消行时方块会崩裂成碎土与粉尘，而不是简单消失。</Typography>
-            <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
+            <Stack direction="row" spacing={1}>
               <Button variant="contained" startIcon={!started || paused ? <PlayIcon /> : <PauseIcon />} onClick={toggleRun}>{!started ? '开始' : paused ? '继续' : '暂停'}</Button>
               <Button startIcon={<RefreshIcon />} onClick={reset}>重开</Button>
             </Stack>
-          </CardContent></Card>
-          <Card><CardContent>
-            <Typography variant="body2" color="text.secondary">键盘：← → 移动，↑ 旋转，↓ 加速，空格直接落下。</Typography>
-            <ButtonGroup variant="outlined" sx={{ mt: 1.5, flexWrap: 'wrap' }}>
-              <Button onClick={() => move(-1, 0)}>左</Button>
-              <Button onClick={rotate}>旋转</Button>
-              <Button onClick={() => move(1, 0)}>右</Button>
-              <Button onClick={() => move(0, 1)}>下</Button>
-              <Button onClick={hardDrop}>落下</Button>
-            </ButtonGroup>
           </CardContent></Card>
         </Stack>
       </Grid>
@@ -588,7 +585,7 @@ export const GamesPage: React.FC = () => {
                 '& .MuiTabs-flexContainer': { minHeight: 36 },
               }}
             >
-              <Tab label="解压俄罗斯方块" sx={{ minHeight: 36, py: 0, px: 1, textTransform: 'none' }} />
+              <Tab label="俄罗斯方块" sx={{ minHeight: 36, py: 0, px: 1, textTransform: 'none' }} />
               <Tab label="数独" sx={{ minHeight: 36, py: 0, px: 1, textTransform: 'none' }} />
             </Tabs>
           </Paper>
