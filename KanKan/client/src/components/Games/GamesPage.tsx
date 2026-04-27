@@ -100,26 +100,26 @@ const DIRT_SHARD_COLORS = ['#2f1a12', '#5f3927', '#8b5b3d', '#b78355', '#d0a06b'
 
 const makeParticles = (rows: number[]) => rows.flatMap((row) => (
   Array.from({ length: BOARD_WIDTH }, (_, col) => (
-    Array.from({ length: 9 }, (_, shard) => {
-      const dust = shard > 5;
-      const fall = 180 + Math.random() * 220;
+    Array.from({ length: 72 }, (_, shard) => {
+      const dust = shard > 36;
+      const fall = 240 + Math.random() * 260;
       return {
-        id: Date.now() + row * 1000 + col * 20 + shard,
+        id: Date.now() + row * 10000 + col * 100 + shard,
         row,
         col,
-        ox: 8 + Math.random() * 84,
-        oy: 8 + Math.random() * 84,
-        dx: (Math.random() - 0.5) * (dust ? 260 : 190),
-        dy: -28 - Math.random() * (dust ? 150 : 105),
+        ox: 4 + Math.random() * 92,
+        oy: 18 + Math.random() * 62,
+        dx: (Math.random() - 0.5) * (dust ? 130 : 92),
+        dy: -8 - Math.random() * (dust ? 42 : 28),
         fall,
-        midFall: fall * (0.28 + Math.random() * 0.16),
-        rot: (Math.random() - 0.5) * (dust ? 1080 : 760),
-        delay: Math.random() * 120,
-        size: dust ? 4 + Math.random() * 12 : 12 + Math.random() * 28,
+        midFall: fall * (0.22 + Math.random() * 0.18),
+        rot: (Math.random() - 0.5) * (dust ? 720 : 520),
+        delay: Math.random() * 85,
+        size: dust ? 1.8 + Math.random() * 3.2 : 3.5 + Math.random() * 4.5,
         color: DIRT_SHARD_COLORS[Math.floor(Math.random() * DIRT_SHARD_COLORS.length)],
         clip: SHARD_CLIPS[Math.floor(Math.random() * SHARD_CLIPS.length)],
-        duration: dust ? 900 + Math.random() * 420 : 760 + Math.random() * 380,
-        blur: dust ? 1.6 + Math.random() * 1.8 : 0.15 + Math.random() * 0.7,
+        duration: dust ? 1050 + Math.random() * 520 : 920 + Math.random() * 420,
+        blur: dust ? 1.1 + Math.random() * 1.4 : 0.05 + Math.random() * 0.35,
       };
     })
   )).flat()
@@ -222,12 +222,91 @@ const TetrisGame: React.FC = () => {
   const [started, setStarted] = useState(false);
   const [paused, setPaused] = useState(true);
   const [gameOver, setGameOver] = useState(false);
-  const [particles, setParticles] = useState<Particle[]>([]);
   const boardRef = useRef(board);
   const pieceRef = useRef(piece);
+  const sandCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const sandFrameRef = useRef<number | null>(null);
 
   useEffect(() => { boardRef.current = board; }, [board]);
   useEffect(() => { pieceRef.current = piece; }, [piece]);
+
+  const clearSand = useCallback(() => {
+    if (sandFrameRef.current != null) {
+      window.cancelAnimationFrame(sandFrameRef.current);
+      sandFrameRef.current = null;
+    }
+    const canvas = sandCanvasRef.current;
+    const ctx = canvas?.getContext('2d');
+    if (canvas && ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }, []);
+
+  const playCrushSand = useCallback((rows: number[]) => {
+    const canvas = sandCanvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    if (sandFrameRef.current != null) window.cancelAnimationFrame(sandFrameRef.current);
+
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.round(rect.width * dpr);
+    canvas.height = Math.round(rect.height * dpr);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    const grains = makeParticles(rows);
+    const startedAt = performance.now();
+    const cellW = rect.width / BOARD_WIDTH;
+    const cellH = rect.height / BOARD_HEIGHT;
+    const totalMs = grains.reduce((max, grain) => Math.max(max, grain.delay + grain.duration), 0) + 120;
+
+    const draw = (now: number) => {
+      const elapsed = now - startedAt;
+      ctx.clearRect(0, 0, rect.width, rect.height);
+      for (const grain of grains) {
+        const local = elapsed - grain.delay;
+        if (local <= 0 || local >= grain.duration) continue;
+        const t = local / grain.duration;
+        const x0 = (grain.col + grain.ox / 100) * cellW;
+        const y0 = (grain.row + grain.oy / 100) * cellH;
+        let x = x0;
+        let y = y0;
+        let rx = grain.size;
+        let ry = grain.size;
+        if (t < 0.14) {
+          const crush = t / 0.14;
+          x += grain.dx * 0.08 * crush;
+          y += cellH * 0.18 * crush;
+          rx = grain.size * (1.8 - crush * 0.7);
+          ry = Math.max(0.7, grain.size * (0.24 + crush * 0.42));
+        } else {
+          const fallT = (t - 0.14) / 0.86;
+          const gravity = fallT * fallT;
+          x += grain.dx * (0.1 + fallT * 0.9);
+          y += Math.sin(fallT * Math.PI) * grain.dy + grain.fall * gravity;
+          const shrink = Math.max(0.18, 1 - fallT * 0.78);
+          rx = grain.size * shrink;
+          ry = grain.size * shrink;
+        }
+        ctx.globalAlpha = t < 0.66 ? 0.92 : Math.max(0, (1 - t) / 0.34) * 0.82;
+        ctx.fillStyle = grain.color;
+        ctx.beginPath();
+        ctx.ellipse(x, y, rx, ry, grain.rot * t * Math.PI / 180, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+      if (elapsed < totalMs) {
+        sandFrameRef.current = window.requestAnimationFrame(draw);
+      } else {
+        ctx.clearRect(0, 0, rect.width, rect.height);
+        sandFrameRef.current = null;
+      }
+    };
+
+    sandFrameRef.current = window.requestAnimationFrame(draw);
+  }, []);
+
+  useEffect(() => () => clearSand(), [clearSand]);
 
   const reset = useCallback(() => {
     setBoard(emptyBoard());
@@ -238,8 +317,8 @@ const TetrisGame: React.FC = () => {
     setStarted(false);
     setPaused(true);
     setGameOver(false);
-    setParticles([]);
-  }, []);
+    clearSand();
+  }, [clearSand]);
 
   const spawnNext = useCallback((currentBoard: Cell[][]) => {
     const spawn = { ...nextPiece, x: Math.floor(BOARD_WIDTH / 2) - 2, y: 0, matrix: nextPiece.matrix.map((row) => [...row]) };
@@ -258,8 +337,7 @@ const TetrisGame: React.FC = () => {
     const clearRows = merged.map((row, index) => row.every(Boolean) ? index : -1).filter((index) => index >= 0);
     let nextBoard = merged;
     if (clearRows.length) {
-      setParticles(makeParticles(clearRows));
-      window.setTimeout(() => setParticles([]), 1150);
+      playCrushSand(clearRows);
       const remaining = merged.filter((_, index) => !clearRows.includes(index));
       nextBoard = [...Array.from({ length: clearRows.length }, () => Array<Cell>(BOARD_WIDTH).fill(null)), ...remaining];
       setScore((value) => value + [0, 100, 300, 500, 800][clearRows.length] + clearRows.length * 15);
@@ -267,7 +345,7 @@ const TetrisGame: React.FC = () => {
     }
     setBoard(nextBoard);
     spawnNext(nextBoard);
-  }, [spawnNext]);
+  }, [playCrushSand, spawnNext]);
 
   const move = useCallback((dx: number, dy: number) => {
     if (!started || paused || gameOver) return;
@@ -363,9 +441,7 @@ const TetrisGame: React.FC = () => {
                 />
               )))}
             </BoxAny>
-            {particles.map((p) => (
-              <BoxAny key={p.id} sx={{ position: 'absolute', left: `calc(${p.col} * 10% + ${p.ox * 0.1}%)`, top: `calc(${p.row} * 5% + ${p.oy * 0.05}%)`, width: `${p.size}px`, aspectRatio: '1', borderRadius: 0, clipPath: p.clip, background: `linear-gradient(145deg, rgba(255,226,177,0.32), ${p.color} 44%, #1f120c)`, animation: `crushDust ${p.duration}ms cubic-bezier(.16,.72,.18,1) ${p.delay}ms forwards`, '--dx': `${p.dx}px`, '--dy': `${p.dy}px`, '--fall': `${p.fall}px`, '--midFall': `${p.midFall}px`, '--rot': `${p.rot}deg`, '--blur': `${p.blur}px`, boxShadow: '0 8px 18px rgba(35,18,10,0.36)', pointerEvents: 'none', transformOrigin: '50% 50%' }} />
-            ))}
+            <BoxAny component="canvas" ref={sandCanvasRef} sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }} />
             {((paused && started) || gameOver) && (
               <BoxAny sx={{ position: 'absolute', inset: 8, borderRadius: 0, display: 'grid', placeItems: 'center', background: 'rgba(20,10,6,0.68)', color: '#fff', textAlign: 'center', backdropFilter: 'blur(4px)' }}>
                 <BoxAny>
@@ -615,7 +691,6 @@ export const GamesPage: React.FC = () => {
           {tab === 0 ? <TetrisGame /> : <SudokuGame />}
         </Container>
       </BoxAny>
-      <style>{`@keyframes crushDust { 0% { opacity: 1; transform: translate(0,0) rotate(0) scale(1); filter: blur(0); } 12% { opacity: 1; transform: translate(calc(var(--dx) * .24), calc(var(--dy) * .30)) rotate(calc(var(--rot) * .20)) scale(.96); filter: blur(0); } 38% { opacity: .96; transform: translate(calc(var(--dx) * .68), calc(var(--dy) * .82)) rotate(calc(var(--rot) * .62)) scale(.78); filter: blur(.15px); } 68% { opacity: .72; transform: translate(var(--dx), calc(var(--dy) + var(--midFall))) rotate(var(--rot)) scale(.52); filter: blur(var(--blur)); } 100% { opacity: 0; transform: translate(calc(var(--dx) * 1.08), calc(var(--dy) + var(--fall))) rotate(calc(var(--rot) * 1.45)) scale(.18); filter: blur(calc(var(--blur) + 1.8px)); } }`}</style>
     </>
   );
 };
