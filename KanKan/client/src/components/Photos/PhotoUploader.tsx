@@ -3,6 +3,7 @@ import { Box, Typography, LinearProgress, List, ListItem, ListItemText, Chip } f
 import { CloudUpload, CheckCircle, Error as ErrorIcon } from '@mui/icons-material';
 import * as exifr from 'exifr';
 import { photoService, type PhotoDto } from '@/services/photo.service';
+import { useLanguage } from '@/i18n/LanguageContext';
 
 interface PhotoUploaderProps {
   onComplete?: (photos: PhotoDto[]) => void;
@@ -10,6 +11,7 @@ interface PhotoUploaderProps {
 }
 
 const PhotoUploader: React.FC<PhotoUploaderProps> = ({ onComplete, maxFiles = 20 }) => {
+  const { t } = useLanguage();
   const [files, setFiles] = useState<Array<{ file: File; status: 'pending' | 'uploading' | 'done' | 'error'; error?: string }>>([]);
   const [progress, setProgress] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -114,10 +116,10 @@ const PhotoUploader: React.FC<PhotoUploaderProps> = ({ onComplete, maxFiles = 20
   };
 
   const statusLabel = (status: string) => {
-    if (status === 'done') return '上传成功';
-    if (status === 'error') return '失败';
-    if (status === 'uploading') return '上传中';
-    return '等待中';
+    if (status === 'done') return t('photos.uploader.success');
+    if (status === 'error') return t('photos.uploader.error');
+    if (status === 'uploading') return t('photos.uploader.uploading');
+    return t('photos.uploader.pending');
   };
 
   return (
@@ -133,8 +135,8 @@ const PhotoUploader: React.FC<PhotoUploaderProps> = ({ onComplete, maxFiles = 20
         onDragOver={(e) => e.preventDefault()}
       >
         <CloudUpload sx={{ fontSize: 48, color: 'primary.main', mb: 1 }} />
-        <Typography variant="body1" fontWeight={500}>点击选择或拖拽照片到此处</Typography>
-        <Typography variant="body2" color="text.secondary">支持 JPG/PNG/HEIC，最多 {maxFiles} 张</Typography>
+        <Typography variant="body1" fontWeight={500}>{t('photos.uploader.dropHint')}</Typography>
+        <Typography variant="body2" color="text.secondary">{t('photos.uploader.supportHint').replace('{max}', String(maxFiles))}</Typography>
         <input ref={inputRef} type="file" multiple accept="image/*" style={{ display: 'none' }}
           onChange={(e) => e.target.files && handleFiles(e.target.files)} />
       </Box>

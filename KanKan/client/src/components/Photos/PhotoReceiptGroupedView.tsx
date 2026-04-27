@@ -4,6 +4,7 @@ import {
 } from '@mui/material';
 import { type PhotoDto } from '@/services/photo.service';
 import PhotoCard from './PhotoCard';
+import { useLanguage } from '@/i18n/LanguageContext';
 
 export interface ReceiptDateGroupReceipt {
   id: string;
@@ -39,6 +40,7 @@ interface PhotoReceiptGroupedViewProps {
 const PhotoReceiptGroupedView: React.FC<PhotoReceiptGroupedViewProps> = ({
   groups, ungroupedPhotos = [], onPhotoClick, onDelete, onExtract, onOpenReceipt, selectedPhotoIds = new Set(), onToggleSelect,
 }) => {
+  const { t } = useLanguage();
   const groupCardBorderRadius = '10px';
   const groupHeaderVerticalPadding = 0.8;
   const groupDateFontSize = '0.82rem';
@@ -81,9 +83,9 @@ const PhotoReceiptGroupedView: React.FC<PhotoReceiptGroupedViewProps> = ({
             sx={{ px: 3, py: 2, display: 'flex', alignItems: 'center', gap: 1.5,
               bgcolor: 'rgba(158,158,158,0.08)' }}
           >
-            <Chip size="small" label="📷 无票据关联" variant="outlined" />
+            <Chip size="small" label={t('photos.noReceiptAssociation')} variant="outlined" />
             <Typography variant="body2" fontWeight={600} color="text.secondary">
-              {ungroupedPhotos.length} 张照片未关联票据
+              {t('photos.unlinkedReceiptPhotos').replace('{count}', String(ungroupedPhotos.length))}
             </Typography>
           </Box>
           <Box sx={{ p: '5px', display: 'grid', columnGap: '8px', rowGap: 2,

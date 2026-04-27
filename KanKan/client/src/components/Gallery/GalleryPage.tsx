@@ -5,11 +5,13 @@ import PhotoAlbumPage from '@/components/Photos/PhotoAlbumPage';
 import { AppHeader } from '@/components/Shared/AppHeader';
 import { adminGalleryService } from '@/services/adminGallery.service';
 import type { RootState } from '@/store';
+import { useLanguage } from '@/i18n/LanguageContext';
 
 const BoxAny = Box as any;
 
 export const GalleryPage: React.FC = () => {
   const { user } = useSelector((state: RootState) => state.auth);
+  const { t } = useLanguage();
   const canDeleteGalleryPhotos = Boolean(user?.isAdmin && user?.domain === 'kankan');
   const loadPhotos = useCallback(() => adminGalleryService.listPhotos(), []);
   const deletePhoto = useCallback((id: string) => adminGalleryService.deletePhoto(id), []);
@@ -21,7 +23,7 @@ export const GalleryPage: React.FC = () => {
         <Container maxWidth="lg">
           <PhotoAlbumPage
             embedded
-            title="图览"
+            title={t('photos.galleryTitle')}
             loadPhotosOverride={loadPhotos}
             deletePhotoOverride={canDeleteGalleryPhotos ? deletePhoto : undefined}
             showUpload={false}
@@ -30,8 +32,8 @@ export const GalleryPage: React.FC = () => {
             showStats={false}
             showDelete={canDeleteGalleryPhotos}
             viewModes={['grid', 'uploaded']}
-            emptyTitle="还没有可浏览图片"
-            emptyDescription="还没有可浏览的图片。"
+            emptyTitle={t('photos.galleryEmptyTitle')}
+            emptyDescription={t('photos.galleryEmptyDescription')}
             organizeGeneratedImages
           />
         </Container>

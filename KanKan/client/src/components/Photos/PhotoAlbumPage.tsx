@@ -15,6 +15,7 @@ import PhotoCard from './PhotoCard';
 import { BatchExtractDialog } from '../Receipts/BatchExtractDialog';
 import PhotoReceiptGroupedView, { type ReceiptDateGroup } from './PhotoReceiptGroupedView';
 import { ImageLightbox, type LightboxGroup } from '../Shared/ImageLightbox';
+import { useLanguage, type Language } from '@/i18n/LanguageContext';
 
 // Work around TS2590 (“union type too complex”) from MUI Box typings in some TS versions.
 const Box = MuiBox as any;
@@ -109,15 +110,18 @@ const toDateKey = (value: string) => {
   return Number.isNaN(date.getTime()) ? null : date.toISOString().slice(0, 10);
 };
 
-const toDateLabel = (key: string) => {
+const toDateLabel = (key: string, language: Language) => {
   const [year, month, day] = key.split('-').map(Number);
-  return `${year}年${month}月${day}日`;
+  return language === 'zh'
+    ? `${year}年${month}月${day}日`
+    : new Date(Date.UTC(year, month - 1, day)).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' });
 };
 
 const buildStandardGroups = (
   items: PhotoDto[],
   accessor: (photo: PhotoDto) => string | undefined,
   undatedLabel: string,
+  language: Language,
 ): PhotoGroup[] => {
   const groups = new Map<string, PhotoDto[]>();
 
@@ -138,7 +142,7 @@ const buildStandardGroups = (
     })
     .map(([key, groupPhotos]) => ({
       id: key,
-      label: key === 'undated' ? undatedLabel : toDateLabel(key),
+      label: key === 'undated' ? undatedLabel : toDateLabel(key, language),
       photos: groupPhotos,
     }));
 };
@@ -146,6 +150,9 @@ const buildStandardGroups = (
 const buildReceiptDateGroups = (
   items: PhotoDto[],
   receipts: ReceiptDto[],
+  language: Language,
+  receiptDatePendingLabel: string,
+  receiptGroupSummaryTemplate: string,
 ): { groups: ReceiptDateGroup[]; ungroupedPhotos: PhotoDto[] } => {
   const receiptsById = new Map(receipts.map(receipt => [receipt.id, receipt]));
   const groups = new Map<string, ReceiptDateGroup>();
@@ -172,7 +179,7 @@ const buildReceiptDateGroups = (
       groupedKeys.add(key);
       const existing = groups.get(key) ?? {
         id: key,
-        label: toDateLabel(key),
+        label: toDateLabel(key, language),
         summary: '',
         photos: [],
         receipts: [],
@@ -202,7 +209,7 @@ const buildReceiptDateGroups = (
       const undatedKey = 'receipt-undated';
       const existing = groups.get(undatedKey) ?? {
         id: undatedKey,
-        label: '票据时间待确认',
+        label: receiptDatePendingLabel,
         summary: '',
         photos: [],
         receipts: [],
@@ -237,7 +244,9 @@ const buildReceiptDateGroups = (
     })
     .map(group => ({
       ...group,
-      summary: `${group.photos.length} 张照片，${group.receipts.length} 张票据`,
+      summary: receiptGroupSummaryTemplate
+        .replace('{photos}', String(group.photos.length))
+        .replace('{receipts}', String(group.receipts.length)),
     }));
 
   return { groups: sortedGroups, ungroupedPhotos };
@@ -245,7 +254,7 @@ const buildReceiptDateGroups = (
 
 const PhotoAlbumPage: React.FC<PhotoAlbumPageProps> = ({
   embedded = false,
-  title = '图片集合',
+  title,
   onOpenReceipt,
   onReceiptsChanged,
   loadPhotosOverride,
@@ -256,10 +265,14 @@ const PhotoAlbumPage: React.FC<PhotoAlbumPageProps> = ({
   showStats = true,
   showDelete = true,
   viewModes,
-  emptyTitle = '还没有照片',
-  emptyDescription = '把票据照片先收进票夹，后面才能做提取、整理和按时间归档',
+  emptyTitle,
+  emptyDescription,
   organizeGeneratedImages = false,
 }) => {
+  const { t, language } = useLanguage();
+  const displayTitle = title ?? t('photos.title');
+  const displayEmptyTitle = emptyTitle ?? t('photos.defaultEmptyTitle');
+  const displayEmptyDescription = emptyDescription ?? t('photos.defaultEmptyDescription');
   const [photos, setPhotos] = useState<PhotoDto[]>([]);
   const [receipts, setReceipts] = useState<ReceiptDto[]>([]);
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
@@ -289,24 +302,30 @@ const PhotoAlbumPage: React.FC<PhotoAlbumPageProps> = ({
 
   useEffect(() => {
     if (viewMode === 'uploaded') {
-      setGrouped(buildStandardGroups(photos, photo => photo.uploadedAt, '未记录上传时间'));
+      setGrouped(buildStandardGroups(photos, photo => photo.uploadedAt, t('photos.undatedUploaded'), language));
       return;
     }
 
     if (viewMode === 'captured') {
-      setGrouped(buildStandardGroups(photos, photo => photo.capturedDate, '未识别拍照时间'));
+      setGrouped(buildStandardGroups(photos, photo => photo.capturedDate, t('photos.undatedCaptured'), language));
       return;
     }
 
     if (viewMode === 'receiptDate' && showReceiptGrouping) {
-      const receiptGroups = buildReceiptDateGroups(photos, receipts);
+      const receiptGroups = buildReceiptDateGroups(
+        photos,
+        receipts,
+        language,
+        t('photos.receiptDatePending'),
+        t('photos.receiptGroupSummary'),
+      );
       setReceiptDateGroups(receiptGroups.groups);
       setReceiptUngroupedPhotos(receiptGroups.ungroupedPhotos);
       return;
     }
 
     setGrouped([]);
-  }, [photos, receipts, viewMode]);
+  }, [photos, receipts, viewMode, showReceiptGrouping, t, language]);
 
   const loadPhotos = useCallback(async () => {
     try {
@@ -525,10 +544,10 @@ const PhotoAlbumPage: React.FC<PhotoAlbumPageProps> = ({
 
   const configuredViewModes = viewModes ?? ['grid', 'captured', ...(showReceiptGrouping ? ['receiptDate' as const] : [])];
   const allModeButtons: Array<{ key: ViewMode; label: string }> = [
-    { key: 'grid', label: '全部照片' },
-    { key: 'uploaded', label: '按上传时间' },
-    { key: 'captured', label: '按拍照时间' },
-    { key: 'receiptDate', label: '按票据时间' },
+    { key: 'grid', label: t('photos.view.all') },
+    { key: 'uploaded', label: t('photos.view.uploaded') },
+    { key: 'captured', label: t('photos.view.captured') },
+    { key: 'receiptDate', label: t('photos.view.receiptDate') },
   ];
   const modeButtons = allModeButtons.filter((button) => configuredViewModes.includes(button.key));
 
@@ -626,9 +645,9 @@ const PhotoAlbumPage: React.FC<PhotoAlbumPageProps> = ({
                 {showStats && (
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                     {[
-                      ['归档', `${groupedPhotoCount}`],
-                      ['待处理', `${unassociatedPhotoCount}`],
-                      ['总数', `${photos.length}`],
+                      [t('photos.stats.archived'), `${groupedPhotoCount}`],
+                      [t('photos.stats.pending'), `${unassociatedPhotoCount}`],
+                      [t('photos.stats.total'), `${photos.length}`],
                     ].map(([label, value]) => (
                       <Box key={label} sx={{ display: 'flex', alignItems: 'baseline', gap: 0.35 }}>
                         <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1 }}>
@@ -645,7 +664,7 @@ const PhotoAlbumPage: React.FC<PhotoAlbumPageProps> = ({
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0.75, flexWrap: 'wrap' }}>
                 {selectMode && displayPhotos.length > 0 && (
                   <Chip
-                    label={`${selectedIds.size}/${displayPhotos.length} 已选`}
+                    label={t('photos.selectedCount').replace('{selected}', String(selectedIds.size)).replace('{total}', String(displayPhotos.length))}
                     color="primary"
                     variant="outlined"
                     size="small"
@@ -660,7 +679,7 @@ const PhotoAlbumPage: React.FC<PhotoAlbumPageProps> = ({
                     onClick={() => setUploadOpen(true)}
                     sx={actionButtonSx}
                   >
-                    上传图片
+                    {t('photos.upload')}
                   </Button>
                 )}
                 {showExtraction && !selectMode && photos.length > 0 && (
@@ -674,7 +693,7 @@ const PhotoAlbumPage: React.FC<PhotoAlbumPageProps> = ({
                     }}
                     sx={solidActionButtonSx}
                   >
-                    选择并提取
+                    {t('photos.selectExtract')}
                   </Button>
                 )}
                 {showExtraction && selectMode && (
@@ -688,7 +707,7 @@ const PhotoAlbumPage: React.FC<PhotoAlbumPageProps> = ({
                       color="primary"
                       sx={actionButtonSx}
                     >
-                      开始提取 {selectedIds.size > 0 ? `(${selectedIds.size})` : ''}
+                      {t('photos.startExtract').replace('{count}', selectedIds.size > 0 ? `(${selectedIds.size})` : '')}
                     </Button>
                     <Button
                       variant="contained"
@@ -697,7 +716,7 @@ const PhotoAlbumPage: React.FC<PhotoAlbumPageProps> = ({
                       disabled={displayPhotos.length === 0}
                       sx={solidActionButtonSx}
                     >
-                      {selectedIds.size === displayPhotos.length && displayPhotos.length > 0 ? '取消全选' : '全选'}
+                      {selectedIds.size === displayPhotos.length && displayPhotos.length > 0 ? t('photos.cancelSelectAll') : t('photos.selectAll')}
                     </Button>
                     <Button
                       variant="contained"
@@ -707,7 +726,7 @@ const PhotoAlbumPage: React.FC<PhotoAlbumPageProps> = ({
                       disabled={selectedIds.size === 0}
                       sx={solidActionButtonSx}
                     >
-                      清空
+                      {t('photos.clearSelection')}
                     </Button>
                     <Button
                       variant="contained"
@@ -715,7 +734,7 @@ const PhotoAlbumPage: React.FC<PhotoAlbumPageProps> = ({
                       onClick={() => { setSelectMode(false); setSelectedIds(new Set()); }}
                       sx={solidActionButtonSx}
                     >
-                      完成
+                      {t('photos.done')}
                     </Button>
                   </>
                 )}
@@ -726,14 +745,14 @@ const PhotoAlbumPage: React.FC<PhotoAlbumPageProps> = ({
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 0.75 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
                   <Typography variant="subtitle1" fontWeight={700} sx={{ lineHeight: 1.2 }}>
-                    {title}
+                    {displayTitle}
                   </Typography>
                   {showStats && (
                     <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
                       {[
-                        ['归档', `${groupedPhotoCount}`],
-                        ['待处理', `${unassociatedPhotoCount}`],
-                        ['总数', `${photos.length}`],
+                        [t('photos.stats.archived'), `${groupedPhotoCount}`],
+                        [t('photos.stats.pending'), `${unassociatedPhotoCount}`],
+                        [t('photos.stats.total'), `${photos.length}`],
                       ].map(([label, value]) => (
                         <Box
                           key={label}
@@ -779,7 +798,7 @@ const PhotoAlbumPage: React.FC<PhotoAlbumPageProps> = ({
                   <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'flex-end' }}>
                     {selectMode && displayPhotos.length > 0 && (
                       <Chip
-                        label={`${selectedIds.size}/${displayPhotos.length} 已选`}
+                        label={t('photos.selectedCount').replace('{selected}', String(selectedIds.size)).replace('{total}', String(displayPhotos.length))}
                         color="primary"
                         variant="outlined"
                         size="small"
@@ -794,7 +813,7 @@ const PhotoAlbumPage: React.FC<PhotoAlbumPageProps> = ({
                         onClick={() => setUploadOpen(true)}
                         sx={actionButtonSx}
                       >
-                        上传图片
+                        {t('photos.upload')}
                       </Button>
                     )}
                     {showExtraction && !selectMode && photos.length > 0 && (
@@ -808,7 +827,7 @@ const PhotoAlbumPage: React.FC<PhotoAlbumPageProps> = ({
                         }}
                         sx={solidActionButtonSx}
                       >
-                        选择并提取
+                        {t('photos.selectExtract')}
                       </Button>
                     )}
                     {showExtraction && selectMode && (
@@ -822,7 +841,7 @@ const PhotoAlbumPage: React.FC<PhotoAlbumPageProps> = ({
                           color="primary"
                           sx={actionButtonSx}
                         >
-                          开始提取 {selectedIds.size > 0 ? `(${selectedIds.size})` : ''}
+                          {t('photos.startExtract').replace('{count}', selectedIds.size > 0 ? `(${selectedIds.size})` : '')}
                         </Button>
                         <Button
                           variant="contained"
@@ -831,7 +850,7 @@ const PhotoAlbumPage: React.FC<PhotoAlbumPageProps> = ({
                           disabled={displayPhotos.length === 0}
                           sx={solidActionButtonSx}
                         >
-                          {selectedIds.size === displayPhotos.length && displayPhotos.length > 0 ? '取消全选' : '全选'}
+                          {selectedIds.size === displayPhotos.length && displayPhotos.length > 0 ? t('photos.cancelSelectAll') : t('photos.selectAll')}
                         </Button>
                         <Button
                           variant="contained"
@@ -841,7 +860,7 @@ const PhotoAlbumPage: React.FC<PhotoAlbumPageProps> = ({
                           disabled={selectedIds.size === 0}
                           sx={solidActionButtonSx}
                         >
-                          清空
+                          {t('photos.clearSelection')}
                         </Button>
                         <Button
                           variant="contained"
@@ -849,7 +868,7 @@ const PhotoAlbumPage: React.FC<PhotoAlbumPageProps> = ({
                           onClick={() => { setSelectMode(false); setSelectedIds(new Set()); }}
                           sx={solidActionButtonSx}
                         >
-                          完成
+                          {t('photos.done')}
                         </Button>
                       </>
                     )}
@@ -942,16 +961,16 @@ const PhotoAlbumPage: React.FC<PhotoAlbumPageProps> = ({
           <Paper sx={{ p: 6, textAlign: 'center', borderRadius: groupedSectionBorderRadius }}>
             {photos.length === 0 ? (
               <>
-                <Typography variant="h5" sx={{ mb: 2 }}>{emptyTitle}</Typography>
+                <Typography variant="h5" sx={{ mb: 2 }}>{displayEmptyTitle}</Typography>
                 <Typography variant="body1" sx={{ color: 'text.secondary' }}>
-                  {emptyDescription}
+                  {displayEmptyDescription}
                 </Typography>
               </>
             ) : (
               <>
-                <Typography variant="h5" sx={{ mb: 2 }}>当前视图暂无照片</Typography>
+                <Typography variant="h5" sx={{ mb: 2 }}>{t('photos.emptyCurrentTitle')}</Typography>
                 <Typography variant="body1" sx={{ color: 'text.secondary' }}>
-                  已有照片存在，但当前分组或视图下没有可显示的内容。
+                  {t('photos.emptyCurrentDescription')}
                 </Typography>
               </>
             )}
@@ -967,12 +986,12 @@ const PhotoAlbumPage: React.FC<PhotoAlbumPageProps> = ({
           fullWidth
           PaperProps={{ sx: dialogPaperSx }}
         >
-          <DialogTitle>上传照片</DialogTitle>
+          <DialogTitle>{t('photos.uploadDialogTitle')}</DialogTitle>
           <DialogContent>
             <PhotoUploader onComplete={handleUploadComplete} />
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setUploadOpen(false)}>关闭</Button>
+            <Button onClick={() => setUploadOpen(false)}>{t('photos.close')}</Button>
           </DialogActions>
         </Dialog>
       )}
@@ -984,15 +1003,15 @@ const PhotoAlbumPage: React.FC<PhotoAlbumPageProps> = ({
         fullWidth
         PaperProps={{ sx: dialogPaperSx }}
       >
-        <DialogTitle>删除照片</DialogTitle>
+        <DialogTitle>{t('photos.deleteTitle')}</DialogTitle>
         <DialogContent>
           <Typography variant="body2" color="text.secondary">
-            确定要删除这张照片吗？删除后无法恢复。
+            {t('photos.deleteConfirm')}
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCancelDelete}>取消</Button>
-          <Button color="error" variant="contained" onClick={handleConfirmDelete}>删除</Button>
+          <Button onClick={handleCancelDelete}>{t('common.cancel')}</Button>
+          <Button color="error" variant="contained" onClick={handleConfirmDelete}>{t('photos.delete')}</Button>
         </DialogActions>
       </Dialog>
 

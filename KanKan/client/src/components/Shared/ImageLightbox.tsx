@@ -129,9 +129,9 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
   const suppressSelectedImageClearUntilRef = useRef(0);
   const isIos = /iP(ad|hone|od)/i.test(navigator.userAgent);
   const selectableImageKindLabels: Record<ScopedSelectableImage['kind'], string> = {
-    source: '原图',
-    edit: '编辑图',
-    standing: '参考图',
+    source: t('image.sourceLabel'),
+    edit: t('image.editLabel'),
+    standing: t('image.referenceLabel'),
   };
 
   const hasGroups = Boolean(groups && groups.length > 0);
