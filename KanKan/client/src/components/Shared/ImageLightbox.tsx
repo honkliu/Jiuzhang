@@ -479,7 +479,10 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
     const cw = containerRef.current.clientWidth || 1;
     const ch = containerRef.current.clientHeight || 1;
     const fit = Math.min(cw / iw, ch / ih);
-    return Math.min(1, Number(fit.toFixed(4)));
+    // Use floor (not toFixed, which rounds up) so the fitted image never
+    // exceeds the container by a sub-pixel amount — otherwise isDraggable
+    // gets a false positive and swipe navigation stops working.
+    return Math.min(1, Math.floor(fit * 10000) / 10000);
   };
 
   const stopOverlayPropagation = (event: React.SyntheticEvent) => {
@@ -501,8 +504,12 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
     if (!imgRef.current || !containerRef.current) return false;
     const iw = imgRef.current.naturalWidth * zoom;
     const ih = imgRef.current.naturalHeight * zoom;
-    // draggable only when the scaled natural image is larger than the container
-    return iw > containerRef.current.clientWidth || ih > containerRef.current.clientHeight;
+    // draggable only when the scaled natural image is larger than the container.
+    // Use a 1px tolerance so sub-pixel rounding doesn't flip this on at fit zoom
+    // (which would suppress swipe navigation in handleTouchEnd).
+    const DRAG_EPS = 1;
+    return iw > containerRef.current.clientWidth + DRAG_EPS
+      || ih > containerRef.current.clientHeight + DRAG_EPS;
   }, [zoom]);
 
   const clampPanOffset = useCallback((x: number, y: number, zoomOverride?: number): { x: number; y: number } => {
