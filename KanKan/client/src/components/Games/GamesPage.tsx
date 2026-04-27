@@ -29,7 +29,7 @@ type Cell = string | null;
 type TetrominoName = 'I' | 'J' | 'L' | 'O' | 'S' | 'T' | 'Z';
 type Tetromino = { name: TetrominoName; matrix: number[][]; color: string; dust: string };
 type ActivePiece = Tetromino & { x: number; y: number };
-type Particle = { id: number; row: number; col: number; ox: number; oy: number; dx: number; dy: number; rot: number; delay: number; size: number; color: string; clip: string; duration: number };
+type Particle = { id: number; row: number; col: number; ox: number; oy: number; dx: number; dy: number; fall: number; midFall: number; rot: number; delay: number; size: number; color: string; clip: string; duration: number; blur: number };
 
 type SudokuDifficulty = 'easy' | 'advanced' | 'expert';
 
@@ -100,21 +100,28 @@ const DIRT_SHARD_COLORS = ['#2f1a12', '#5f3927', '#8b5b3d', '#b78355', '#d0a06b'
 
 const makeParticles = (rows: number[]) => rows.flatMap((row) => (
   Array.from({ length: BOARD_WIDTH }, (_, col) => (
-    Array.from({ length: 5 }, (_, shard) => ({
-      id: Date.now() + row * 1000 + col * 10 + shard,
-      row,
-      col,
-      ox: 15 + Math.random() * 70,
-      oy: 14 + Math.random() * 72,
-      dx: (Math.random() - 0.5) * 150,
-      dy: -18 - Math.random() * 105,
-      rot: (Math.random() - 0.5) * 520,
-      delay: Math.random() * 95,
-      size: 15 + Math.random() * 38,
-      color: DIRT_SHARD_COLORS[Math.floor(Math.random() * DIRT_SHARD_COLORS.length)],
-      clip: SHARD_CLIPS[Math.floor(Math.random() * SHARD_CLIPS.length)],
-      duration: 680 + Math.random() * 260,
-    }))
+    Array.from({ length: 9 }, (_, shard) => {
+      const dust = shard > 5;
+      const fall = 180 + Math.random() * 220;
+      return {
+        id: Date.now() + row * 1000 + col * 20 + shard,
+        row,
+        col,
+        ox: 8 + Math.random() * 84,
+        oy: 8 + Math.random() * 84,
+        dx: (Math.random() - 0.5) * (dust ? 260 : 190),
+        dy: -28 - Math.random() * (dust ? 150 : 105),
+        fall,
+        midFall: fall * (0.28 + Math.random() * 0.16),
+        rot: (Math.random() - 0.5) * (dust ? 1080 : 760),
+        delay: Math.random() * 120,
+        size: dust ? 4 + Math.random() * 12 : 12 + Math.random() * 28,
+        color: DIRT_SHARD_COLORS[Math.floor(Math.random() * DIRT_SHARD_COLORS.length)],
+        clip: SHARD_CLIPS[Math.floor(Math.random() * SHARD_CLIPS.length)],
+        duration: dust ? 900 + Math.random() * 420 : 760 + Math.random() * 380,
+        blur: dust ? 1.6 + Math.random() * 1.8 : 0.15 + Math.random() * 0.7,
+      };
+    })
   )).flat()
 ));
 
@@ -335,7 +342,7 @@ const TetrisGame: React.FC = () => {
   return (
     <Grid container spacing={2.2}>
       <Grid item xs={12} md={7} lg={6}>
-        <Card sx={{ position: 'relative', p: { xs: 1, sm: 1.5 }, background: 'linear-gradient(145deg, #3a2116, #6b3d25)', border: '1px solid rgba(255,236,200,0.28)', boxShadow: '0 30px 90px rgba(62,35,19,0.38)' }}>
+        <Card sx={{ position: 'relative', p: { xs: 1, sm: 1.5 }, borderRadius: '10px', background: 'linear-gradient(145deg, #3a2116, #6b3d25)', border: '1px solid rgba(255,236,200,0.28)', boxShadow: '0 30px 90px rgba(62,35,19,0.38)' }}>
           <BoxAny sx={{ position: 'relative', mx: 'auto', width: { xs: 'calc((100% - 82px) * 0.8)', sm: 'min(100%, 360px)' }, aspectRatio: `${BOARD_WIDTH}/${BOARD_HEIGHT}`, p: 1, borderRadius: 0, background: 'linear-gradient(180deg, #2b1a13, #4c2b1c)', boxShadow: 'inset 0 8px 24px rgba(0,0,0,0.45), 0 16px 35px rgba(0,0,0,0.28)' }}>
             <BoxAny sx={{ display: 'grid', gridTemplateColumns: `repeat(${BOARD_WIDTH}, 1fr)`, gap: '3px', width: '100%', height: '100%' }}>
               {display.flatMap((row, rowIndex) => row.map((cell, colIndex) => (
@@ -357,7 +364,7 @@ const TetrisGame: React.FC = () => {
               )))}
             </BoxAny>
             {particles.map((p) => (
-              <BoxAny key={p.id} sx={{ position: 'absolute', left: `calc(${p.col} * 10% + ${p.ox * 0.1}%)`, top: `calc(${p.row} * 5% + ${p.oy * 0.05}%)`, width: `${p.size}px`, aspectRatio: '1', borderRadius: 0, clipPath: p.clip, background: `linear-gradient(145deg, rgba(255,226,177,0.28), ${p.color} 45%, #21130d)`, animation: `crushDust ${p.duration}ms cubic-bezier(.17,.67,.2,1) ${p.delay}ms forwards`, '--dx': `${p.dx}px`, '--dy': `${p.dy}px`, '--rot': `${p.rot}deg`, boxShadow: '0 6px 14px rgba(35,18,10,0.34)', pointerEvents: 'none', transformOrigin: '50% 50%' }} />
+              <BoxAny key={p.id} sx={{ position: 'absolute', left: `calc(${p.col} * 10% + ${p.ox * 0.1}%)`, top: `calc(${p.row} * 5% + ${p.oy * 0.05}%)`, width: `${p.size}px`, aspectRatio: '1', borderRadius: 0, clipPath: p.clip, background: `linear-gradient(145deg, rgba(255,226,177,0.32), ${p.color} 44%, #1f120c)`, animation: `crushDust ${p.duration}ms cubic-bezier(.16,.72,.18,1) ${p.delay}ms forwards`, '--dx': `${p.dx}px`, '--dy': `${p.dy}px`, '--fall': `${p.fall}px`, '--midFall': `${p.midFall}px`, '--rot': `${p.rot}deg`, '--blur': `${p.blur}px`, boxShadow: '0 8px 18px rgba(35,18,10,0.36)', pointerEvents: 'none', transformOrigin: '50% 50%' }} />
             ))}
             {((paused && started) || gameOver) && (
               <BoxAny sx={{ position: 'absolute', inset: 8, borderRadius: 0, display: 'grid', placeItems: 'center', background: 'rgba(20,10,6,0.68)', color: '#fff', textAlign: 'center', backdropFilter: 'blur(4px)' }}>
@@ -389,7 +396,6 @@ const TetrisGame: React.FC = () => {
               pointerEvents: 'none',
             }}
           >
-            <Typography sx={{ mb: 0.35, color: 'rgba(255,236,204,0.78)', fontSize: 10, lineHeight: 1, fontWeight: 800, textAlign: 'center' }}>下一个</Typography>
             <BoxAny sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 13px)', gap: '2px' }}>
               {Array.from({ length: 16 }, (_, index) => {
                 const y = Math.floor(index / 4);
@@ -399,12 +405,29 @@ const TetrisGame: React.FC = () => {
               })}
             </BoxAny>
           </BoxAny>
-          <BoxAny sx={{ mt: { xs: 0.75, sm: 1 }, display: 'flex', justifyContent: 'center' }}>
-            <ButtonGroup variant="outlined" sx={{ flexWrap: 'wrap', '& .MuiButton-root': { minWidth: { xs: 52, sm: 62 }, px: { xs: 0.75, sm: 1.25 } } }}>
+          <BoxAny sx={{ mt: { xs: 0.75, sm: 1 }, width: '100%' }}>
+            <ButtonGroup
+              variant="outlined"
+              fullWidth
+              sx={{
+                '& .MuiButton-root': {
+                  flex: 1,
+                  minWidth: 0,
+                  px: { xs: 0.75, sm: 1.25 },
+                  color: '#d9a86c',
+                  borderColor: 'rgba(217,168,108,0.62)',
+                  background: 'rgba(74,42,26,0.22)',
+                  fontWeight: 900,
+                  '&:hover': {
+                    borderColor: '#e7c28e',
+                    background: 'rgba(139,91,61,0.34)',
+                  },
+                },
+              }}
+            >
               <Button onClick={() => move(-1, 0)}>左</Button>
               <Button onClick={rotate}>旋转</Button>
               <Button onClick={() => move(1, 0)}>右</Button>
-              <Button onClick={hardDrop}>落下</Button>
             </ButtonGroup>
           </BoxAny>
         </Card>
@@ -486,7 +509,7 @@ const SudokuGame: React.FC = () => {
   return (
     <Grid container spacing={2.2}>
       <Grid item xs={12} md={7}>
-        <Card sx={{ p: { xs: 1, md: 2 }, background: 'linear-gradient(145deg, rgba(255,255,255,0.92), rgba(242,248,255,0.78))' }}>
+        <Card sx={{ p: { xs: 1, md: 2 }, borderRadius: '10px', background: 'linear-gradient(145deg, rgba(255,255,255,0.92), rgba(242,248,255,0.78))' }}>
           <BoxAny sx={{ mx: 'auto', maxWidth: 560, display: 'grid', gridTemplateColumns: 'repeat(9, 1fr)', border: '3px solid #172033', borderRadius: 0, overflow: 'hidden', boxShadow: '0 24px 70px rgba(15,23,42,0.18)' }}>
             {grid.map((value, index) => {
               const row = Math.floor(index / 9);
@@ -504,15 +527,15 @@ const SudokuGame: React.FC = () => {
                     aspectRatio: '1', minWidth: 0, borderRadius: 0, p: 0.25,
                     borderRight: col === 2 || col === 5 ? '3px solid #172033' : '1px solid rgba(23,32,51,0.16)',
                     borderBottom: row === 2 || row === 5 ? '3px solid #172033' : '1px solid rgba(23,32,51,0.16)',
-                    bgcolor: isSelected ? '#dff2ff' : related ? '#f2f7fb' : '#fffdf8',
+                    bgcolor: isSelected ? '#9bd8ff' : related ? '#d8ecff' : '#fffdf8',
                     color: wrong ? '#d32f2f' : fixed ? '#182033' : '#1976d2',
                     fontWeight: fixed ? 900 : 700,
                     fontSize: { xs: 21, sm: 30 },
-                    '&:hover': { bgcolor: '#e8f5ff' },
+                    '&:hover': { bgcolor: isSelected ? '#8fd0f8' : '#cfe8ff' },
                   }}
                 >
                   {value ? value : hintMode ? (
-                    <BoxAny sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', width: '86%', height: '86%', color: 'rgba(20,40,70,0.42)', fontFamily: '"Comic Sans MS", "Segoe Print", cursive', fontSize: { xs: 7, sm: 11 }, lineHeight: 1.1 }}>
+                    <BoxAny sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', width: '86%', height: '86%', color: 'rgba(20,40,70,0.52)', fontFamily: '"Comic Sans MS", "Segoe Print", cursive', fontSize: { xs: 8.5, sm: 12.5 }, lineHeight: 1.1 }}>
                       {Array.from({ length: 9 }, (_, i) => <BoxAny key={i} sx={{ display: 'grid', placeItems: 'center' }}>{cands.includes(i + 1) ? i + 1 : ''}</BoxAny>)}
                     </BoxAny>
                   ) : ''}
@@ -592,7 +615,7 @@ export const GamesPage: React.FC = () => {
           {tab === 0 ? <TetrisGame /> : <SudokuGame />}
         </Container>
       </BoxAny>
-      <style>{`@keyframes crushDust { 0% { opacity: 1; transform: translate(0,0) rotate(0) scale(1); filter: blur(0); } 18% { opacity: 1; transform: translate(calc(var(--dx) * .34), calc(var(--dy) * .42)) rotate(calc(var(--rot) * .28)) scale(.92); filter: blur(0); } 58% { opacity: .88; transform: translate(var(--dx), var(--dy)) rotate(var(--rot)) scale(.7); filter: blur(.2px); } 100% { opacity: 0; transform: translate(calc(var(--dx) * 1.22), calc(var(--dy) + 118px)) rotate(calc(var(--rot) * 1.55)) scale(.26); filter: blur(2.2px); } }`}</style>
+      <style>{`@keyframes crushDust { 0% { opacity: 1; transform: translate(0,0) rotate(0) scale(1); filter: blur(0); } 12% { opacity: 1; transform: translate(calc(var(--dx) * .24), calc(var(--dy) * .30)) rotate(calc(var(--rot) * .20)) scale(.96); filter: blur(0); } 38% { opacity: .96; transform: translate(calc(var(--dx) * .68), calc(var(--dy) * .82)) rotate(calc(var(--rot) * .62)) scale(.78); filter: blur(.15px); } 68% { opacity: .72; transform: translate(var(--dx), calc(var(--dy) + var(--midFall))) rotate(var(--rot)) scale(.52); filter: blur(var(--blur)); } 100% { opacity: 0; transform: translate(calc(var(--dx) * 1.08), calc(var(--dy) + var(--fall))) rotate(calc(var(--rot) * 1.45)) scale(.18); filter: blur(calc(var(--blur) + 1.8px)); } }`}</style>
     </>
   );
 };
