@@ -705,7 +705,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
 
       if (
         isVerticalSwipe
-        && swipeDeltaY > VERTICAL_SWIPE_THRESHOLD
+        && Math.abs(swipeDeltaY) > VERTICAL_SWIPE_THRESHOLD
         && canToggleLayerBySwipe
       ) {
         handleToggleLayer();
