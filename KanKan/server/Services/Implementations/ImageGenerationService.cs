@@ -353,7 +353,11 @@ public class ImageGenerationService : IImageGenerationService
         }
 
         var suffix = withoutExt.Substring(baseName.Length + 1);
-        return int.TryParse(suffix, out var value) ? value : int.MaxValue;
+        // Generated files end in `_{index}` (e.g. `_3` or `_secondaryStem_..._3`),
+        // so the trailing numeric segment is the canonical index used for ordering.
+        var lastUnderscore = suffix.LastIndexOf('_');
+        var trailing = lastUnderscore >= 0 ? suffix.Substring(lastUnderscore + 1) : suffix;
+        return int.TryParse(trailing, out var value) ? value : int.MaxValue;
     }
 
     private static int GetNextGeneratedIndex(string uploadsPath, string baseName, string extension)
@@ -403,9 +407,20 @@ public class ImageGenerationService : IImageGenerationService
         }
 
         var suffix = generatedBaseName.Substring(sourceBaseName.Length + 1);
+        if (string.IsNullOrEmpty(suffix))
+        {
+            return false;
+        }
+
+        // Generated files have one of two shapes:
+        //   {source}_{index}.ext                              (prompt-only edit)
+        //   {source}_{secondaryStem}_{...}_{index}.ext        (edit with reference image / labels)
+        // Accept any suffix that contains at least one positive integer segment
+        // (the index appended by GetNextGeneratedIndex). This keeps unrelated
+        // files out while not requiring every segment to be numeric.
         var parts = suffix.Split('_', StringSplitOptions.None);
         return parts.Length > 0
-            && parts.All(part => int.TryParse(part, out var index) && index > 0);
+            && parts.Any(part => int.TryParse(part, out var index) && index > 0);
     }
 
     private static string CombineFileStems(params string[] stems)
