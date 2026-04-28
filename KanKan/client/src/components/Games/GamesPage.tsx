@@ -29,7 +29,7 @@ type Cell = string | null;
 type TetrominoName = 'I' | 'J' | 'L' | 'O' | 'S' | 'T' | 'Z';
 type Tetromino = { name: TetrominoName; matrix: number[][]; color: string; dust: string };
 type ActivePiece = Tetromino & { x: number; y: number };
-type Particle = { id: number; row: number; col: number; ox: number; oy: number; dx: number; dy: number; fall: number; midFall: number; rot: number; delay: number; size: number; color: string; clip: string; duration: number; blur: number };
+type Particle = { id: number; row: number; col: number; ox: number; oy: number; dx: number; dy: number; fall: number; rot: number; delay: number; size: number; color: string; duration: number; kind: 'chunk' | 'sand'; points: number };
 
 type SudokuDifficulty = 'easy' | 'advanced' | 'expert';
 
@@ -41,6 +41,7 @@ type SudokuPuzzle = {
 const BOARD_WIDTH = 10;
 const BOARD_HEIGHT = 20;
 const DROP_MS = 650;
+const CRUSH_WAVE_MS = 58;
 
 const TETROMINOES: Tetromino[] = [
   { name: 'I', matrix: [[1, 1, 1, 1]], color: '#d9a86c', dust: '#e7c28e' },
@@ -88,42 +89,39 @@ const mergePiece = (board: Cell[][], piece: ActivePiece) => {
   return next;
 };
 
-const SHARD_CLIPS = [
-  'polygon(0 12%, 72% 0, 100% 41%, 55% 100%, 9% 78%)',
-  'polygon(13% 0, 100% 18%, 81% 92%, 27% 100%, 0 44%)',
-  'polygon(0 0, 84% 12%, 100% 100%, 31% 82%, 9% 39%)',
-  'polygon(29% 0, 100% 0, 82% 70%, 41% 100%, 0 54%)',
-  'polygon(4% 27%, 44% 0, 100% 23%, 76% 100%, 0 82%)',
-];
-
 const DIRT_SHARD_COLORS = ['#2f1a12', '#5f3927', '#8b5b3d', '#b78355', '#d0a06b', '#6f4630'];
 
-const makeParticles = (rows: number[]) => rows.flatMap((row) => (
-  Array.from({ length: BOARD_WIDTH }, (_, col) => (
-    Array.from({ length: 72 }, (_, shard) => {
-      const dust = shard > 36;
-      const fall = 240 + Math.random() * 260;
+const makeParticles = (rows: number[], leftToRight = false) => {
+  const topRow = Math.min(...rows);
+  const rowSpan = Math.max(1, Math.max(...rows) - topRow + 1);
+  return rows.flatMap((row) => (
+    Array.from({ length: BOARD_WIDTH }, (_, col) => (
+    Array.from({ length: 1140 }, (_, shard) => {
+      const sand = shard >= 1;
+      const visualRow = topRow + Math.random() * rowSpan;
+      const fall = sand ? 1.08 + Math.random() * 0.82 : 260 + Math.random() * 260;
+      const startOffsetX = 2 + Math.random() * 96;
       return {
         id: Date.now() + row * 10000 + col * 100 + shard,
-        row,
+        row: visualRow,
         col,
-        ox: 4 + Math.random() * 92,
-        oy: 18 + Math.random() * 62,
-        dx: (Math.random() - 0.5) * (dust ? 130 : 92),
-        dy: -8 - Math.random() * (dust ? 42 : 28),
+        ox: startOffsetX,
+        oy: Math.random() * 100,
+        dx: (Math.random() - 0.5) * (sand ? 10 : 24),
+        dy: Math.random() * (sand ? 34 : 10),
         fall,
-        midFall: fall * (0.22 + Math.random() * 0.18),
-        rot: (Math.random() - 0.5) * (dust ? 720 : 520),
-        delay: Math.random() * 85,
-        size: dust ? 1.8 + Math.random() * 3.2 : 3.5 + Math.random() * 4.5,
+        rot: (Math.random() - 0.5) * (sand ? 90 : 640),
+        delay: (leftToRight ? col * CRUSH_WAVE_MS : 0) + Math.random() * (sand ? 70 : 72),
+        size: sand ? 1.74 + Math.random() * 3.75 : 1.8 + Math.random() * 2.4,
         color: DIRT_SHARD_COLORS[Math.floor(Math.random() * DIRT_SHARD_COLORS.length)],
-        clip: SHARD_CLIPS[Math.floor(Math.random() * SHARD_CLIPS.length)],
-        duration: dust ? 1050 + Math.random() * 520 : 920 + Math.random() * 420,
-        blur: dust ? 1.1 + Math.random() * 1.4 : 0.05 + Math.random() * 0.35,
+        duration: sand ? 960 + Math.random() * 420 : 520 + Math.random() * 260,
+        kind: sand ? 'sand' as const : 'chunk' as const,
+        points: 4 + Math.floor(Math.random() * 4),
       };
     })
-  )).flat()
-));
+    )).flat()
+  ));
+};
 
 const createSudokuPuzzle = (puzzle: string, index: number): SudokuPuzzle => {
   const givens = (puzzle.match(/[1-9]/g) || []).length;
@@ -323,7 +321,7 @@ const TetrisGame: React.FC = () => {
     if (canvas && ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
   }, []);
 
-  const playCrushSand = useCallback((rows: number[]) => {
+  const playCrushSand = useCallback((rows: number[], leftToRight = false) => {
     const canvas = sandCanvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
@@ -337,7 +335,7 @@ const TetrisGame: React.FC = () => {
     if (!ctx) return;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-    const grains = makeParticles(rows);
+    const grains = makeParticles(rows, leftToRight);
     const startedAt = performance.now();
     const cellW = rect.width / BOARD_WIDTH;
     const cellH = rect.height / BOARD_HEIGHT;
@@ -354,28 +352,53 @@ const TetrisGame: React.FC = () => {
         const y0 = (grain.row + grain.oy / 100) * cellH;
         let x = x0;
         let y = y0;
-        let rx = grain.size;
-        let ry = grain.size;
-        if (t < 0.14) {
-          const crush = t / 0.14;
-          x += grain.dx * 0.08 * crush;
-          y += cellH * 0.18 * crush;
-          rx = grain.size * (1.8 - crush * 0.7);
-          ry = Math.max(0.7, grain.size * (0.24 + crush * 0.42));
+        let rx = grain.size * (grain.kind === 'sand' ? 0.82 : 1.15);
+        let ry = grain.size * (grain.kind === 'sand' ? 0.58 : 0.92);
+        if (t < 0.1) {
+          const crush = t / 0.1;
+          x += grain.dx * 0.035 * crush;
+          y += cellH * 0.22 * crush;
+          rx = grain.size * (grain.kind === 'sand' ? 0.9 : 1.95);
+          ry = Math.max(0.35, grain.size * (grain.kind === 'sand' ? 0.45 : 0.28));
         } else {
-          const fallT = (t - 0.14) / 0.86;
-          const gravity = fallT * fallT;
-          x += grain.dx * (0.1 + fallT * 0.9);
-          y += Math.sin(fallT * Math.PI) * grain.dy + grain.fall * gravity;
-          const shrink = Math.max(0.18, 1 - fallT * 0.78);
-          rx = grain.size * shrink;
-          ry = grain.size * shrink;
+          const fallT = (t - 0.1) / 0.9;
+          const motionT = fallT;
+          const gravity = motionT * motionT * (4.2 + motionT * 2.1);
+          if (grain.kind === 'sand') {
+            const startY = y0 + cellH * 0.2;
+            const bottomlessDistance = rect.height + cellH * 5 - startY;
+            x = x0 + grain.dx * Math.min(1, motionT * 0.55);
+            y = startY + bottomlessDistance * Math.min(1.55, gravity * grain.fall);
+          } else {
+            const crumble = fallT * 4;
+            x += grain.dx * (0.08 + fallT * 0.42);
+            y += grain.dy * fallT + crumble + cellH * 0.2 + grain.fall * gravity;
+          }
+          const shrink = Math.max(grain.kind === 'sand' ? 0.56 : 0.24, 1 - motionT * (grain.kind === 'sand' ? 0.24 : 0.68));
+          rx = grain.size * shrink * (grain.kind === 'sand' ? 0.42 : 0.92);
+          ry = grain.size * shrink * (grain.kind === 'sand' ? (motionT < 0.62 ? 2.7 : 0.72) : 0.72);
         }
-        ctx.globalAlpha = t < 0.66 ? 0.92 : Math.max(0, (1 - t) / 0.34) * 0.82;
+        if (grain.kind === 'sand' && y - ry / 2 > rect.height) continue;
+        ctx.globalAlpha = grain.kind === 'sand'
+          ? 0.95
+          : (t < 0.72 ? 0.94 : Math.max(0, (1 - t) / 0.28) * 0.86);
         ctx.fillStyle = grain.color;
         ctx.beginPath();
-        ctx.ellipse(x, y, rx, ry, grain.rot * t * Math.PI / 180, 0, Math.PI * 2);
-        ctx.fill();
+        if (grain.kind === 'chunk') {
+          const angle = grain.rot * t * Math.PI / 180;
+          for (let point = 0; point < grain.points; point += 1) {
+            const theta = angle + (Math.PI * 2 * point) / grain.points;
+            const radius = point % 2 === 0 ? rx : rx * 0.58;
+            const px = x + Math.cos(theta) * radius;
+            const py = y + Math.sin(theta) * ry * (point % 2 === 0 ? 1 : 0.7);
+            if (point === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+          }
+          ctx.closePath();
+          ctx.fill();
+        } else {
+          ctx.fillRect(x - rx / 2, y - ry / 2, Math.max(0.65, rx), Math.max(0.65, ry));
+        }
       }
       ctx.globalAlpha = 1;
       if (elapsed < totalMs) {
@@ -420,7 +443,7 @@ const TetrisGame: React.FC = () => {
     const clearRows = merged.map((row, index) => row.every(Boolean) ? index : -1).filter((index) => index >= 0);
     let nextBoard = merged;
     if (clearRows.length) {
-      playCrushSand(clearRows);
+      playCrushSand(clearRows, true);
       const remaining = merged.filter((_, index) => !clearRows.includes(index));
       nextBoard = [...Array.from({ length: clearRows.length }, () => Array<Cell>(BOARD_WIDTH).fill(null)), ...remaining];
       setScore((value) => value + [0, 100, 300, 500, 800][clearRows.length] + clearRows.length * 15);
