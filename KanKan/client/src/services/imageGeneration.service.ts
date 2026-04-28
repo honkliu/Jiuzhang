@@ -47,6 +47,8 @@ class UnifiedImageGenerationService {
     messageId?: string;
     mediaUrl?: string;
     secondaryMediaUrl?: string;
+    primaryUserId?: string;
+    secondaryUserId?: string;
     emotion?: string;
     mode?: 'create' | 'replace';
     variationCount?: number;
@@ -60,6 +62,8 @@ class UnifiedImageGenerationService {
       messageId: request.messageId,
       mediaUrl: request.mediaUrl,
       secondaryMediaUrl: request.secondaryMediaUrl,
+      primaryUserId: request.primaryUserId,
+      secondaryUserId: request.secondaryUserId,
       emotion: request.emotion,
       mode: request.mode,
       variationCount: request.variationCount || 9,

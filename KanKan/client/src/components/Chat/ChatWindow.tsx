@@ -1133,6 +1133,12 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
           addLocalInfoMessage(t('chat.command.photoAvatarMissing'));
           return;
         }
+        const primaryUserId = user?.id;
+        const secondaryUserId = otherParticipant?.userId;
+        if (!primaryUserId || !secondaryUserId) {
+          addLocalInfoMessage(t('chat.command.photoAvatarMissing'));
+          return;
+        }
 
         addLocalInfoMessage(t('chat.command.generatingPhoto'));
 
@@ -1143,6 +1149,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
               generationType: 'custom',
               mediaUrl: primaryAvatar,
               secondaryMediaUrl: secondaryAvatar,
+              primaryUserId,
+              secondaryUserId,
               customPrompts: [rest],
               variationCount: 1,
             });

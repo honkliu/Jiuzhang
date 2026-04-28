@@ -55,6 +55,8 @@ public class ImageGenerationController : ControllerBase
                 MessageId = request.MessageId,
                 MediaUrl = request.MediaUrl,
                 SecondaryMediaUrl = request.SecondaryMediaUrl,
+                PrimaryUserId = request.PrimaryUserId,
+                SecondaryUserId = request.SecondaryUserId,
                 GenerationType = request.GenerationType,
                 Emotion = request.Emotion,
                 Mode = request.Mode,
@@ -154,6 +156,13 @@ public class UnifiedGenerationRequest
     public string? MessageId { get; set; }
     public string? MediaUrl { get; set; }
     public string? SecondaryMediaUrl { get; set; }
+
+    // For pair generation (chat /p): identifies the two users involved so
+    // generated filenames are namespaced per-user-pair rather than per-avatar.
+    // Avatar IDs alone are unsafe because two different users can share the
+    // same stock avatar and would otherwise collide on disk.
+    public string? PrimaryUserId { get; set; }
+    public string? SecondaryUserId { get; set; }
 
     // Generation parameters
     public string? Emotion { get; set; }

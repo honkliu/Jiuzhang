@@ -33,6 +33,8 @@ public class GenerationRequest
     public string? MessageId { get; set; }
     public string? MediaUrl { get; set; }
     public string? SecondaryMediaUrl { get; set; }
+    public string? PrimaryUserId { get; set; }
+    public string? SecondaryUserId { get; set; }
     public string GenerationType { get; set; } = string.Empty; // "emotions" | "styles" | "variations" | "custom"
     public string? Emotion { get; set; }
     public string? Mode { get; set; } // "create" | "replace"

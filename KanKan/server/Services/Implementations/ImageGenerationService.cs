@@ -844,13 +844,17 @@ public class ImageGenerationService : IImageGenerationService
             //   The secondary reference image does not affect filenames here.
             var isPairCase = string.IsNullOrWhiteSpace(request.MessageId)
                 && secondarySource != null
-                && !string.IsNullOrWhiteSpace(secondarySource.FileStem);
+                && !string.IsNullOrWhiteSpace(request.PrimaryUserId)
+                && !string.IsNullOrWhiteSpace(request.SecondaryUserId);
 
             string filePrefix;
             string? pairBaseName = null;
             if (isPairCase)
             {
-                pairBaseName = CombineFileStems(sourceImage.FileStem, secondarySource!.FileStem);
+                // Use user IDs (not avatar image IDs) so two different users
+                // who share the same stock avatar can't collide on disk and
+                // accidentally read each other's pair photos.
+                pairBaseName = CombineFileStems(request.PrimaryUserId!, request.SecondaryUserId!);
                 filePrefix = string.IsNullOrWhiteSpace(pairBaseName)
                     ? sourceImage.FileStem
                     : pairBaseName;
