@@ -353,11 +353,10 @@ public class ImageGenerationService : IImageGenerationService
         }
 
         var suffix = withoutExt.Substring(baseName.Length + 1);
-        // Generated files end in `_{index}` (e.g. `_3` or `_secondaryStem_..._3`),
-        // so the trailing numeric segment is the canonical index used for ordering.
-        var lastUnderscore = suffix.LastIndexOf('_');
-        var trailing = lastUnderscore >= 0 ? suffix.Substring(lastUnderscore + 1) : suffix;
-        return int.TryParse(trailing, out var value) ? value : int.MaxValue;
+        // Direct descendants are exactly `{baseName}_{N}`. Anything else
+        // (containing further underscores) belongs to a deeper namespace and
+        // shouldn't be ordered against direct children.
+        return int.TryParse(suffix, out var value) ? value : int.MaxValue;
     }
 
     private static int GetNextGeneratedIndex(string uploadsPath, string baseName, string extension)
@@ -384,6 +383,46 @@ public class ImageGenerationService : IImageGenerationService
         return maxIndex + 1;
     }
 
+    /// <summary>
+    /// For chat /p pair generation: returns 0 if `{baseName}.{ext}` does not
+    /// exist yet (the first take has no suffix), otherwise returns the next
+    /// available `-N` take index.
+    /// </summary>
+    private static int GetNextPairTakeIndex(string uploadsPath, string baseName, string extension)
+    {
+        if (!Directory.Exists(uploadsPath))
+        {
+            return 0;
+        }
+
+        var unsuffixed = Path.Combine(uploadsPath, $"{baseName}{extension}");
+        if (!File.Exists(unsuffixed))
+        {
+            return 0;
+        }
+
+        var searchPattern = string.IsNullOrWhiteSpace(extension)
+            ? $"{baseName}-*"
+            : $"{baseName}-*{extension}";
+
+        var maxTake = 0;
+        foreach (var file in Directory.GetFiles(uploadsPath, searchPattern))
+        {
+            var stem = Path.GetFileNameWithoutExtension(file);
+            if (!stem.StartsWith(baseName + "-", StringComparison.OrdinalIgnoreCase)) continue;
+            var trailing = stem.Substring(baseName.Length + 1);
+            // Only accept pure positive integers — reject things like
+            // `A_B-3_2` (a case-1 edit of A_B-3) so they don't bump the
+            // pair take index.
+            if (int.TryParse(trailing, out var take) && take > 0 && take > maxTake)
+            {
+                maxTake = take;
+            }
+        }
+
+        return maxTake + 1;
+    }
+
     private static List<string> FindGeneratedFiles(string folderPath, string searchPattern, string baseName, string urlPrefix)
     {
         if (!Directory.Exists(folderPath))
@@ -391,6 +430,9 @@ public class ImageGenerationService : IImageGenerationService
             return new List<string>();
         }
 
+        // After the case-1 naming change, direct descendants are exactly
+        // `{baseName}_{N}` — all in the same namespace — so ordering by N
+        // matches the order they were produced.
         return Directory.GetFiles(folderPath, searchPattern)
             .Select(path => Path.GetFileName(path))
             .Where(name => IsGeneratedDescendantName(Path.GetFileNameWithoutExtension(name), baseName))
@@ -406,21 +448,40 @@ public class ImageGenerationService : IImageGenerationService
             return false;
         }
 
+        // Direct descendants are exactly `{source}_{positiveInt}` — no further
+        // underscores. Anything deeper (e.g. `A_B-3_2` relative to `A`) is the
+        // descendant of a sibling, not of `A` itself, and shouldn't be listed
+        // as A's edit. The flat lightbox view shows only the source's direct
+        // edit children; deeper edits show up under their own parent.
         var suffix = generatedBaseName.Substring(sourceBaseName.Length + 1);
-        if (string.IsNullOrEmpty(suffix))
+        return !string.IsNullOrEmpty(suffix)
+            && !suffix.Contains('_')
+            && int.TryParse(suffix, out var index)
+            && index > 0;
+    }
+
+    /// <summary>
+    /// Strip a trailing "_N" edit index from a file stem to find its naming
+    /// namespace. `A_5` -> `A`, `A_B-3_2` -> `A_B-3`, `A_B-3` -> `A_B-3` (no
+    /// trailing _N), `A` -> `A`.
+    /// </summary>
+    private static string StripTrailingEditIndex(string fileStem)
+    {
+        if (string.IsNullOrEmpty(fileStem))
         {
-            return false;
+            return fileStem;
         }
 
-        // Generated files have one of two shapes:
-        //   {source}_{index}.ext                              (prompt-only edit)
-        //   {source}_{secondaryStem}_{...}_{index}.ext        (edit with reference image / labels)
-        // Accept any suffix that contains at least one positive integer segment
-        // (the index appended by GetNextGeneratedIndex). This keeps unrelated
-        // files out while not requiring every segment to be numeric.
-        var parts = suffix.Split('_', StringSplitOptions.None);
-        return parts.Length > 0
-            && parts.Any(part => int.TryParse(part, out var index) && index > 0);
+        var lastUnderscore = fileStem.LastIndexOf('_');
+        if (lastUnderscore <= 0 || lastUnderscore == fileStem.Length - 1)
+        {
+            return fileStem;
+        }
+
+        var trailing = fileStem.Substring(lastUnderscore + 1);
+        return int.TryParse(trailing, out var n) && n > 0
+            ? fileStem.Substring(0, lastUnderscore)
+            : fileStem;
     }
 
     private static string CombineFileStems(params string[] stems)
@@ -763,9 +824,41 @@ public class ImageGenerationService : IImageGenerationService
             // Determine prompts
             var prompts = GetPrompts(request.GenerationType, request.CustomPrompts, null, BaseEmotionTypes);
             var generatedUrls = new List<string>();
-            var filePrefix = secondarySource == null
-                ? sourceImage.FileStem
-                : CombineFileStems(sourceImage.FileStem, secondarySource.FileStem);
+
+            // Two naming cases:
+            //
+            // Case 2 — chat /p pairing (no MessageId, has secondary):
+            //   primary avatar A + secondary avatar B
+            //   first take      -> A_B.{ext}
+            //   subsequent take -> A_B-1, A_B-2, ...
+            //   These are siblings, not parent/child. The "-N" separator is
+            //   used (instead of "_N") so a later case-1 edit of A_B-2 lives
+            //   in its own namespace as A_B-2_1, A_B-2_2, ...
+            //
+            // Case 1 — lightbox edit (has MessageId, secondary optional):
+            //   strip the trailing "_N" from the source stem to find the
+            //   namespace, then continue numbering inside it:
+            //     A_5     -> namespace "A"     -> A_6, A_7, ...
+            //     A_B-3   -> namespace "A_B-3" -> A_B-3_1, A_B-3_2, ...
+            //     A_B-3_2 -> namespace "A_B-3" -> A_B-3_3, A_B-3_4, ...
+            //   The secondary reference image does not affect filenames here.
+            var isPairCase = string.IsNullOrWhiteSpace(request.MessageId)
+                && secondarySource != null
+                && !string.IsNullOrWhiteSpace(secondarySource.FileStem);
+
+            string filePrefix;
+            string? pairBaseName = null;
+            if (isPairCase)
+            {
+                pairBaseName = CombineFileStems(sourceImage.FileStem, secondarySource!.FileStem);
+                filePrefix = string.IsNullOrWhiteSpace(pairBaseName)
+                    ? sourceImage.FileStem
+                    : pairBaseName;
+            }
+            else
+            {
+                filePrefix = StripTrailingEditIndex(sourceImage.FileStem);
+            }
             if (string.IsNullOrWhiteSpace(filePrefix))
             {
                 filePrefix = sourceImage.FileStem;
@@ -792,8 +885,22 @@ public class ImageGenerationService : IImageGenerationService
                     var generatedBase64 = await _comfyUIService.GenerateImageAsync(imageBase64, fullPrompt, secondaryImageBase64);
 
                     // Save to file system
-                    var nextIndex = GetNextGeneratedIndex(sourceImage.DirectoryPath, filePrefix, fileExtension);
-                    var generatedFileName = $"{filePrefix}_{nextIndex}{fileExtension}";
+                    string generatedFileName;
+                    if (isPairCase && pairBaseName != null)
+                    {
+                        // First take is `A_B.ext` (no suffix). Subsequent takes
+                        // are `A_B-1.ext`, `A_B-2.ext`, ... — siblings, not
+                        // descendants, so the dash separator is used.
+                        var nextPairTake = GetNextPairTakeIndex(sourceImage.DirectoryPath, pairBaseName, fileExtension);
+                        generatedFileName = nextPairTake == 0
+                            ? $"{pairBaseName}{fileExtension}"
+                            : $"{pairBaseName}-{nextPairTake}{fileExtension}";
+                    }
+                    else
+                    {
+                        var nextIndex = GetNextGeneratedIndex(sourceImage.DirectoryPath, filePrefix, fileExtension);
+                        generatedFileName = $"{filePrefix}_{nextIndex}{fileExtension}";
+                    }
                     var generatedFilePath = Path.Combine(sourceImage.DirectoryPath, generatedFileName);
 
                     var generatedBytes = Convert.FromBase64String(generatedBase64);
