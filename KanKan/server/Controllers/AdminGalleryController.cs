@@ -102,9 +102,30 @@ public class AdminGalleryController : ControllerBase
         {
             var allowedUrls = await GetAllowedImageUrlsAsync(currentUser);
             var allowedRelativePaths = BuildAllowedRelativePathSet(allowedUrls);
-            var allowedSourceKeys = allowedRelativePaths.Select(ToGalleryFileKey).Where(key => key != null).Select(key => key!).ToList();
+
+            // Group source keys by (directory, extension) so we can probe the
+            // bucket relevant to a candidate file in O(1) rather than scanning
+            // the whole list. Without this the descendant check is O(files ×
+            // sourceKeys), which made GET /admin/gallery/photos visibly slow
+            // (>10s) on chats with even a handful of generated images.
+            var allowedSourceKeysByBucket = new Dictionary<(string Directory, string Extension), List<GalleryFileKey>>(
+                EqualityComparer<(string, string)>.Default);
+            foreach (var key in allowedRelativePaths
+                .Select(ToGalleryFileKey)
+                .Where(key => key != null)
+                .Select(key => key!))
+            {
+                var bucket = (key.Directory.ToLowerInvariant(), key.Extension.ToLowerInvariant());
+                if (!allowedSourceKeysByBucket.TryGetValue(bucket, out var list))
+                {
+                    list = new List<GalleryFileKey>();
+                    allowedSourceKeysByBucket[bucket] = list;
+                }
+                list.Add(key);
+            }
+
             files = files
-                .Where(filePath => IsAllowedGalleryFile(filePath, allowedRelativePaths, allowedSourceKeys))
+                .Where(filePath => IsAllowedGalleryFile(filePath, allowedRelativePaths, allowedSourceKeysByBucket))
                 .ToList();
         }
 
@@ -415,7 +436,10 @@ public class AdminGalleryController : ControllerBase
         return path.StartsWith("uploads/", StringComparison.OrdinalIgnoreCase) ? path : null;
     }
 
-    private bool IsAllowedGalleryFile(string filePath, HashSet<string> allowedRelativePaths, List<GalleryFileKey> allowedSourceKeys)
+    private bool IsAllowedGalleryFile(
+        string filePath,
+        HashSet<string> allowedRelativePaths,
+        Dictionary<(string Directory, string Extension), List<GalleryFileKey>> allowedSourceKeysByBucket)
     {
         var relativePath = GetGalleryRelativePath(filePath);
         if (allowedRelativePaths.Contains(relativePath))
@@ -429,10 +453,25 @@ public class AdminGalleryController : ControllerBase
             return false;
         }
 
-        return allowedSourceKeys.Any(sourceKey =>
-            string.Equals(sourceKey.Directory, fileKey.Directory, StringComparison.OrdinalIgnoreCase)
-            && string.Equals(sourceKey.Extension, fileKey.Extension, StringComparison.OrdinalIgnoreCase)
-            && IsGeneratedDescendantName(fileKey.BaseName, sourceKey.BaseName));
+        // Only compare against source keys that share the same directory and
+        // extension — they're the only ones that could plausibly be parents
+        // of this file. This narrows the candidate list from "everything the
+        // user can see" to a small bucket, typically a few entries.
+        if (!allowedSourceKeysByBucket.TryGetValue(
+                (fileKey.Directory.ToLowerInvariant(), fileKey.Extension.ToLowerInvariant()),
+                out var bucket))
+        {
+            return false;
+        }
+
+        foreach (var sourceKey in bucket)
+        {
+            if (IsGeneratedDescendantName(fileKey.BaseName, sourceKey.BaseName))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static GalleryFileKey? ToGalleryFileKey(string relativePath)

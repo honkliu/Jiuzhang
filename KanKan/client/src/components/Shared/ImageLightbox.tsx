@@ -289,6 +289,11 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
     };
   }, [open, initialIndex, initialGroupIndex, hasGroups, initialGeneratedUrl, groups]);
 
+  // Prefetch generated edits for every group so the thumbnail strip can
+  // show accurate "{n}" badges. Each per-message lookup is fast on the
+  // server now (it skips Mongo entirely when the lookup id is a base64
+  // upload path), so doing all of them in parallel on open is cheap even
+  // for image-heavy chats.
   useEffect(() => {
     if (!open || !hasGroups || !groups) return;
     const pending = groups.filter((group) => generatedByGroup[group.messageId] === undefined);

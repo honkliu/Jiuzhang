@@ -851,8 +851,10 @@ public class ChatController : ControllerBase
                 });
             }
 
-            // Add participants based on @mentions (e.g., @carol)
-            await TryAddMentionedParticipantsAsync(chat, message, currentUser);
+            // @mentions are display-only — they no longer auto-add users to
+            // the chat. Use the explicit `/a @name` slash command (handled by
+            // the client via POST /api/chat/{id}/participants) to invite a
+            // group member.
 
             // AI agent response if mentioned (run in background so this request returns immediately)
             if (ShouldTriggerAgent(chat, message))
@@ -959,6 +961,143 @@ public class ChatController : ControllerBase
         {
             _logger.LogError(ex, "Failed to add participants to chat {ChatId}", chatId);
             return StatusCode(500, new { message = "Failed to add participants" });
+        }
+    }
+
+    /// <summary>
+    /// Add a user to this chat by handle/displayName, using the same lenient
+    /// rules previously triggered by `@mention` in chat text. This is the
+    /// explicit replacement for that behavior: invoked by the client `/a` slash
+    /// command. Works for any chat participant (not just admins) and converts
+    /// a 1-1 chat into a group when needed — both behaviors inherited from
+    /// the original TryAddMentionedParticipantsAsync flow.
+    /// </summary>
+    [HttpPost("{chatId}/mentions/add")]
+    public async Task<IActionResult> AddByMention(string chatId, [FromBody] AddByMentionRequest request)
+    {
+        try
+        {
+            var userId = GetUserId();
+            var currentUser = await _userRepository.GetByIdAsync(userId);
+            if (currentUser == null)
+                return BadRequest(new { message = "User not found" });
+
+            var chat = await _chatRepository.GetByIdAsync(chatId);
+            if (chat == null)
+                return NotFound(new { message = "Chat not found" });
+
+            // Caller must be a member of the chat (any role) — same implicit
+            // requirement as the old @-mention path.
+            if (!chat.Participants.Any(p => p.UserId == userId))
+                return Forbid();
+
+            var name = request?.Name?.Trim();
+            if (string.IsNullOrWhiteSpace(name))
+                return BadRequest(new { message = "Name is required" });
+            if (name.StartsWith("@")) name = name.Substring(1);
+
+            // /a only resolves names against the inviter's friends. This makes
+            // the lookup space deterministic (you can't accidentally pull in
+            // a stranger by name collision) and matches the product rule:
+            // a chat member can only invite their own friends.
+            var friendContacts = await _contactRepository.GetContactsByStatusAsync(userId, "accepted");
+            if (friendContacts.Count == 0)
+                return NotFound(new { message = "No friend matches", reason = "no_friend_match", name });
+
+            var friendIds = friendContacts.Select(c => c.ContactId).ToHashSet();
+            var lower = name.ToLowerInvariant();
+
+            // Resolve to User records to compare against handle as well as
+            // displayName (Contact stores its own DisplayName, but handle is
+            // only on User).
+            var friendUsers = new List<User>();
+            foreach (var id in friendIds)
+            {
+                var u = await _userRepository.GetByIdAsync(id);
+                if (u != null) friendUsers.Add(u);
+            }
+
+            // Prefer exact (case-insensitive) match on displayName/handle,
+            // fall back to first containing match.
+            User? match = friendUsers.FirstOrDefault(u =>
+                string.Equals(u.DisplayName, name, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(u.Handle, name, StringComparison.OrdinalIgnoreCase));
+            if (match == null)
+            {
+                match = friendUsers.FirstOrDefault(u =>
+                    (u.DisplayName ?? string.Empty).ToLowerInvariant().Contains(lower) ||
+                    (u.Handle ?? string.Empty).ToLowerInvariant().Contains(lower));
+            }
+
+            if (match == null)
+                return NotFound(new { message = "No friend matches", reason = "no_friend_match", name });
+
+            // Friendship gate: a chat member can only invite their own
+            // friends. The invitee may already be in a different domain or
+            // unrelated to other group members — that's fine; the rule is
+            // about the inviter's relationship to the invitee, not about
+            // group composition. (Always true here since the candidate set
+            // is already friends-only, but we keep the explicit check so
+            // future refactors can't regress this invariant.)
+            if (!await IsFriendAsync(userId, match.Id))
+                return StatusCode(403, new { message = "Not friends", reason = "not_friends", displayName = match.DisplayName });
+
+            var isSuperDomainUser = IsSuperDomainUser(currentUser);
+            var allowIsolationBypass = string.Equals(chat.ChatType, "group", StringComparison.OrdinalIgnoreCase);
+            if (!allowIsolationBypass && !isSuperDomainUser && !CanAccessDomain(currentUser, match))
+                return Forbid();
+
+            if (chat.Participants.Any(p => p.UserId == match.Id))
+                return Ok(new { alreadyMember = true, userId = match.Id, displayName = match.DisplayName });
+
+            chat.Participants.Add(new ChatParticipant
+            {
+                UserId = match.Id,
+                DisplayName = match.DisplayName,
+                AvatarUrl = match.AvatarUrl ?? string.Empty,
+                JoinedAt = DateTime.UtcNow
+            });
+
+            // 1-1 → group conversion mirrors the original mention path.
+            if (chat.ChatType == "direct")
+            {
+                var realOtherCount = chat.Participants.Count(p =>
+                    p.UserId != currentUser.Id &&
+                    p.UserId != ChatDomain.AgentUserId &&
+                    !string.IsNullOrWhiteSpace(p.UserId));
+                if (realOtherCount >= 1)
+                {
+                    chat.ChatType = "group";
+                    if (chat.AdminIds == null || chat.AdminIds.Count == 0)
+                        chat.AdminIds = new List<string> { currentUser.Id };
+                    if (string.IsNullOrWhiteSpace(chat.GroupName))
+                        chat.GroupName = BuildGroupName(chat.Participants);
+                }
+            }
+
+            chat.UpdatedAt = DateTime.UtcNow;
+            await _chatRepository.UpdateAsync(chat);
+            await UpsertChatUsersFromChatAsync(chat);
+
+            await _hubContext.Clients.Group(chat.Id)
+                .SendAsync("ChatUpdated", ChatDomain.ToChatDto(chat, currentUser.Id, ChatHub.IsUserOnline));
+            await _hubContext.Clients.Group(chat.Id)
+                .SendAsync("ParticipantsAdded", chat.Id, new List<string> { match.Id });
+            await _hubContext.Clients.User(match.Id)
+                .SendAsync("ChatCreated", ChatDomain.ToChatDto(chat, match.Id, ChatHub.IsUserOnline));
+
+            return Ok(new
+            {
+                added = true,
+                userId = match.Id,
+                displayName = match.DisplayName,
+                chat = ChatDomain.ToChatDto(chat, currentUser.Id, ChatHub.IsUserOnline),
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to add user by mention to chat {ChatId}", chatId);
+            return StatusCode(500, new { message = "Failed to add user" });
         }
     }
 
@@ -1391,4 +1530,12 @@ public class ChatController : ControllerBase
 public class AddParticipantsRequest
 {
     public List<string> UserIds { get; set; } = new();
+}
+
+public class AddByMentionRequest
+{
+    /// <summary>
+    /// Display name or handle of the user to add (with or without leading `@`).
+    /// </summary>
+    public string Name { get; set; } = string.Empty;
 }

@@ -232,11 +232,111 @@ const markdownSx = {
   '& hr': { border: 'none', borderTop: '1px solid rgba(0,0,0,0.1)', margin: '0.5em 0' },
 };
 
-const MarkdownOrPlainText: React.FC<{ text: string }> = ({ text }) => {
+/**
+ * Match `@Name` against the list of chat participants. Names can contain
+ * spaces, so we sort longer names first to prefer the longest match — this
+ * keeps `@Bob` from eating part of `@Bob Smith`. Mentions must be preceded
+ * by start-of-string or whitespace to avoid matching inside emails.
+ */
+const findMentionAt = (text: string, startIdx: number, names: string[]): { name: string; end: number } | null => {
+  if (text[startIdx] !== '@') return null;
+  if (startIdx > 0) {
+    const prev = text[startIdx - 1];
+    if (prev !== ' ' && prev !== '\n' && prev !== '\t') return null;
+  }
+  const after = text.slice(startIdx + 1);
+  const sorted = [...names].sort((a, b) => b.length - a.length);
+  for (const name of sorted) {
+    if (after.startsWith(name)) {
+      const charAfter = after[name.length];
+      // Mention must end at a non-name character to avoid matching prefixes
+      // (e.g. don't let "Bob" match inside "Bobby").
+      if (
+        charAfter === undefined
+        || charAfter === ' '
+        || charAfter === '\n'
+        || charAfter === '\t'
+        || /[.,!?;:'"，。！？；：]/.test(charAfter)
+      ) {
+        return { name, end: startIdx + 1 + name.length };
+      }
+    }
+  }
+  return null;
+};
+
+const mentionStyleSx = {
+  // Red text + underline, no extra weight. Red has enough contrast against
+  // both the green own-bubble and the white incoming-bubble to stay legible.
+  color: 'error.main',
+  textDecoration: 'underline',
+  textUnderlineOffset: '2px',
+  '& a': { color: 'inherit' },
+};
+
+/**
+ * Split text into [plain, mention, plain, mention, ...] segments. Plain
+ * segments still go through markdown + redTag rendering; mention segments
+ * are rendered with the mention style and bypass markdown (the `@` would
+ * otherwise be misread).
+ *
+ * Each plain segment's wrapper forces its inner `<p>` from ReactMarkdown to
+ * `display: inline` — otherwise splitting a single line into multiple
+ * fragments produces visible line breaks where the mention sits.
+ */
+const inlinePSx = { '& p': { margin: 0, display: 'inline' } };
+
+const renderTextWithMentions = (text: string, names: string[] | undefined): React.ReactNode => {
+  if (!names || names.length === 0) {
+    return renderMarkdownWithRedTags(text);
+  }
+
+  const nodes: React.ReactNode[] = [];
+  let cursor = 0;
+  let i = 0;
+  while (i < text.length) {
+    if (text[i] === '@') {
+      const hit = findMentionAt(text, i, names);
+      if (hit) {
+        if (i > cursor) {
+          const before = text.slice(cursor, i);
+          nodes.push(
+            <BoxAny key={`pre-${cursor}`} component="span" sx={inlinePSx}>
+              {renderMarkdownWithRedTags(before)}
+            </BoxAny>
+          );
+        }
+        nodes.push(
+          <BoxAny key={`men-${i}`} component="span" sx={mentionStyleSx}>
+            @{hit.name}
+          </BoxAny>
+        );
+        cursor = hit.end;
+        i = hit.end;
+        continue;
+      }
+    }
+    i += 1;
+  }
+  if (cursor < text.length) {
+    const tail = text.slice(cursor);
+    nodes.push(
+      <BoxAny key={`tail-${cursor}`} component="span" sx={inlinePSx}>
+        {renderMarkdownWithRedTags(tail)}
+      </BoxAny>
+    );
+  }
+  return nodes;
+};
+
+const MarkdownOrPlainText: React.FC<{ text: string; mentionableNames?: string[] }> = ({ text, mentionableNames }) => {
   const isMd = hasMarkdownSyntax(text);
+  const hasMention = mentionableNames && mentionableNames.length > 0 && text.includes('@');
   return (
     <BoxAny sx={isMd ? markdownSx : plainTextSx}>
-      {renderMarkdownWithRedTags(text)}
+      {hasMention
+        ? renderTextWithMentions(text, mentionableNames)
+        : renderMarkdownWithRedTags(text)}
     </BoxAny>
   );
 };
@@ -250,6 +350,8 @@ interface MessageBubbleProps {
   imageIndex?: number;
   imageGroups?: Array<{ sourceUrl: string; messageId: string; canEdit: boolean }>;
   imageGroupIndex?: number;
+  /** Display names of chat participants — used to highlight `@Name` mentions in text. */
+  mentionableNames?: string[];
 }
 
 export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
@@ -261,6 +363,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
   imageIndex,
   imageGroups,
   imageGroupIndex,
+  mentionableNames,
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -463,7 +566,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
             {t('chat.message.deleted')}
           </Typography>
         ) : message.messageType === 'text' ? (
-          <MarkdownOrPlainText text={renderText} />
+          <MarkdownOrPlainText text={renderText} mentionableNames={mentionableNames} />
         ) : message.messageType === 'image' ? (
           <ImageHoverPreview
             src={displayedImageUrl}

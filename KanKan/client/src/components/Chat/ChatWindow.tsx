@@ -10,6 +10,7 @@ import {
   Paper,
   Stack,
   Chip,
+  Avatar,
   ClickAwayListener,
   SxProps,
   Theme,
@@ -162,7 +163,7 @@ interface Chat2DSegment {
   fileName?: string;
 }
 
-type ChatCommandId = '/w' | '/wa' | '/h' | '/b' | '/i' | '/r' | '/p';
+type ChatCommandId = '/w' | '/wa' | '/h' | '/b' | '/i' | '/r' | '/p' | '/a';
 
 interface ChatMessagesProps {
   activeChat: Chat | null;
@@ -182,6 +183,8 @@ interface ChatMessagesProps {
   imageGroupIndexByUrl: Record<string, number>;
   imageGallery: { urls: string[]; indexById: Record<string, number> };
   imageGroupIndexByMessageId: Record<string, number>;
+  /** Display names of all participants (real users), for @mention highlighting in bubbles. */
+  participantNames: string[];
   messagesEndRef: React.RefObject<HTMLDivElement>;
   noMessagesText: string;
 }
@@ -204,6 +207,7 @@ const ChatMessages: React.FC<ChatMessagesProps> = React.memo(({
   imageGroupIndexByUrl,
   imageGallery,
   imageGroupIndexByMessageId,
+  participantNames,
   messagesEndRef,
   noMessagesText,
 }) => {
@@ -313,6 +317,7 @@ const ChatMessages: React.FC<ChatMessagesProps> = React.memo(({
               imageIndex={imageGallery.indexById[message.id]}
               imageGroups={imageGroups}
               imageGroupIndex={imageGroupIndexByMessageId[message.id]}
+              mentionableNames={participantNames}
             />
           );
         }}
@@ -328,6 +333,8 @@ interface ChatInputPanelProps {
   isRecordingVoice: boolean;
   recordingSeconds: number;
   chatCommands: Array<{ id: ChatCommandId; description: string; example: string }>;
+  /** Other real participants in the active chat — fed to the @-mention picker for /p. */
+  mentionCandidates: Array<{ userId: string; displayName: string; avatarUrl: string }>;
   onSendMessage: (raw: string) => Promise<boolean>;
   onFileSelected: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onStartVoiceRecording: () => Promise<void>;
@@ -343,6 +350,7 @@ const ChatInputPanel: React.FC<ChatInputPanelProps> = React.memo(({
   isRecordingVoice,
   recordingSeconds,
   chatCommands,
+  mentionCandidates,
   onSendMessage,
   onFileSelected,
   onStartVoiceRecording,
@@ -363,22 +371,64 @@ const ChatInputPanel: React.FC<ChatInputPanelProps> = React.memo(({
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
   const [recentEmojiUnifieds, setRecentEmojiUnifieds] = useState<string[]>([]);
 
-  const isCommandMode = messageText.startsWith('/');
+  // Command mode is active when the input either starts with a slash or
+  // begins with `@name ` followed by a slash command (so `@bob /p hug` and
+  // `/p @bob hug` both put the input in command mode and surface helpers).
+  const isCommandMode =
+    messageText.startsWith('/')
+    || /^@\S+\s+\//.test(messageText)
+    || /^@[^\s]*$/.test(messageText); // typing a leading @ while preparing a command
   const commandToken = (() => {
     if (!isCommandMode) return null;
-    const firstSpace = messageText.indexOf(' ');
-    return (firstSpace === -1 ? messageText : messageText.slice(0, firstSpace)).trim();
+    // Find the slash token if present; otherwise null (user is still typing
+    // the leading mention before they've entered the slash).
+    const m = messageText.match(/(^|\s)(\/[a-zA-Z]*)(?=\s|$)/);
+    return m ? m[2] : null;
   })();
 
   const commandSuggestions = (() => {
     if (!isCommandMode) return [];
-    const prefix = commandToken ?? '/';
-    return chatCommands.filter((c) => c.id.startsWith(prefix as string));
+    // Only suggest slash commands once the user has actually typed a `/`.
+    // While they're still typing a leading `@mention` (no slash yet), the
+    // mention picker handles autocompletion; showing every slash command as
+    // a generic prefix match here is more noise than help.
+    if (!commandToken) return [];
+    return chatCommands.filter((c) => c.id.startsWith(commandToken));
   })();
 
   useEffect(() => {
     setCommandSelectedIndex(0);
   }, [commandToken]);
+
+  // @-mention autocomplete. Active in any text — slash-command or plain
+  // chat — so users can type "@bob can you..." and pick from a list. The
+  // /p handler interprets the same `@token` for image pairing; for plain
+  // messages the mention is purely cosmetic (highlighted in bubbles).
+  //
+  // Exception: when the command is /a (add user to group), the picker would
+  // mislead — /a's whole purpose is to bring in someone NOT in the chat,
+  // so listing existing members is the wrong set. We just suppress it.
+  const [mentionSelectedIndex, setMentionSelectedIndex] = useState(0);
+  const mentionState = (() => {
+    if (mentionCandidates.length === 0) return null;
+    if (commandToken === '/a') return null;
+    const caret = selectionStartRef.current ?? messageText.length;
+    const before = messageText.slice(0, caret);
+    const m = before.match(/(^|\s)@([^\s@]*)$/);
+    if (!m) return null;
+    const token = m[2];
+    const tokenStart = caret - token.length - 1; // includes the '@'
+    const lower = token.toLowerCase();
+    const matches = mentionCandidates.filter((p) =>
+      token === '' || p.displayName.toLowerCase().includes(lower)
+    );
+    if (matches.length === 0) return null;
+    return { token, tokenStart, caret, matches };
+  })();
+
+  useEffect(() => {
+    setMentionSelectedIndex(0);
+  }, [mentionState?.token, mentionState?.matches.length]);
 
   useEffect(() => {
     setMessageText('');
@@ -473,6 +523,31 @@ const ChatInputPanel: React.FC<ChatInputPanelProps> = React.memo(({
     insertEmojiIntoMessage(emojiData.emoji);
   }, [insertEmojiIntoMessage]);
 
+  const applyMention = useCallback(
+    (candidate: { displayName: string }) => {
+      if (!mentionState) return;
+      const before = messageText.slice(0, mentionState.tokenStart);
+      const after = messageText.slice(mentionState.caret);
+      // Replace `@partial` with `@FullName ` (trailing space for the prompt).
+      const inserted = `@${candidate.displayName} `;
+      const nextValue = `${before}${inserted}${after}`;
+      const nextCaret = before.length + inserted.length;
+      setMessageText(nextValue);
+      if (activeChatId) {
+        scheduleDraftSend(nextValue);
+      }
+      selectionStartRef.current = nextCaret;
+      selectionEndRef.current = nextCaret;
+      window.requestAnimationFrame(() => {
+        const input = inputRef.current;
+        if (!input) return;
+        input.focus();
+        input.setSelectionRange(nextCaret, nextCaret);
+      });
+    },
+    [activeChatId, messageText, mentionState, scheduleDraftSend]
+  );
+
   const handleRecentEmojiClick = useCallback((emoji: string, unified: string) => {
     setRecentEmojiUnifieds((prev) => {
       const next = [unified, ...prev.filter((value) => value !== unified)];
@@ -551,6 +626,33 @@ const ChatInputPanel: React.FC<ChatInputPanelProps> = React.memo(({
     if (e.key === 'Escape' && isEmojiPickerOpen) {
       setIsEmojiPickerOpen(false);
       return;
+    }
+
+    // @-mention picker takes priority when active — its arrow/Enter/Tab keys
+    // navigate candidates instead of the command palette below.
+    if (mentionState) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setMentionSelectedIndex((i) => Math.min(i + 1, mentionState.matches.length - 1));
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setMentionSelectedIndex((i) => Math.max(i - 1, 0));
+        return;
+      }
+      if (e.key === 'Tab' || e.key === 'Enter') {
+        const choice = mentionState.matches[mentionSelectedIndex] ?? mentionState.matches[0];
+        if (choice) {
+          e.preventDefault();
+          applyMention(choice);
+          return;
+        }
+      }
+      if (e.key === 'Escape') {
+        // Cancel: collapse the picker by inserting a space, breaking the @token.
+        return;
+      }
     }
 
     if (!isCommandMode || commandSuggestions.length === 0) return;
@@ -792,7 +894,55 @@ const ChatInputPanel: React.FC<ChatInputPanelProps> = React.memo(({
             </ClickAwayListener>
           </Popper>
         ) : null}
-        {isCommandMode && commandSuggestions.length > 0 ? (
+        {mentionState ? (
+          <Popper
+            open
+            anchorEl={inputRef.current}
+            placement="top-start"
+            sx={{ zIndex: 1301 }}
+          >
+            <Paper
+              elevation={6}
+              sx={{
+                width: 'fit-content',
+                maxWidth: 'calc(100vw - 32px)',
+                mb: 1,
+                px: 0.5,
+                py: 0.5,
+              }}
+            >
+              <Stack spacing={0.25}>
+                {mentionState.matches.map((p, idx) => (
+                  <BoxAny
+                    key={p.userId}
+                    onMouseEnter={() => setMentionSelectedIndex(idx)}
+                    onMouseDown={(event: React.MouseEvent) => {
+                      // Use mousedown so the input keeps focus.
+                      event.preventDefault();
+                      applyMention(p);
+                    }}
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 0.75,
+                      px: 1,
+                      py: 0.5,
+                      borderRadius: 1,
+                      cursor: 'pointer',
+                      bgcolor: idx === mentionSelectedIndex ? 'action.selected' : 'transparent',
+                    }}
+                  >
+                    <Avatar src={p.avatarUrl} sx={{ width: 22, height: 22 }} />
+                    <Typography variant="body2" sx={{ whiteSpace: 'nowrap' }}>
+                      {p.displayName}
+                    </Typography>
+                  </BoxAny>
+                ))}
+              </Stack>
+            </Paper>
+          </Popper>
+        ) : null}
+        {isCommandMode && commandSuggestions.length > 0 && !mentionState ? (
           <Popper
             open
             anchorEl={inputRef.current}
@@ -1008,6 +1158,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
       { id: '/i' as const, description: t('chat.command.desc.i'), example: `/i ${exampleText}` },
       { id: '/r' as const, description: t('chat.command.desc.r'), example: `/r ${exampleText}` },
       { id: '/p' as const, description: t('chat.command.desc.p'), example: `/p ${exampleText}` },
+      { id: '/a' as const, description: t('chat.command.desc.a'), example: '/a @name' },
     ];
   }, [t]);
 
@@ -1036,9 +1187,19 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
   const runChatCommand = async (rawInput: string) => {
     if (!activeChat) return;
 
-    const firstSpace = rawInput.indexOf(' ');
-    const cmd = (firstSpace === -1 ? rawInput : rawInput.slice(0, firstSpace)).trim() as string;
-    const rest = (firstSpace === -1 ? '' : rawInput.slice(firstSpace + 1)).trim();
+    // Find the slash-command token wherever it appears (so users can write
+    // "@bob /p hug" or "/p hug @bob" or "/p @bob hug" interchangeably).
+    const slashMatch = rawInput.match(/(^|\s)(\/[a-zA-Z]+)(?=\s|$)/);
+    const cmd = (slashMatch ? slashMatch[2] : rawInput.split(/\s+/)[0] || '').trim() as string;
+
+    // `rest` is everything except the command token itself, with surrounding
+    // whitespace collapsed. The /p handler extracts its own @-mention from
+    // this; other commands treat it as plain text.
+    const rest = slashMatch
+      ? `${rawInput.slice(0, slashMatch.index! + slashMatch[1].length)}${rawInput.slice(slashMatch.index! + slashMatch[1].length + slashMatch[2].length)}`
+          .replace(/\s+/g, ' ')
+          .trim()
+      : '';
 
     const known = chatCommands.some((c) => c.id === cmd);
     if (!known || cmd === '/' || cmd.length === 0) {
@@ -1126,15 +1287,66 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
           return;
         }
 
+        // Parse a free-position `@token` from anywhere in `rest`. Examples:
+        //   "/p @bob hug"      → mention=bob, prompt=hug
+        //   "/p hug @bob"      → mention=bob, prompt=hug
+        //   "@bob /p hug"      → mention=bob, prompt=hug   (slash already extracted)
+        //   "/p hug"           → no mention; falls back to the only other in 1v1
+        // Only the first `@word` boundary token is treated as a mention; later
+        // `@`s remain part of the prompt.
+        const realOthers = getOtherRealParticipants(activeChat, user?.id);
+        const mentionMatch = rest.match(/(^|\s)@(\S+)/);
+        const mentionedToken = mentionMatch ? mentionMatch[2] : null;
+        const promptBody = mentionMatch
+          ? `${rest.slice(0, mentionMatch.index! + mentionMatch[1].length)}${rest.slice(mentionMatch.index! + mentionMatch[0].length)}`
+              .replace(/\s+/g, ' ')
+              .trim()
+          : rest.trim();
+
+        let targetParticipant: typeof realOthers[number] | undefined;
+
+        if (mentionedToken) {
+          const exact = realOthers.filter((p) => p.displayName === mentionedToken);
+          if (exact.length === 1) {
+            targetParticipant = exact[0];
+          } else if (exact.length > 1) {
+            addLocalInfoMessage(t('chat.command.photoMentionAmbiguous').replace('{name}', mentionedToken));
+            return;
+          } else {
+            const prefix = realOthers.filter((p) =>
+              p.displayName.toLowerCase().startsWith(mentionedToken.toLowerCase())
+            );
+            if (prefix.length === 1) {
+              targetParticipant = prefix[0];
+            } else if (prefix.length > 1) {
+              addLocalInfoMessage(t('chat.command.photoMentionAmbiguous').replace('{name}', mentionedToken));
+              return;
+            } else {
+              addLocalInfoMessage(t('chat.command.photoMentionNotFound').replace('{name}', mentionedToken));
+              return;
+            }
+          }
+        } else if (isGroup) {
+          addLocalInfoMessage(t('chat.command.photoMentionRequired'));
+          return;
+        } else {
+          targetParticipant = realOthers[0];
+        }
+
+        if (!promptBody) {
+          addLocalInfoMessage(t('chat.command.usage.p'));
+          return;
+        }
+
         const targetChatId = activeChat.id;
         const primaryAvatar = rightAvatar?.trim();
-        const secondaryAvatar = leftAvatar?.trim();
+        const secondaryAvatar = (targetParticipant?.avatarUrl || leftAvatar)?.trim();
         if (!primaryAvatar || !secondaryAvatar) {
           addLocalInfoMessage(t('chat.command.photoAvatarMissing'));
           return;
         }
         const primaryUserId = user?.id;
-        const secondaryUserId = otherParticipant?.userId;
+        const secondaryUserId = targetParticipant?.userId;
         if (!primaryUserId || !secondaryUserId) {
           addLocalInfoMessage(t('chat.command.photoAvatarMissing'));
           return;
@@ -1151,7 +1363,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
               secondaryMediaUrl: secondaryAvatar,
               primaryUserId,
               secondaryUserId,
-              customPrompts: [rest],
+              customPrompts: [promptBody],
               variationCount: 1,
             });
 
@@ -1175,6 +1387,59 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
           }
         })();
 
+        return;
+      }
+
+      case '/a': {
+        // Explicit replacement for the old `@mention` auto-add behavior.
+        // The server applies the same lenient rules (any chat member can
+        // invoke; 1-1 chats convert to groups when needed) — keeping the
+        // client side trivial and deferring to one source of truth.
+        if (!rest) {
+          addLocalInfoMessage(t('chat.command.usage.a'));
+          return;
+        }
+
+        // Accept either `/a @bob` or `/a bob`. The mention picker is
+        // disabled for /a (existing-member list is the wrong set), so the
+        // user types the name themselves.
+        const addMention = rest.match(/(^|\s)@(\S+)/);
+        const target = (addMention ? addMention[2] : rest.trim()).trim();
+        if (!target) {
+          addLocalInfoMessage(t('chat.command.usage.a'));
+          return;
+        }
+
+        try {
+          const result = await chatService.addByMention(activeChat.id, target);
+          if (result.alreadyMember) {
+            addLocalInfoMessage(t('chat.command.addUserAlreadyIn').replace('{name}', result.displayName || target));
+            return;
+          }
+          if (result.chat) {
+            dispatch(updateChat(result.chat));
+          }
+          addLocalInfoMessage(t('chat.command.addUserAdded').replace('{name}', result.displayName || target));
+        } catch (error: any) {
+          if (error?.response?.status === 403) {
+            const reason = error?.response?.data?.reason;
+            if (reason === 'not_friends') {
+              const displayName = error?.response?.data?.displayName || target;
+              addLocalInfoMessage(t('chat.command.addUserNotFriend').replace('{name}', displayName));
+            } else {
+              addLocalInfoMessage(t('chat.command.addUserForbidden'));
+            }
+          } else if (error?.response?.status === 404) {
+            // Server now restricts /a's name resolution to the inviter's
+            // friends. A 404 means "no friend matches this name" — could be
+            // either a typo or a non-friend; we surface a friend-aware
+            // message so users understand the constraint.
+            addLocalInfoMessage(t('chat.command.addUserNoFriendMatch').replace('{name}', target));
+          } else {
+            console.error('Failed to add participant:', error);
+            addLocalInfoMessage(t('chat.command.addUserFailed'));
+          }
+        }
         return;
       }
     }
@@ -1224,13 +1489,20 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
   const sendMessage = async (raw: string): Promise<boolean> => {
     if (!activeChat || sending) return false;
 
-    // Commands only trigger when '/' is the first character.
-    // Leading whitespace like "  /w" is NOT a command.
-    if (raw.startsWith('/')) {
+    // Commands trigger when:
+    //  - '/' is the first character ("/p hug @bob")
+    //  - or '@name /p ...' — a leading mention followed by a slash command,
+    //    so the user can write "@bob /p hug" in any natural order.
+    const trimmedRaw = raw.replace(/^\s+/, '');
+    const startsWithSlash = trimmedRaw.startsWith('/');
+    const leadingMentionThenSlash =
+      /^@\S+\s+\/[a-zA-Z]/.test(trimmedRaw);
+
+    if (startsWithSlash || leadingMentionThenSlash) {
       setSending(true);
 
       try {
-        await runChatCommand(raw);
+        await runChatCommand(trimmedRaw);
         return true;
       } catch (error: any) {
         console.error('Failed to run command:', error);
@@ -1519,6 +1791,26 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
   const otherParticipant = activeChat
     ? getOtherRealParticipants(activeChat, user?.id)[0] || displayParticipant
     : undefined;
+
+  // Candidates for the @-mention picker used by /p in the input panel.
+  // Stable reference so React.memo on ChatInputPanel doesn't re-render on every keystroke.
+  const mentionCandidates = useMemo(() => {
+    if (!activeChat) return [] as Array<{ userId: string; displayName: string; avatarUrl: string }>;
+    return getOtherRealParticipants(activeChat, user?.id).map((p) => ({
+      userId: p.userId,
+      displayName: p.displayName,
+      avatarUrl: p.avatarUrl,
+    }));
+  }, [activeChat, user?.id]);
+
+  // Names used to highlight `@Name` in rendered message bubbles. Includes
+  // self so a message from someone else mentioning the current user is also
+  // styled.
+  const participantNames = useMemo(() => {
+    if (!activeChat) return [] as string[];
+    const names = getRealParticipants(activeChat.participants).map((p) => p.displayName);
+    return Array.from(new Set(names.filter(Boolean)));
+  }, [activeChat]);
 
   useEffect(() => {
     if (!otherParticipant?.userId) {
@@ -1870,6 +2162,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
           isRecordingVoice={isRecordingVoice}
           recordingSeconds={recordingSeconds}
           chatCommands={chatCommands}
+          mentionCandidates={mentionCandidates}
           onSendMessage={sendMessage}
           onFileSelected={handleFileSelected}
           onStartVoiceRecording={startVoiceRecording}
@@ -1887,6 +2180,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
     isRecordingVoice,
     recordingSeconds,
     chatCommands,
+    mentionCandidates,
     sendMessage,
     handleFileSelected,
     startVoiceRecording,
@@ -2061,6 +2355,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
         imageGroupIndexByUrl={imageGroupIndexByUrl}
         imageGallery={imageGallery}
         imageGroupIndexByMessageId={imageGroupIndexByMessageId}
+        participantNames={participantNames}
         messagesEndRef={messagesEndRef}
         noMessagesText={t('chat.noMessages')}
       />

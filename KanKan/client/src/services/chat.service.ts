@@ -132,6 +132,29 @@ class ChatService {
   async deleteMessage(chatId: string, messageId: string): Promise<void> {
     await apiClient.delete(`/chat/${chatId}/messages/${messageId}`);
   }
+
+  async addParticipants(chatId: string, userIds: string[]): Promise<Chat> {
+    const response = await apiClient.post<Chat>(`/chat/${chatId}/participants`, { userIds });
+    return response.data;
+  }
+
+  /**
+   * Explicit replacement for the old `@mention` auto-add behavior. The
+   * server resolves the name (display name or handle, with or without
+   * leading `@`) globally and adds the user to this chat with the same
+   * lenient rules — any chat member can invoke; 1-1 chats are converted
+   * to groups when needed.
+   */
+  async addByMention(chatId: string, name: string): Promise<{
+    added?: boolean;
+    alreadyMember?: boolean;
+    userId: string;
+    displayName: string;
+    chat?: Chat;
+  }> {
+    const response = await apiClient.post(`/chat/${chatId}/mentions/add`, { name });
+    return response.data;
+  }
 }
 
 export const chatService = new ChatService();

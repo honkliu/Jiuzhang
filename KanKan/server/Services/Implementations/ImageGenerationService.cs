@@ -196,15 +196,30 @@ public class ImageGenerationService : IImageGenerationService
 
     public async Task<List<string>> GetVariationUrlsAsync(string messageId)
     {
-        var message = await _messages.Find(m => m.Id == messageId).FirstOrDefaultAsync();
-        var sourceUrl = message?.Content?.MediaUrl ?? message?.Content?.ThumbnailUrl;
-        if (string.IsNullOrWhiteSpace(sourceUrl))
+        // The client passes either a real Mongo message id or a base64-encoded
+        // upload path produced by toGeneratedLookupId(). Doing two Mongo round
+        // trips for every base64 lookup id (one against _messages, one against
+        // _generationJobs) made the lightbox visibly slow when opening any
+        // chat with several images. Only hit Mongo when the id actually looks
+        // like a Mongo ObjectId (24 lowercase hex chars).
+        string? sourceUrl = null;
+        var looksLikeObjectId = !string.IsNullOrWhiteSpace(messageId)
+            && messageId.Length == 24
+            && messageId.All(c => (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'));
+
+        if (looksLikeObjectId)
         {
-            var job = await _generationJobs
-                .Find(j => j.SourceType == "chat_image" && j.SourceRef.MessageId == messageId && j.SourceRef.OriginalMediaUrl != null)
-                .SortBy(j => j.CreatedAt)
-                .FirstOrDefaultAsync();
-            sourceUrl = job?.SourceRef?.OriginalMediaUrl;
+            var message = await _messages.Find(m => m.Id == messageId).FirstOrDefaultAsync();
+            sourceUrl = message?.Content?.MediaUrl ?? message?.Content?.ThumbnailUrl;
+
+            if (string.IsNullOrWhiteSpace(sourceUrl))
+            {
+                var job = await _generationJobs
+                    .Find(j => j.SourceType == "chat_image" && j.SourceRef.MessageId == messageId && j.SourceRef.OriginalMediaUrl != null)
+                    .SortBy(j => j.CreatedAt)
+                    .FirstOrDefaultAsync();
+                sourceUrl = job?.SourceRef?.OriginalMediaUrl;
+            }
         }
 
         if (string.IsNullOrWhiteSpace(sourceUrl))
