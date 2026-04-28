@@ -435,16 +435,21 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
   const displayedImageUrl = withChatImageCacheBust(imageUrl);
 
   if (message.messageType === 'system' || message.senderId === '__system__') {
+    const isMultiline = (message.text || '').includes('\n');
+
     return (
       <Typography
         variant="caption"
         sx={{
           display: 'block',
-          textAlign: 'center',
+          textAlign: isMultiline ? 'left' : 'center',
           color: 'text.secondary',
           fontSize: '0.72rem',
           py: 1,
+          mx: 'auto',
+          maxWidth: isMultiline ? '76%' : '100%',
           opacity: 0.7,
+          whiteSpace: 'pre-line',
         }}
       >
         {message.text}

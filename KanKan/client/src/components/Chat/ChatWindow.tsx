@@ -426,6 +426,16 @@ const ChatInputPanel: React.FC<ChatInputPanelProps> = React.memo(({
     return { token, tokenStart, caret, matches };
   })();
 
+  const mentionAllState = (() => {
+    if (mentionCandidates.length === 0) return null;
+    if (commandToken === '/a') return null;
+    const caret = selectionStartRef.current ?? messageText.length;
+    const before = messageText.slice(0, caret);
+    const m = before.match(/(^|\s)@@$/);
+    if (!m) return null;
+    return { tokenStart: caret - 2, caret };
+  })();
+
   useEffect(() => {
     setMentionSelectedIndex(0);
   }, [mentionState?.token, mentionState?.matches.length]);
@@ -548,6 +558,27 @@ const ChatInputPanel: React.FC<ChatInputPanelProps> = React.memo(({
     [activeChatId, messageText, mentionState, scheduleDraftSend]
   );
 
+  const applyMentionAll = useCallback(() => {
+    if (!mentionAllState || mentionCandidates.length === 0) return;
+    const before = messageText.slice(0, mentionAllState.tokenStart);
+    const after = messageText.slice(mentionAllState.caret);
+    const inserted = `${mentionCandidates.map((candidate) => `@${candidate.displayName}`).join(' ')} `;
+    const nextValue = `${before}${inserted}${after}`;
+    const nextCaret = before.length + inserted.length;
+    setMessageText(nextValue);
+    if (activeChatId) {
+      scheduleDraftSend(nextValue);
+    }
+    selectionStartRef.current = nextCaret;
+    selectionEndRef.current = nextCaret;
+    window.requestAnimationFrame(() => {
+      const input = inputRef.current;
+      if (!input) return;
+      input.focus();
+      input.setSelectionRange(nextCaret, nextCaret);
+    });
+  }, [activeChatId, mentionAllState, mentionCandidates, messageText, scheduleDraftSend]);
+
   const handleRecentEmojiClick = useCallback((emoji: string, unified: string) => {
     setRecentEmojiUnifieds((prev) => {
       const next = [unified, ...prev.filter((value) => value !== unified)];
@@ -625,6 +656,12 @@ const ChatInputPanel: React.FC<ChatInputPanelProps> = React.memo(({
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape' && isEmojiPickerOpen) {
       setIsEmojiPickerOpen(false);
+      return;
+    }
+
+    if (mentionAllState && (e.key === 'Tab' || e.key === 'Enter')) {
+      e.preventDefault();
+      applyMentionAll();
       return;
     }
 
@@ -1157,10 +1194,21 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
       { id: '/b' as const, description: t('chat.command.desc.b'), example: `/b ${exampleText}` },
       { id: '/i' as const, description: t('chat.command.desc.i'), example: `/i ${exampleText}` },
       { id: '/r' as const, description: t('chat.command.desc.r'), example: `/r ${exampleText}` },
-      { id: '/p' as const, description: t('chat.command.desc.p'), example: `/p ${exampleText}` },
+      { id: '/p' as const, description: t('chat.command.desc.p'), example: `/p @name @name ${exampleText}` },
       { id: '/a' as const, description: t('chat.command.desc.a'), example: '/a @name' },
     ];
   }, [t]);
+
+  const chatHelpLines = useMemo(() => [
+    t('chat.command.available'),
+    ...chatCommands.flatMap((c) => [
+      `  ${c.example}  — ${c.description}`,
+      ...(c.id === '/p' ? [`    ${t('chat.command.usage.p')}`] : []),
+    ]),
+    '',
+    `  @name  — ${t('chat.command.usage.mention')}`,
+    `  @@  — ${t('chat.command.usage.mentionAll')}`,
+  ], [chatCommands, t]);
 
 
   const addLocalInfoMessage = (text: string) => {
@@ -1205,8 +1253,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
     if (!known || cmd === '/' || cmd.length === 0) {
       addLocalInfoMessage(
         [
-          t('chat.command.available'),
-          ...chatCommands.map((c) => `  ${c.example}  — ${c.description}`),
+          ...chatHelpLines,
           '',
           t('chat.command.tip'),
         ].join('\n')
@@ -1217,7 +1264,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
     switch (cmd as ChatCommandId) {
       case '/h': {
         addLocalInfoMessage(
-          [t('chat.command.available'), ...chatCommands.map((c) => `  ${c.example}  — ${c.description}`)].join('\n')
+          chatHelpLines.join('\n')
         );
         return;
       }
@@ -1282,71 +1329,90 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
       }
 
       case '/p': {
-        if (!rest) {
-          addLocalInfoMessage(t('chat.command.usage.p'));
-          return;
-        }
-
-        // Parse a free-position `@token` from anywhere in `rest`. Examples:
-        //   "/p @bob hug"      → mention=bob, prompt=hug
-        //   "/p hug @bob"      → mention=bob, prompt=hug
-        //   "@bob /p hug"      → mention=bob, prompt=hug   (slash already extracted)
-        //   "/p hug"           → no mention; falls back to the only other in 1v1
-        // Only the first `@word` boundary token is treated as a mention; later
-        // `@`s remain part of the prompt.
         const realOthers = getOtherRealParticipants(activeChat, user?.id);
-        const mentionMatch = rest.match(/(^|\s)@(\S+)/);
-        const mentionedToken = mentionMatch ? mentionMatch[2] : null;
-        const promptBody = mentionMatch
-          ? `${rest.slice(0, mentionMatch.index! + mentionMatch[1].length)}${rest.slice(mentionMatch.index! + mentionMatch[0].length)}`
-              .replace(/\s+/g, ' ')
-              .trim()
-          : rest.trim();
+        const mentionResults: Array<{
+          participant: typeof realOthers[number];
+          start: number;
+          end: number;
+        }> = [];
+        let scanIndex = 0;
 
-        let targetParticipant: typeof realOthers[number] | undefined;
+        while (scanIndex < rest.length) {
+          const mentionMatch = rest.slice(scanIndex).match(/(^|\s)@/);
+          if (!mentionMatch) break;
 
-        if (mentionedToken) {
-          const exact = realOthers.filter((p) => p.displayName === mentionedToken);
-          if (exact.length === 1) {
-            targetParticipant = exact[0];
-          } else if (exact.length > 1) {
-            addLocalInfoMessage(t('chat.command.photoMentionAmbiguous').replace('{name}', mentionedToken));
+          const mentionStart = scanIndex + mentionMatch.index! + mentionMatch[1].length;
+          const afterMention = rest.slice(mentionStart + 1);
+          const exactMentionMatches = realOthers
+            .filter((p) => {
+              const name = p.displayName.trim();
+              return name.length > 0 && (afterMention === name || afterMention.startsWith(`${name} `));
+            })
+            .sort((a, b) => b.displayName.length - a.displayName.length);
+          const typedMentionToken = afterMention.match(/^(\S+)/)?.[1] ?? '';
+
+          const longestExactLength = exactMentionMatches[0]?.displayName.length ?? 0;
+          const longestExact = exactMentionMatches.filter((p) => p.displayName.length === longestExactLength);
+          let participant: typeof realOthers[number] | undefined;
+          let mentionEnd = -1;
+
+          if (longestExact.length === 1) {
+            participant = longestExact[0];
+            mentionEnd = mentionStart + 1 + participant.displayName.length;
+          } else if (longestExact.length > 1) {
+            addLocalInfoMessage(t('chat.command.photoMentionAmbiguous').replace('{name}', longestExact[0].displayName));
             return;
-          } else {
+          } else if (typedMentionToken) {
             const prefix = realOthers.filter((p) =>
-              p.displayName.toLowerCase().startsWith(mentionedToken.toLowerCase())
+              p.displayName.toLowerCase().startsWith(typedMentionToken.toLowerCase())
             );
             if (prefix.length === 1) {
-              targetParticipant = prefix[0];
+              participant = prefix[0];
+              mentionEnd = mentionStart + 1 + typedMentionToken.length;
             } else if (prefix.length > 1) {
-              addLocalInfoMessage(t('chat.command.photoMentionAmbiguous').replace('{name}', mentionedToken));
+              addLocalInfoMessage(t('chat.command.photoMentionAmbiguous').replace('{name}', typedMentionToken));
               return;
             } else {
-              addLocalInfoMessage(t('chat.command.photoMentionNotFound').replace('{name}', mentionedToken));
+              addLocalInfoMessage(t('chat.command.photoMentionNotFound').replace('{name}', typedMentionToken));
               return;
             }
+          } else {
+            addLocalInfoMessage(t('chat.command.usage.p'));
+            return;
           }
-        } else if (isGroup) {
+
+          mentionResults.push({ participant, start: mentionStart, end: mentionEnd });
+          scanIndex = mentionEnd;
+        }
+
+        const promptBody = mentionResults.reduce<{ parts: string[]; lastIndex: number }>((acc, mention) => {
+          acc.parts.push(rest.slice(acc.lastIndex, mention.start));
+          acc.lastIndex = mention.end;
+          return acc;
+        }, { parts: [], lastIndex: 0 });
+        const promptText = `${promptBody.parts.join('')}${rest.slice(promptBody.lastIndex)}`
+          .replace(/\s+/g, ' ')
+          .trim() || t('chat.command.defaultPhotoPrompt');
+
+        if (mentionResults.length === 0 && isGroup) {
           addLocalInfoMessage(t('chat.command.photoMentionRequired'));
           return;
-        } else {
-          targetParticipant = realOthers[0];
         }
 
-        if (!promptBody) {
-          addLocalInfoMessage(t('chat.command.usage.p'));
-          return;
-        }
+        const targetParticipant = mentionResults[0]?.participant ?? realOthers[0];
+        const primaryParticipant = mentionResults.length >= 2 ? mentionResults[0].participant : undefined;
+        const secondaryParticipant = mentionResults.length >= 2 ? mentionResults[1].participant : targetParticipant;
 
         const targetChatId = activeChat.id;
-        const primaryAvatar = rightAvatar?.trim();
-        const secondaryAvatar = (targetParticipant?.avatarUrl || leftAvatar)?.trim();
+        const pairChatId = isRealGroupChat(activeChat, user?.id) ? targetChatId : undefined;
+        const primaryAvatar = (primaryParticipant?.avatarUrl || rightAvatar)?.trim();
+        const secondaryAvatar = (secondaryParticipant?.avatarUrl || leftAvatar)?.trim();
         if (!primaryAvatar || !secondaryAvatar) {
           addLocalInfoMessage(t('chat.command.photoAvatarMissing'));
           return;
         }
-        const primaryUserId = user?.id;
-        const secondaryUserId = targetParticipant?.userId;
+        const primaryUserId = primaryParticipant?.userId || user?.id;
+        const secondaryUserId = secondaryParticipant?.userId;
         if (!primaryUserId || !secondaryUserId) {
           addLocalInfoMessage(t('chat.command.photoAvatarMissing'));
           return;
@@ -1359,11 +1425,12 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
             const jobResponse = await imageGenerationService.generate({
               sourceType: 'chat_image',
               generationType: 'custom',
+              chatId: pairChatId,
               mediaUrl: primaryAvatar,
               secondaryMediaUrl: secondaryAvatar,
               primaryUserId,
               secondaryUserId,
-              customPrompts: [promptBody],
+              customPrompts: [promptText],
               variationCount: 1,
             });
 

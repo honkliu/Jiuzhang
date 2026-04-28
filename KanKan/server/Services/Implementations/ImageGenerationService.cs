@@ -86,6 +86,7 @@ public class ImageGenerationService : IImageGenerationService
             {
                 AvatarId = request.AvatarId,
                 MessageId = request.MessageId,
+                ChatId = request.ChatId,
                 OriginalMediaUrl = originalMediaUrl,
                 SecondaryMediaUrl = request.SecondaryMediaUrl
             },
@@ -844,8 +845,10 @@ public class ImageGenerationService : IImageGenerationService
             //
             // Case 2 — chat /p pairing (no MessageId, has secondary):
             //   primary avatar A + secondary avatar B
-            //   first take      -> A_B.{ext}
-            //   subsequent take -> A_B-1, A_B-2, ...
+            //   direct chat first take      -> A_B.{ext}
+            //   direct chat subsequent take -> A_B-1, A_B-2, ...
+            //   group chat first take       -> A_B_chatId.{ext}
+            //   group chat subsequent take  -> A_B_chatId-1, A_B_chatId-2, ...
             //   These are siblings, not parent/child. The "-N" separator is
             //   used (instead of "_N") so a later case-1 edit of A_B-2 lives
             //   in its own namespace as A_B-2_1, A_B-2_2, ...
@@ -868,8 +871,10 @@ public class ImageGenerationService : IImageGenerationService
             {
                 // Use user IDs (not avatar image IDs) so two different users
                 // who share the same stock avatar can't collide on disk and
-                // accidentally read each other's pair photos.
-                pairBaseName = CombineFileStems(request.PrimaryUserId!, request.SecondaryUserId!);
+                // accidentally read each other's pair photos. When the caller
+                // provides a group chat ID, include it so the same pair in
+                // different groups also gets isolated names.
+                pairBaseName = CombineFileStems(request.PrimaryUserId!, request.SecondaryUserId!, request.ChatId ?? string.Empty);
                 filePrefix = string.IsNullOrWhiteSpace(pairBaseName)
                     ? sourceImage.FileStem
                     : pairBaseName;

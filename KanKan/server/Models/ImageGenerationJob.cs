@@ -60,6 +60,9 @@ public class SourceReference
     [BsonElement("messageId")]
     public string? MessageId { get; set; }
 
+    [BsonElement("chatId")]
+    public string? ChatId { get; set; }
+
     [BsonElement("originalMediaUrl")]
     public string? OriginalMediaUrl { get; set; }
 

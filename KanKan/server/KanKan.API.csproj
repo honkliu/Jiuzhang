@@ -28,17 +28,6 @@
     </Reference>
   </ItemGroup>
 
-  <!-- Test dependencies and files -->
-  <ItemGroup>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
-    <PackageReference Include="Moq" Version="4.20.72" />
-    <PackageReference Include="xunit" Version="2.9.3" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.1">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-  </ItemGroup>
-
   <ItemGroup>
     <Compile Remove="obj\**\*.cs;bin\**\*.cs;obj_*\**\*.cs;bin_*\**\*.cs" />
     <EmbeddedResource Remove="obj\**\*;bin\**\*;obj_*\**\*;bin_*\**\*" />

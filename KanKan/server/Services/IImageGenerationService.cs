@@ -31,6 +31,7 @@ public class GenerationRequest
     public string SourceType { get; set; } = string.Empty; // "avatar" | "chat_image"
     public string? AvatarId { get; set; }
     public string? MessageId { get; set; }
+    public string? ChatId { get; set; }
     public string? MediaUrl { get; set; }
     public string? SecondaryMediaUrl { get; set; }
     public string? PrimaryUserId { get; set; }

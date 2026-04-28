@@ -53,6 +53,7 @@ public class ImageGenerationController : ControllerBase
                 SourceType = request.SourceType,
                 AvatarId = request.AvatarId,
                 MessageId = request.MessageId,
+                ChatId = request.ChatId,
                 MediaUrl = request.MediaUrl,
                 SecondaryMediaUrl = request.SecondaryMediaUrl,
                 PrimaryUserId = request.PrimaryUserId,
@@ -154,6 +155,7 @@ public class UnifiedGenerationRequest
 
     // For chat_image source
     public string? MessageId { get; set; }
+    public string? ChatId { get; set; }
     public string? MediaUrl { get; set; }
     public string? SecondaryMediaUrl { get; set; }
 

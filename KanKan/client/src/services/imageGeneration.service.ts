@@ -45,6 +45,7 @@ class UnifiedImageGenerationService {
     generationType: 'emotions' | 'styles' | 'variations' | 'custom';
     avatarId?: string;
     messageId?: string;
+    chatId?: string;
     mediaUrl?: string;
     secondaryMediaUrl?: string;
     primaryUserId?: string;
@@ -60,6 +61,7 @@ class UnifiedImageGenerationService {
       generationType: request.generationType,
       avatarId: request.avatarId,
       messageId: request.messageId,
+      chatId: request.chatId,
       mediaUrl: request.mediaUrl,
       secondaryMediaUrl: request.secondaryMediaUrl,
       primaryUserId: request.primaryUserId,
