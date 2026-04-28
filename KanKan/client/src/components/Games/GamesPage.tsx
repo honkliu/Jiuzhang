@@ -702,6 +702,7 @@ const SudokuGame: React.FC = () => {
               const wrong = value !== 0 && value !== Number(solution[index]);
               const noteValues = notes[index] ?? [];
               const cands = noteValues.length > 0 ? noteValues : hintMode ? candidatesFor(grid, index) : [];
+              const showingPencilNotes = noteValues.length > 0;
               return (
                 <Button
                   key={index}
@@ -718,7 +719,7 @@ const SudokuGame: React.FC = () => {
                   }}
                 >
                   {value ? value : cands.length > 0 ? (
-                    <BoxAny sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', width: '86%', height: '86%', color: 'rgba(20,40,70,0.52)', fontFamily: '"Comic Sans MS", "Segoe Print", cursive', fontSize: { xs: 8.5, sm: 12.5 }, lineHeight: 1.1 }}>
+                    <BoxAny sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', width: '86%', height: '86%', color: showingPencilNotes ? '#1565c0' : 'rgba(20,40,70,0.38)', fontFamily: '"Comic Sans MS", "Segoe Print", cursive', fontSize: { xs: 8.5, sm: 12.5 }, fontWeight: showingPencilNotes ? 900 : 700, lineHeight: 1.1 }}>
                       {Array.from({ length: 9 }, (_, i) => <BoxAny key={i} sx={{ display: 'grid', placeItems: 'center' }}>{cands.includes(i + 1) ? i + 1 : ''}</BoxAny>)}
                     </BoxAny>
                   ) : ''}
@@ -738,8 +739,8 @@ const SudokuGame: React.FC = () => {
               </Button>
             ))}
             <Button color="error" variant="outlined" onClick={clearCell} sx={{ minWidth: 0, minHeight: { xs: 44, sm: 48 }, px: 0, fontWeight: 800 }}>清除</Button>
-            <Button variant={pencilMode ? 'contained' : 'outlined'} onClick={() => setPencilMode((value) => !value)} sx={{ minWidth: 0, minHeight: { xs: 44, sm: 48 }, px: 0, fontWeight: 800 }}>铅笔</Button>
-            <Button variant={hintMode ? 'contained' : 'outlined'} onClick={() => setHintMode((value) => !value)} sx={{ minWidth: 0, minHeight: { xs: 44, sm: 48 }, px: 0, fontWeight: 800 }}>提示</Button>
+            <Button variant={pencilMode ? 'contained' : 'outlined'} onClick={() => setPencilMode((value) => !value)} sx={{ minWidth: 0, minHeight: { xs: 44, sm: 48 }, px: 0, fontWeight: 800, color: pencilMode ? '#fff' : '#1565c0', borderColor: '#1565c0', bgcolor: pencilMode ? '#1565c0' : undefined, '&:hover': { borderColor: '#0d47a1', bgcolor: pencilMode ? '#0d47a1' : 'rgba(21,101,192,0.08)' } }}>铅笔</Button>
+            <Button variant={hintMode ? 'contained' : 'outlined'} onClick={() => setHintMode((value) => !value)} sx={{ minWidth: 0, minHeight: { xs: 44, sm: 48 }, px: 0, fontWeight: 800, color: hintMode ? '#fff' : '#6d6d6d', borderColor: '#8a8a8a', bgcolor: hintMode ? '#757575' : undefined, '&:hover': { borderColor: '#616161', bgcolor: hintMode ? '#616161' : 'rgba(97,97,97,0.08)' } }}>提示</Button>
           </BoxAny>
         </Card>
       </Grid>
