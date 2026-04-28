@@ -501,22 +501,27 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
   const effectiveMaxSize = 'none';
 
   const isDraggable = useMemo(() => {
-    if (!imgRef.current || !containerRef.current) return false;
-    const iw = imgRef.current.naturalWidth * zoom;
-    const ih = imgRef.current.naturalHeight * zoom;
-    // draggable only when the scaled natural image is larger than the container.
-    // Use a 1px tolerance so sub-pixel rounding doesn't flip this on at fit zoom
-    // (which would suppress swipe navigation in handleTouchEnd).
+    if (!containerRef.current) return false;
+    // IMPORTANT: read from imageNaturalSize state, not imgRef.current. When
+    // navigating to a different-sized image, zoom updates before the <img>
+    // DOM element's src refreshes, so imgRef.current.naturalWidth would still
+    // report the previous image's dimensions and falsely flag isDraggable=true,
+    // which suppresses swipe navigation in handleTouchEnd.
+    if (imageNaturalSize.width <= 0 || imageNaturalSize.height <= 0) return false;
+    const iw = imageNaturalSize.width * zoom;
+    const ih = imageNaturalSize.height * zoom;
+    // 1px tolerance so sub-pixel rounding doesn't flip this on at fit zoom.
     const DRAG_EPS = 1;
     return iw > containerRef.current.clientWidth + DRAG_EPS
       || ih > containerRef.current.clientHeight + DRAG_EPS;
-  }, [zoom]);
+  }, [zoom, imageNaturalSize.width, imageNaturalSize.height]);
 
   const clampPanOffset = useCallback((x: number, y: number, zoomOverride?: number): { x: number; y: number } => {
-    if (!imgRef.current || !containerRef.current) return { x, y };
+    if (!containerRef.current) return { x, y };
+    if (imageNaturalSize.width <= 0 || imageNaturalSize.height <= 0) return { x, y };
     const z = zoomOverride ?? zoom;
-    const iw = imgRef.current.naturalWidth * z;
-    const ih = imgRef.current.naturalHeight * z;
+    const iw = imageNaturalSize.width * z;
+    const ih = imageNaturalSize.height * z;
     const cw = containerRef.current.clientWidth;
     const ch = containerRef.current.clientHeight;
     // Allow panning only so that image edges stay within the viewport
@@ -526,7 +531,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
       x: Math.max(-maxX, Math.min(maxX, x)),
       y: Math.max(-maxY, Math.min(maxY, y)),
     };
-  }, [zoom]);
+  }, [zoom, imageNaturalSize.width, imageNaturalSize.height]);
 
   const handleDragStart = (event: React.MouseEvent) => {
     if (!isDraggable) return;
