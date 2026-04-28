@@ -685,6 +685,7 @@ const SudokuGame: React.FC = () => {
     if (grid[selected] !== Number(solution[selected])) setMistakes((value) => value + 1);
   }, [grid, solution, selected]);
 
+  const previousPuzzle = () => setPuzzleIndex((value) => (value - 1 + SUDOKU_BANK[difficulty].length) % SUDOKU_BANK[difficulty].length);
   const nextPuzzle = () => setPuzzleIndex((value) => (value + 1) % SUDOKU_BANK[difficulty].length);
 
   return (
@@ -762,6 +763,7 @@ const SudokuGame: React.FC = () => {
               <Button variant={difficulty === 'expert' ? 'contained' : 'outlined'} onClick={() => { setDifficulty('expert'); setPuzzleIndex(0); }}>专家</Button>
             </ButtonGroup>
             <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
+              <Button startIcon={<CasinoIcon />} onClick={previousPuzzle}>上一题</Button>
               <Button startIcon={<CasinoIcon />} onClick={nextPuzzle}>下一题</Button>
               <Button startIcon={<RefreshIcon />} onClick={resetPuzzle}>重置</Button>
             </Stack>
