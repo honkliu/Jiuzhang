@@ -1,4 +1,5 @@
 using KanKan.API.Models.Entities;
+using KanKan.API.Services.Interfaces;
 
 namespace KanKan.API.Domain;
 
@@ -16,9 +17,19 @@ public static class FamilyAccessPolicy
         return GetVisibleDomains(configuration, user).Count > 0;
     }
 
+    public static bool CanViewFamilyTree(AccessConfigSnapshot config, User user)
+    {
+        return GetVisibleDomains(config, user).Count > 0;
+    }
+
     public static bool CanEditAnyFamilyTree(IConfiguration configuration, User user)
     {
         return GetEditableDomains(configuration, user).Count > 0;
+    }
+
+    public static bool CanEditAnyFamilyTree(AccessConfigSnapshot config, User user)
+    {
+        return GetEditableDomains(config, user).Count > 0;
     }
 
     public static IReadOnlyCollection<string> GetVisibleDomains(IConfiguration configuration, User user)
@@ -40,26 +51,65 @@ public static class FamilyAccessPolicy
         return domains.ToArray();
     }
 
-    public static IReadOnlyCollection<string> GetEditableDomains(IConfiguration configuration, User user)
+    public static IReadOnlyCollection<string> GetVisibleDomains(AccessConfigSnapshot config, User user)
     {
-        if (!user.IsAdmin)
-        {
-            return Array.Empty<string>();
-        }
-
         var domains = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var enabledDomains = GetEnabledDomains(configuration);
         var ownDomain = ResolveDomain(user);
+        var enabledDomains = config.GetEnabledFamilyTreeDomains();
 
         if (enabledDomains.Contains(ownDomain))
         {
             domains.Add(ownDomain);
         }
 
+        foreach (var managedDomain in GetEditableDomains(config, user))
+        {
+            domains.Add(managedDomain);
+        }
+
+        return domains.ToArray();
+    }
+
+    public static IReadOnlyCollection<string> GetEditableDomains(IConfiguration configuration, User user)
+    {
+        var domains = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        if (user.IsAdmin)
+        {
+            var enabledDomains = GetEnabledDomains(configuration);
+            var ownDomain = ResolveDomain(user);
+            if (enabledDomains.Contains(ownDomain))
+            {
+                domains.Add(ownDomain);
+            }
+        }
+
         var managedDomains = GetManagedDomains(configuration, user.Email);
         foreach (var domain in managedDomains)
         {
             domains.Add(domain);
+        }
+
+        return domains.ToArray();
+    }
+
+    public static IReadOnlyCollection<string> GetEditableDomains(AccessConfigSnapshot config, User user)
+    {
+        var domains = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        if (config.GetAdminEmails().Contains(NormalizeEmail(user.Email)))
+        {
+            var enabledDomains = config.GetEnabledFamilyTreeDomains();
+            var ownDomain = ResolveDomain(user);
+            if (enabledDomains.Contains(ownDomain))
+            {
+                domains.Add(ownDomain);
+            }
+        }
+
+        foreach (var managedDomain in config.GetManagedDomains(user.Email))
+        {
+            domains.Add(managedDomain);
         }
 
         return domains.ToArray();
@@ -72,6 +122,13 @@ public static class FamilyAccessPolicy
             .Any(domain => string.Equals(domain, normalizedDomain, StringComparison.OrdinalIgnoreCase));
     }
 
+    public static bool CanViewTreeDomain(AccessConfigSnapshot config, User user, string treeDomain)
+    {
+        var normalizedDomain = NormalizeDomain(treeDomain);
+        return GetVisibleDomains(config, user)
+            .Any(domain => string.Equals(domain, normalizedDomain, StringComparison.OrdinalIgnoreCase));
+    }
+
     public static bool CanEditTreeDomain(IConfiguration configuration, User user, string treeDomain)
     {
         var normalizedDomain = NormalizeDomain(treeDomain);
@@ -79,9 +136,26 @@ public static class FamilyAccessPolicy
             .Any(domain => string.Equals(domain, normalizedDomain, StringComparison.OrdinalIgnoreCase));
     }
 
+    public static bool CanEditTreeDomain(AccessConfigSnapshot config, User user, string treeDomain)
+    {
+        var normalizedDomain = NormalizeDomain(treeDomain);
+        return GetEditableDomains(config, user)
+            .Any(domain => string.Equals(domain, normalizedDomain, StringComparison.OrdinalIgnoreCase));
+    }
+
     public static bool CanViewTree(IConfiguration configuration, User user, FamilyTree tree, FamilyTreeVisibility? visibility)
     {
         if (CanViewTreeDomain(configuration, user, tree.Domain))
+        {
+            return true;
+        }
+
+        return HasExplicitViewerAccess(user, visibility);
+    }
+
+    public static bool CanViewTree(AccessConfigSnapshot config, User user, FamilyTree tree, FamilyTreeVisibility? visibility)
+    {
+        if (CanViewTreeDomain(config, user, tree.Domain))
         {
             return true;
         }
@@ -99,9 +173,29 @@ public static class FamilyAccessPolicy
         return HasExplicitEditorAccess(user, visibility);
     }
 
+    public static bool CanEditTree(AccessConfigSnapshot config, User user, FamilyTree tree, FamilyTreeVisibility? visibility)
+    {
+        if (CanEditTreeDomain(config, user, tree.Domain))
+        {
+            return true;
+        }
+
+        return HasExplicitEditorAccess(user, visibility);
+    }
+
     public static bool CanManageTree(IConfiguration configuration, User user, FamilyTree tree)
     {
         if (CanEditTreeDomain(configuration, user, tree.Domain))
+        {
+            return true;
+        }
+
+        return string.Equals(tree.OwnerId, user.Id, StringComparison.Ordinal);
+    }
+
+    public static bool CanManageTree(AccessConfigSnapshot config, User user, FamilyTree tree)
+    {
+        if (CanEditTreeDomain(config, user, tree.Domain))
         {
             return true;
         }

@@ -20,6 +20,7 @@ public class InMemoryAuthService : IAuthService
 {
     private readonly IUserRepository _userRepository;
     private readonly IConfiguration _configuration;
+    private readonly IAccessConfigService _accessConfig;
     private readonly ILogger<InMemoryAuthService> _logger;
 
     // In-memory storage for verification codes
@@ -29,10 +30,12 @@ public class InMemoryAuthService : IAuthService
     public InMemoryAuthService(
         IUserRepository userRepository,
         IConfiguration configuration,
+        IAccessConfigService accessConfig,
         ILogger<InMemoryAuthService> logger)
     {
         _userRepository = userRepository;
         _configuration = configuration;
+        _accessConfig = accessConfig;
         _logger = logger;
     }
 
@@ -264,11 +267,7 @@ public class InMemoryAuthService : IAuthService
 
     private bool IsConfiguredAdmin(string email)
     {
-        var adminEmails = _configuration.GetSection("AdminEmails").Get<string[]>()
-            ?? Array.Empty<string>();
-        return Array.Exists(
-            adminEmails,
-            adminEmail => string.Equals(adminEmail, email, StringComparison.OrdinalIgnoreCase));
+        return _accessConfig.IsAdminEmail(email);
     }
 
     public async Task RevokeRefreshTokenAsync(string token)

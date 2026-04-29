@@ -8,6 +8,7 @@ using KanKan.API.Domain;
 using KanKan.API.Models.DTOs.Family;
 using KanKan.API.Models.Entities;
 using KanKan.API.Repositories.Interfaces;
+using KanKan.API.Services.Interfaces;
 
 namespace KanKan.API.Controllers;
 
@@ -34,6 +35,7 @@ public class FamilyController : ControllerBase
     private readonly INotebookPageRepository _nbPageRepo;
     private readonly IUserRepository _userRepo;
     private readonly IConfiguration _configuration;
+    private readonly IAccessConfigService _accessConfig;
     private readonly IWebHostEnvironment _environment;
     private readonly ILogger<FamilyController> _logger;
     private static readonly JsonSerializerOptions ArchiveJsonOptions = new()
@@ -56,6 +58,7 @@ public class FamilyController : ControllerBase
         INotebookPageRepository nbPageRepo,
         IUserRepository userRepo,
         IConfiguration configuration,
+        IAccessConfigService accessConfig,
         IWebHostEnvironment environment,
         ILogger<FamilyController> logger)
     {
@@ -71,6 +74,7 @@ public class FamilyController : ControllerBase
         _nbPageRepo = nbPageRepo;
         _userRepo = userRepo;
         _configuration = configuration;
+        _accessConfig = accessConfig;
         _environment = environment;
         _logger = logger;
     }
@@ -81,7 +85,7 @@ public class FamilyController : ControllerBase
     {
         var user = await GetCurrentUserAsync();
         if (user == null) return Unauthorized();
-        var visibleDomains = FamilyAccessPolicy.GetVisibleDomains(_configuration, user);
+        var visibleDomains = FamilyAccessPolicy.GetVisibleDomains(_accessConfig.Snapshot, user);
 
         var trees = new List<FamilyTree>();
         foreach (var domain in visibleDomains)
@@ -98,7 +102,7 @@ public class FamilyController : ControllerBase
             }
 
             var tree = await _treeRepo.GetByIdAsync(visibility.TreeId);
-            if (tree == null || !FamilyAccessPolicy.CanViewTree(_configuration, user, tree, visibility))
+            if (tree == null || !FamilyAccessPolicy.CanViewTree(_accessConfig.Snapshot, user, tree, visibility))
             {
                 continue;
             }
@@ -120,7 +124,7 @@ public class FamilyController : ControllerBase
             .GroupBy(t => t.Id, StringComparer.Ordinal)
             .Select(group => group.First())
             .OrderByDescending(t => t.UpdatedAt)
-            .Select(tree => ToTreeResponse(tree, FamilyAccessPolicy.CanManageTree(_configuration, user, tree))));
+            .Select(tree => ToTreeResponse(tree, FamilyAccessPolicy.CanManageTree(_accessConfig.Snapshot, user, tree))));
     }
 
     // ── POST /api/family ────────────────────────────────────────────────────
@@ -132,7 +136,7 @@ public class FamilyController : ControllerBase
         var targetDomain = FamilyAccessPolicy.NormalizeDomain(string.IsNullOrWhiteSpace(req.Domain)
             ? FamilyAccessPolicy.ResolveDomain(user)
             : req.Domain);
-        if (!FamilyAccessPolicy.CanEditTreeDomain(_configuration, user, targetDomain)) return Forbid();
+        if (!FamilyAccessPolicy.CanEditTreeDomain(_accessConfig.Snapshot, user, targetDomain)) return Forbid();
 
         var tree = new FamilyTree
         {
@@ -146,7 +150,7 @@ public class FamilyController : ControllerBase
         };
 
         await _treeRepo.CreateAsync(tree);
-        return Ok(ToTreeResponse(tree, FamilyAccessPolicy.CanManageTree(_configuration, user, tree)));
+        return Ok(ToTreeResponse(tree, FamilyAccessPolicy.CanManageTree(_accessConfig.Snapshot, user, tree)));
     }
 
     // ── GET  /api/family/{treeId} ───────────────────────────────────────────
@@ -159,14 +163,14 @@ public class FamilyController : ControllerBase
         var tree = await _treeRepo.GetByIdAsync(treeId);
         if (tree == null) return NotFound();
         var visibility = await _visibilityRepo.GetByTreeIdAsync(treeId);
-        if (!FamilyAccessPolicy.CanViewTree(_configuration, user, tree, visibility)) return Forbid();
+        if (!FamilyAccessPolicy.CanViewTree(_accessConfig.Snapshot, user, tree, visibility)) return Forbid();
 
         var persons = await _personRepo.GetByTreeIdAsync(treeId);
         var rels = await _relRepo.GetByTreeIdAsync(treeId);
 
         return Ok(new FullFamilyTreeResponse
         {
-            Tree = ToTreeResponse(tree, FamilyAccessPolicy.CanManageTree(_configuration, user, tree)),
+            Tree = ToTreeResponse(tree, FamilyAccessPolicy.CanManageTree(_accessConfig.Snapshot, user, tree)),
             Persons = persons.Select(ToPersonResponse).ToList(),
             Relationships = rels.Select(ToRelResponse).ToList()
         });
@@ -182,7 +186,7 @@ public class FamilyController : ControllerBase
         var tree = await _treeRepo.GetByIdAsync(treeId);
         if (tree == null) return NotFound();
         var visibility = await _visibilityRepo.GetByTreeIdAsync(treeId);
-        if (!FamilyAccessPolicy.CanManageTree(_configuration, user, tree)) return Forbid();
+        if (!FamilyAccessPolicy.CanManageTree(_accessConfig.Snapshot, user, tree)) return Forbid();
 
         if (req.Name != null) tree.Name = req.Name;
         if (req.Surname != null) tree.Surname = req.Surname;
@@ -190,7 +194,7 @@ public class FamilyController : ControllerBase
         if (req.ZibeiPoem != null) tree.ZibeiPoem = req.ZibeiPoem;
 
         await _treeRepo.UpdateAsync(tree);
-        return Ok(ToTreeResponse(tree, FamilyAccessPolicy.CanManageTree(_configuration, user, tree)));
+        return Ok(ToTreeResponse(tree, FamilyAccessPolicy.CanManageTree(_accessConfig.Snapshot, user, tree)));
     }
 
     // ── DELETE /api/family/{treeId} ─────────────────────────────────────────
@@ -203,7 +207,7 @@ public class FamilyController : ControllerBase
         var tree = await _treeRepo.GetByIdAsync(treeId);
         if (tree == null) return NotFound();
         var visibility = await _visibilityRepo.GetByTreeIdAsync(treeId);
-        if (!FamilyAccessPolicy.CanManageTree(_configuration, user, tree)) return Forbid();
+        if (!FamilyAccessPolicy.CanManageTree(_accessConfig.Snapshot, user, tree)) return Forbid();
 
         await _personRepo.ClearLinkedTreeReferencesAsync(treeId);
         await _pageRepo.DeleteByTreeIdAsync(treeId);
@@ -225,7 +229,7 @@ public class FamilyController : ControllerBase
         if (tree == null) return NotFound();
 
         var visibility = await _visibilityRepo.GetByTreeIdAsync(treeId);
-        if (!FamilyAccessPolicy.CanViewTree(_configuration, user, tree, visibility)) return Forbid();
+        if (!FamilyAccessPolicy.CanViewTree(_accessConfig.Snapshot, user, tree, visibility)) return Forbid();
 
         return Ok(ToVisibilityResponse(visibility, treeId));
     }
@@ -240,7 +244,7 @@ public class FamilyController : ControllerBase
         if (tree == null) return NotFound();
 
         var existingVisibility = await _visibilityRepo.GetByTreeIdAsync(treeId);
-        if (!FamilyAccessPolicy.CanManageTree(_configuration, user, tree)) return Forbid();
+        if (!FamilyAccessPolicy.CanManageTree(_accessConfig.Snapshot, user, tree)) return Forbid();
 
         var visibility = new FamilyTreeVisibility
         {
@@ -286,7 +290,7 @@ public class FamilyController : ControllerBase
         var tree = await _treeRepo.GetByIdAsync(treeId);
         if (tree == null) return NotFound();
         var visibility = await _visibilityRepo.GetByTreeIdAsync(treeId);
-        if (!FamilyAccessPolicy.CanEditTree(_configuration, user, tree, visibility)) return Forbid();
+        if (!FamilyAccessPolicy.CanEditTree(_accessConfig.Snapshot, user, tree, visibility)) return Forbid();
 
         var personId = $"fperson_{Guid.NewGuid():N}";
         var linkValidation = await ValidateLinkedPersonAsync(user, treeId, req.LinkedTreeId, req.LinkedPersonId, req.ClearLinkedPerson == true, personId);
@@ -338,7 +342,7 @@ public class FamilyController : ControllerBase
         var tree = await _treeRepo.GetByIdAsync(treeId);
         if (tree == null) return NotFound();
         var visibility = await _visibilityRepo.GetByTreeIdAsync(treeId);
-        if (!FamilyAccessPolicy.CanEditTree(_configuration, user, tree, visibility)) return Forbid();
+        if (!FamilyAccessPolicy.CanEditTree(_accessConfig.Snapshot, user, tree, visibility)) return Forbid();
 
         var previousLinkedTreeId = person.LinkedTreeId;
         var previousLinkedPersonId = person.LinkedPersonId;
@@ -407,7 +411,7 @@ public class FamilyController : ControllerBase
         var tree = await _treeRepo.GetByIdAsync(treeId);
         if (tree == null) return NotFound();
         var visibility = await _visibilityRepo.GetByTreeIdAsync(treeId);
-        if (!FamilyAccessPolicy.CanEditTree(_configuration, user, tree, visibility)) return Forbid();
+        if (!FamilyAccessPolicy.CanEditTree(_accessConfig.Snapshot, user, tree, visibility)) return Forbid();
 
         await ClearReverseLinkedPersonAsync(person, person.LinkedTreeId, person.LinkedPersonId);
         await _relRepo.DeleteByPersonIdAsync(personId);
@@ -425,7 +429,7 @@ public class FamilyController : ControllerBase
         var tree = await _treeRepo.GetByIdAsync(treeId);
         if (tree == null) return NotFound();
         var visibility = await _visibilityRepo.GetByTreeIdAsync(treeId);
-        if (!FamilyAccessPolicy.CanEditTree(_configuration, user, tree, visibility)) return Forbid();
+        if (!FamilyAccessPolicy.CanEditTree(_accessConfig.Snapshot, user, tree, visibility)) return Forbid();
 
         var rel = new FamilyRelationship
         {
@@ -464,7 +468,7 @@ public class FamilyController : ControllerBase
         var tree = await _treeRepo.GetByIdAsync(treeId);
         if (tree == null) return NotFound();
         var visibility = await _visibilityRepo.GetByTreeIdAsync(treeId);
-        if (!FamilyAccessPolicy.CanEditTree(_configuration, user, tree, visibility)) return Forbid();
+        if (!FamilyAccessPolicy.CanEditTree(_accessConfig.Snapshot, user, tree, visibility)) return Forbid();
 
         if (req.ParentRole != null) rel.ParentRole = NormalizeOptionalString(req.ParentRole);
         if (req.ChildStatus != null) rel.ChildStatus = NormalizeOptionalString(req.ChildStatus);
@@ -491,7 +495,7 @@ public class FamilyController : ControllerBase
         var tree = await _treeRepo.GetByIdAsync(treeId);
         if (tree == null) return NotFound();
         var visibility = await _visibilityRepo.GetByTreeIdAsync(treeId);
-        if (!FamilyAccessPolicy.CanEditTree(_configuration, user, tree, visibility)) return Forbid();
+        if (!FamilyAccessPolicy.CanEditTree(_accessConfig.Snapshot, user, tree, visibility)) return Forbid();
 
         await _relRepo.DeleteAsync(relId);
         return Ok(new { message = "Relationship deleted" });
@@ -547,7 +551,7 @@ public class FamilyController : ControllerBase
             targetDomain = FamilyAccessPolicy.ResolveDomain(user);
         }
 
-        if (!FamilyAccessPolicy.CanEditTreeDomain(_configuration, user, targetDomain)) return Forbid();
+        if (!FamilyAccessPolicy.CanEditTreeDomain(_accessConfig.Snapshot, user, targetDomain)) return Forbid();
 
         var treeName = string.IsNullOrWhiteSpace(name) ? manifest.Tree.Name : name.Trim();
         if (string.IsNullOrWhiteSpace(treeName))
@@ -689,7 +693,7 @@ public class FamilyController : ControllerBase
                 await _visibilityRepo.UpsertAsync(visibility);
             }
 
-            return Ok(ToTreeResponse(tree, FamilyAccessPolicy.CanManageTree(_configuration, user, tree)));
+            return Ok(ToTreeResponse(tree, FamilyAccessPolicy.CanManageTree(_accessConfig.Snapshot, user, tree)));
         }
         catch (Exception ex)
         {
@@ -709,7 +713,7 @@ public class FamilyController : ControllerBase
         var tree = await _treeRepo.GetByIdAsync(treeId);
         if (tree == null) return NotFound();
         var visibility = await _visibilityRepo.GetByTreeIdAsync(treeId);
-        if (!FamilyAccessPolicy.CanEditTree(_configuration, user, tree, visibility)) return Forbid();
+        if (!FamilyAccessPolicy.CanEditTree(_accessConfig.Snapshot, user, tree, visibility)) return Forbid();
 
         var persons = new List<FamilyPerson>();
         var rels = new List<FamilyRelationship>();
@@ -732,9 +736,9 @@ public class FamilyController : ControllerBase
         var tree = await _treeRepo.GetByIdAsync(treeId);
         if (tree == null) return NotFound();
         var visibility = await _visibilityRepo.GetByTreeIdAsync(treeId);
-        if (!FamilyAccessPolicy.CanViewTree(_configuration, user, tree, visibility)) return Forbid();
+        if (!FamilyAccessPolicy.CanViewTree(_accessConfig.Snapshot, user, tree, visibility)) return Forbid();
 
-        var canManageTree = FamilyAccessPolicy.CanManageTree(_configuration, user, tree);
+        var canManageTree = FamilyAccessPolicy.CanManageTree(_accessConfig.Snapshot, user, tree);
         var persons = await _personRepo.GetByTreeIdAsync(treeId);
         var rels = await _relRepo.GetByTreeIdAsync(treeId);
 
@@ -761,14 +765,14 @@ public class FamilyController : ControllerBase
         var tree = await _treeRepo.GetByIdAsync(treeId);
         if (tree == null) return NotFound();
         var visibility = await _visibilityRepo.GetByTreeIdAsync(treeId);
-        if (!FamilyAccessPolicy.CanViewTree(_configuration, user, tree, visibility)) return Forbid();
+        if (!FamilyAccessPolicy.CanViewTree(_accessConfig.Snapshot, user, tree, visibility)) return Forbid();
 
         var persons = await _personRepo.GetByTreeIdAsync(treeId);
         var rels = await _relRepo.GetByTreeIdAsync(treeId);
 
         var export = new FullFamilyTreeResponse
         {
-            Tree = ToTreeResponse(tree, FamilyAccessPolicy.CanManageTree(_configuration, user, tree)),
+            Tree = ToTreeResponse(tree, FamilyAccessPolicy.CanManageTree(_accessConfig.Snapshot, user, tree)),
             Persons = persons.Select(ToPersonResponse).ToList(),
             Relationships = rels.Select(ToRelResponse).ToList()
         };
@@ -787,7 +791,7 @@ public class FamilyController : ControllerBase
         var tree = await _treeRepo.GetByIdAsync(treeId);
         if (tree == null) return NotFound();
         var visibility = await _visibilityRepo.GetByTreeIdAsync(treeId);
-        if (!FamilyAccessPolicy.CanViewTree(_configuration, user, tree, visibility)) return Forbid();
+        if (!FamilyAccessPolicy.CanViewTree(_accessConfig.Snapshot, user, tree, visibility)) return Forbid();
 
         if (!string.IsNullOrEmpty(tree.NotebookId))
         {
@@ -813,7 +817,7 @@ public class FamilyController : ControllerBase
         var tree = await _treeRepo.GetByIdAsync(treeId);
         if (tree == null) return NotFound();
         var treeVisibility = await _visibilityRepo.GetByTreeIdAsync(treeId);
-        if (!FamilyAccessPolicy.CanEditTree(_configuration, user, tree, treeVisibility)) return Forbid();
+        if (!FamilyAccessPolicy.CanEditTree(_accessConfig.Snapshot, user, tree, treeVisibility)) return Forbid();
 
         // Re-read tree to minimize race window
         tree = await _treeRepo.GetByIdAsync(treeId);
@@ -881,7 +885,7 @@ public class FamilyController : ControllerBase
         var tree = await _treeRepo.GetByIdAsync(treeId);
         if (tree == null) return NotFound();
         var visibility = await _visibilityRepo.GetByTreeIdAsync(treeId);
-        if (!FamilyAccessPolicy.CanViewTree(_configuration, user, tree, visibility)) return Forbid();
+        if (!FamilyAccessPolicy.CanViewTree(_accessConfig.Snapshot, user, tree, visibility)) return Forbid();
 
         var sections = await _sectionRepo.GetByTreeIdAsync(treeId);
         return Ok(sections.Select(ToSectionResponse).ToList());
@@ -896,7 +900,7 @@ public class FamilyController : ControllerBase
         var tree = await _treeRepo.GetByIdAsync(treeId);
         if (tree == null) return NotFound();
         var visibility = await _visibilityRepo.GetByTreeIdAsync(treeId);
-        if (!FamilyAccessPolicy.CanEditTree(_configuration, user, tree, visibility)) return Forbid();
+        if (!FamilyAccessPolicy.CanEditTree(_accessConfig.Snapshot, user, tree, visibility)) return Forbid();
 
         var existing = await _sectionRepo.GetByTreeIdAsync(treeId);
         var sortOrder = req.SortOrder ?? (existing.Count > 0 ? existing.Max(s => s.SortOrder) + 1 : 1);
@@ -934,7 +938,7 @@ public class FamilyController : ControllerBase
         var tree = await _treeRepo.GetByIdAsync(treeId);
         if (tree == null) return NotFound();
         var visibility = await _visibilityRepo.GetByTreeIdAsync(treeId);
-        if (!FamilyAccessPolicy.CanEditTree(_configuration, user, tree, visibility)) return Forbid();
+        if (!FamilyAccessPolicy.CanEditTree(_accessConfig.Snapshot, user, tree, visibility)) return Forbid();
 
         var section = await _sectionRepo.GetByIdAsync(sectionId);
         if (section == null || section.TreeId != treeId) return NotFound();
@@ -955,7 +959,7 @@ public class FamilyController : ControllerBase
         var tree = await _treeRepo.GetByIdAsync(treeId);
         if (tree == null) return NotFound();
         var visibility = await _visibilityRepo.GetByTreeIdAsync(treeId);
-        if (!FamilyAccessPolicy.CanEditTree(_configuration, user, tree, visibility)) return Forbid();
+        if (!FamilyAccessPolicy.CanEditTree(_accessConfig.Snapshot, user, tree, visibility)) return Forbid();
 
         var section = await _sectionRepo.GetByIdAsync(sectionId);
         if (section == null || section.TreeId != treeId) return NotFound();
@@ -976,7 +980,7 @@ public class FamilyController : ControllerBase
         var tree = await _treeRepo.GetByIdAsync(treeId);
         if (tree == null) return NotFound();
         var visibility = await _visibilityRepo.GetByTreeIdAsync(treeId);
-        if (!FamilyAccessPolicy.CanViewTree(_configuration, user, tree, visibility)) return Forbid();
+        if (!FamilyAccessPolicy.CanViewTree(_accessConfig.Snapshot, user, tree, visibility)) return Forbid();
 
         var section = await _sectionRepo.GetByIdAsync(sectionId);
         if (section == null || section.TreeId != treeId) return NotFound();
@@ -998,7 +1002,7 @@ public class FamilyController : ControllerBase
         var tree = await _treeRepo.GetByIdAsync(treeId);
         if (tree == null) return NotFound();
         var visibility = await _visibilityRepo.GetByTreeIdAsync(treeId);
-        if (!FamilyAccessPolicy.CanViewTree(_configuration, user, tree, visibility)) return Forbid();
+        if (!FamilyAccessPolicy.CanViewTree(_accessConfig.Snapshot, user, tree, visibility)) return Forbid();
 
         var page = await _pageRepo.GetByIdAsync(pageId);
         if (page == null || page.TreeId != treeId) return NotFound();
@@ -1015,7 +1019,7 @@ public class FamilyController : ControllerBase
         var tree = await _treeRepo.GetByIdAsync(treeId);
         if (tree == null) return NotFound();
         var visibility = await _visibilityRepo.GetByTreeIdAsync(treeId);
-        if (!FamilyAccessPolicy.CanEditTree(_configuration, user, tree, visibility)) return Forbid();
+        if (!FamilyAccessPolicy.CanEditTree(_accessConfig.Snapshot, user, tree, visibility)) return Forbid();
 
         var section = await _sectionRepo.GetByIdAsync(sectionId);
         if (section == null || section.TreeId != treeId) return NotFound();
@@ -1045,7 +1049,7 @@ public class FamilyController : ControllerBase
         var tree = await _treeRepo.GetByIdAsync(treeId);
         if (tree == null) return NotFound();
         var visibility = await _visibilityRepo.GetByTreeIdAsync(treeId);
-        if (!FamilyAccessPolicy.CanEditTree(_configuration, user, tree, visibility)) return Forbid();
+        if (!FamilyAccessPolicy.CanEditTree(_accessConfig.Snapshot, user, tree, visibility)) return Forbid();
 
         var page = await _pageRepo.GetByIdAsync(pageId);
         if (page == null || page.TreeId != treeId) return NotFound();
@@ -1082,7 +1086,7 @@ public class FamilyController : ControllerBase
         var tree = await _treeRepo.GetByIdAsync(treeId);
         if (tree == null) return NotFound();
         var visibility = await _visibilityRepo.GetByTreeIdAsync(treeId);
-        if (!FamilyAccessPolicy.CanEditTree(_configuration, user, tree, visibility)) return Forbid();
+        if (!FamilyAccessPolicy.CanEditTree(_accessConfig.Snapshot, user, tree, visibility)) return Forbid();
 
         var page = await _pageRepo.GetByIdAsync(pageId);
         if (page == null || page.TreeId != treeId) return NotFound();
@@ -1100,12 +1104,11 @@ public class FamilyController : ControllerBase
         if (user == null) return Unauthorized();
 
         // Only allow admins
-        var adminEmails = _configuration.GetSection("AdminEmails").Get<string[]>() ?? Array.Empty<string>();
-        if (!adminEmails.Contains(user.Email, StringComparer.OrdinalIgnoreCase))
+        if (!_accessConfig.IsAdminEmail(user.Email))
             return Forbid();
 
         // Find first tree the user owns
-        var visibleDomains = FamilyAccessPolicy.GetVisibleDomains(_configuration, user);
+        var visibleDomains = FamilyAccessPolicy.GetVisibleDomains(_accessConfig.Snapshot, user);
         FamilyTree? tree = null;
         foreach (var domain in visibleDomains)
         {
@@ -1197,11 +1200,10 @@ public class FamilyController : ControllerBase
         var user = await GetCurrentUserAsync();
         if (user == null) return Unauthorized();
 
-        var adminEmails = _configuration.GetSection("AdminEmails").Get<string[]>() ?? Array.Empty<string>();
-        if (!adminEmails.Contains(user.Email, StringComparer.OrdinalIgnoreCase))
+        if (!_accessConfig.IsAdminEmail(user.Email))
             return Forbid();
 
-        var visibleDomains = FamilyAccessPolicy.GetVisibleDomains(_configuration, user);
+        var visibleDomains = FamilyAccessPolicy.GetVisibleDomains(_accessConfig.Snapshot, user);
         var linked = 0;
         var deleted = 0;
 
@@ -1674,7 +1676,7 @@ public class FamilyController : ControllerBase
             return BadRequest(new { message = "Linked tree was not found." });
         }
         var linkedTreeVisibility = await _visibilityRepo.GetByTreeIdAsync(linkedTreeId!);
-        if (!FamilyAccessPolicy.CanEditTree(_configuration, user, linkedTree, linkedTreeVisibility))
+        if (!FamilyAccessPolicy.CanEditTree(_accessConfig.Snapshot, user, linkedTree, linkedTreeVisibility))
         {
             return Forbid();
         }

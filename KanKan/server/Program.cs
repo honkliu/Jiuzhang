@@ -225,6 +225,7 @@ if (useInMemory)
     builder.Services.AddSingleton<IMomentRepository, InMemoryMomentRepository>();
     builder.Services.AddSingleton<IContactRepository, InMemoryContactRepository>();
     builder.Services.AddSingleton<INotificationRepository, InMemoryNotificationRepository>();
+    builder.Services.AddSingleton<IAccessConfigService, ConfigurationAccessConfigService>();
     builder.Services.AddScoped<IAuthService, InMemoryAuthService>();
     // Family repos (InMemory stubs — returns empty data, writes are no-ops)
     builder.Services.AddSingleton<KanKan.API.Repositories.Interfaces.IFamilyTreeRepository, KanKan.API.Repositories.Implementations.InMemoryFamilyRepository>();
@@ -244,6 +245,9 @@ if (useInMemory)
 }
 else if (storageMode == "mongodb")
 {
+    builder.Services.AddSingleton<MongoAccessConfigService>();
+    builder.Services.AddSingleton<IAccessConfigService>(sp => sp.GetRequiredService<MongoAccessConfigService>());
+    builder.Services.AddHostedService<AccessConfigHostedService>();
     builder.Services.AddScoped<IUserRepository, UserRepository>();
     builder.Services.AddScoped<IChatRepository, ChatRepository>();
     builder.Services.AddScoped<IChatUserRepository, ChatUserRepository>();

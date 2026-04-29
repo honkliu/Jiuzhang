@@ -6,6 +6,7 @@ using KanKan.API.Models.DTOs.Photo;
 using KanKan.API.Models.Entities;
 using KanKan.API.Repositories.Implementations;
 using KanKan.API.Repositories.Interfaces;
+using KanKan.API.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
@@ -36,6 +37,7 @@ public class AdminGalleryController : ControllerBase
     private readonly INotebookSectionRepository _notebookSectionRepository;
     private readonly INotebookPageRepository _notebookPageRepository;
     private readonly IConfiguration _configuration;
+    private readonly IAccessConfigService _accessConfig;
     private readonly IWebHostEnvironment _environment;
     private readonly IMongoCollection<Message> _messages;
     private readonly IMongoCollection<Moment> _moments;
@@ -55,6 +57,7 @@ public class AdminGalleryController : ControllerBase
         INotebookSectionRepository notebookSectionRepository,
         INotebookPageRepository notebookPageRepository,
         IConfiguration configuration,
+        IAccessConfigService accessConfig,
         IWebHostEnvironment environment,
         IMongoClient mongoClient)
     {
@@ -72,6 +75,7 @@ public class AdminGalleryController : ControllerBase
         _notebookSectionRepository = notebookSectionRepository;
         _notebookPageRepository = notebookPageRepository;
         _configuration = configuration;
+        _accessConfig = accessConfig;
         _environment = environment;
 
         var database = mongoClient.GetDatabase(configuration["MongoDB:DatabaseName"] ?? "KanKanDB");
@@ -262,7 +266,7 @@ public class AdminGalleryController : ControllerBase
     {
         var treesById = new Dictionary<string, FamilyTree>(StringComparer.Ordinal);
 
-        foreach (var domain in FamilyAccessPolicy.GetVisibleDomains(_configuration, user))
+        foreach (var domain in FamilyAccessPolicy.GetVisibleDomains(_accessConfig.Snapshot, user))
         {
             foreach (var tree in await _familyTreeRepository.GetByDomainAsync(domain))
             {
@@ -286,7 +290,7 @@ public class AdminGalleryController : ControllerBase
             }
 
             var tree = await _familyTreeRepository.GetByIdAsync(visibility.TreeId);
-            if (tree != null && FamilyAccessPolicy.CanViewTree(_configuration, user, tree, visibility))
+            if (tree != null && FamilyAccessPolicy.CanViewTree(_accessConfig.Snapshot, user, tree, visibility))
             {
                 treesById[tree.Id] = tree;
             }

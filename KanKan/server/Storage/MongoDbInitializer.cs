@@ -60,7 +60,8 @@ public class MongoDbInitializer : IHostedService
             "avatarImages",
             "imageGenerationJobs",
             _configuration["MongoDB:Collections:Receipts"] ?? "Receipts",
-            _configuration["MongoDB:Collections:ReceiptVisits"] ?? "ReceiptVisits"
+            _configuration["MongoDB:Collections:ReceiptVisits"] ?? "ReceiptVisits",
+            _configuration["MongoDB:Collections:AppAccessConfig"] ?? "AppAccessConfig"
         };
 
         var existingCollections = await (await database.ListCollectionNamesAsync(cancellationToken: cancellationToken))

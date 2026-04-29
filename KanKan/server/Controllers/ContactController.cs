@@ -10,6 +10,7 @@ using KanKan.API.Models.Entities;
 using KanKan.API.Hubs;
 using KanKan.API.Repositories.Interfaces;
 using KanKan.API.Services;
+using KanKan.API.Services.Interfaces;
 
 namespace KanKan.API.Controllers;
 
@@ -27,6 +28,7 @@ public class ContactController : ControllerBase
     private readonly INotificationRepository _notificationRepository;
     private readonly IFamilyTreeVisibilityRepository _familyTreeVisibilityRepository;
     private readonly IConfiguration _configuration;
+    private readonly IAccessConfigService _accessConfig;
     private readonly ILogger<ContactController> _logger;
 
     public ContactController(
@@ -39,6 +41,7 @@ public class ContactController : ControllerBase
         INotificationRepository notificationRepository,
         IFamilyTreeVisibilityRepository familyTreeVisibilityRepository,
         IConfiguration configuration,
+        IAccessConfigService accessConfig,
         ILogger<ContactController> logger)
     {
         _userRepository = userRepository;
@@ -50,6 +53,7 @@ public class ContactController : ControllerBase
         _notificationRepository = notificationRepository;
         _familyTreeVisibilityRepository = familyTreeVisibilityRepository;
         _configuration = configuration;
+        _accessConfig = accessConfig;
         _logger = logger;
     }
 
@@ -90,7 +94,7 @@ public class ContactController : ControllerBase
 
         var familyCapabilities = await GetFamilyCapabilitiesAsync(user);
         var resolvedDomain = string.IsNullOrWhiteSpace(user.Domain) ? DomainRules.GetDomain(user.Email) : user.Domain;
-        var editableFamilyTreeDomains = FamilyAccessPolicy.GetEditableDomains(_configuration, user).ToArray();
+        var editableFamilyTreeDomains = FamilyAccessPolicy.GetEditableDomains(_accessConfig.Snapshot, user).ToArray();
         return new UserDto
         {
             Id = user.Id,
@@ -117,8 +121,8 @@ public class ContactController : ControllerBase
 
     private async Task<(bool canView, bool canEdit)> GetFamilyCapabilitiesAsync(User user)
     {
-        var canView = FamilyAccessPolicy.CanViewFamilyTree(_configuration, user);
-        var canEdit = FamilyAccessPolicy.CanEditAnyFamilyTree(_configuration, user);
+        var canView = FamilyAccessPolicy.CanViewFamilyTree(_accessConfig.Snapshot, user);
+        var canEdit = FamilyAccessPolicy.CanEditAnyFamilyTree(_accessConfig.Snapshot, user);
         if (canView && canEdit)
         {
             return (canView, canEdit);

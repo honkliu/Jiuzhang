@@ -48,6 +48,7 @@ const navItems = [
   { label: 'FamilyTree', path: '/family', adminOnly: true },
   { label: 'Gallery', path: '/gallery', adminOnly: false },
   { label: 'admin.title', path: '/admin', adminOnly: true },
+  { label: 'admin.config.menu', path: '/admin/access-config', adminOnly: true },
 ];
 
 const headerNavButtonSx = {

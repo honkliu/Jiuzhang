@@ -16,6 +16,7 @@ import { NotebookPage } from './components/Notebook/NotebookPage';
 import { ReceiptsPage } from './components/Receipts/ReceiptsPage';
 import { GalleryPage } from './components/Gallery/GalleryPage';
 import { InviteCodesPage } from './components/Admin/InviteCodesPage';
+import { AccessConfigPage } from './components/Admin/AccessConfigPage';
 import { authService } from './services/auth.service';
 import { contactService } from './services/contact.service';
 import { LanguageProvider } from './i18n/LanguageContext';
@@ -359,6 +360,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <InviteCodesPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/access-config"
+                element={
+                  <ProtectedRoute>
+                    <AccessConfigPage />
                   </ProtectedRoute>
                 }
               />

@@ -19,6 +19,7 @@ public class AuthService : IAuthService
 {
     private readonly IUserRepository _userRepository;
     private readonly IConfiguration _configuration;
+    private readonly IAccessConfigService _accessConfig;
     private readonly IMongoCollection<EmailVerification> _verificationCollection;
     private readonly IMongoCollection<AvatarImage> _avatarCollection;
     private readonly ILogger<AuthService> _logger;
@@ -26,11 +27,13 @@ public class AuthService : IAuthService
     public AuthService(
         IUserRepository userRepository,
         IConfiguration configuration,
+        IAccessConfigService accessConfig,
         IMongoClient mongoClient,
         ILogger<AuthService> logger)
     {
         _userRepository = userRepository;
         _configuration = configuration;
+        _accessConfig = accessConfig;
         _logger = logger;
 
         var databaseName = configuration["MongoDB:DatabaseName"] ?? "KanKanDB";
@@ -279,11 +282,7 @@ public class AuthService : IAuthService
 
     private bool IsConfiguredAdmin(string email)
     {
-        var adminEmails = _configuration.GetSection("AdminEmails").Get<string[]>()
-            ?? Array.Empty<string>();
-        return Array.Exists(
-            adminEmails,
-            adminEmail => string.Equals(adminEmail, email, StringComparison.OrdinalIgnoreCase));
+        return _accessConfig.IsAdminEmail(email);
     }
 
     public async Task RevokeRefreshTokenAsync(string token)

@@ -28,6 +28,7 @@ public class AuthController : ControllerBase
     private readonly IDomainGroupService _domainGroupService;
     private readonly IHubContext<ChatHub> _hubContext;
     private readonly IConfiguration _configuration;
+    private readonly IAccessConfigService _accessConfig;
     private readonly ILogger<AuthController> _logger;
 
     public AuthController(
@@ -40,6 +41,7 @@ public class AuthController : ControllerBase
         IDomainGroupService domainGroupService,
         IHubContext<ChatHub> hubContext,
         IConfiguration configuration,
+        IAccessConfigService accessConfig,
         ILogger<AuthController> logger)
     {
         _authService = authService;
@@ -51,6 +53,7 @@ public class AuthController : ControllerBase
         _domainGroupService = domainGroupService;
         _hubContext = hubContext;
         _configuration = configuration;
+        _accessConfig = accessConfig;
         _logger = logger;
     }
 
@@ -351,9 +354,7 @@ public class AuthController : ControllerBase
 
     private async Task NotifyAdminsAboutPendingActionAsync(string email, string category, string body, string notificationPrefix)
     {
-        var adminEmails = _configuration.GetSection("AdminEmails").Get<string[]>() ?? Array.Empty<string>();
-
-        foreach (var adminEmail in adminEmails)
+        foreach (var adminEmail in _accessConfig.Snapshot.GetAdminEmails())
         {
             var admin = await _authService.GetUserByEmailAsync(adminEmail);
             if (admin == null) continue;
@@ -450,7 +451,7 @@ public class AuthController : ControllerBase
     {
         var normalizedAvatarImageId = await _avatarService.NormalizeAvatarImageIdAsync(user.AvatarImageId);
         var familyCapabilities = await GetFamilyCapabilitiesAsync(user);
-        var editableFamilyTreeDomains = FamilyAccessPolicy.GetEditableDomains(_configuration, user).ToArray();
+        var editableFamilyTreeDomains = FamilyAccessPolicy.GetEditableDomains(_accessConfig.Snapshot, user).ToArray();
         return new UserDto
         {
             Id = user.Id,
@@ -474,8 +475,8 @@ public class AuthController : ControllerBase
 
     private async Task<(bool canView, bool canEdit)> GetFamilyCapabilitiesAsync(UserEntity user)
     {
-        var canView = FamilyAccessPolicy.CanViewFamilyTree(_configuration, user);
-        var canEdit = FamilyAccessPolicy.CanEditAnyFamilyTree(_configuration, user);
+        var canView = FamilyAccessPolicy.CanViewFamilyTree(_accessConfig.Snapshot, user);
+        var canEdit = FamilyAccessPolicy.CanEditAnyFamilyTree(_accessConfig.Snapshot, user);
         if (canView && canEdit)
         {
             return (canView, canEdit);
