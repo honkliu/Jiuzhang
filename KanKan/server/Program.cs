@@ -8,6 +8,7 @@ using MongoDB.Driver;
 using MongoDB.Driver.Core.Events;
 using Microsoft.IdentityModel.Tokens;
 using KanKan.API.Domain;
+using KanKan.API.Domain.Chat;
 using KanKan.API.Hubs;
 using KanKan.API.Models.Entities;
 using KanKan.API.Repositories.Implementations;
@@ -304,36 +305,16 @@ if (useInMemory)
     using var scope = app.Services.CreateScope();
     var users = scope.ServiceProvider.GetRequiredService<IUserRepository>();
 
-    var ai = await users.GetByEmailAsync("wa@assistant.local");
+    var ai = await users.GetByIdAsync(ChatDomain.AgentUserId)
+        ?? await users.GetByEmailAsync(ChatDomain.AgentEmail);
     if (ai == null)
     {
-        await users.CreateAsync(new KanKan.API.Models.Entities.User
-        {
-            Id = "user_ai_wa",
-            Type = "user",
-            Email = "wa@assistant.local",
-            Domain = DomainRules.SuperDomain,
-            EmailVerified = true,
-            IsAdmin = false,
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword(Guid.NewGuid().ToString()),
-            Handle = "assistant_1003",
-            DisplayName = "Assistant",
-            AvatarUrl = "/zodiac/zodiac_01_r1c1.png",
-            Gender = "male",
-            Bio = "AI assistant",
-            IsOnline = true,
-            LastSeen = DateTime.UtcNow,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow,
-            Settings = new UserSettings
-            {
-                Privacy = "friends",
-                Notifications = true,
-                Language = "en",
-                Theme = "light"
-            },
-            RefreshTokens = new List<RefreshToken>()
-        });
+        await users.CreateAsync(ChatDomain.CreateAgentUser());
+    }
+    else
+    {
+        ChatDomain.ApplyAgentUserDefaults(ai);
+        await users.UpdateAsync(ai);
     }
 }
 

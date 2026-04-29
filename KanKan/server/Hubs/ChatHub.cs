@@ -628,7 +628,12 @@ public class ChatHub : Hub
         if (chat.Participants.Any(p => p.UserId == ChatDomain.AgentUserId))
             return;
 
-        var agent = await EnsureAgentUserAsync();
+        var agent = await GetAgentUserAsync();
+        if (agent == null)
+        {
+            _logger.LogWarning("Assistant user {AgentUserId} is missing; skipping agent participant add for chat {ChatId}.", ChatDomain.AgentUserId, chat.Id);
+            return;
+        }
 
         chat.Participants.Add(new Models.Entities.ChatParticipant
         {
@@ -642,40 +647,10 @@ public class ChatHub : Hub
         await UpsertChatUsersFromChatAsync(chat);
     }
 
-    private async Task<Models.Entities.User> EnsureAgentUserAsync()
+    private async Task<Models.Entities.User?> GetAgentUserAsync()
     {
-        var agent = await _userRepository.GetByIdAsync(ChatDomain.AgentUserId)
-            ?? await _userRepository.GetByEmailAsync("wa@assistant.local");
-        if (agent != null)
-            return agent;
-
-        return await _userRepository.CreateAsync(new Models.Entities.User
-        {
-            Id = ChatDomain.AgentUserId,
-            Type = "user",
-            Email = "wa@assistant.local",
-            Domain = DomainRules.SuperDomain,
-            EmailVerified = true,
-            IsAdmin = false,
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword(Guid.NewGuid().ToString()),
-            Handle = "assistant_1003",
-            DisplayName = ChatDomain.AgentDisplayName,
-            AvatarUrl = "/zodiac/assistant.png",
-            Gender = "male",
-            Bio = "AI assistant",
-            IsOnline = true,
-            LastSeen = DateTime.UtcNow,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow,
-            Settings = new Models.Entities.UserSettings
-            {
-                Privacy = "friends",
-                Notifications = true,
-                Language = "en",
-                Theme = "light"
-            },
-            RefreshTokens = new List<Models.Entities.RefreshToken>()
-        });
+        return await _userRepository.GetByIdAsync(ChatDomain.AgentUserId)
+            ?? await _userRepository.GetByEmailAsync(ChatDomain.AgentEmail);
     }
 
     private static async Task<string> BuildAgentPromptAsync(Models.Entities.Message message)

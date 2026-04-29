@@ -1,3 +1,4 @@
+using KanKan.API.Domain;
 using KanKan.API.Models.DTOs.Chat;
 using KanKan.API.Models.Entities;
 
@@ -9,6 +10,58 @@ public static class ChatDomain
 {
     public const string AgentUserId = "user_ai_wa";
     public const string AgentDisplayName = "River";
+    public const string AgentEmail = "wa@assistant.local";
+    public const string AgentHandle = "assistant_1003";
+    public const string AgentAvatarUrl = "/zodiac/assistant.png";
+    public const string AgentBio = "AI assistant";
+
+    public static User CreateAgentUser(DateTime? timestamp = null)
+    {
+        var now = timestamp ?? DateTime.UtcNow;
+        var user = new User
+        {
+            Id = AgentUserId,
+            CreatedAt = now
+        };
+        ApplyAgentUserDefaults(user, now);
+        return user;
+    }
+
+    public static void ApplyAgentUserDefaults(User user, DateTime? timestamp = null)
+    {
+        var now = timestamp ?? DateTime.UtcNow;
+        user.Type = "user";
+        user.Email = AgentEmail;
+        user.Domain = DomainRules.SuperDomain;
+        user.EmailVerified = true;
+        user.IsAdmin = false;
+        user.IsDisabled = false;
+        if (string.IsNullOrWhiteSpace(user.PasswordHash))
+        {
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(Guid.NewGuid().ToString());
+        }
+        user.Handle = AgentHandle;
+        user.DisplayName = AgentDisplayName;
+        user.AvatarUrl = AgentAvatarUrl;
+        user.Gender = "male";
+        user.Bio = AgentBio;
+        user.IsOnline = true;
+        if (user.LastSeen == default)
+        {
+            user.LastSeen = now;
+        }
+        if (user.CreatedAt == default)
+        {
+            user.CreatedAt = now;
+        }
+        user.UpdatedAt = now;
+        user.Settings ??= new UserSettings();
+        user.Settings.Privacy = "friends";
+        user.Settings.Notifications = true;
+        user.Settings.Language = "en";
+        user.Settings.Theme = "light";
+        user.RefreshTokens ??= new List<RefreshToken>();
+    }
 
     public static bool IsAgentUserId(string? userId) =>
         string.Equals(userId, AgentUserId, StringComparison.Ordinal);

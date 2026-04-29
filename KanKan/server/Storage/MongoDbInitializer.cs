@@ -1,5 +1,6 @@
 using MongoDB.Driver;
 using KanKan.API.Domain;
+using KanKan.API.Domain.Chat;
 using KanKan.API.Models;
 using KanKan.API.Models.Entities;
 using KanKan.API.Utils;
@@ -448,52 +449,21 @@ public class MongoDbInitializer : IHostedService
             _configuration["MongoDB:Collections:UserEmailLookup"] ?? "UserEmailLookup");
 
         var existing = await usersCollection
-            .Find(u => u.Type == "user" && u.Email == "wa@assistant.local")
+            .Find(u => u.Type == "user" && (u.Id == ChatDomain.AgentUserId || u.Email == ChatDomain.AgentEmail))
             .FirstOrDefaultAsync(cancellationToken);
 
         if (existing != null)
         {
-            if (string.IsNullOrWhiteSpace(existing.Domain))
-            {
-                existing.Domain = DomainRules.SuperDomain;
-                existing.UpdatedAt = DateTime.UtcNow;
-                await usersCollection.ReplaceOneAsync(
-                    Builders<User>.Filter.Eq(u => u.Id, existing.Id),
-                    existing,
-                    cancellationToken: cancellationToken);
-            }
+            ChatDomain.ApplyAgentUserDefaults(existing);
+            await usersCollection.ReplaceOneAsync(
+                Builders<User>.Filter.Eq(u => u.Id, existing.Id),
+                existing,
+                cancellationToken: cancellationToken);
             await EnsureEmailLookupAsync(emailLookupCollection, existing, cancellationToken);
             return;
         }
 
-        var assistant = new User
-        {
-            Id = "user_ai_wa",
-            Email = "wa@assistant.local",
-            Domain = DomainRules.SuperDomain,
-            EmailVerified = true,
-            IsAdmin = false,
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword(Guid.NewGuid().ToString()),
-            Handle = "assistant_1003",
-            DisplayName = "Assistant",
-            AvatarUrl = "/zodiac/zodiac_01_r1c1.png",
-            Gender = "male",
-            Bio = "AI assistant",
-            IsOnline = true,
-            LastSeen = DateTime.UtcNow,
-            Settings = new UserSettings
-            {
-                Privacy = "friends",
-                Notifications = true,
-                Language = "en",
-                Theme = "light"
-            },
-            RefreshTokens = new List<RefreshToken>()
-        };
-
-        assistant.Email = assistant.Email.ToLower();
-        assistant.CreatedAt = DateTime.UtcNow;
-        assistant.UpdatedAt = DateTime.UtcNow;
+        var assistant = ChatDomain.CreateAgentUser();
 
         await usersCollection.InsertOneAsync(assistant, cancellationToken: cancellationToken);
         await EnsureEmailLookupAsync(emailLookupCollection, assistant, cancellationToken);
