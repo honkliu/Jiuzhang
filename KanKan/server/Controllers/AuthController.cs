@@ -25,6 +25,7 @@ public class AuthController : ControllerBase
     private readonly INotificationRepository _notificationRepository;
     private readonly IUserRepository _userRepository;
     private readonly IFamilyTreeVisibilityRepository _familyTreeVisibilityRepository;
+    private readonly IDomainGroupService _domainGroupService;
     private readonly IHubContext<ChatHub> _hubContext;
     private readonly IConfiguration _configuration;
     private readonly ILogger<AuthController> _logger;
@@ -36,6 +37,7 @@ public class AuthController : ControllerBase
         INotificationRepository notificationRepository,
         IUserRepository userRepository,
         IFamilyTreeVisibilityRepository familyTreeVisibilityRepository,
+        IDomainGroupService domainGroupService,
         IHubContext<ChatHub> hubContext,
         IConfiguration configuration,
         ILogger<AuthController> logger)
@@ -46,6 +48,7 @@ public class AuthController : ControllerBase
         _notificationRepository = notificationRepository;
         _userRepository = userRepository;
         _familyTreeVisibilityRepository = familyTreeVisibilityRepository;
+        _domainGroupService = domainGroupService;
         _hubContext = hubContext;
         _configuration = configuration;
         _logger = logger;
@@ -107,6 +110,8 @@ public class AuthController : ControllerBase
                 Password = request.Password,
                 DisplayName = request.DisplayName
             });
+
+            await _domainGroupService.EnsureDomainGroupForUserAsync(user);
 
             // Generate tokens
             var accessToken = _authService.GenerateAccessToken(user);
@@ -449,6 +454,7 @@ public class AuthController : ControllerBase
         return new UserDto
         {
             Id = user.Id,
+            Email = user.Email,
             Domain = string.IsNullOrWhiteSpace(user.Domain) ? DomainRules.GetDomain(user.Email) : user.Domain,
             EditableFamilyTreeDomains = editableFamilyTreeDomains.ToList(),
             Handle = user.Handle,

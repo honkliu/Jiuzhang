@@ -237,6 +237,10 @@ export const ContactsPage: React.FC = () => {
   const otherUsers = users.filter(
     (user) => user.id !== currentUserId && user.id !== WA_USER_ID && !isContact(user.id)
   );
+  const getUserSubtitle = (user: User, suffix?: string) => {
+    const primary = user.email || user.domain || '';
+    return [primary, suffix].filter(Boolean).join(' · ');
+  };
 
   return (
     <BoxAny sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
@@ -331,7 +335,7 @@ export const ContactsPage: React.FC = () => {
                     </ListItemAvatar>
                     <ListItemText
                       primary={<Typography fontWeight={600} variant="body2" noWrap>{req.fromUser.displayName}</Typography>}
-                      secondary={<Typography noWrap sx={{ fontSize: 12, lineHeight: 1.2 }}>{req.fromUser.domain || ''}</Typography>}
+                      secondary={<Typography noWrap sx={{ fontSize: 12, lineHeight: 1.2 }}>{getUserSubtitle(req.fromUser)}</Typography>}
                     />
                   </ListItem>
                 ))}
@@ -428,9 +432,7 @@ export const ContactsPage: React.FC = () => {
                         </BoxAny>
                       }
                       secondary={
-                        user.domain
-                          ? <Typography noWrap sx={{ fontSize: 12, lineHeight: 1.2 }}>{`${user.domain} · ${t('contacts.friend')}`}</Typography>
-                          : <Typography sx={{ fontSize: 12, lineHeight: 1.2 }}>{t('contacts.friend')}</Typography>
+                        <Typography noWrap sx={{ fontSize: 12, lineHeight: 1.2 }}>{getUserSubtitle(user, t('contacts.friend'))}</Typography>
                       }
                     />
                   </ListItem>
@@ -499,7 +501,7 @@ export const ContactsPage: React.FC = () => {
                           {user.isDisabled && <Typography variant="caption" sx={{ color: 'warning.main', whiteSpace: 'nowrap' }}>{t('contacts.disabled')}</Typography>}
                         </BoxAny>
                       }
-                      secondary={user.domain ? <Typography noWrap sx={{ fontSize: 12, lineHeight: 1.2 }}>{user.domain}</Typography> : null}
+                      secondary={getUserSubtitle(user) ? <Typography noWrap sx={{ fontSize: 12, lineHeight: 1.2 }}>{getUserSubtitle(user)}</Typography> : null}
                     />
                   </ListItem>
                 ))}

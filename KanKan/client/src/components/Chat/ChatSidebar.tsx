@@ -96,29 +96,15 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
     }
   };
 
-  const truncateText = (text: string, maxLen: number) => {
-    const cleaned = text.replace(/\s+/g, ' ').trim();
-    if (cleaned.length <= maxLen) return cleaned;
-    return `${cleaned.slice(0, Math.max(0, maxLen - 1))}…`;
-  };
-
   const getLocalizedParticipantName = (userId?: string, displayName?: string) => {
     return userId === WA_USER_ID ? t('Wa') : (displayName || '');
   };
 
-  const getLastMessagePreview = (chat: Chat) => {
-    if (!chat.lastMessage) return t('chat.noMessagesShort');
-    const senderName = getLocalizedParticipantName(chat.lastMessage.senderId, chat.lastMessage.senderName);
-    const senderPrefix = chat.lastMessage.senderId === user?.id
-      ? `${t('chat.you')}: `
-      : `${senderName}: `;
-    return truncateText(`${senderPrefix}${chat.lastMessage.text || ''}`, 44);
-  };
-
   const getGroupParticipantsLine = (chat: Chat) => {
     const meId = user?.id;
-    const names = chat.participants
-      .filter((p) => p.userId !== WA_USER_ID)
+    const realParticipants = getRealParticipants(chat.participants);
+    const memberCount = realParticipants.length;
+    const names = realParticipants
       .filter((p) => !meId || p.userId !== meId)
       .map((p) => p.displayName)
       .filter(Boolean);
@@ -126,7 +112,11 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
     const shown = names.slice(0, 4);
     const extra = names.length - shown.length;
     const base = shown.join(' · ');
-    return base + (extra > 0 ? ` +${extra}` : '');
+    const memberCountText = `${memberCount} ${t('chat.members')}`;
+
+    if (!base) return memberCountText;
+
+    return `${memberCountText} · ${base}${extra > 0 ? ` +${extra}` : ''}`;
   };
 
   const formatLastMessageTime = (timestamp: string) => {
@@ -225,7 +215,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
         ) : (
           filteredChats.map((chat) => {
             const meId = user?.id;
-            const isGroup = isRealGroupChat(chat, meId);
+            const isGroup = chat.chatType === 'group' || isRealGroupChat(chat, meId);
             const hasWa = (chat.participants || []).some((p) => p.userId === WA_USER_ID);
             const realParticipants = getRealParticipants(chat.participants);
             const isWaOnlyChat = !isGroup && hasWa && realParticipants.length <= 1;
@@ -244,7 +234,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
               sx={{
                 py: '6px',
                 pl: 1,
-                borderRadius: '8px',
+                borderRadius: '3px',
                 position: 'relative',
                 pr: 5,
                 '& .chatRowActions': {
@@ -290,6 +280,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
                   {isGroup ? (
                     <GroupAvatar
                       size={48}
+                      sx={{ borderRadius: '3px' }}
                       members={(() => {
                         const others = getOtherRealParticipants(chat, meId);
                         const source = others.length > 0 ? others : chat.participants.filter((p) => p.userId !== WA_USER_ID);
@@ -309,7 +300,12 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
                           gender={m?.gender}
                           fallbackText={getLocalizedParticipantName(m?.userId, m?.displayName) || displayChatName}
                           variant="rounded"
-                          sx={{ width: 48, height: 48 }}
+                          sx={{
+                            width: 48,
+                            height: 48,
+                            borderRadius: '3px',
+                            '& .MuiAvatar-img': { borderRadius: '3px' },
+                          }}
                         />
                       );
                     })()
@@ -379,37 +375,16 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
                     </BoxAny>
                   </BoxAny>
                 }
-                secondary={
-                  <BoxAny sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 1 }}>
-                    <BoxAny sx={{ minWidth: 0 }}>
-                      {isGroup && (
-                        <Typography
-                          variant="caption"
-                          color="text.secondary"
-                          noWrap
-                          sx={{ display: 'block', maxWidth: 220 }}
-                        >
-                          {getGroupParticipantsLine(chat)}
-                        </Typography>
-                      )}
-                      <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        noWrap
-                        sx={{
-                          maxWidth: 220,
-                          fontWeight: showUnread ? 'bold' : 'normal',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                        title={chat.lastMessage ? `${getLocalizedParticipantName(chat.lastMessage.senderId, chat.lastMessage.senderName)}: ${chat.lastMessage.text}` : undefined}
-                      >
-                        {getLastMessagePreview(chat)}
-                      </Typography>
-                    </BoxAny>
-                  </BoxAny>
-                }
+                secondary={isGroup ? (
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    noWrap
+                    sx={{ display: 'block', maxWidth: 220 }}
+                  >
+                    {getGroupParticipantsLine(chat)}
+                  </Typography>
+                ) : null}
               />
             </ListItemButton>
             );

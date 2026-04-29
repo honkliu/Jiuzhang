@@ -208,6 +208,7 @@ public class AdminController : ControllerBase
         return new UserDto
         {
             Id = user.Id,
+            Email = user.Email,
             Domain = ResolveDomain(user),
             IsAdmin = user.IsAdmin,
             IsDisabled = user.IsDisabled,

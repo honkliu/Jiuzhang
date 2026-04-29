@@ -30,6 +30,7 @@ public class ChatController : ControllerBase
     private readonly INotificationRepository _notificationRepository;
     private readonly IAgentService _agentService;
     private readonly IAvatarService _avatarService;
+    private readonly IDomainGroupService _domainGroupService;
     private readonly IHubContext<ChatHub> _hubContext;
     private readonly ILogger<ChatController> _logger;
     private readonly IServiceScopeFactory _scopeFactory;
@@ -43,6 +44,7 @@ public class ChatController : ControllerBase
         IContactRepository contactRepository,
         INotificationRepository notificationRepository,
         IAgentService agentService,
+        IDomainGroupService domainGroupService,
         IHubContext<ChatHub> hubContext,
         IAvatarService avatarService,
         IServiceScopeFactory scopeFactory,
@@ -55,6 +57,7 @@ public class ChatController : ControllerBase
         _contactRepository = contactRepository;
         _notificationRepository = notificationRepository;
         _agentService = agentService;
+        _domainGroupService = domainGroupService;
         _avatarService = avatarService;
         _hubContext = hubContext;
         _scopeFactory = scopeFactory;
@@ -155,6 +158,12 @@ public class ChatController : ControllerBase
         try
         {
             var userId = GetUserId();
+            var currentUser = await _userRepository.GetByIdAsync(userId);
+            if (currentUser != null)
+            {
+                await _domainGroupService.EnsureDomainGroupForUserAsync(currentUser);
+            }
+
             var chatUsers = await _chatUserRepository.GetUserChatsAsync(userId);
             if (chatUsers.Count == 0)
             {
@@ -408,6 +417,9 @@ public class ChatController : ControllerBase
             if (!chat.Participants.Any(p => p.UserId == userId))
                 return Forbid();
 
+            if (_domainGroupService.IsDomainGroupChatId(chat.Id))
+                return BadRequest(new { message = "Default domain group chats cannot be renamed" });
+
             // Only admins can update group chats
             if (chat.ChatType == "group" && !chat.AdminIds.Contains(userId))
                 return Forbid();
@@ -454,6 +466,9 @@ public class ChatController : ControllerBase
 
             if (!chat.Participants.Any(p => p.UserId == userId))
                 return Forbid();
+
+            if (_domainGroupService.IsDomainGroupChatId(chat.Id))
+                return BadRequest(new { message = "Default domain group chats cannot be deleted or left" });
 
             if (chat.ChatType == "direct")
             {
@@ -927,6 +942,9 @@ public class ChatController : ControllerBase
             if (chat.ChatType != "group")
                 return BadRequest(new { message = "Can only add participants to group chats" });
 
+            if (_domainGroupService.IsDomainGroupChatId(chat.Id))
+                return BadRequest(new { message = "Default domain group membership is managed automatically" });
+
             if (!chat.AdminIds.Contains(userId))
                 return Forbid();
 
@@ -990,6 +1008,9 @@ public class ChatController : ControllerBase
             // requirement as the old @-mention path.
             if (!chat.Participants.Any(p => p.UserId == userId))
                 return Forbid();
+
+            if (_domainGroupService.IsDomainGroupChatId(chat.Id))
+                return BadRequest(new { message = "Default domain group membership is managed automatically" });
 
             var name = request?.Name?.Trim();
             if (string.IsNullOrWhiteSpace(name))
@@ -1117,6 +1138,9 @@ public class ChatController : ControllerBase
 
             if (chat.ChatType != "group")
                 return BadRequest(new { message = "Can only remove participants from group chats" });
+
+            if (_domainGroupService.IsDomainGroupChatId(chat.Id))
+                return BadRequest(new { message = "Default domain group participants cannot be removed" });
 
             // Only admins can remove others, anyone can remove themselves
             if (participantId != userId && !chat.AdminIds.Contains(userId))

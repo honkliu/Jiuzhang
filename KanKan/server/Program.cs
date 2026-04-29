@@ -275,6 +275,7 @@ else if (storageMode == "mongodb")
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<IAgentService, OpenAiAgentService>();
+builder.Services.AddScoped<IDomainGroupService, DomainGroupService>();
 
 // Register Image Generation services (MongoDB only)
 if (storageMode == "mongodb")

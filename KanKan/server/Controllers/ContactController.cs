@@ -94,6 +94,7 @@ public class ContactController : ControllerBase
         return new UserDto
         {
             Id = user.Id,
+            Email = user.Email,
             Domain = includeDomain
                 ? resolvedDomain
                 : null,

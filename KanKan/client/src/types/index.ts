@@ -1,6 +1,7 @@
 // User types
 export interface User {
   id: string;
+  email?: string;
   domain?: string;
   editableFamilyTreeDomains?: string[];
   isAdmin?: boolean;
