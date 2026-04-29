@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.SignalR;
 using System.Security.Claims;
 using System.Text;
 using System.Text.RegularExpressions;
+using KanKan.API.Domain;
 using KanKan.API.Domain.Chat;
 using KanKan.API.Models.DTOs.Chat;
 using KanKan.API.Models.Entities;
@@ -627,9 +628,7 @@ public class ChatHub : Hub
         if (chat.Participants.Any(p => p.UserId == ChatDomain.AgentUserId))
             return;
 
-        var agent = await _userRepository.GetByIdAsync(ChatDomain.AgentUserId);
-        if (agent == null)
-            return;
+        var agent = await EnsureAgentUserAsync();
 
         chat.Participants.Add(new Models.Entities.ChatParticipant
         {
@@ -641,6 +640,42 @@ public class ChatHub : Hub
         chat.UpdatedAt = DateTime.UtcNow;
         await _chatRepository.UpdateAsync(chat);
         await UpsertChatUsersFromChatAsync(chat);
+    }
+
+    private async Task<Models.Entities.User> EnsureAgentUserAsync()
+    {
+        var agent = await _userRepository.GetByIdAsync(ChatDomain.AgentUserId)
+            ?? await _userRepository.GetByEmailAsync("wa@assistant.local");
+        if (agent != null)
+            return agent;
+
+        return await _userRepository.CreateAsync(new Models.Entities.User
+        {
+            Id = ChatDomain.AgentUserId,
+            Type = "user",
+            Email = "wa@assistant.local",
+            Domain = DomainRules.SuperDomain,
+            EmailVerified = true,
+            IsAdmin = false,
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(Guid.NewGuid().ToString()),
+            Handle = "assistant_1003",
+            DisplayName = ChatDomain.AgentDisplayName,
+            AvatarUrl = "/zodiac/assistant.png",
+            Gender = "male",
+            Bio = "AI assistant",
+            IsOnline = true,
+            LastSeen = DateTime.UtcNow,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+            Settings = new Models.Entities.UserSettings
+            {
+                Privacy = "friends",
+                Notifications = true,
+                Language = "en",
+                Theme = "light"
+            },
+            RefreshTokens = new List<Models.Entities.RefreshToken>()
+        });
     }
 
     private static async Task<string> BuildAgentPromptAsync(Models.Entities.Message message)

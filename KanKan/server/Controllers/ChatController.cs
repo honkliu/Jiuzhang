@@ -1368,9 +1368,7 @@ public class ChatController : ControllerBase
         if (chat.Participants.Any(p => p.UserId == ChatDomain.AgentUserId))
             return;
 
-        var agent = await _userRepository.GetByIdAsync(ChatDomain.AgentUserId);
-        if (agent == null)
-            return;
+        var agent = await EnsureAgentUserAsync();
 
         chat.Participants.Add(new ChatParticipant
         {
@@ -1382,6 +1380,42 @@ public class ChatController : ControllerBase
         chat.UpdatedAt = DateTime.UtcNow;
         await _chatRepository.UpdateAsync(chat);
         await UpsertChatUsersFromChatAsync(chat);
+    }
+
+    private async Task<User> EnsureAgentUserAsync()
+    {
+        var agent = await _userRepository.GetByIdAsync(ChatDomain.AgentUserId)
+            ?? await _userRepository.GetByEmailAsync("wa@assistant.local");
+        if (agent != null)
+            return agent;
+
+        return await _userRepository.CreateAsync(new User
+        {
+            Id = ChatDomain.AgentUserId,
+            Type = "user",
+            Email = "wa@assistant.local",
+            Domain = DomainRules.SuperDomain,
+            EmailVerified = true,
+            IsAdmin = false,
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(Guid.NewGuid().ToString()),
+            Handle = "assistant_1003",
+            DisplayName = ChatDomain.AgentDisplayName,
+            AvatarUrl = "/zodiac/zodiac_01_r1c1.png",
+            Gender = "male",
+            Bio = "AI assistant",
+            IsOnline = true,
+            LastSeen = DateTime.UtcNow,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+            Settings = new UserSettings
+            {
+                Privacy = "friends",
+                Notifications = true,
+                Language = "en",
+                Theme = "light"
+            },
+            RefreshTokens = new List<RefreshToken>()
+        });
     }
 
     private static async Task<string> BuildAgentPromptAsync(Message message)
@@ -1441,9 +1475,7 @@ public class ChatController : ControllerBase
                 if (source.Participants.Any(p => p.UserId == ChatDomain.AgentUserId))
                     return;
 
-                var agent = await userRepository.GetByIdAsync(ChatDomain.AgentUserId);
-                if (agent == null)
-                    return;
+                var agent = await EnsureScopedAgentUserAsync();
 
                 source.Participants.Add(new ChatParticipant
                 {
@@ -1455,6 +1487,42 @@ public class ChatController : ControllerBase
                 source.UpdatedAt = DateTime.UtcNow;
                 await chatRepository.UpdateAsync(source);
                 await UpsertChatUsersFromChatAsync(source);
+            }
+
+            async Task<User> EnsureScopedAgentUserAsync()
+            {
+                var agent = await userRepository.GetByIdAsync(ChatDomain.AgentUserId)
+                    ?? await userRepository.GetByEmailAsync("wa@assistant.local");
+                if (agent != null)
+                    return agent;
+
+                return await userRepository.CreateAsync(new User
+                {
+                    Id = ChatDomain.AgentUserId,
+                    Type = "user",
+                    Email = "wa@assistant.local",
+                    Domain = DomainRules.SuperDomain,
+                    EmailVerified = true,
+                    IsAdmin = false,
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword(Guid.NewGuid().ToString()),
+                    Handle = "assistant_1003",
+                    DisplayName = ChatDomain.AgentDisplayName,
+                    AvatarUrl = "/zodiac/zodiac_01_r1c1.png",
+                    Gender = "male",
+                    Bio = "AI assistant",
+                    IsOnline = true,
+                    LastSeen = DateTime.UtcNow,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow,
+                    Settings = new UserSettings
+                    {
+                        Privacy = "friends",
+                        Notifications = true,
+                        Language = "en",
+                        Theme = "light"
+                    },
+                    RefreshTokens = new List<RefreshToken>()
+                });
             }
 
             async Task<List<(string SenderName, string Message)>> BuildHistoryAsync(string targetChatId)
