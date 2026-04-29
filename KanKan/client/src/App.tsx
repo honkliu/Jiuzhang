@@ -23,6 +23,7 @@ import { SettingsProvider } from './settings/SettingsContext';
 import { setAuth } from './store/authSlice';
 
 const GamesPage = React.lazy(() => import('./components/Games/GamesPage'));
+const HelpPage = React.lazy(() => import('./components/Help/HelpPage'));
 
 // Create MUI theme
 const theme = createTheme({
@@ -331,6 +332,16 @@ function App() {
                   <ProtectedRoute>
                     <React.Suspense fallback={null}>
                       <GamesPage />
+                    </React.Suspense>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/help"
+                element={
+                  <ProtectedRoute>
+                    <React.Suspense fallback={null}>
+                      <HelpPage />
                     </React.Suspense>
                   </ProtectedRoute>
                 }

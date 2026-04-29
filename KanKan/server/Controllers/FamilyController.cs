@@ -106,7 +106,15 @@ public class FamilyController : ControllerBase
             trees.Add(tree);
         }
 
-        if (trees.Count == 0) return Forbid();
+        if (trees.Count == 0)
+        {
+            if (visibleDomains.Count == 0 && explicitVisibilities.Count == 0)
+            {
+                return Forbid();
+            }
+
+            return Ok(Array.Empty<FamilyTreeResponse>());
+        }
 
         return Ok(trees
             .GroupBy(t => t.Id, StringComparer.Ordinal)

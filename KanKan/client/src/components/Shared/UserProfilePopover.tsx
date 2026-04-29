@@ -116,7 +116,7 @@ export const UserProfilePopover: React.FC<UserProfilePopoverProps> = ({
               closePreviewOnClick
             />
             <BoxAny sx={{ minWidth: 0, flexGrow: 1 }}>
-              <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
                 <Typography
                   variant="subtitle2"
                   fontWeight={700}
@@ -126,21 +126,32 @@ export const UserProfilePopover: React.FC<UserProfilePopoverProps> = ({
                   {profile.displayName}
                 </Typography>
                 {profile.isOnline && (
-                  <OnlineIcon sx={{ fontSize: 8, color: 'success.main' }} />
+                  <OnlineIcon sx={{ fontSize: 8, color: 'success.main', flexShrink: 0 }} />
                 )}
-              </BoxAny>
-              <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                 {profile.gender && (
-                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                  <Typography variant="caption" color="text.secondary" noWrap sx={{ fontSize: '0.7rem', flexShrink: 0 }}>
                     {profile.gender === 'male' ? t('profile.male') : t('profile.female')}
                   </Typography>
                 )}
                 {activeDays !== null && (
-                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                  <Typography variant="caption" color="text.secondary" noWrap sx={{ fontSize: '0.7rem', flexShrink: 0 }}>
                     {t('profile.activeDays').replace('{n}', String(activeDays))}
                   </Typography>
                 )}
               </BoxAny>
+              {profile.email && (
+                <BoxAny sx={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    noWrap
+                    title={profile.email}
+                    sx={{ minWidth: 0, fontSize: '0.7rem' }}
+                  >
+                    {profile.email}
+                  </Typography>
+                </BoxAny>
+              )}
             </BoxAny>
             {showAddFriend && (
               <IconButton
