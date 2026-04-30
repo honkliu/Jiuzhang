@@ -54,9 +54,25 @@ bbtalk is the command-line chat tool. It is useful when you want to chat from a 
 
 bbtalk basics:
 
-- For first-time setup, go to `KanKan/bbtalk` and run `npm install`.
-- Log in with `node index.js login <email> <password> --base-url <api-base-url>`.
-- Start it with `npm start` or `node index.js`.
+- Download: [bbtalk-0.1.0.tgz](/downloads/bbtalk-0.1.0.tgz).
+- Install it:
+
+```powershell
+npm install -g bbtalk-0.1.0.tgz
+```
+
+- Sign in and start chatting:
+
+```powershell
+bbtalk login <email> <password> --base-url https://kankan.eastasia.cloudapp.azure.com/api
+```
+
+- Later, start it:
+
+```powershell
+bbtalk
+```
+
 - Type a message and press Enter to send; press `Ctrl+C` to quit.
 
 bbtalk chat commands:

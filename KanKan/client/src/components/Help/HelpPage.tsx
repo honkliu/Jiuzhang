@@ -32,6 +32,15 @@ const markdownSx = {
   '& p': {
     my: 0.8,
   },
+  '& a': {
+    color: 'primary.main',
+    fontWeight: 700,
+    textDecoration: 'underline',
+    textUnderlineOffset: '3px',
+  },
+  '& a:hover': {
+    color: 'primary.dark',
+  },
   '& ul': {
     mt: 0.75,
     mb: 1.25,
