@@ -1,123 +1,64 @@
-# Admin Help
+# Admin Configuration
 
-## Chat
+This admin help only covers configuration. For everyday use of chat, notes, family trees, receipts, Pa, and other features, use the user help.
 
-Admins manage users and keep domain groups healthy. Default domain groups are created from email domains, so use consistent user email domains.
+## Access Config
 
-Admin checks:
+Open **Config** from the top navigation. Saved changes take effect immediately; the API does not need a restart.
 
-- Confirm user email domains before expecting default groups to work.
-- River is a system user and should be initialized by the server startup path.
-- If a database was cleaned, restart the server so startup initialization runs.
+Configuration rules:
 
-Chat commands:
+- Add a row to enable that rule.
+- Delete a row to remove that rule.
+- Click **Save** in the current configuration block after editing.
+- Click **Refresh** first when you need to reload the server state.
 
-- `/h` shows chat command help.
-- `/w` lists chat members.
-- `/wa` lists active members.
-- `/b <text>`, `/i <text>`, and `/r <text>` send bold, italic, and red text.
-- `/p [prompt]` creates an image; in groups use `@name` to choose people.
-- `/a @name` adds someone to the current chat.
-- `@name` mentions one person; `@@` calls River.
+## kankan@kankan
 
-2D immersive chat admin basics:
+`kankan@kankan` is the root admin and can maintain global access configuration.
 
-- The entry point is the 2D button on the right side of a one-on-one chat title bar.
-- Users still send normal direct-chat messages; the view only presents recent content in two sides.
-- If a user cannot see the 2D button, first confirm the current chat is a one-on-one chat.
-- If the view renders incorrectly, check the direct-chat message data and browser console errors first.
+Sections:
 
-Example:
+- **Domain visibility**: enter a source domain and a visible domain. Users from the source domain can see family trees from the visible domain.
+- **Family tree domains**: enter email domains that can use family tree features, such as `shaol.com`.
+- **Admin users**: enter system admin emails. An admin can naturally manage the enabled family-tree domain that matches their own email domain.
+- **Family tree managers**: enter a user email and a managed domain. That user can create, import, and edit family trees in that domain.
 
-- A user with `amy@shaol.com` belongs to the `shaol.com` default group.
+Checks:
 
-## bbtalk
+- Use **Domain visibility preview** to confirm cross-domain visibility rules.
+- A family tree manager can be a normal user; they do not need to be in the admin list.
+- Yellow rows or brown email text mean the config references a user that does not exist yet.
 
-bbtalk is for people who want terminal chat. It is also useful for checking Wa's long answers, Markdown, tables, and formula rendering.
+## Regular Admins
 
-bbtalk admin basics:
+Regular admins can only maintain family tree managers for domains they already manage.
 
-- The install folder is `KanKan/bbtalk`; run `npm install` the first time.
-- Log in with `node index.js login <email> <password> --base-url <api-base-url>`.
-- Start with `npm start` or `node index.js`.
-- If it cannot connect, check the API base URL, login token, KanKan server, and SignalR connection.
+How to configure:
 
-bbtalk commands:
+- Add the user email and managed domain in **Family tree managers**.
+- The managed domain must already be editable by the current admin.
+- After saving, check **Who can create and view each family tree** for domain state and tree counts.
+- Check **Effective user permissions** to confirm each user's final editable domains.
 
-- Chat: `/cl` lists chats, `/cj <number>` enters a chat, `/cq` leaves the current chat, `/cd` clears/deletes current chat history, `/cn` shows the current chat name.
-- Contacts: `/ul` lists users, `/ua <number>` sends a friend request, `/c <number>` starts a one-on-one chat, `/ur` lists requests, `/urc [number]` accepts, `/urd [number]` declines.
-- Admin: `/du <number>` deletes a user from the `/ul` list.
-- Other: `/help` shows help, `/quit` exits the program.
+## Common Setup Flow
 
-## Image Beautification
+When opening a new family-tree domain:
 
-Image beautification is a major workflow. It depends on image upload, prompt composition, generation jobs, and saved generated results.
+1. Sign in as `kankan@kankan` and add the domain under **Family tree domains**.
+2. If cross-domain viewing is needed, add a **Domain visibility** rule.
+3. Add the responsible **Admin user** or **Family tree manager**.
+4. Save, refresh, and review the preview tables.
 
-What admins should know:
+When granting a normal user family-tree management:
 
-- Users can generate from chat images, Pa images, family images, receipt images, and gallery images.
-- Prompt library entries should stay short and reusable.
-- Generated results are shown under the same source image, so users can compare original and edits.
-- If generation feels slow, check the image generation service before changing UI code.
+1. Add the user's email under **Family tree managers**.
+2. Enter the domain they should manage.
+3. Save and verify their effective editable domains.
 
-Example:
+## Troubleshooting
 
-- A good prompt is `formal portrait, clean background`; a weak prompt is `make it better`.
-
-## Notes
-
-Use notebooks for shared knowledge that should outlive a chat. Keep page names short and split large topics into sections.
-
-Management:
-
-- Use settings to manage who can view or edit a notebook.
-- Export important notebooks before large cleanup work.
-- Import can restore or move a notebook archive.
-- Encourage one topic per notebook; avoid one giant notebook for everything.
-
-Example:
-
-- Create sections such as `Projects`, `Family Records`, and `Decisions`.
-
-## Family Tree
-
-Admins create, import, and manage family trees for enabled domains. Start with one clean tree, then add people, relationships, and optional notebook pages.
-
-Setup:
-
-- Enable the domain before users expect to see the family tree menu.
-- Create or import the tree, then verify root person, surname, and generation.
-- Manage visibility for users or domains when a tree crosses family branches.
-
-Relationships:
-
-- Parents, spouses, and children drive the visible tree structure.
-- `出继` should be used only when the lineage meaning is clear.
-- Linked persons connect the same person across separate trees; they do not merge the trees.
-
-Examples:
-
-- Create a tree for `shaol.com`, import the root person, then add parents, spouses, and children.
-- Link a branch-tree ancestor back to the same ancestor in the main tree.
-
-## Receipts
-
-Admins usually help with cleanup: duplicate photos, wrong dates, or extraction mistakes. The goal is searchable records, not perfect OCR.
-
-Review checklist:
-
-- Check date, total amount, vendor or hospital name.
-- Keep original photos when possible; they are the audit trail.
-- Use the photo collection view for visual cleanup.
-
-Example:
-
-- After batch extraction, spot-check totals and dates before trusting reports.
-
-## Pa
-
-Pa needs little administration. Keep it friendly and remove only content that clearly does not belong.
-
-Admin tip:
-
-- If a post should become long-term knowledge, move the idea into Notes instead of leaving it only in Pa.
+- User cannot see the family tree entry: confirm their email domain is in **Family tree domains**.
+- User cannot create or edit a tree: confirm they are covered by **Admin users** or **Family tree managers** for that domain.
+- Cross-domain trees are not visible: check **Domain visibility** and **Domain visibility preview**.
+- Saved state looks wrong: click **Refresh** and confirm what the server returned.
