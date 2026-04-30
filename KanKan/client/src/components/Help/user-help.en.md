@@ -1,5 +1,24 @@
 # User Help
 
+## Register And Sign In
+
+Registration has two steps.
+
+Registration flow:
+
+- On the sign-in page, open registration, enter your email, and continue.
+- The system prepares a registration verification code for that email and notifies admins.
+- Ask an admin for the code. Admins can see pending registration codes on the verification page.
+- Return to registration and enter the code, display name, password, and confirmation password.
+- Display name must be at least 2 characters. Password must be at least 8 characters, and both password fields must match.
+- After the account is created, you are signed in automatically and taken to Chats.
+
+Notes:
+
+- Your email is your account name; the same email cannot be registered twice.
+- If the email is wrong, use Change Email to return to the first step.
+- If the code is invalid or expired, ask an admin to refresh or provide a new code.
+
 ## Chat
 
 Use **Chats** to talk with people or groups. You can send text, images, voice messages, and quick AI-assisted content.

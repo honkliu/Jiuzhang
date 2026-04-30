@@ -37,6 +37,15 @@ const markdownSx = {
     mb: 1.25,
     pl: 2.5,
   },
+  '& ol': {
+    mt: 0.75,
+    mb: 1.25,
+    pl: 3,
+  },
+  '& li::marker': {
+    color: 'text.secondary',
+    fontWeight: 600,
+  },
   '& li': {
     mb: 0.35,
   },
