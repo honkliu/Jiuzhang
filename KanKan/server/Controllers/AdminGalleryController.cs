@@ -30,13 +30,9 @@ public class AdminGalleryController : ControllerBase
     private readonly IFamilyTreeRepository _familyTreeRepository;
     private readonly IFamilyTreeVisibilityRepository _familyTreeVisibilityRepository;
     private readonly IFamilyPersonRepository _familyPersonRepository;
-    private readonly IFamilySectionRepository _familySectionRepository;
-    private readonly IFamilyPageRepository _familyPageRepository;
     private readonly INotebookRepository _notebookRepository;
-    private readonly INotebookVisibilityRepository _notebookVisibilityRepository;
     private readonly INotebookSectionRepository _notebookSectionRepository;
     private readonly INotebookPageRepository _notebookPageRepository;
-    private readonly IConfiguration _configuration;
     private readonly IAccessConfigService _accessConfig;
     private readonly IWebHostEnvironment _environment;
     private readonly IMongoCollection<Message> _messages;
@@ -50,10 +46,7 @@ public class AdminGalleryController : ControllerBase
         IFamilyTreeRepository familyTreeRepository,
         IFamilyTreeVisibilityRepository familyTreeVisibilityRepository,
         IFamilyPersonRepository familyPersonRepository,
-        IFamilySectionRepository familySectionRepository,
-        IFamilyPageRepository familyPageRepository,
         INotebookRepository notebookRepository,
-        INotebookVisibilityRepository notebookVisibilityRepository,
         INotebookSectionRepository notebookSectionRepository,
         INotebookPageRepository notebookPageRepository,
         IConfiguration configuration,
@@ -68,13 +61,9 @@ public class AdminGalleryController : ControllerBase
         _familyTreeRepository = familyTreeRepository;
         _familyTreeVisibilityRepository = familyTreeVisibilityRepository;
         _familyPersonRepository = familyPersonRepository;
-        _familySectionRepository = familySectionRepository;
-        _familyPageRepository = familyPageRepository;
         _notebookRepository = notebookRepository;
-        _notebookVisibilityRepository = notebookVisibilityRepository;
         _notebookSectionRepository = notebookSectionRepository;
         _notebookPageRepository = notebookPageRepository;
-        _configuration = configuration;
         _accessConfig = accessConfig;
         _environment = environment;
 
@@ -250,13 +239,6 @@ public class AdminGalleryController : ControllerBase
                 urls.Add(person.AvatarUrl);
                 urls.AddRange(person.Photos.Select(photo => photo.Url));
             }
-
-            var sections = await _familySectionRepository.GetByTreeIdAsync(tree.Id);
-            foreach (var section in sections)
-            {
-                var pages = await _familyPageRepository.GetBySectionIdAsync(section.Id);
-                urls.AddRange(pages.SelectMany(page => ExtractPageElementImageUrls(page.Elements)));
-            }
         }
 
         return urls;
@@ -302,7 +284,9 @@ public class AdminGalleryController : ControllerBase
     private async Task<IEnumerable<string?>> GetNotebookImageUrlsAsync(User user)
     {
         var urls = new List<string?>();
-        var notebooks = await GetVisibleNotebooksAsync(user);
+        var notebooks = (await _notebookRepository.GetByOwnerIdAsync(user.Id))
+            .Where(notebook => string.IsNullOrWhiteSpace(notebook.LinkedTreeId))
+            .ToList();
 
         foreach (var notebook in notebooks)
         {
@@ -315,40 +299,6 @@ public class AdminGalleryController : ControllerBase
         }
 
         return urls;
-    }
-
-    private async Task<List<Notebook>> GetVisibleNotebooksAsync(User user)
-    {
-        var notebooksById = new Dictionary<string, Notebook>(StringComparer.Ordinal);
-
-        foreach (var notebook in await _notebookRepository.GetByOwnerIdAsync(user.Id))
-        {
-            notebooksById[notebook.Id] = notebook;
-        }
-
-        var explicitVisibilities = new List<NotebookVisibility>();
-        explicitVisibilities.AddRange(await _notebookVisibilityRepository.GetByEmailAsync(FamilyAccessPolicy.NormalizeEmail(user.Email)));
-        var userDomain = FamilyAccessPolicy.ResolveDomain(user);
-        if (!string.IsNullOrWhiteSpace(userDomain))
-        {
-            explicitVisibilities.AddRange(await _notebookVisibilityRepository.GetByDomainAsync(userDomain));
-        }
-
-        foreach (var visibility in explicitVisibilities)
-        {
-            if (notebooksById.ContainsKey(visibility.NotebookId))
-            {
-                continue;
-            }
-
-            var notebook = await _notebookRepository.GetByIdAsync(visibility.NotebookId);
-            if (notebook != null && NotebookAccessPolicy.CanViewNotebook(_configuration, user, notebook, visibility))
-            {
-                notebooksById[notebook.Id] = notebook;
-            }
-        }
-
-        return notebooksById.Values.ToList();
     }
 
     private static void AddUrls(HashSet<string> urls, IEnumerable<string?> values)
