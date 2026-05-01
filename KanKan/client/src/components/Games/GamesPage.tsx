@@ -768,13 +768,29 @@ const SudokuGame: React.FC = () => {
     currentSudokuStateRef.current = buildSudokuState(overrides);
   }, [buildSudokuState]);
 
+  const persistCurrentSudokuState = useCallback(() => {
+    if (currentSudokuStateRef.current) writeSudokuState(currentSudokuStateRef.current);
+  }, []);
+
   useEffect(() => {
     rememberSudokuState();
   }, [rememberSudokuState]);
 
-  useEffect(() => () => {
-    if (currentSudokuStateRef.current) writeSudokuState(currentSudokuStateRef.current);
-  }, []);
+  useEffect(() => () => persistCurrentSudokuState(), [persistCurrentSudokuState]);
+
+  useEffect(() => {
+    const handlePageHide = () => persistCurrentSudokuState();
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') persistCurrentSudokuState();
+    };
+
+    window.addEventListener('pagehide', handlePageHide);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      window.removeEventListener('pagehide', handlePageHide);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [persistCurrentSudokuState]);
 
   const setCell = (value: number) => {
     if (selected == null || givens[selected]) return;
