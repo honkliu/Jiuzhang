@@ -136,8 +136,34 @@ class AuthService {
   }
 
   clearAuth(): void {
+    this.clearSessionState();
     localStorage.removeItem('accessToken');
     localStorage.removeItem('user');
+  }
+
+  private clearSessionState(): void {
+    const exactKeys = new Set([
+      'kankan.games.activeTab',
+      'kankan.games.sudokuState.v1',
+      'kankan.notebookPageState',
+      'kankan.chat.layoutState',
+    ]);
+    const prefixes = [
+      'kankan.notebook.editorState:',
+      'kankan.notebook.pageDraft:',
+      'kankan.chat.layoutState:',
+      'kankan.chat.inputDraft:',
+      'kankan.chat.2d:',
+      'kankan.chat.3d:',
+    ];
+
+    for (let index = localStorage.length - 1; index >= 0; index -= 1) {
+      const key = localStorage.key(index);
+      if (!key) continue;
+      if (exactKeys.has(key) || prefixes.some((prefix) => key.startsWith(prefix))) {
+        localStorage.removeItem(key);
+      }
+    }
   }
 
   private handleError(error: unknown): ApiError {

@@ -626,6 +626,8 @@ const candidatesFor = (grid: number[], index: number) => {
   return getSudokuCandidates(grid, index);
 };
 
+const getSudokuGivens = (difficulty: SudokuDifficulty, puzzleIndex: number) => SUDOKU_BANK[difficulty][puzzleIndex].puzzle.split('').map((value) => Number(value));
+
 const createEmptySudokuNotes = () => Array.from({ length: 81 }, () => [] as number[]);
 
 const isSudokuDifficulty = (value: unknown): value is SudokuDifficulty => value === 'easy' || value === 'advanced' || value === 'expert';
@@ -735,11 +737,11 @@ const checkSudokuGrid = (grid: number[]): SudokuCheckResult => {
 
 const SudokuGame: React.FC = () => {
   const restoredState = useMemo(() => readSudokuState(), []);
-  const skipInitialPuzzleResetRef = useRef(true);
+  const currentSudokuStateRef = useRef<SavedSudokuState | null>(restoredState);
   const [difficulty, setDifficulty] = useState<SudokuDifficulty>(() => restoredState?.difficulty ?? 'easy');
   const [puzzleIndex, setPuzzleIndex] = useState(() => restoredState?.puzzleIndex ?? 0);
   const puzzle = SUDOKU_BANK[difficulty][puzzleIndex];
-  const givens = useMemo(() => puzzle.puzzle.split('').map((value) => Number(value)), [puzzle]);
+  const givens = useMemo(() => getSudokuGivens(difficulty, puzzleIndex), [difficulty, puzzleIndex]);
   const [grid, setGrid] = useState<number[]>(() => restoredState?.grid ?? givens);
   const [notes, setNotes] = useState<number[][]>(() => restoredState?.notes ?? createEmptySudokuNotes());
   const [selected, setSelected] = useState<number | null>(() => restoredState?.selected ?? null);
@@ -747,75 +749,109 @@ const SudokuGame: React.FC = () => {
   const [pencilMode, setPencilMode] = useState(() => restoredState?.pencilMode ?? false);
   const [checkResult, setCheckResult] = useState<SudokuCheckResult | null>(() => restoredState?.checkResult ?? null);
 
-  useEffect(() => {
-    if (skipInitialPuzzleResetRef.current) {
-      skipInitialPuzzleResetRef.current = false;
-      return;
-    }
-    setGrid(givens);
-    setNotes(createEmptySudokuNotes());
-    setSelected(null);
-    setCheckResult(null);
-  }, [givens]);
+  const buildSudokuState = useCallback((overrides: Partial<SavedSudokuState> = {}) => ({
+    version: 1,
+    difficulty,
+    puzzleIndex,
+    puzzleId: puzzle.id,
+    grid,
+    notes,
+    selected,
+    hintMode,
+    pencilMode,
+    checkResult,
+    updatedAt: new Date().toISOString(),
+    ...overrides,
+  } satisfies SavedSudokuState), [difficulty, puzzleIndex, puzzle.id, grid, notes, selected, hintMode, pencilMode, checkResult]);
+
+  const rememberSudokuState = useCallback((overrides: Partial<SavedSudokuState> = {}) => {
+    currentSudokuStateRef.current = buildSudokuState(overrides);
+  }, [buildSudokuState]);
 
   useEffect(() => {
-    writeSudokuState({
-      version: 1,
-      difficulty,
-      puzzleIndex,
-      puzzleId: puzzle.id,
-      grid,
-      notes,
-      selected,
-      hintMode,
-      pencilMode,
-      checkResult,
-      updatedAt: new Date().toISOString(),
-    });
-  }, [difficulty, puzzleIndex, puzzle.id, grid, notes, selected, hintMode, pencilMode, checkResult]);
+    rememberSudokuState();
+  }, [rememberSudokuState]);
+
+  useEffect(() => () => {
+    if (currentSudokuStateRef.current) writeSudokuState(currentSudokuStateRef.current);
+  }, []);
 
   const setCell = (value: number) => {
     if (selected == null || givens[selected]) return;
     if (pencilMode) {
       if (grid[selected]) return;
-      setNotes((prev) => {
-        const next = prev.map((item) => [...item]);
-        next[selected] = next[selected].includes(value)
-          ? next[selected].filter((item) => item !== value)
-          : [...next[selected], value].sort((left, right) => left - right);
-        return next;
-      });
+      const nextNotes = notes.map((item) => [...item]);
+      nextNotes[selected] = nextNotes[selected].includes(value)
+        ? nextNotes[selected].filter((item) => item !== value)
+        : [...nextNotes[selected], value].sort((left, right) => left - right);
+      rememberSudokuState({ notes: nextNotes });
+      setNotes(nextNotes);
       return;
     }
 
-    setGrid((prev) => {
-      const next = [...prev];
-      next[selected] = next[selected] === value ? 0 : value;
-      return next;
-    });
+    const nextGrid = [...grid];
+    nextGrid[selected] = nextGrid[selected] === value ? 0 : value;
+    const nextNotes = notes.map((item) => [...item]);
+    nextNotes[selected] = [];
+    rememberSudokuState({ grid: nextGrid, notes: nextNotes, checkResult: null });
+    setGrid(nextGrid);
     setCheckResult(null);
-    setNotes((prev) => {
-      const next = prev.map((item) => [...item]);
-      next[selected] = [];
-      return next;
-    });
+    setNotes(nextNotes);
   };
 
   const resetPuzzle = () => {
+    const nextNotes = createEmptySudokuNotes();
+    rememberSudokuState({ grid: givens, notes: nextNotes, checkResult: null });
     setGrid(givens);
-    setNotes(createEmptySudokuNotes());
+    setNotes(nextNotes);
     setCheckResult(null);
   };
 
   const checkPuzzle = () => {
-    setCheckResult(checkSudokuGrid(grid));
+    const nextCheckResult = checkSudokuGrid(grid);
+    rememberSudokuState({ checkResult: nextCheckResult });
+    setCheckResult(nextCheckResult);
   };
 
   const selectedValue = selected != null ? grid[selected] || givens[selected] : 0;
   const selectedNotes = selected != null ? notes[selected] ?? [] : [];
 
-  const previousPuzzle = () => setPuzzleIndex((value) => (value - 1 + SUDOKU_BANK[difficulty].length) % SUDOKU_BANK[difficulty].length);
-  const nextPuzzle = () => setPuzzleIndex((value) => (value + 1) % SUDOKU_BANK[difficulty].length);
+  const switchPuzzle = (nextDifficulty: SudokuDifficulty, nextPuzzleIndex: number) => {
+    const nextGrid = getSudokuGivens(nextDifficulty, nextPuzzleIndex);
+    const nextNotes = createEmptySudokuNotes();
+    rememberSudokuState({
+      difficulty: nextDifficulty,
+      puzzleIndex: nextPuzzleIndex,
+      puzzleId: SUDOKU_BANK[nextDifficulty][nextPuzzleIndex].id,
+      grid: nextGrid,
+      notes: nextNotes,
+      selected: null,
+      checkResult: null,
+    });
+    setDifficulty(nextDifficulty);
+    setPuzzleIndex(nextPuzzleIndex);
+    setGrid(nextGrid);
+    setNotes(nextNotes);
+    setSelected(null);
+    setCheckResult(null);
+  };
+  const previousPuzzle = () => switchPuzzle(difficulty, (puzzleIndex - 1 + SUDOKU_BANK[difficulty].length) % SUDOKU_BANK[difficulty].length);
+  const nextPuzzle = () => switchPuzzle(difficulty, (puzzleIndex + 1) % SUDOKU_BANK[difficulty].length);
+  const changeDifficulty = (nextDifficulty: SudokuDifficulty) => switchPuzzle(nextDifficulty, 0);
+  const selectCell = (index: number) => {
+    rememberSudokuState({ selected: index });
+    setSelected(index);
+  };
+  const togglePencilMode = () => {
+    const nextPencilMode = !pencilMode;
+    rememberSudokuState({ pencilMode: nextPencilMode });
+    setPencilMode(nextPencilMode);
+  };
+  const toggleHintMode = () => {
+    const nextHintMode = !hintMode;
+    rememberSudokuState({ hintMode: nextHintMode });
+    setHintMode(nextHintMode);
+  };
   const keypadButtonSx: SxProps<Theme> = {
     minWidth: 0,
     height: { xs: 46, sm: 50 },
@@ -868,7 +904,7 @@ const SudokuGame: React.FC = () => {
                     return (
                       <Button
                         key={index}
-                        onClick={() => setSelected(index)}
+                        onClick={() => selectCell(index)}
                         sx={{
                           minWidth: 0,
                           minHeight: 0,
@@ -908,8 +944,8 @@ const SudokuGame: React.FC = () => {
               </Button>
             ))}
             <Button color="success" variant="outlined" onClick={checkPuzzle} sx={{ ...keypadButtonSx, fontWeight: 800 }}>检查</Button>
-            <Button variant={pencilMode ? 'contained' : 'outlined'} onClick={() => setPencilMode((value) => !value)} sx={{ ...keypadButtonSx, fontWeight: 800, color: pencilMode ? '#fff' : '#1565c0', borderColor: '#1565c0', bgcolor: pencilMode ? '#1565c0' : undefined, '&:hover': { boxShadow: 'none', borderColor: '#0d47a1', bgcolor: pencilMode ? '#0d47a1' : 'rgba(21,101,192,0.08)' } }}>铅笔</Button>
-            <Button variant={hintMode ? 'contained' : 'outlined'} onClick={() => setHintMode((value) => !value)} sx={{ ...keypadButtonSx, fontWeight: 800, color: hintMode ? '#fff' : '#6d6d6d', borderColor: '#8a8a8a', bgcolor: hintMode ? '#757575' : undefined, '&:hover': { boxShadow: 'none', borderColor: '#616161', bgcolor: hintMode ? '#616161' : 'rgba(97,97,97,0.08)' } }}>提示</Button>
+            <Button variant={pencilMode ? 'contained' : 'outlined'} onClick={togglePencilMode} sx={{ ...keypadButtonSx, fontWeight: 800, color: pencilMode ? '#fff' : '#1565c0', borderColor: '#1565c0', bgcolor: pencilMode ? '#1565c0' : undefined, '&:hover': { boxShadow: 'none', borderColor: '#0d47a1', bgcolor: pencilMode ? '#0d47a1' : 'rgba(21,101,192,0.08)' } }}>铅笔</Button>
+            <Button variant={hintMode ? 'contained' : 'outlined'} onClick={toggleHintMode} sx={{ ...keypadButtonSx, fontWeight: 800, color: hintMode ? '#fff' : '#6d6d6d', borderColor: '#8a8a8a', bgcolor: hintMode ? '#757575' : undefined, '&:hover': { boxShadow: 'none', borderColor: '#616161', bgcolor: hintMode ? '#616161' : 'rgba(97,97,97,0.08)' } }}>提示</Button>
           </BoxAny>
         </Card>
       </Grid>
@@ -927,9 +963,9 @@ const SudokuGame: React.FC = () => {
           <Card><CardContent>
             <Typography fontWeight={800} sx={{ mb: 1 }}>难度</Typography>
             <ButtonGroup fullWidth>
-              <Button variant={difficulty === 'easy' ? 'contained' : 'outlined'} onClick={() => { setDifficulty('easy'); setPuzzleIndex(0); }}>Easy</Button>
-              <Button variant={difficulty === 'advanced' ? 'contained' : 'outlined'} onClick={() => { setDifficulty('advanced'); setPuzzleIndex(0); }}>进阶</Button>
-              <Button variant={difficulty === 'expert' ? 'contained' : 'outlined'} onClick={() => { setDifficulty('expert'); setPuzzleIndex(0); }}>专家</Button>
+              <Button variant={difficulty === 'easy' ? 'contained' : 'outlined'} onClick={() => changeDifficulty('easy')}>Easy</Button>
+              <Button variant={difficulty === 'advanced' ? 'contained' : 'outlined'} onClick={() => changeDifficulty('advanced')}>进阶</Button>
+              <Button variant={difficulty === 'expert' ? 'contained' : 'outlined'} onClick={() => changeDifficulty('expert')}>专家</Button>
             </ButtonGroup>
             <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
               <Button startIcon={<CasinoIcon />} onClick={previousPuzzle}>上一题</Button>
@@ -970,7 +1006,10 @@ export const GamesPage: React.FC = () => {
               <Tab label="数独" sx={{ minHeight: 36, py: 0, px: 1, textTransform: 'none' }} />
             </Tabs>
           </Paper>
-          {tab === 0 ? <TetrisGame /> : <SudokuGame />}
+          {tab === 0 ? <TetrisGame /> : null}
+          <BoxAny sx={{ display: tab === 1 ? 'block' : 'none' }}>
+            <SudokuGame />
+          </BoxAny>
         </Container>
       </BoxAny>
     </>
