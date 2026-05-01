@@ -680,6 +680,7 @@ const readSudokuState = (): SavedSudokuState | null => {
 
 const writeSudokuState = (state: SavedSudokuState) => {
   try {
+    if (!window.localStorage.getItem('accessToken')) return;
     window.localStorage.setItem(SUDOKU_STATE_STORAGE_KEY, JSON.stringify(state));
   } catch {}
 };

@@ -136,9 +136,9 @@ class AuthService {
   }
 
   clearAuth(): void {
-    this.clearSessionState();
     localStorage.removeItem('accessToken');
     localStorage.removeItem('user');
+    this.clearSessionState();
   }
 
   private clearSessionState(): void {
