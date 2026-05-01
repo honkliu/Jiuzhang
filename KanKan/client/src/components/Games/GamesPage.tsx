@@ -25,6 +25,8 @@ import { AppHeader } from '@/components/Shared/AppHeader';
 
 const BoxAny = Box as any;
 
+const ancientPaperBackground = 'linear-gradient(180deg, rgba(140,100,60,0.05) 0%, rgba(140,100,60,0.1) 100%)';
+
 type Cell = string | null;
 type TetrominoName = 'I' | 'J' | 'L' | 'O' | 'S' | 'T' | 'Z';
 type Tetromino = { name: TetrominoName; matrix: number[][]; color: string; dust: string };
@@ -36,6 +38,11 @@ type SudokuDifficulty = 'easy' | 'advanced' | 'expert';
 type SudokuPuzzle = {
   id: string;
   puzzle: string;
+};
+
+type SudokuCheckResult = {
+  severity: 'success' | 'warning' | 'error';
+  message: string;
 };
 
 const BOARD_WIDTH = 10;
@@ -261,37 +268,6 @@ function getSudokuCandidates(grid: number[], index: number) {
     }
   }
   return Array.from({ length: 9 }, (_, candidateIndex) => candidateIndex + 1).filter((candidate) => !used.has(candidate));
-}
-
-function solveSudokuString(puzzle: string) {
-  const grid = puzzle.split('').map((item) => Number(item));
-  const findBestEmpty = () => {
-    let bestIndex = -1;
-    let bestCandidates: number[] | null = null;
-    for (let cellIndex = 0; cellIndex < grid.length; cellIndex += 1) {
-      if (grid[cellIndex]) continue;
-      const candidates = getSudokuCandidates(grid, cellIndex);
-      if (candidates.length === 0) return { index: cellIndex, candidates };
-      if (!bestCandidates || candidates.length < bestCandidates.length) {
-        bestIndex = cellIndex;
-        bestCandidates = candidates;
-        if (candidates.length === 1) break;
-      }
-    }
-    return bestIndex < 0 ? null : { index: bestIndex, candidates: bestCandidates ?? [] };
-  };
-  const solve = (): boolean => {
-    const next = findBestEmpty();
-    if (!next) return true;
-    if (next.candidates.length === 0) return false;
-    for (const value of next.candidates) {
-      grid[next.index] = value;
-      if (solve()) return true;
-      grid[next.index] = 0;
-    }
-    return false;
-  };
-  return solve() ? grid.join('') : puzzle;
 }
 
 const TetrisGame: React.FC = () => {
@@ -634,6 +610,42 @@ const candidatesFor = (grid: number[], index: number) => {
 
 const createEmptySudokuNotes = () => Array.from({ length: 81 }, () => [] as number[]);
 
+const checkSudokuGrid = (grid: number[]): SudokuCheckResult => {
+  const units: Array<{ label: string; values: number[] }> = [];
+
+  for (let row = 0; row < 9; row += 1) {
+    units.push({ label: `第 ${row + 1} 行`, values: Array.from({ length: 9 }, (_, col) => grid[row * 9 + col]) });
+  }
+  for (let col = 0; col < 9; col += 1) {
+    units.push({ label: `第 ${col + 1} 列`, values: Array.from({ length: 9 }, (_, row) => grid[row * 9 + col]) });
+  }
+  for (let boxRow = 0; boxRow < 3; boxRow += 1) {
+    for (let boxCol = 0; boxCol < 3; boxCol += 1) {
+      units.push({
+        label: `第 ${boxRow * 3 + boxCol + 1} 宫`,
+        values: Array.from({ length: 9 }, (_, index) => {
+          const row = boxRow * 3 + Math.floor(index / 3);
+          const col = boxCol * 3 + (index % 3);
+          return grid[row * 9 + col];
+        }),
+      });
+    }
+  }
+
+  for (const unit of units) {
+    const filledValues = unit.values.filter(Boolean);
+    if (new Set(filledValues).size !== filledValues.length) {
+      return { severity: 'error', message: `${unit.label} 有重复数字。` };
+    }
+  }
+
+  if (grid.some((value) => value === 0)) {
+    return { severity: 'warning', message: '还没填完；目前行、列和 3x3 宫没有重复冲突。' };
+  }
+
+  return { severity: 'success', message: '检查通过：每行、每列和每个 3x3 宫都满足 1-9。' };
+};
+
 const SudokuGame: React.FC = () => {
   const [difficulty, setDifficulty] = useState<SudokuDifficulty>('easy');
   const [puzzleIndex, setPuzzleIndex] = useState(0);
@@ -642,16 +654,15 @@ const SudokuGame: React.FC = () => {
   const [grid, setGrid] = useState<number[]>(() => givens);
   const [notes, setNotes] = useState<number[][]>(() => createEmptySudokuNotes());
   const [selected, setSelected] = useState<number | null>(null);
-  const [hintMode, setHintMode] = useState(true);
+  const [hintMode, setHintMode] = useState(false);
   const [pencilMode, setPencilMode] = useState(false);
-  const [mistakes, setMistakes] = useState(0);
-  const solution = useMemo(() => solveSudokuString(puzzle.puzzle), [puzzle.puzzle]);
+  const [checkResult, setCheckResult] = useState<SudokuCheckResult | null>(null);
 
   useEffect(() => {
     setGrid(givens);
     setNotes(createEmptySudokuNotes());
     setSelected(null);
-    setMistakes(0);
+    setCheckResult(null);
   }, [givens]);
 
   const setCell = (value: number) => {
@@ -673,20 +684,7 @@ const SudokuGame: React.FC = () => {
       next[selected] = next[selected] === value ? 0 : value;
       return next;
     });
-    setNotes((prev) => {
-      const next = prev.map((item) => [...item]);
-      next[selected] = [];
-      return next;
-    });
-  };
-
-  const clearCell = () => {
-    if (selected == null || givens[selected]) return;
-    setGrid((prev) => {
-      const next = [...prev];
-      next[selected] = 0;
-      return next;
-    });
+    setCheckResult(null);
     setNotes((prev) => {
       const next = prev.map((item) => [...item]);
       next[selected] = [];
@@ -697,16 +695,15 @@ const SudokuGame: React.FC = () => {
   const resetPuzzle = () => {
     setGrid(givens);
     setNotes(createEmptySudokuNotes());
+    setCheckResult(null);
   };
 
-  const completed = grid.every((value, index) => value === Number(solution[index]));
+  const checkPuzzle = () => {
+    setCheckResult(checkSudokuGrid(grid));
+  };
+
   const selectedValue = selected != null ? grid[selected] || givens[selected] : 0;
   const selectedNotes = selected != null ? notes[selected] ?? [] : [];
-
-  useEffect(() => {
-    if (selected == null || !grid[selected]) return;
-    if (grid[selected] !== Number(solution[selected])) setMistakes((value) => value + 1);
-  }, [grid, solution, selected]);
 
   const previousPuzzle = () => setPuzzleIndex((value) => (value - 1 + SUDOKU_BANK[difficulty].length) % SUDOKU_BANK[difficulty].length);
   const nextPuzzle = () => setPuzzleIndex((value) => (value + 1) % SUDOKU_BANK[difficulty].length);
@@ -714,39 +711,64 @@ const SudokuGame: React.FC = () => {
   return (
     <Grid container spacing={2.2}>
       <Grid item xs={12} md={7}>
-        <Card sx={{ p: { xs: 1, md: 2 }, borderRadius: '10px', background: 'linear-gradient(145deg, rgba(255,255,255,0.92), rgba(242,248,255,0.78))' }}>
-          <BoxAny sx={{ mx: 'auto', maxWidth: 560, display: 'grid', gridTemplateColumns: 'repeat(9, 1fr)', border: '3px solid #172033', borderRadius: 0, overflow: 'hidden', boxShadow: '0 24px 70px rgba(15,23,42,0.18)' }}>
-            {grid.map((value, index) => {
-              const row = Math.floor(index / 9);
-              const col = index % 9;
-              const fixed = Boolean(givens[index]);
-              const isSelected = selected === index;
-              const related = selected != null && (Math.floor(selected / 9) === row || selected % 9 === col || (Math.floor(Math.floor(selected / 9) / 3) === Math.floor(row / 3) && Math.floor((selected % 9) / 3) === Math.floor(col / 3)));
-              const wrong = value !== 0 && value !== Number(solution[index]);
-              const noteValues = notes[index] ?? [];
-              const cands = noteValues.length > 0 ? noteValues : hintMode ? candidatesFor(grid, index) : [];
-              const showingPencilNotes = noteValues.length > 0;
+        <Card sx={{ p: { xs: 1, md: 2 }, borderRadius: '10px', backgroundColor: '#f2ead8', backgroundImage: ancientPaperBackground }}>
+          <BoxAny sx={{ mx: 'auto', maxWidth: 560, aspectRatio: '1', display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gridTemplateRows: 'repeat(3, minmax(0, 1fr))', border: '3px solid #172033', borderRadius: 0, overflow: 'hidden', boxShadow: '0 24px 70px rgba(15,23,42,0.18)', bgcolor: '#172033' }}>
+            {Array.from({ length: 9 }, (_, boxIndex) => {
+              const boxRow = Math.floor(boxIndex / 3);
+              const boxCol = boxIndex % 3;
               return (
-                <Button
-                  key={index}
-                  onClick={() => setSelected(index)}
+                <BoxAny
+                  key={boxIndex}
                   sx={{
-                    aspectRatio: '1', minWidth: 0, borderRadius: 0, p: 0.25,
-                    borderRight: col === 2 || col === 5 ? '3px solid #172033' : '1px solid rgba(23,32,51,0.16)',
-                    borderBottom: row === 2 || row === 5 ? '3px solid #172033' : '1px solid rgba(23,32,51,0.16)',
-                    bgcolor: isSelected ? '#9bd8ff' : related ? '#d8ecff' : '#fffdf8',
-                    color: wrong ? '#d32f2f' : fixed ? '#182033' : '#1976d2',
-                    fontWeight: fixed ? 900 : 700,
-                    fontSize: { xs: 21, sm: 30 },
-                    '&:hover': { bgcolor: isSelected ? '#8fd0f8' : '#cfe8ff' },
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                    gridTemplateRows: 'repeat(3, minmax(0, 1fr))',
+                    gap: '1px',
+                    bgcolor: 'rgba(23,32,51,0.18)',
+                    borderRight: boxCol < 2 ? '3px solid #172033' : 0,
+                    borderBottom: boxRow < 2 ? '3px solid #172033' : 0,
+                    boxSizing: 'border-box',
                   }}
                 >
-                  {value ? value : cands.length > 0 ? (
-                    <BoxAny sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', width: '86%', height: '86%', color: showingPencilNotes ? '#1565c0' : 'rgba(20,40,70,0.38)', fontFamily: '"Comic Sans MS", "Segoe Print", cursive', fontSize: { xs: 8.5, sm: 12.5 }, fontWeight: showingPencilNotes ? 900 : 700, lineHeight: 1.1 }}>
-                      {Array.from({ length: 9 }, (_, i) => <BoxAny key={i} sx={{ display: 'grid', placeItems: 'center' }}>{cands.includes(i + 1) ? i + 1 : ''}</BoxAny>)}
-                    </BoxAny>
-                  ) : ''}
-                </Button>
+                  {Array.from({ length: 9 }, (_, cellInBox) => {
+                    const row = boxRow * 3 + Math.floor(cellInBox / 3);
+                    const col = boxCol * 3 + (cellInBox % 3);
+                    const index = row * 9 + col;
+                    const value = grid[index];
+                    const fixed = Boolean(givens[index]);
+                    const isSelected = selected === index;
+                    const related = selected != null && (Math.floor(selected / 9) === row || selected % 9 === col || (Math.floor(Math.floor(selected / 9) / 3) === Math.floor(row / 3) && Math.floor((selected % 9) / 3) === Math.floor(col / 3)));
+                    const noteValues = notes[index] ?? [];
+                    const cands = noteValues.length > 0 ? noteValues : hintMode ? candidatesFor(grid, index) : [];
+                    const showingPencilNotes = noteValues.length > 0;
+                    return (
+                      <Button
+                        key={index}
+                        onClick={() => setSelected(index)}
+                        sx={{
+                          minWidth: 0,
+                          minHeight: 0,
+                          borderRadius: 0,
+                          border: 0,
+                          p: 0.25,
+                          boxSizing: 'border-box',
+                          backgroundColor: isSelected ? '#e7cfa2' : related ? '#f0dfbd' : '#f2ead8',
+                          backgroundImage: ancientPaperBackground,
+                          color: fixed ? '#3f2b17' : '#7c3f1d',
+                          fontWeight: fixed ? 900 : 700,
+                          fontSize: { xs: 21, sm: 30 },
+                          '&:hover': { backgroundColor: isSelected ? '#dfc391' : '#ead6ad' },
+                        }}
+                      >
+                        {value ? value : cands.length > 0 ? (
+                          <BoxAny sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', width: '86%', height: '86%', color: showingPencilNotes ? '#1565c0' : 'rgba(20,40,70,0.38)', fontFamily: '"Comic Sans MS", "Segoe Print", cursive', fontSize: { xs: 8.5, sm: 12.5 }, fontWeight: showingPencilNotes ? 900 : 700, lineHeight: 1.1 }}>
+                            {Array.from({ length: 9 }, (_, i) => <BoxAny key={i} sx={{ display: 'grid', placeItems: 'center' }}>{cands.includes(i + 1) ? i + 1 : ''}</BoxAny>)}
+                          </BoxAny>
+                        ) : ''}
+                      </Button>
+                    );
+                  })}
+                </BoxAny>
               );
             })}
           </BoxAny>
@@ -761,7 +783,7 @@ const SudokuGame: React.FC = () => {
                 {index + 1}
               </Button>
             ))}
-            <Button color="error" variant="outlined" onClick={clearCell} sx={{ minWidth: 0, minHeight: { xs: 44, sm: 48 }, px: 0, fontWeight: 800 }}>清除</Button>
+            <Button color="success" variant="outlined" onClick={checkPuzzle} sx={{ minWidth: 0, minHeight: { xs: 44, sm: 48 }, px: 0, fontWeight: 800 }}>检查</Button>
             <Button variant={pencilMode ? 'contained' : 'outlined'} onClick={() => setPencilMode((value) => !value)} sx={{ minWidth: 0, minHeight: { xs: 44, sm: 48 }, px: 0, fontWeight: 800, color: pencilMode ? '#fff' : '#1565c0', borderColor: '#1565c0', bgcolor: pencilMode ? '#1565c0' : undefined, '&:hover': { borderColor: '#0d47a1', bgcolor: pencilMode ? '#0d47a1' : 'rgba(21,101,192,0.08)' } }}>铅笔</Button>
             <Button variant={hintMode ? 'contained' : 'outlined'} onClick={() => setHintMode((value) => !value)} sx={{ minWidth: 0, minHeight: { xs: 44, sm: 48 }, px: 0, fontWeight: 800, color: hintMode ? '#fff' : '#6d6d6d', borderColor: '#8a8a8a', bgcolor: hintMode ? '#757575' : undefined, '&:hover': { borderColor: '#616161', bgcolor: hintMode ? '#616161' : 'rgba(97,97,97,0.08)' } }}>提示</Button>
           </BoxAny>
@@ -773,11 +795,10 @@ const SudokuGame: React.FC = () => {
             <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
               <Chip label={difficulty === 'easy' ? 'Easy' : difficulty === 'advanced' ? '进阶' : '专家'} color="primary" />
               <Chip label={`题库 ${puzzleIndex + 1}/30`} />
-              <Chip label={`错误 ${mistakes}`} variant="outlined" />
             </Stack>
             <Typography variant="h5" sx={{ mt: 2, fontWeight: 900 }}>数独</Typography>
             <Typography color="text.secondary" sx={{ mt: 1 }}>固定数字不可修改。提示模式只按当前行、列、3x3 宫排除候选数，不做联合推理。</Typography>
-            {completed && <Alert severity="success" sx={{ mt: 2 }}>完成！这局数独已正确解出。</Alert>}
+            {checkResult && <Alert severity={checkResult.severity} sx={{ mt: 2 }}>{checkResult.message}</Alert>}
           </CardContent></Card>
           <Card><CardContent>
             <Typography fontWeight={800} sx={{ mb: 1 }}>难度</Typography>
