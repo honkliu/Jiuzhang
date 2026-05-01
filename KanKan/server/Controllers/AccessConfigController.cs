@@ -111,10 +111,14 @@ public class AccessConfigController : ControllerBase
 
     private async Task<AccessConfigResponseDto> BuildResponseAsync(AccessConfigSnapshot snapshot, User currentUser)
     {
-        var config = ToDto(snapshot);
+        var canManageGlobalAccess = CanManageGlobalAccess(currentUser);
+        var scopedDomains = canManageGlobalAccess
+            ? null
+            : BuildScopedFamilyDomains(snapshot, currentUser);
+        var config = canManageGlobalAccess ? ToDto(snapshot) : ToScopedDto(snapshot, scopedDomains!);
         var adminEmails = snapshot.GetAdminEmails();
         var enabledFamilyDomains = snapshot.GetEnabledFamilyTreeDomains();
-        var warnings = BuildWarnings(snapshot, adminEmails, enabledFamilyDomains);
+        var warnings = BuildWarnings(snapshot, adminEmails, enabledFamilyDomains, scopedDomains);
 
         var domains = new HashSet<string>(enabledFamilyDomains, StringComparer.OrdinalIgnoreCase);
         foreach (var rule in snapshot.DomainVisibilityRules)
@@ -125,6 +129,10 @@ public class AccessConfigController : ControllerBase
         foreach (var manager in snapshot.FamilyTreeManagers)
         {
             domains.Add(manager.Domain);
+        }
+        if (scopedDomains != null)
+        {
+            domains.IntersectWith(scopedDomains);
         }
 
         var familyTreeDomains = new List<FamilyTreeDomainPermissionDto>();
@@ -145,8 +153,8 @@ public class AccessConfigController : ControllerBase
             });
         }
 
-        var familyUsers = await BuildUserRowsAsync(snapshot, currentUser, adminEmails);
-        var visibilityPreview = BuildDomainVisibilityPreview(snapshot);
+        var familyUsers = await BuildUserRowsAsync(snapshot, currentUser, adminEmails, scopedDomains);
+        var visibilityPreview = canManageGlobalAccess ? BuildDomainVisibilityPreview(snapshot) : new List<DomainVisibilityPreviewDto>();
 
         return new AccessConfigResponseDto
         {
@@ -158,10 +166,53 @@ public class AccessConfigController : ControllerBase
         };
     }
 
+    private static HashSet<string> BuildScopedFamilyDomains(AccessConfigSnapshot snapshot, User currentUser)
+    {
+        var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var enabledDomains = snapshot.GetEnabledFamilyTreeDomains();
+        var currentDomain = FamilyAccessPolicy.ResolveDomain(currentUser);
+
+        foreach (var domain in enabledDomains)
+        {
+            if (CanSeeDomainFromSnapshot(snapshot, currentDomain, domain))
+            {
+                result.Add(domain);
+            }
+        }
+
+        foreach (var domain in FamilyAccessPolicy.GetEditableDomains(snapshot, currentUser))
+        {
+            result.Add(domain);
+        }
+
+        return result;
+    }
+
+    private static bool CanSeeDomainFromSnapshot(AccessConfigSnapshot snapshot, string viewerDomain, string targetDomain)
+    {
+        var viewer = AccessConfigSnapshot.NormalizeDomain(viewerDomain);
+        var target = AccessConfigSnapshot.NormalizeDomain(targetDomain);
+        if (viewer.Length == 0 || target.Length == 0) return false;
+        if (string.Equals(viewer, target, StringComparison.OrdinalIgnoreCase)) return true;
+
+        return snapshot.DomainVisibilityRules.Any(row =>
+                {
+                        if (!row.Enabled) return false;
+
+                        var source = AccessConfigSnapshot.NormalizeDomain(row.SourceDomain);
+                        var ruleTarget = AccessConfigSnapshot.NormalizeDomain(row.TargetDomain);
+                        return (string.Equals(source, viewer, StringComparison.OrdinalIgnoreCase) &&
+                                        string.Equals(ruleTarget, target, StringComparison.OrdinalIgnoreCase)) ||
+                                     (string.Equals(source, target, StringComparison.OrdinalIgnoreCase) &&
+                                        string.Equals(ruleTarget, viewer, StringComparison.OrdinalIgnoreCase));
+                });
+    }
+
     private async Task<List<FamilyTreeUserPermissionDto>> BuildUserRowsAsync(
         AccessConfigSnapshot snapshot,
         User currentUser,
-        HashSet<string> adminEmails)
+        HashSet<string> adminEmails,
+        HashSet<string>? scopedDomains)
     {
         var existingUsers = new Dictionary<string, User>(StringComparer.OrdinalIgnoreCase)
         {
@@ -172,8 +223,20 @@ public class AccessConfigController : ControllerBase
             currentUser.Email
         };
 
-        foreach (var email in adminEmails) subjectEmails.Add(email);
-        foreach (var manager in snapshot.FamilyTreeManagers) subjectEmails.Add(manager.AdminEmail);
+        foreach (var email in adminEmails)
+        {
+            if (scopedDomains == null || scopedDomains.Contains(AccessConfigSnapshot.NormalizeDomain(DomainRules.GetDomain(email))))
+            {
+                subjectEmails.Add(email);
+            }
+        }
+        foreach (var manager in snapshot.FamilyTreeManagers)
+        {
+            if (scopedDomains == null || scopedDomains.Contains(AccessConfigSnapshot.NormalizeDomain(manager.Domain)))
+            {
+                subjectEmails.Add(manager.AdminEmail);
+            }
+        }
 
         var enabledDomains = snapshot.GetEnabledFamilyTreeDomains();
         foreach (var user in await _userRepository.GetAllUsersAsync(string.Empty, 1000))
@@ -205,6 +268,16 @@ public class AccessConfigController : ControllerBase
                     IsAdmin = adminEmails.Contains(AccessConfigSnapshot.NormalizeEmail(email))
                 };
 
+                var managedDomains = snapshot.GetManagedDomains(email)
+                    .Where(domain => scopedDomains == null || scopedDomains.Contains(domain))
+                    .ToList();
+                var canViewDomains = FamilyAccessPolicy.GetVisibleDomains(snapshot, projectedUser)
+                    .Where(domain => scopedDomains == null || scopedDomains.Contains(domain))
+                    .ToList();
+                var canEditDomains = FamilyAccessPolicy.GetEditableDomains(snapshot, projectedUser)
+                    .Where(domain => scopedDomains == null || scopedDomains.Contains(domain))
+                    .ToList();
+
                 return new FamilyTreeUserPermissionDto
                 {
                     Email = email,
@@ -212,11 +285,12 @@ public class AccessConfigController : ControllerBase
                     UserExists = userExists,
                     IsAdmin = projectedUser.IsAdmin,
                     OwnDomainEnabled = enabledDomains.Contains(domain),
-                    ManagedDomains = snapshot.GetManagedDomains(email).ToList(),
-                    CanViewDomains = FamilyAccessPolicy.GetVisibleDomains(snapshot, projectedUser).ToList(),
-                    CanEditDomains = FamilyAccessPolicy.GetEditableDomains(snapshot, projectedUser).ToList()
+                    ManagedDomains = managedDomains,
+                    CanViewDomains = canViewDomains,
+                    CanEditDomains = canEditDomains
                 };
             })
+            .Where(row => scopedDomains == null || row.Email.Equals(currentUser.Email, StringComparison.OrdinalIgnoreCase) || row.ManagedDomains.Count > 0 || row.CanViewDomains.Count > 0 || row.CanEditDomains.Count > 0 || scopedDomains.Contains(row.Domain))
             .ToList();
     }
 
@@ -292,12 +366,17 @@ public class AccessConfigController : ControllerBase
     private static List<string> BuildWarnings(
         AccessConfigSnapshot snapshot,
         HashSet<string> adminEmails,
-        HashSet<string> enabledFamilyDomains)
+        HashSet<string> enabledFamilyDomains,
+        HashSet<string>? scopedDomains = null)
     {
         var warnings = new List<string>();
 
         foreach (var manager in snapshot.FamilyTreeManagers.Where(row => row.Enabled))
         {
+            if (scopedDomains != null && !scopedDomains.Contains(AccessConfigSnapshot.NormalizeDomain(manager.Domain)))
+            {
+                continue;
+            }
             if (!enabledFamilyDomains.Contains(manager.Domain))
             {
                 warnings.Add($"{manager.Domain} is assigned to {manager.AdminEmail}, but the family tree feature is not enabled for that domain.");
@@ -305,6 +384,25 @@ public class AccessConfigController : ControllerBase
         }
 
         return warnings;
+    }
+
+    private static AccessConfigDto ToScopedDto(AccessConfigSnapshot snapshot, HashSet<string> scopedDomains)
+    {
+        return new AccessConfigDto
+        {
+            DomainVisibilityRules = new List<DomainVisibilityRuleDto>(),
+            FeatureDomainAccess = new List<FeatureDomainAccessDto>(),
+            AdminUsers = new List<AdminUserAccessDto>(),
+            FamilyTreeManagers = snapshot.FamilyTreeManagers
+                .Where(row => scopedDomains.Contains(AccessConfigSnapshot.NormalizeDomain(row.Domain)))
+                .Select(row => new FamilyTreeManagerAccessDto
+                {
+                    AdminEmail = row.AdminEmail,
+                    Domain = row.Domain,
+                    Enabled = row.Enabled
+                })
+                .ToList()
+        };
     }
 
     private static AccessConfigDto ToDto(AccessConfigSnapshot snapshot)
