@@ -64,7 +64,63 @@ interface NotebookProps {
   canEdit: boolean;
 }
 
+type NotebookEditorState = {
+  activeSectionId: string | null;
+  activePageId: string | null;
+  zoom: number;
+  pageStyle: number;
+};
+
+type NotebookDraftState = {
+  notebookId: string;
+  pageId: string;
+  pageUpdatedAt: string;
+  blocks: PageElementDto[];
+  updatedAt: string;
+};
+
+const notebookEditorStateKey = (notebookId: string) => `kankan.notebook.editorState:${notebookId}`;
+const notebookDraftStateKey = (notebookId: string, pageId: string) => `kankan.notebook.pageDraft:${notebookId}:${pageId}`;
+
+function readNotebookEditorState(notebookId: string): NotebookEditorState | null {
+  try {
+    const raw = window.localStorage.getItem(notebookEditorStateKey(notebookId));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<NotebookEditorState>;
+    return {
+      activeSectionId: typeof parsed.activeSectionId === 'string' ? parsed.activeSectionId : null,
+      activePageId: typeof parsed.activePageId === 'string' ? parsed.activePageId : null,
+      zoom: typeof parsed.zoom === 'number' ? clamp(parsed.zoom, 0.3, 2.0) : 1.0,
+      pageStyle: typeof parsed.pageStyle === 'number' && parsed.pageStyle >= 0 && parsed.pageStyle < PAGE_STYLES.length ? parsed.pageStyle : 0,
+    };
+  } catch { return null; }
+}
+
+function writeNotebookEditorState(notebookId: string, state: NotebookEditorState) {
+  try { window.localStorage.setItem(notebookEditorStateKey(notebookId), JSON.stringify(state)); } catch {}
+}
+
+function readNotebookDraftState(notebookId: string, pageId: string, pageUpdatedAt: string): NotebookDraftState | null {
+  try {
+    const raw = window.localStorage.getItem(notebookDraftStateKey(notebookId, pageId));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<NotebookDraftState>;
+    if (parsed.notebookId !== notebookId || parsed.pageId !== pageId || parsed.pageUpdatedAt !== pageUpdatedAt) return null;
+    if (!Array.isArray(parsed.blocks)) return null;
+    return { notebookId, pageId, pageUpdatedAt, blocks: parsed.blocks, updatedAt: typeof parsed.updatedAt === 'string' ? parsed.updatedAt : new Date().toISOString() };
+  } catch { return null; }
+}
+
+function writeNotebookDraftState(state: NotebookDraftState) {
+  try { window.localStorage.setItem(notebookDraftStateKey(state.notebookId, state.pageId), JSON.stringify(state)); } catch {}
+}
+
+function clearNotebookDraftState(notebookId: string, pageId: string) {
+  try { window.localStorage.removeItem(notebookDraftStateKey(notebookId, pageId)); } catch {}
+}
+
 export const Notebook: React.FC<NotebookProps> = ({ notebookId, canEdit }) => {
+  const restoredEditorState = useMemo(() => readNotebookEditorState(notebookId), [notebookId]);
   // ── Sections ──
   const [sections, setSections] = useState<NotebookSectionDto[]>([]);
   const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
@@ -83,8 +139,8 @@ export const Notebook: React.FC<NotebookProps> = ({ notebookId, canEdit }) => {
   // ── UI ──
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [zoom, setZoom] = useState(1.0);
-  const [pageStyle, setPageStyle] = useState(0);
+  const [zoom, setZoom] = useState(() => restoredEditorState?.zoom ?? 1.0);
+  const [pageStyle, setPageStyle] = useState(() => restoredEditorState?.pageStyle ?? 0);
   const [activeTextBlockId, setActiveTextBlockId] = useState<string | null>(null);
   const canvasWrapperRef = useRef<HTMLDivElement>(null);
 
@@ -127,11 +183,12 @@ export const Notebook: React.FC<NotebookProps> = ({ notebookId, canEdit }) => {
       setLoading(false);
       if (result.length > 0) {
         const sorted = [...result].sort((a, b) => a.sortOrder - b.sortOrder);
-        setActiveSectionId(sorted[0].id);
+        const restoredSectionId = restoredEditorState?.activeSectionId;
+        setActiveSectionId(restoredSectionId && result.some((section) => section.id === restoredSectionId) ? restoredSectionId : sorted[0].id);
       }
     }).catch(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [notebookId]);
+  }, [notebookId, restoredEditorState?.activeSectionId]);
 
   // ── Load pages when section changes ──
   useEffect(() => {
@@ -142,11 +199,12 @@ export const Notebook: React.FC<NotebookProps> = ({ notebookId, canEdit }) => {
       setPageSummaries(result);
       if (result.length > 0) {
         const sorted = [...result].sort((a, b) => a.pageNumber - b.pageNumber);
-        setActivePageId(sorted[0].id);
+        const restoredPageId = restoredEditorState?.activePageId;
+        setActivePageId(restoredPageId && result.some((page) => page.id === restoredPageId) ? restoredPageId : sorted[0].id);
       } else { setActivePageId(null); setActivePage(null); }
     }).catch(() => {});
     return () => { cancelled = true; };
-  }, [notebookId, activeSectionId]);
+  }, [notebookId, activeSectionId, restoredEditorState?.activePageId]);
 
   // ── Load page content ──
   useEffect(() => {
@@ -154,13 +212,29 @@ export const Notebook: React.FC<NotebookProps> = ({ notebookId, canEdit }) => {
     let cancelled = false;
     notebookService.getPage(notebookId, activePageId).then(result => {
       if (cancelled) return;
+      const draft = readNotebookDraftState(notebookId, activePageId, result.updatedAt);
       setActivePage(result);
-      setDraftBlocks(normalizeBlocks(result.elements));
-      setDirty(false);
+      setDraftBlocks(normalizeBlocks(draft?.blocks ?? result.elements));
+      setDirty(Boolean(draft));
       setPendingImages(current => { Object.values(current).forEach(e => URL.revokeObjectURL(e.objectUrl)); return {}; });
     }).catch(() => {});
     return () => { cancelled = true; };
   }, [notebookId, activePageId]);
+
+  useEffect(() => {
+    writeNotebookEditorState(notebookId, { activeSectionId, activePageId, zoom, pageStyle });
+  }, [notebookId, activeSectionId, activePageId, zoom, pageStyle]);
+
+  useEffect(() => {
+    if (!activePageId || !activePage || !dirty) return;
+    writeNotebookDraftState({
+      notebookId,
+      pageId: activePageId,
+      pageUpdatedAt: activePage.updatedAt,
+      blocks: draftBlocks,
+      updatedAt: new Date().toISOString(),
+    });
+  }, [notebookId, activePageId, activePage, dirty, draftBlocks]);
 
   // ── Section handlers ──
   const handleAddSection = useCallback(async () => {
@@ -252,6 +326,7 @@ export const Notebook: React.FC<NotebookProps> = ({ notebookId, canEdit }) => {
       const updated = await notebookService.updatePage(notebookId, activePageId, { elements: finalBlocks });
       setActivePage(updated);
       setDirty(false);
+      clearNotebookDraftState(notebookId, activePageId);
       setPendingImages(current => {
         Object.keys(uploadedUrls).forEach(id => { const e = current[id]; if (e) URL.revokeObjectURL(e.objectUrl); });
         const next = { ...current }; Object.keys(uploadedUrls).forEach(id => delete next[id]); return next;

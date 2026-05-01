@@ -64,8 +64,34 @@ const BoxAny = Box as any;
 
 const MAX_VOICE_DURATION_SECONDS = 60;
 const EMOJI_SUGGESTED_LS_KEY = 'epr_suggested';
+const CHAT_INPUT_DRAFT_PREFIX = 'kankan.chat.inputDraft:';
 const MAX_RECENT_EMOJIS = 8;
 const EMOJI_PICKER_WIDTH = 248;
+
+const chatInputDraftKey = (chatId: string) => `${CHAT_INPUT_DRAFT_PREFIX}${chatId}`;
+
+function readChatInputDraft(chatId: string) {
+  try {
+    const raw = window.localStorage.getItem(chatInputDraftKey(chatId));
+    if (!raw) return '';
+    const parsed = JSON.parse(raw) as { text?: unknown };
+    return typeof parsed.text === 'string' ? parsed.text : '';
+  } catch { return ''; }
+}
+
+function writeChatInputDraft(chatId: string, text: string) {
+  try {
+    if (text.trim().length === 0) {
+      window.localStorage.removeItem(chatInputDraftKey(chatId));
+    } else {
+      window.localStorage.setItem(chatInputDraftKey(chatId), JSON.stringify({ text, updatedAt: new Date().toISOString() }));
+    }
+  } catch {}
+}
+
+function clearChatInputDraft(chatId: string) {
+  try { window.localStorage.removeItem(chatInputDraftKey(chatId)); } catch {}
+}
 
 const formatVoiceRecordingHint = (seconds: number) => {
   const safeSeconds = Math.max(0, Math.min(MAX_VOICE_DURATION_SECONDS, seconds));
@@ -116,12 +142,12 @@ const pickRecorderMimeType = () => {
 };
 
 const VirtualizedMessageList = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  (props, ref) => (
-    <div
+  ({ style, ...props }, ref) => (
+    <BoxAny
       {...props}
       ref={ref}
-      style={{
-        ...props.style,
+      sx={{
+        ...style,
         padding: '12px 1px',
         display: 'flex',
         flexDirection: 'column',
@@ -364,6 +390,7 @@ const ChatInputPanel: React.FC<ChatInputPanelProps> = React.memo(({
   const draftDebounceRef = useRef<number | null>(null);
   const lastDraftRef = useRef<string>('');
   const lastDraftSentAtRef = useRef<number>(0);
+  const skipDraftSaveRef = useRef(false);
   const selectionStartRef = useRef<number | null>(null);
   const selectionEndRef = useRef<number | null>(null);
   const [messageText, setMessageText] = useState('');
@@ -441,9 +468,19 @@ const ChatInputPanel: React.FC<ChatInputPanelProps> = React.memo(({
   }, [mentionState?.token, mentionState?.matches.length]);
 
   useEffect(() => {
-    setMessageText('');
+    skipDraftSaveRef.current = true;
+    setMessageText(activeChatId ? readChatInputDraft(activeChatId) : '');
     setIsEmojiPickerOpen(false);
   }, [activeChatId]);
+
+  useEffect(() => {
+    if (skipDraftSaveRef.current) {
+      skipDraftSaveRef.current = false;
+      return;
+    }
+    if (!activeChatId) return;
+    writeChatInputDraft(activeChatId, messageText);
+  }, [activeChatId, messageText]);
 
   useEffect(() => {
     if (isRecordingVoice) {
@@ -649,6 +686,7 @@ const ChatInputPanel: React.FC<ChatInputPanelProps> = React.memo(({
       if (!raw.trim()) return;
       setMessageText('');
       const ok = await onSendMessage(raw);
+      if (ok && activeChatId) clearChatInputDraft(activeChatId);
       if (!ok) setMessageText(raw);
     }
   };
@@ -1021,6 +1059,7 @@ const ChatInputPanel: React.FC<ChatInputPanelProps> = React.memo(({
             if (!raw.trim()) return;
             setMessageText('');
             const ok = await onSendMessage(raw);
+            if (ok && activeChatId) clearChatInputDraft(activeChatId);
             if (!ok) setMessageText(raw);
           }}
           disabled={!messageText.trim() || sending || uploading || isRecordingVoice}

@@ -20,7 +20,7 @@ const STATE_KEY = 'kankan.notebookPageState';
 
 function readState(): { selectedNotebookId: string | null } | null {
   try {
-    const raw = window.sessionStorage.getItem(STATE_KEY);
+    const raw = window.localStorage.getItem(STATE_KEY) ?? window.sessionStorage.getItem(STATE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     return { selectedNotebookId: typeof parsed.selectedNotebookId === 'string' ? parsed.selectedNotebookId : null };
@@ -28,7 +28,7 @@ function readState(): { selectedNotebookId: string | null } | null {
 }
 
 function writeState(state: { selectedNotebookId: string | null }) {
-  window.sessionStorage.setItem(STATE_KEY, JSON.stringify(state));
+  window.localStorage.setItem(STATE_KEY, JSON.stringify(state));
 }
 
 function selectPreferredNotebookId(

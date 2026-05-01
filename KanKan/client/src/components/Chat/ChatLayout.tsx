@@ -11,10 +11,13 @@ import { AppHeader } from '@/components/Shared/AppHeader';
 import { useLanguage } from '@/i18n/LanguageContext';
 import {
   fetchChats,
+  fetchMessages,
   addMessage,
   addChat,
   updateChat,
   incrementUnread,
+  clearUnread,
+  setActiveChat,
   setTypingUser,
   updateUserOnlineStatus,
   upsertParticipantProfile,
@@ -31,6 +34,20 @@ import { chatService } from '@/services/chat.service';
 
 // Work around TS2590 (“union type too complex”) from MUI Box typings in some TS versions.
 const BoxAny = Box as any;
+const CHAT_LAYOUT_STATE_KEY = 'kankan.chat.layoutState';
+
+function readSavedActiveChatId() {
+  try {
+    const raw = window.localStorage.getItem(CHAT_LAYOUT_STATE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { activeChatId?: unknown };
+    return typeof parsed.activeChatId === 'string' ? parsed.activeChatId : null;
+  } catch { return null; }
+}
+
+function writeSavedActiveChatId(activeChatId: string | null) {
+  try { window.localStorage.setItem(CHAT_LAYOUT_STATE_KEY, JSON.stringify({ activeChatId })); } catch {}
+}
 
 export const ChatLayout: React.FC = () => {
   const theme = useTheme();
@@ -50,6 +67,8 @@ export const ChatLayout: React.FC = () => {
   const inFlightChatFetchRef = useRef<Set<string>>(new Set());
   const agentChunkBufferRef = useRef<Map<string, string>>(new Map());
   const agentChunkFlushTimerRef = useRef<number | null>(null);
+  const savedActiveChatIdRef = useRef<string | null>(readSavedActiveChatId());
+  const restoredActiveChatRef = useRef(false);
 
   useEffect(() => {
     activeChatIdRef.current = activeChat?.id ?? null;
@@ -62,6 +81,22 @@ export const ChatLayout: React.FC = () => {
   useEffect(() => {
     chatIdsRef.current = new Set(chats.map((c) => c.id));
   }, [chats]);
+
+  useEffect(() => {
+    if (activeChat?.id) writeSavedActiveChatId(activeChat.id);
+  }, [activeChat?.id]);
+
+  useEffect(() => {
+    if (restoredActiveChatRef.current || activeChat || chats.length === 0) return;
+    const savedChatId = savedActiveChatIdRef.current;
+    if (!savedChatId) return;
+    const savedChat = chats.find((chat) => chat.id === savedChatId);
+    if (!savedChat) return;
+    restoredActiveChatRef.current = true;
+    dispatch(setActiveChat(savedChat));
+    dispatch(clearUnread({ chatId: savedChat.id }));
+    dispatch(fetchMessages({ chatId: savedChat.id }));
+  }, [activeChat, chats, dispatch]);
 
   useEffect(() => {
     // Fetch chats on mount

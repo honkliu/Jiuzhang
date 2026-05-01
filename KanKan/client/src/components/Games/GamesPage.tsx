@@ -11,8 +11,10 @@ import {
   Grid,
   Paper,
   Stack,
+  type SxProps,
   Tab,
   Tabs,
+  type Theme,
   Typography,
 } from '@mui/material';
 import {
@@ -45,10 +47,26 @@ type SudokuCheckResult = {
   message: string;
 };
 
+type SavedSudokuState = {
+  version: 1;
+  difficulty: SudokuDifficulty;
+  puzzleIndex: number;
+  puzzleId: string;
+  grid: number[];
+  notes: number[][];
+  selected: number | null;
+  hintMode: boolean;
+  pencilMode: boolean;
+  checkResult: SudokuCheckResult | null;
+  updatedAt: string;
+};
+
 const BOARD_WIDTH = 10;
 const BOARD_HEIGHT = 20;
 const DROP_MS = 650;
 const CRUSH_WAVE_MS = 58;
+const GAMES_TAB_STORAGE_KEY = 'kankan.games.activeTab';
+const SUDOKU_STATE_STORAGE_KEY = 'kankan.games.sudokuState.v1';
 
 const TETROMINOES: Tetromino[] = [
   { name: 'I', matrix: [[1, 1, 1, 1]], color: '#d9a86c', dust: '#e7c28e' },
@@ -610,6 +628,75 @@ const candidatesFor = (grid: number[], index: number) => {
 
 const createEmptySudokuNotes = () => Array.from({ length: 81 }, () => [] as number[]);
 
+const isSudokuDifficulty = (value: unknown): value is SudokuDifficulty => value === 'easy' || value === 'advanced' || value === 'expert';
+
+const isSudokuGrid = (value: unknown): value is number[] => (
+  Array.isArray(value)
+  && value.length === 81
+  && value.every((item) => Number.isInteger(item) && item >= 0 && item <= 9)
+);
+
+const isSudokuNotes = (value: unknown): value is number[][] => (
+  Array.isArray(value)
+  && value.length === 81
+  && value.every((items) => (
+    Array.isArray(items)
+    && items.every((item) => Number.isInteger(item) && item >= 1 && item <= 9)
+  ))
+);
+
+const readSudokuState = (): SavedSudokuState | null => {
+  try {
+    const raw = window.localStorage.getItem(SUDOKU_STATE_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<SavedSudokuState>;
+    if (parsed.version !== 1 || !isSudokuDifficulty(parsed.difficulty)) return null;
+    const bank = SUDOKU_BANK[parsed.difficulty];
+    const puzzleIndex = parsed.puzzleIndex;
+    const selected = parsed.selected ?? null;
+    if (typeof puzzleIndex !== 'number' || !Number.isInteger(puzzleIndex) || puzzleIndex < 0 || puzzleIndex >= bank.length) return null;
+    const puzzle = bank[puzzleIndex];
+    if (parsed.puzzleId !== puzzle.id || !isSudokuGrid(parsed.grid) || !isSudokuNotes(parsed.notes)) return null;
+    if (selected !== null && (!Number.isInteger(selected) || selected < 0 || selected > 80)) return null;
+    return {
+      version: 1,
+      difficulty: parsed.difficulty,
+      puzzleIndex,
+      puzzleId: puzzle.id,
+      grid: parsed.grid,
+      notes: parsed.notes.map((items) => [...new Set(items)].sort((left, right) => left - right)),
+      selected,
+      hintMode: Boolean(parsed.hintMode),
+      pencilMode: Boolean(parsed.pencilMode),
+      checkResult: parsed.checkResult?.severity && parsed.checkResult.message ? parsed.checkResult : null,
+      updatedAt: typeof parsed.updatedAt === 'string' ? parsed.updatedAt : new Date().toISOString(),
+    };
+  } catch {
+    return null;
+  }
+};
+
+const writeSudokuState = (state: SavedSudokuState) => {
+  try {
+    window.localStorage.setItem(SUDOKU_STATE_STORAGE_KEY, JSON.stringify(state));
+  } catch {}
+};
+
+const readGamesTab = () => {
+  try {
+    const value = Number(window.localStorage.getItem(GAMES_TAB_STORAGE_KEY));
+    return value === 1 ? 1 : 0;
+  } catch {
+    return 0;
+  }
+};
+
+const writeGamesTab = (tab: number) => {
+  try {
+    window.localStorage.setItem(GAMES_TAB_STORAGE_KEY, String(tab));
+  } catch {}
+};
+
 const checkSudokuGrid = (grid: number[]): SudokuCheckResult => {
   const units: Array<{ label: string; values: number[] }> = [];
 
@@ -647,23 +734,45 @@ const checkSudokuGrid = (grid: number[]): SudokuCheckResult => {
 };
 
 const SudokuGame: React.FC = () => {
-  const [difficulty, setDifficulty] = useState<SudokuDifficulty>('easy');
-  const [puzzleIndex, setPuzzleIndex] = useState(0);
+  const restoredState = useMemo(() => readSudokuState(), []);
+  const skipInitialPuzzleResetRef = useRef(true);
+  const [difficulty, setDifficulty] = useState<SudokuDifficulty>(() => restoredState?.difficulty ?? 'easy');
+  const [puzzleIndex, setPuzzleIndex] = useState(() => restoredState?.puzzleIndex ?? 0);
   const puzzle = SUDOKU_BANK[difficulty][puzzleIndex];
   const givens = useMemo(() => puzzle.puzzle.split('').map((value) => Number(value)), [puzzle]);
-  const [grid, setGrid] = useState<number[]>(() => givens);
-  const [notes, setNotes] = useState<number[][]>(() => createEmptySudokuNotes());
-  const [selected, setSelected] = useState<number | null>(null);
-  const [hintMode, setHintMode] = useState(false);
-  const [pencilMode, setPencilMode] = useState(false);
-  const [checkResult, setCheckResult] = useState<SudokuCheckResult | null>(null);
+  const [grid, setGrid] = useState<number[]>(() => restoredState?.grid ?? givens);
+  const [notes, setNotes] = useState<number[][]>(() => restoredState?.notes ?? createEmptySudokuNotes());
+  const [selected, setSelected] = useState<number | null>(() => restoredState?.selected ?? null);
+  const [hintMode, setHintMode] = useState(() => restoredState?.hintMode ?? false);
+  const [pencilMode, setPencilMode] = useState(() => restoredState?.pencilMode ?? false);
+  const [checkResult, setCheckResult] = useState<SudokuCheckResult | null>(() => restoredState?.checkResult ?? null);
 
   useEffect(() => {
+    if (skipInitialPuzzleResetRef.current) {
+      skipInitialPuzzleResetRef.current = false;
+      return;
+    }
     setGrid(givens);
     setNotes(createEmptySudokuNotes());
     setSelected(null);
     setCheckResult(null);
   }, [givens]);
+
+  useEffect(() => {
+    writeSudokuState({
+      version: 1,
+      difficulty,
+      puzzleIndex,
+      puzzleId: puzzle.id,
+      grid,
+      notes,
+      selected,
+      hintMode,
+      pencilMode,
+      checkResult,
+      updatedAt: new Date().toISOString(),
+    });
+  }, [difficulty, puzzleIndex, puzzle.id, grid, notes, selected, hintMode, pencilMode, checkResult]);
 
   const setCell = (value: number) => {
     if (selected == null || givens[selected]) return;
@@ -707,6 +816,21 @@ const SudokuGame: React.FC = () => {
 
   const previousPuzzle = () => setPuzzleIndex((value) => (value - 1 + SUDOKU_BANK[difficulty].length) % SUDOKU_BANK[difficulty].length);
   const nextPuzzle = () => setPuzzleIndex((value) => (value + 1) % SUDOKU_BANK[difficulty].length);
+  const keypadButtonSx: SxProps<Theme> = {
+    minWidth: 0,
+    height: { xs: 46, sm: 50 },
+    minHeight: { xs: 46, sm: 50 },
+    maxHeight: { xs: 46, sm: 50 },
+    px: 0,
+    py: 0,
+    borderWidth: '1px',
+    borderStyle: 'solid',
+    boxSizing: 'border-box',
+    boxShadow: 'none',
+    lineHeight: 1,
+    '&:hover': { boxShadow: 'none' },
+    '&:active': { boxShadow: 'none', transform: 'none' },
+  };
 
   return (
     <Grid container spacing={2.2}>
@@ -778,14 +902,14 @@ const SudokuGame: React.FC = () => {
                 key={index + 1}
                 variant={(pencilMode ? selectedNotes.includes(index + 1) : selectedValue === index + 1) ? 'contained' : 'outlined'}
                 onClick={() => setCell(index + 1)}
-                sx={{ minWidth: 0, minHeight: { xs: 44, sm: 48 }, fontSize: { xs: 20, sm: 22 }, fontWeight: 900, px: 0 }}
+                sx={{ ...keypadButtonSx, fontSize: { xs: 20, sm: 22 }, fontWeight: 900 }}
               >
                 {index + 1}
               </Button>
             ))}
-            <Button color="success" variant="outlined" onClick={checkPuzzle} sx={{ minWidth: 0, minHeight: { xs: 44, sm: 48 }, px: 0, fontWeight: 800 }}>检查</Button>
-            <Button variant={pencilMode ? 'contained' : 'outlined'} onClick={() => setPencilMode((value) => !value)} sx={{ minWidth: 0, minHeight: { xs: 44, sm: 48 }, px: 0, fontWeight: 800, color: pencilMode ? '#fff' : '#1565c0', borderColor: '#1565c0', bgcolor: pencilMode ? '#1565c0' : undefined, '&:hover': { borderColor: '#0d47a1', bgcolor: pencilMode ? '#0d47a1' : 'rgba(21,101,192,0.08)' } }}>铅笔</Button>
-            <Button variant={hintMode ? 'contained' : 'outlined'} onClick={() => setHintMode((value) => !value)} sx={{ minWidth: 0, minHeight: { xs: 44, sm: 48 }, px: 0, fontWeight: 800, color: hintMode ? '#fff' : '#6d6d6d', borderColor: '#8a8a8a', bgcolor: hintMode ? '#757575' : undefined, '&:hover': { borderColor: '#616161', bgcolor: hintMode ? '#616161' : 'rgba(97,97,97,0.08)' } }}>提示</Button>
+            <Button color="success" variant="outlined" onClick={checkPuzzle} sx={{ ...keypadButtonSx, fontWeight: 800 }}>检查</Button>
+            <Button variant={pencilMode ? 'contained' : 'outlined'} onClick={() => setPencilMode((value) => !value)} sx={{ ...keypadButtonSx, fontWeight: 800, color: pencilMode ? '#fff' : '#1565c0', borderColor: '#1565c0', bgcolor: pencilMode ? '#1565c0' : undefined, '&:hover': { boxShadow: 'none', borderColor: '#0d47a1', bgcolor: pencilMode ? '#0d47a1' : 'rgba(21,101,192,0.08)' } }}>铅笔</Button>
+            <Button variant={hintMode ? 'contained' : 'outlined'} onClick={() => setHintMode((value) => !value)} sx={{ ...keypadButtonSx, fontWeight: 800, color: hintMode ? '#fff' : '#6d6d6d', borderColor: '#8a8a8a', bgcolor: hintMode ? '#757575' : undefined, '&:hover': { boxShadow: 'none', borderColor: '#616161', bgcolor: hintMode ? '#616161' : 'rgba(97,97,97,0.08)' } }}>提示</Button>
           </BoxAny>
         </Card>
       </Grid>
@@ -820,7 +944,11 @@ const SudokuGame: React.FC = () => {
 };
 
 export const GamesPage: React.FC = () => {
-  const [tab, setTab] = useState(0);
+  const [tab, setTab] = useState(() => readGamesTab());
+  const handleTabChange = (_: React.SyntheticEvent, value: number) => {
+    setTab(value);
+    writeGamesTab(value);
+  };
   return (
     <>
       <AppHeader />
@@ -829,7 +957,7 @@ export const GamesPage: React.FC = () => {
           <Paper sx={{ p: { xs: 0.25, sm: 0.5 }, mb: 1.25, borderRadius: '10px', background: '#ffffff', boxShadow: '0 8px 24px rgba(15,23,42,0.08)' }}>
             <Tabs
               value={tab}
-              onChange={(_, value) => setTab(value)}
+              onChange={handleTabChange}
               variant="fullWidth"
               sx={{
                 minHeight: 36,
