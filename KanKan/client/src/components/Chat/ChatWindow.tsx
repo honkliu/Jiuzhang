@@ -219,9 +219,19 @@ const ChatMessages: React.FC<ChatMessagesProps> = React.memo(({
   const preserveScrollRef = useRef<{ scrollHeight: number; scrollTop: number } | null>(null);
   const isPinnedToBottomRef = useRef(true);
   const previousLatestMessageIdRef = useRef<string | undefined>(undefined);
+  const previousChatIdRef = useRef<string | undefined>(undefined);
   const [loadingOlderMessages, setLoadingOlderMessages] = useState(false);
   const firstMessageId = mergedMessages.at(0)?.id;
   const latestMessageId = mergedMessages.at(-1)?.id;
+
+  useEffect(() => {
+    if (!activeChat?.id || previousChatIdRef.current === activeChat.id) return;
+    previousChatIdRef.current = activeChat.id;
+    previousLatestMessageIdRef.current = undefined;
+    isPinnedToBottomRef.current = true;
+    preserveScrollRef.current = null;
+    setLoadingOlderMessages(false);
+  }, [activeChat?.id]);
 
   const isNearBottom = useCallback((container: HTMLDivElement) => {
     return container.scrollHeight - container.scrollTop - container.clientHeight <= BOTTOM_PIN_THRESHOLD_PX;
