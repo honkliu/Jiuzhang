@@ -1,0 +1,13 @@
+{
+  "agent": {
+    "name": "ShangAgent",
+    "home": ".",
+    "listen": "http://localhost:8787",
+    "endpoint": "http://localhost:8787/agent/message"
+  },
+  "llm": {
+    "baseUrl": "",
+    "apiKey": "",
+    "model": ""
+  }
+}

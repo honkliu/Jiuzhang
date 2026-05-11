@@ -1,0 +1,16 @@
+{
+  "name": "shang",
+  "version": "0.1.0",
+  "description": "Local-first personal knowledge and agent-to-agent prototype",
+  "type": "module",
+  "bin": {
+    "shang": "./src/cli.js"
+  },
+  "scripts": {
+    "start": "node src/cli.js",
+    "check": "node src/cli.js doctor"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

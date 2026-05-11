@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   Box,
   AppBar,
@@ -21,7 +21,6 @@ import {
   useTheme,
 } from '@mui/material';
 import EmojiPicker, { Categories, SuggestionMode, emojiByUnified, type EmojiClickData } from 'emoji-picker-react';
-import { Virtuoso } from 'react-virtuoso';
 import { createRoot, type Root } from 'react-dom/client';
 import {
   ArrowBack as ArrowBackIcon,
@@ -141,34 +140,6 @@ const pickRecorderMimeType = () => {
   return candidates.find((type) => MediaRecorder.isTypeSupported(type)) ?? '';
 };
 
-const VirtualizedMessageList = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ style, ...props }, ref) => (
-    <BoxAny
-      {...props}
-      ref={ref}
-      sx={{
-        ...style,
-        padding: '12px 1px',
-        display: 'flex',
-        flexDirection: 'column',
-        minHeight: '100%',
-      }}
-    />
-  )
-);
-VirtualizedMessageList.displayName = 'VirtualizedMessageList';
-
-const VirtualizedMessageScroller = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => (
-    <div
-      {...props}
-      ref={ref}
-      className={className ? `${className} chat-window-scroll-hidden` : 'chat-window-scroll-hidden'}
-    />
-  )
-);
-VirtualizedMessageScroller.displayName = 'VirtualizedMessageScroller';
-
 interface ChatWindowProps {
   onBack?: () => void;
   onToggleSidebar?: () => void;
@@ -211,7 +182,6 @@ interface ChatMessagesProps {
   imageGroupIndexByMessageId: Record<string, number>;
   /** Display names of all participants (real users), for @mention highlighting in bubbles. */
   participantNames: string[];
-  messagesEndRef: React.RefObject<HTMLDivElement>;
   noMessagesText: string;
 }
 
@@ -234,10 +204,44 @@ const ChatMessages: React.FC<ChatMessagesProps> = React.memo(({
   imageGallery,
   imageGroupIndexByMessageId,
   participantNames,
-  messagesEndRef,
   noMessagesText,
 }) => {
   const { language } = useLanguage();
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const scrollContentRef = useRef<HTMLDivElement | null>(null);
+  const latestMessageId = mergedMessages.at(-1)?.id;
+
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = 'auto') => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    container.scrollTo({ top: container.scrollHeight, behavior });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (isRoom3D || isRoom2D || mergedMessages.length === 0) return;
+
+    scrollToBottom('auto');
+    const firstFrame = window.requestAnimationFrame(() => scrollToBottom('auto'));
+    const secondFrame = window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => scrollToBottom('auto'));
+    });
+    const settleTimer = window.setTimeout(() => scrollToBottom('auto'), 120);
+
+    return () => {
+      window.cancelAnimationFrame(firstFrame);
+      window.cancelAnimationFrame(secondFrame);
+      window.clearTimeout(settleTimer);
+    };
+  }, [isRoom3D, isRoom2D, mergedMessages.length, latestMessageId, scrollToBottom]);
+
+  useEffect(() => {
+    if (isRoom3D || isRoom2D || !scrollContentRef.current) return;
+
+    const observer = new ResizeObserver(() => scrollToBottom('auto'));
+    observer.observe(scrollContentRef.current);
+    return () => observer.disconnect();
+  }, [isRoom3D, isRoom2D, scrollToBottom]);
+
   if (!activeChat) return null;
 
   if (isRoom3D) {
@@ -292,18 +296,13 @@ const ChatMessages: React.FC<ChatMessagesProps> = React.memo(({
   }
 
   return (
-    <BoxAny sx={{ flexGrow: 1, minHeight: 0 }}>
-      <Virtuoso
-        data={mergedMessages}
-        followOutput="auto"
-        computeItemKey={(_, message) => message.id}
-        style={{ height: '100%', width: '100%' }}
-        components={{
-          Scroller: VirtualizedMessageScroller,
-          List: VirtualizedMessageList,
-          Footer: () => <div ref={messagesEndRef} />,
-        }}
-        itemContent={(index, message) => {
+    <BoxAny
+      ref={scrollContainerRef}
+      className="chat-window-scroll-hidden"
+      sx={{ flexGrow: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden' }}
+    >
+      <BoxAny ref={scrollContentRef} sx={{ px: 0.125, py: 1.5, minHeight: '100%' }}>
+        {mergedMessages.map((message, index) => {
           const prevMessage = index > 0 ? mergedMessages[index - 1] : null;
           const showAvatar = !prevMessage || prevMessage.senderId !== message.senderId;
 
@@ -335,6 +334,7 @@ const ChatMessages: React.FC<ChatMessagesProps> = React.memo(({
 
           return (
             <MessageBubble
+              key={message.id}
               message={message}
               isOwn={message.senderId === user?.id}
               showAvatar={showAvatar}
@@ -346,8 +346,8 @@ const ChatMessages: React.FC<ChatMessagesProps> = React.memo(({
               mentionableNames={participantNames}
             />
           );
-        }}
-      />
+        })}
+      </BoxAny>
     </BoxAny>
   );
 });
@@ -1089,7 +1089,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
   const [isRoom2D, setIsRoom2D] = useState(false);
   const [otherAvatarImageId, setOtherAvatarImageId] = useState<string | null>(null);
   const [otherLiveAvatarUrl, setOtherLiveAvatarUrl] = useState<string | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRootHostRef = useRef<HTMLDivElement | null>(null);
   const inputRootRef = useRef<Root | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -1550,12 +1549,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
       }
     }
   };
-
-  // Scroll to bottom when messages change
-  useEffect(() => {
-    if (isRoom3D || isRoom2D) return;
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [mergedMessages, isRoom3D, isRoom2D]);
 
   // When our own mood changes, broadcast mood + the resolved avatar URL via draft
   const lastBroadcastMoodRef = React.useRef<string | null>(null);
@@ -2462,7 +2455,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
         imageGallery={imageGallery}
         imageGroupIndexByMessageId={imageGroupIndexByMessageId}
         participantNames={participantNames}
-        messagesEndRef={messagesEndRef}
         noMessagesText={t('chat.noMessages')}
       />
 
