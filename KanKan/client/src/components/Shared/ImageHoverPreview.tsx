@@ -70,7 +70,11 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
 }) => {
   const theme = useTheme();
   const isHoverCapable = useMediaQuery('(hover: hover) and (pointer: fine)');
-  const isTouchDevice = !isHoverCapable;
+  const hasTouchInput = React.useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    return navigator.maxTouchPoints > 0 || 'ontouchstart' in window;
+  }, []);
+  const isTouchDevice = hasTouchInput || !isHoverCapable;
 
   const [anchorEl, setAnchorEl] = React.useState<HTMLElement | null>(null);
   const [isPreviewHover, setIsPreviewHover] = React.useState(false);

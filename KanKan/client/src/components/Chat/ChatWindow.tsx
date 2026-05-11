@@ -66,6 +66,9 @@ const EMOJI_SUGGESTED_LS_KEY = 'epr_suggested';
 const CHAT_INPUT_DRAFT_PREFIX = 'kankan.chat.inputDraft:';
 const MAX_RECENT_EMOJIS = 8;
 const EMOJI_PICKER_WIDTH = 248;
+const MESSAGE_PAGE_SIZE = 50;
+const HISTORY_LOAD_SCROLL_THRESHOLD_PX = 80;
+const BOTTOM_PIN_THRESHOLD_PX = 80;
 
 const chatInputDraftKey = (chatId: string) => `${CHAT_INPUT_DRAFT_PREFIX}${chatId}`;
 
@@ -183,6 +186,8 @@ interface ChatMessagesProps {
   /** Display names of all participants (real users), for @mention highlighting in bubbles. */
   participantNames: string[];
   noMessagesText: string;
+  hasOlderMessages: boolean;
+  onLoadOlderMessages: () => Promise<boolean>;
 }
 
 const ChatMessages: React.FC<ChatMessagesProps> = React.memo(({
@@ -205,11 +210,22 @@ const ChatMessages: React.FC<ChatMessagesProps> = React.memo(({
   imageGroupIndexByMessageId,
   participantNames,
   noMessagesText,
+  hasOlderMessages,
+  onLoadOlderMessages,
 }) => {
   const { language } = useLanguage();
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const scrollContentRef = useRef<HTMLDivElement | null>(null);
+  const preserveScrollRef = useRef<{ scrollHeight: number; scrollTop: number } | null>(null);
+  const isPinnedToBottomRef = useRef(true);
+  const previousLatestMessageIdRef = useRef<string | undefined>(undefined);
+  const [loadingOlderMessages, setLoadingOlderMessages] = useState(false);
+  const firstMessageId = mergedMessages.at(0)?.id;
   const latestMessageId = mergedMessages.at(-1)?.id;
+
+  const isNearBottom = useCallback((container: HTMLDivElement) => {
+    return container.scrollHeight - container.scrollTop - container.clientHeight <= BOTTOM_PIN_THRESHOLD_PX;
+  }, []);
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = 'auto') => {
     const container = scrollContainerRef.current;
@@ -217,8 +233,48 @@ const ChatMessages: React.FC<ChatMessagesProps> = React.memo(({
     container.scrollTo({ top: container.scrollHeight, behavior });
   }, []);
 
+  const handleScroll = useCallback(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    isPinnedToBottomRef.current = isNearBottom(container);
+
+    if (
+      container.scrollTop <= HISTORY_LOAD_SCROLL_THRESHOLD_PX
+      && hasOlderMessages
+      && !loadingOlderMessages
+      && mergedMessages.length > 0
+    ) {
+      preserveScrollRef.current = {
+        scrollHeight: container.scrollHeight,
+        scrollTop: container.scrollTop,
+      };
+      setLoadingOlderMessages(true);
+      onLoadOlderMessages()
+        .catch((error) => {
+          console.error('Failed to load older messages:', error);
+        })
+        .finally(() => {
+          setLoadingOlderMessages(false);
+        });
+    }
+  }, [hasOlderMessages, isNearBottom, loadingOlderMessages, mergedMessages.length, onLoadOlderMessages]);
+
+  useLayoutEffect(() => {
+    const container = scrollContainerRef.current;
+    const preserved = preserveScrollRef.current;
+    if (!container || !preserved) return;
+
+    preserveScrollRef.current = null;
+    container.scrollTop = container.scrollHeight - preserved.scrollHeight + preserved.scrollTop;
+  }, [firstMessageId]);
+
   useLayoutEffect(() => {
     if (isRoom3D || isRoom2D || mergedMessages.length === 0) return;
+
+    const previousLatestMessageId = previousLatestMessageIdRef.current;
+    previousLatestMessageIdRef.current = latestMessageId;
+    const shouldScrollToBottom = !previousLatestMessageId || (previousLatestMessageId !== latestMessageId && isPinnedToBottomRef.current);
+    if (!shouldScrollToBottom) return;
 
     scrollToBottom('auto');
     const firstFrame = window.requestAnimationFrame(() => scrollToBottom('auto'));
@@ -237,7 +293,11 @@ const ChatMessages: React.FC<ChatMessagesProps> = React.memo(({
   useEffect(() => {
     if (isRoom3D || isRoom2D || !scrollContentRef.current) return;
 
-    const observer = new ResizeObserver(() => scrollToBottom('auto'));
+    const observer = new ResizeObserver(() => {
+      if (isPinnedToBottomRef.current) {
+        scrollToBottom('auto');
+      }
+    });
     observer.observe(scrollContentRef.current);
     return () => observer.disconnect();
   }, [isRoom3D, isRoom2D, scrollToBottom]);
@@ -299,8 +359,23 @@ const ChatMessages: React.FC<ChatMessagesProps> = React.memo(({
     <BoxAny
       ref={scrollContainerRef}
       className="chat-window-scroll-hidden"
-      sx={{ flexGrow: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden' }}
+      sx={{
+        flexGrow: 1,
+        minHeight: 0,
+        overflowY: 'auto',
+        overflowX: 'hidden',
+        position: 'relative',
+        touchAction: 'pan-y',
+        overscrollBehavior: 'contain',
+        WebkitOverflowScrolling: 'touch',
+      }}
+      onScroll={handleScroll}
     >
+      {loadingOlderMessages ? (
+        <BoxAny sx={{ position: 'absolute', top: 8, left: 0, right: 0, display: 'flex', justifyContent: 'center', zIndex: 1, pointerEvents: 'none' }}>
+          <CircularProgress size={18} />
+        </BoxAny>
+      ) : null}
       <BoxAny ref={scrollContentRef} sx={{ px: 0.125, py: 1.5, minHeight: '100%' }}>
         {mergedMessages.map((message, index) => {
           const prevMessage = index > 0 ? mergedMessages[index - 1] : null;
@@ -1087,6 +1162,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [isRoom3D, setIsRoom3D] = useState(false);
   const [isRoom2D, setIsRoom2D] = useState(false);
+  const [hasOlderMessagesByChatId, setHasOlderMessagesByChatId] = useState<Record<string, boolean>>({});
   const [otherAvatarImageId, setOtherAvatarImageId] = useState<string | null>(null);
   const [otherLiveAvatarUrl, setOtherLiveAvatarUrl] = useState<string | null>(null);
   const inputRootHostRef = useRef<HTMLDivElement | null>(null);
@@ -1141,6 +1217,31 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
     () => [...chatMessages, ...draftMessages],
     [chatMessages, draftMessages]
   );
+
+  const hasOlderMessages = activeChat
+    ? hasOlderMessagesByChatId[activeChat.id] ?? chatMessages.length >= MESSAGE_PAGE_SIZE
+    : false;
+
+  const loadOlderMessages = useCallback(async () => {
+    if (!activeChat || chatMessages.length === 0) return false;
+
+    const oldestMessage = chatMessages[0];
+    if (!oldestMessage?.timestamp) return false;
+
+    const result = await dispatch(fetchMessages({
+      chatId: activeChat.id,
+      limit: MESSAGE_PAGE_SIZE,
+      before: oldestMessage.timestamp,
+    })).unwrap();
+
+    const loadedCount = result.messages.length;
+    setHasOlderMessagesByChatId((prev) => ({
+      ...prev,
+      [activeChat.id]: loadedCount >= MESSAGE_PAGE_SIZE,
+    }));
+
+    return loadedCount > 0;
+  }, [activeChat, chatMessages, dispatch]);
 
   const getMessageImageUrl = (msg: Message): string => {
     const content = (msg as any)?.content;
@@ -2456,6 +2557,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
         imageGroupIndexByMessageId={imageGroupIndexByMessageId}
         participantNames={participantNames}
         noMessagesText={t('chat.noMessages')}
+        hasOlderMessages={hasOlderMessages}
+        onLoadOlderMessages={loadOlderMessages}
       />
 
       {/* Input */}

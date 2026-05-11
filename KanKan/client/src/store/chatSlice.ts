@@ -40,7 +40,7 @@ export const fetchMessages = createAsyncThunk(
   'chat/fetchMessages',
   async ({ chatId, limit, before }: { chatId: string; limit?: number; before?: string }) => {
     const messages = await chatService.getMessages(chatId, limit, before);
-    return { chatId, messages };
+    return { chatId, messages, before };
   }
 );
 
@@ -339,8 +339,19 @@ const chatSlice = createSlice({
       })
       .addCase(fetchMessages.fulfilled, (state, action) => {
         state.loading = false;
-        const { chatId, messages } = action.payload;
-        state.messages[chatId] = messages;
+        const { chatId, messages, before } = action.payload;
+        if (before) {
+          const existingMessages = state.messages[chatId] || [];
+          const byId = new Map<string, Message>();
+          [...messages, ...existingMessages].forEach((message) => {
+            byId.set(message.id, message);
+          });
+          state.messages[chatId] = Array.from(byId.values()).sort(
+            (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+          );
+        } else {
+          state.messages[chatId] = messages;
+        }
       })
       .addCase(fetchMessages.rejected, (state, action) => {
         state.loading = false;
