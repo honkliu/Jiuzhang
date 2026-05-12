@@ -74,7 +74,7 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
     if (typeof window === 'undefined') return false;
     return navigator.maxTouchPoints > 0 || 'ontouchstart' in window;
   }, []);
-  const isTouchDevice = hasTouchInput || !isHoverCapable;
+  const isTouchOnlyDevice = hasTouchInput && !isHoverCapable;
 
   const [anchorEl, setAnchorEl] = React.useState<HTMLElement | null>(null);
   const [isPreviewHover, setIsPreviewHover] = React.useState(false);
@@ -103,7 +103,7 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
   const imageMaxHeight = Math.max(0, maxHeight - previewPaddingPx);
 
   const handleOpen = (event: React.MouseEvent<HTMLElement> | React.FocusEvent<HTMLElement>) => {
-    if (!src || disabled || isTouchDevice) return;
+    if (!src || disabled || !isHoverCapable) return;
     if (openTimerRef.current) {
       window.clearTimeout(openTimerRef.current);
       openTimerRef.current = null;
@@ -159,7 +159,7 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
       window.clearTimeout(openTimerRef.current);
       openTimerRef.current = null;
     }
-    if (anchorEl && !isPreviewHoverRef.current && !isTouchDevice) {
+    if (anchorEl && !isPreviewHoverRef.current && isHoverCapable) {
       if (closeTimerRef.current) {
         window.clearTimeout(closeTimerRef.current);
       }
@@ -173,7 +173,7 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
   };
 
   const handleDoubleClick = (event: React.MouseEvent<HTMLElement>) => {
-    if (!src || disabled || isTouchDevice || !openOnDoubleClick) return;
+    if (!src || disabled || !isHoverCapable || !openOnDoubleClick) return;
     if (openTimerRef.current) {
       window.clearTimeout(openTimerRef.current);
       openTimerRef.current = null;
@@ -190,7 +190,7 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
 
   // Touch: long press to preview
   const handleTouchStart = (event: React.TouchEvent<HTMLElement>) => {
-    if (!src || disabled || !isTouchDevice) return;
+    if (!src || disabled || !hasTouchInput) return;
     if (openOnLongPress) {
       event.preventDefault();
     }
@@ -224,7 +224,7 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
       event.stopPropagation();
       return;
     }
-    if (openOnTap && isTouchDevice) {
+    if (openOnTap && hasTouchInput) {
       closeOtherPreviews(popoverId);
       const currentTarget = event.currentTarget as HTMLElement;
       setAnchorEl(currentTarget);
@@ -239,7 +239,7 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
   const shouldCloseOnTriggerClick = closeOnClickWhenOpen || closeOnTriggerClickWhenOpen;
 
   const handleClickOpen = (event: React.MouseEvent<HTMLElement>) => {
-    if (!src || disabled || isTouchDevice || !openOnClick) return;
+    if (!src || disabled || !isHoverCapable || !openOnClick) return;
     if (open) {
       if (shouldCloseOnTriggerClick) {
         event.preventDefault();
@@ -294,7 +294,7 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
     if (!open) return;
 
     const handleDocumentPointerDown = (event: MouseEvent | TouchEvent) => {
-      if (isTouchDevice) {
+      if (event.type === 'touchstart') {
         closePreview(true);
         return;
       }
@@ -311,11 +311,11 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
       document.removeEventListener('mousedown', handleDocumentPointerDown, true);
       document.removeEventListener('touchstart', handleDocumentPointerDown, true);
     };
-  }, [open, anchorEl, isTouchDevice]);
+  }, [open, anchorEl, closePreview]);
 
   return (
     <>
-      {open && isTouchDevice && (
+      {open && isTouchOnlyDevice && (
         <Box
           // @ts-expect-error - TS2590 union type complexity
           onClick={() => closePreview(true)}
@@ -330,20 +330,20 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
         />
       )}
       {children({
-        onMouseEnter: !isTouchDevice && openOnHover ? handleOpen : noopMouse,
-        onMouseLeave: !isTouchDevice && openOnHover
+        onMouseEnter: isHoverCapable && openOnHover ? handleOpen : noopMouse,
+        onMouseLeave: isHoverCapable && openOnHover
           ? (dismissOnHoverOut ? handleClose : handleCancelPendingOpen)
           : noopMouse,
-        onFocus: !isTouchDevice && openOnHover ? handleOpen : (noopMouse as any),
-        onBlur: !isTouchDevice && openOnHover
+        onFocus: isHoverCapable && openOnHover ? handleOpen : (noopMouse as any),
+        onBlur: isHoverCapable && openOnHover
           ? (dismissOnHoverOut ? handleClose : handleCancelPendingOpen)
           : (noopMouse as any),
-        onClick: !isTouchDevice && (openOnClick || shouldCloseOnTriggerClick)
+        onClick: isHoverCapable && (openOnClick || shouldCloseOnTriggerClick)
           ? (openOnClick ? handleClickOpen : handleTriggerClick)
           : undefined,
-        onDoubleClick: !isTouchDevice && openOnDoubleClick ? handleDoubleClick : undefined,
-        onTouchStart: isTouchDevice && (openOnLongPress || openOnTap) ? handleTouchStart : undefined,
-        onTouchEnd: isTouchDevice && (openOnLongPress || openOnDoubleClick || openOnTap) ? handleTouchEnd : undefined,
+        onDoubleClick: isHoverCapable && openOnDoubleClick ? handleDoubleClick : undefined,
+        onTouchStart: hasTouchInput && (openOnLongPress || openOnTap) ? handleTouchStart : undefined,
+        onTouchEnd: hasTouchInput && (openOnLongPress || openOnDoubleClick || openOnTap) ? handleTouchEnd : undefined,
         'aria-describedby': id,
       })}
       <Popover
@@ -356,12 +356,12 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
         disableEnforceFocus
         disableRestoreFocus
         keepMounted
-        sx={{ pointerEvents: isTouchDevice ? 'auto' : 'none', zIndex: theme.zIndex.modal + 1 }}
-        anchorOrigin={isTouchDevice
+        sx={{ pointerEvents: isTouchOnlyDevice ? 'auto' : 'none', zIndex: theme.zIndex.modal + 1 }}
+        anchorOrigin={isTouchOnlyDevice
           ? { vertical: 'top', horizontal: 'center' }
           : { vertical: 'center', horizontal: 'right' }
         }
-        transformOrigin={isTouchDevice
+        transformOrigin={isTouchOnlyDevice
           ? { vertical: 'bottom', horizontal: 'center' }
           : { vertical: 'center', horizontal: 'left' }
         }
@@ -371,10 +371,10 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
             maxWidth,
             maxHeight,
             borderRadius: 1,
-            pointerEvents: interactive && !isTouchDevice ? 'auto' : 'none',
+            pointerEvents: interactive && !isTouchOnlyDevice ? 'auto' : 'none',
             overflow: 'hidden',
           },
-          onMouseEnter: interactive && !isTouchDevice
+          onMouseEnter: interactive && !isTouchOnlyDevice
             ? () => {
                 if (closeTimerRef.current) {
                   window.clearTimeout(closeTimerRef.current);
@@ -384,14 +384,14 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
                 isPreviewHoverRef.current = true;
               }
             : undefined,
-          onMouseLeave: interactive && !isTouchDevice && dismissOnHoverOut
+          onMouseLeave: interactive && !isTouchOnlyDevice && dismissOnHoverOut
             ? () => {
                 setIsPreviewHover(false);
                 isPreviewHoverRef.current = false;
                 handleClose();
               }
             : undefined,
-          onClick: interactive && !isTouchDevice
+          onClick: interactive && !isTouchOnlyDevice
             ? () => {
                 onPreviewClick?.();
                 if (closeOnClickWhenOpen) {
@@ -403,13 +403,13 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
                 handleClose();
               }
             : undefined,
-          onTouchStart: isTouchDevice ? stopTouchPropagation : undefined,
-          onTouchEnd: isTouchDevice ? stopTouchPropagation : undefined,
+          onTouchStart: isTouchOnlyDevice ? stopTouchPropagation : undefined,
+          onTouchEnd: isTouchOnlyDevice ? stopTouchPropagation : undefined,
         }}
       >
         <Box
-          onTouchStart={isTouchDevice ? stopTouchPropagation : undefined}
-          onTouchEnd={isTouchDevice ? stopTouchPropagation : undefined}
+          onTouchStart={isTouchOnlyDevice ? stopTouchPropagation : undefined}
+          onTouchEnd={isTouchOnlyDevice ? stopTouchPropagation : undefined}
           sx={{
             p: 0.5,
             display: 'flex',
