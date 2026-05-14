@@ -103,7 +103,7 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
   const imageMaxHeight = Math.max(0, maxHeight - previewPaddingPx);
 
   const handleOpen = (event: React.MouseEvent<HTMLElement> | React.FocusEvent<HTMLElement>) => {
-    if (!src || disabled || !isHoverCapable) return;
+    if (!src || disabled) return;
     if (openTimerRef.current) {
       window.clearTimeout(openTimerRef.current);
       openTimerRef.current = null;
@@ -173,7 +173,7 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
   };
 
   const handleDoubleClick = (event: React.MouseEvent<HTMLElement>) => {
-    if (!src || disabled || !isHoverCapable || !openOnDoubleClick) return;
+    if (!src || disabled || !openOnDoubleClick) return;
     if (openTimerRef.current) {
       window.clearTimeout(openTimerRef.current);
       openTimerRef.current = null;
@@ -239,7 +239,13 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
   const shouldCloseOnTriggerClick = closeOnClickWhenOpen || closeOnTriggerClickWhenOpen;
 
   const handleClickOpen = (event: React.MouseEvent<HTMLElement>) => {
-    if (!src || disabled || !isHoverCapable || !openOnClick) return;
+    if (suppressNextClickRef.current) {
+      suppressNextClickRef.current = false;
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+    if (!src || disabled || !openOnClick) return;
     if (open) {
       if (shouldCloseOnTriggerClick) {
         event.preventDefault();
@@ -330,18 +336,18 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
         />
       )}
       {children({
-        onMouseEnter: isHoverCapable && openOnHover ? handleOpen : noopMouse,
-        onMouseLeave: isHoverCapable && openOnHover
+        onMouseEnter: openOnHover ? handleOpen : noopMouse,
+        onMouseLeave: openOnHover
           ? (dismissOnHoverOut ? handleClose : handleCancelPendingOpen)
           : noopMouse,
-        onFocus: isHoverCapable && openOnHover ? handleOpen : (noopMouse as any),
-        onBlur: isHoverCapable && openOnHover
+        onFocus: openOnHover ? handleOpen : (noopMouse as any),
+        onBlur: openOnHover
           ? (dismissOnHoverOut ? handleClose : handleCancelPendingOpen)
           : (noopMouse as any),
-        onClick: isHoverCapable && (openOnClick || shouldCloseOnTriggerClick)
+        onClick: openOnClick || shouldCloseOnTriggerClick
           ? (openOnClick ? handleClickOpen : handleTriggerClick)
           : undefined,
-        onDoubleClick: isHoverCapable && openOnDoubleClick ? handleDoubleClick : undefined,
+        onDoubleClick: openOnDoubleClick ? handleDoubleClick : undefined,
         onTouchStart: hasTouchInput && (openOnLongPress || openOnTap) ? handleTouchStart : undefined,
         onTouchEnd: hasTouchInput && (openOnLongPress || openOnDoubleClick || openOnTap) ? handleTouchEnd : undefined,
         'aria-describedby': id,

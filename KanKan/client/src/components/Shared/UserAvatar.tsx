@@ -109,6 +109,7 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
       closeOnTriggerClickWhenOpen={Boolean(closePreviewOnClick)}
       openOnHover={previewMode === 'hover'}
       openOnLongPress={previewMode === 'hover'}
+      openOnClick={previewMode === 'tap'}
       openOnDoubleClick={previewMode === 'doubleClick'}
       openOnTap={previewMode === 'tap'}
     >
