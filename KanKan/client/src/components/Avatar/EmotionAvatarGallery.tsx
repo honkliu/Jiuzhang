@@ -313,7 +313,7 @@ export const EmotionAvatarGallery: React.FC<EmotionAvatarGalleryProps> = ({ user
 
   return (
     <BoxAny sx={{ px: 0, py: isMobile ? 1 : 0.375 }}>
-      <BoxAny sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: '1px' }}>
+      <BoxAny sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: '5px' }}>
         <Typography variant="h6">{t('avatar.emotionTitle')}</Typography>
         <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
           <Button

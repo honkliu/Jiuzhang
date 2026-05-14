@@ -632,7 +632,7 @@ const translations: Record<Language, Record<string, string>> = {
     'avatar.generatingAll': '生成中...',
     'avatar.generateOne': '生成',
     'avatar.generatingOne': '生成中...',
-    'avatar.extraPromptLabel': '输入你想要什么风格和效果（可选）',
+    'avatar.extraPromptLabel': '风格和效果（可选）',
     'avatar.extraPromptPlaceholder': '输入你想要什么风格和效果（可选）',
     'promptComposer.title': '提示词库',
     'promptComposer.search': '搜索提示词...',
