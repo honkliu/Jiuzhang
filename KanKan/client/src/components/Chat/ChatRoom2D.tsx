@@ -429,9 +429,9 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
                   key={`${segment.type}-${segment.url}-${index}`}
                   src={segment.url}
                   alt="Chat media"
-                  openOnHover={isHoverCapable}
-                  openOnLongPress={!isHoverCapable}
-                  openOnTap={false}
+                  openOnHover
+                  openOnLongPress
+                  openOnTap
                 >
                   {(previewProps) => (
                     <BoxAny

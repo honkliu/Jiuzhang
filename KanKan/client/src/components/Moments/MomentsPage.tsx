@@ -108,9 +108,9 @@ const MomentMediaGrid: React.FC<MomentMediaGridProps> = ({
           <ImageHoverPreview
             src={url}
             alt={imageAlt}
-            openOnHover={isHoverCapable}
-            openOnLongPress={!isHoverCapable}
-            openOnTap={false}
+            openOnHover
+            openOnLongPress
+            openOnTap
           >
             {(previewProps) => (
               <BoxAny

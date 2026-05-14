@@ -226,9 +226,9 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
   const zoomPercent = Math.round(zoom * 100);
   const actionControlHeight = isMobile ? 35 : 37;
   const pickerPreviewBehavior = {
-    openOnHover: isHoverCapable,
-    openOnLongPress: !isHoverCapable,
-    openOnTap: false,
+    openOnHover: true,
+    openOnLongPress: true,
+    openOnTap: true,
   };
 
   useEffect(() => {
@@ -1393,9 +1393,9 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
                           src={selectedReferenceImageUrl}
                           alt={t('image.selectedImage')}
                           maxSize={420}
-                          openOnHover={isHoverCapable}
-                          openOnLongPress={!isHoverCapable}
-                          openOnTap={false}
+                          openOnHover
+                          openOnLongPress
+                          openOnTap
                           onOpenChange={(open) => {
                             if (open && !isHoverCapable) {
                               suppressSelectedImageClearUntilRef.current = Date.now() + 500;

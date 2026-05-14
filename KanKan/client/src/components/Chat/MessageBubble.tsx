@@ -576,9 +576,9 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
           <ImageHoverPreview
             src={displayedImageUrl}
             alt={t('chat.message.image')}
-            openOnHover={isHoverCapable}
-            openOnLongPress={!isHoverCapable}
-            openOnTap={false}
+            openOnHover
+            openOnLongPress
+            openOnTap
           >
             {(previewProps) => (
               <BoxAny

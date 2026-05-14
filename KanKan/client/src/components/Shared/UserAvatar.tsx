@@ -107,9 +107,8 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
       alt={fallbackText || 'Avatar'}
       maxSize={400}
       closeOnTriggerClickWhenOpen={Boolean(closePreviewOnClick)}
-      openOnHover={previewMode === 'hover'}
-      openOnLongPress={previewMode === 'hover'}
-      openOnClick={previewMode === 'tap'}
+      openOnHover={previewMode !== 'doubleClick'}
+      openOnLongPress={previewMode !== 'doubleClick'}
       openOnDoubleClick={previewMode === 'doubleClick'}
       openOnTap={previewMode === 'tap'}
     >

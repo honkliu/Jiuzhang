@@ -261,6 +261,7 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
   const id = open ? popoverId : undefined;
 
   const shouldCloseOnTriggerClick = closeOnClickWhenOpen || closeOnTriggerClickWhenOpen;
+  const canOpenWithHybridPointer = isTouchDevice && (openOnHover || openOnLongPress || openOnTap);
 
   const handleClickOpen = (event: React.MouseEvent<HTMLElement>) => {
     if (suppressNextClickRef.current) {
@@ -365,8 +366,8 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
         onMouseLeave: !isTouchDevice && openOnHover
           ? (dismissOnHoverOut ? handleClose : handleCancelPendingOpen)
           : noopMouse,
-        onPointerEnter: isTouchDevice && openOnHover ? handlePointerOpen : undefined,
-        onPointerLeave: isTouchDevice && openOnHover ? handlePointerClose : undefined,
+        onPointerEnter: canOpenWithHybridPointer ? handlePointerOpen : undefined,
+        onPointerLeave: canOpenWithHybridPointer ? handlePointerClose : undefined,
         onFocus: !isTouchDevice && openOnHover ? handleOpen : (noopMouse as any),
         onBlur: !isTouchDevice && openOnHover
           ? (dismissOnHoverOut ? handleClose : handleCancelPendingOpen)
