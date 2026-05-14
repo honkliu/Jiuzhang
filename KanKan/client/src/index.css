@@ -32,16 +32,6 @@ select {
   font: inherit;
 }
 
-button,
-a,
-[role='button'],
-input,
-textarea,
-select,
-.MuiButtonBase-root {
-  touch-action: manipulation;
-}
-
 input[type='password'] {
   font-family: 'Segoe UI', Roboto, Arial, sans-serif;
   letter-spacing: normal;
@@ -58,9 +48,8 @@ code {
 }
 
 .chat-window-scroll-hidden {
+  scrollbar-width: none;
   -ms-overflow-style: none;
-  touch-action: pan-y;
-  overscroll-behavior: contain;
 }
 
 .chat-window-scroll-hidden::-webkit-scrollbar {
