@@ -16,6 +16,7 @@ import { authService } from '@/services/auth.service';
 import { useDispatch } from 'react-redux';
 import { setAuth } from '@/store/authSlice';
 import { useLanguage } from '@/i18n/LanguageContext';
+import { useSkin } from '@/skins/SkinContext';
 import './Login.css';
 
 export const Login: React.FC = () => {
@@ -25,8 +26,16 @@ export const Login: React.FC = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { t, language } = useLanguage();
+  const { skin, skinId, setSkinId, available } = useSkin();
   const navigate = useNavigate();
   const dispatch = useDispatch();
+
+  const cycleSkin = () => {
+    if (available.length === 0) return;
+    const idx = available.findIndex((s) => s.id === skinId);
+    const next = available[(idx + 1) % available.length];
+    setSkinId(next.id);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,7 +67,23 @@ export const Login: React.FC = () => {
       <div className="loginContainer">
         <Paper elevation={3} sx={{ p: 4, width: '100%' }}>
           <div className="loginTitleRow">
-            <img src={kankanLogo24} alt="KanKan" className="loginLogo" />
+            {/* Clicking the 侃侃 logo cycles through the skins (silent — no
+                name is shown). It's the only skin affordance on this page. */}
+            <img
+              src={kankanLogo24}
+              alt="KanKan"
+              className="loginLogo"
+              role="button"
+              tabIndex={0}
+              onClick={cycleSkin}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  cycleSkin();
+                }
+              }}
+              title={language === 'zh' ? '点击切换皮肤' : 'Click to switch skin'}
+            />
             <Typography component="h1" variant="h4" className="loginTitleText">
               {language === 'zh' ? '欢迎你' : t('auth.login.title')}
             </Typography>
@@ -119,6 +144,7 @@ export const Login: React.FC = () => {
               <Link
                 to="/forgot-password"
                 className="loginLink loginLinkSmall"
+                style={{ color: skin.linkColor }}
               >
                 {t('auth.login.forgot')}
               </Link>
@@ -138,7 +164,11 @@ export const Login: React.FC = () => {
             <div className="loginFooter">
               <Typography variant="body2" color="text.secondary">
                 {t('auth.login.noAccount')}{' '}
-                <Link to="/register" className="loginLink loginLinkStrong">
+                <Link
+                  to="/register"
+                  className="loginLink loginLinkStrong"
+                  style={{ color: skin.linkColor }}
+                >
                   {t('auth.login.create')}
                 </Link>
               </Typography>

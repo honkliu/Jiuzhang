@@ -518,7 +518,10 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
           bgcolor: message.messageType === 'image'
             ? 'transparent'
             : (isOwn ? '#07c160' : '#ffffff'),
-          color: 'text.primary',
+          // Bubble text color is hardcoded (not `text.primary`) so it stays
+          // legible under every skin — otherwise midnight's near-white
+          // text.primary would vanish on the white "other" bubble.
+          color: 'rgba(0, 0, 0, 0.87)',
             borderRadius: '4px',
           ml: isOwn ? 'auto' : 0,
           border: message.messageType === 'image'

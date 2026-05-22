@@ -32,6 +32,8 @@ import { updateUser } from '@/store/authSlice';
 import { UserAvatar } from '@/components/Shared/UserAvatar';
 import { GeneratedAvatarPicker } from '@/components/Avatar/GeneratedAvatarPicker';
 import { useSettings } from '@/settings/SettingsContext';
+import { useSkin } from '@/skins/SkinContext';
+import kankanLogo from '@/assets/brand/kankan-96-q95.jpg';
 
 // Work around TS2590 (“union type too complex”) from MUI Box typings in some TS versions.
 const BoxAny = Box as any;
@@ -99,6 +101,7 @@ export const AppHeader: React.FC<AppHeaderProps> = () => {
   );
   const { t, toggleLanguage, language } = useLanguage();
   const { formatDateTime } = useSettings();
+  const { skinId, setSkinId, available: availableSkins } = useSkin();
   const [notificationsAnchorEl, setNotificationsAnchorEl] = React.useState<null | HTMLElement>(null);
   const [navAnchorEl, setNavAnchorEl] = React.useState<null | HTMLElement>(null);
   const [avatarAnchorEl, setAvatarAnchorEl] = React.useState<null | HTMLElement>(null);
@@ -265,10 +268,43 @@ export const AppHeader: React.FC<AppHeaderProps> = () => {
     navigate('/login');
   };
 
+  const cycleSkin = () => {
+    if (availableSkins.length === 0) return;
+    const idx = availableSkins.findIndex((s) => s.id === skinId);
+    const next = availableSkins[(idx + 1) % availableSkins.length];
+    setSkinId(next.id);
+  };
+
   return (
     <AppBar position="fixed" color="default" elevation={0} sx={{ pt: 'env(safe-area-inset-top)' }}>
       <Toolbar sx={{ gap: 1.25, minHeight: { xs: 53, sm: 61 }, py: 0.25, px: { xs: 1, sm: 1.5 } }}>
         <BoxAny ref={leftNavRef} sx={{ display: 'flex', alignItems: 'center', gap: 1, flexGrow: 1, minWidth: 0 }}>
+          {/* Skin switcher — clicking the 侃侃 logo cycles through skins,
+              matching the login screen behavior. Silent: no name shown. */}
+          <BoxAny
+            component="img"
+            src={kankanLogo}
+            alt="KanKan"
+            role="button"
+            tabIndex={0}
+            onClick={cycleSkin}
+            onKeyDown={(event: React.KeyboardEvent<HTMLImageElement>) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                cycleSkin();
+              }
+            }}
+            title={language === 'zh' ? '点击切换皮肤' : 'Click to switch skin'}
+            sx={{
+              width: { xs: 28, sm: 32 },
+              height: { xs: 28, sm: 32 },
+              borderRadius: '10px',
+              objectFit: 'cover',
+              cursor: 'pointer',
+              flexShrink: 0,
+              display: 'block',
+            }}
+          />
           <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: isCompactNav ? 0.5 : 1, minWidth: 0, overflow: 'hidden' }}>
             {compactVisibleNavItems.map((item) => (
               <Button

@@ -924,6 +924,19 @@ const ChatInputPanel: React.FC<ChatInputPanelProps> = React.memo(({
               paddingLeft: '8px !important',
               paddingRight: '8px !important',
             },
+            // Pin the typed text color so the chat input reads the same in
+            // every skin. Without this, dark-mode skins (midnight) make
+            // `text.primary` near-white, which would render invisible on the
+            // hardcoded light-grey input bg above.
+            '& .MuiInputBase-input': {
+              color: 'rgba(0, 0, 0, 0.87)',
+              WebkitTextFillColor: 'rgba(0, 0, 0, 0.87)',
+              caretColor: 'rgba(0, 0, 0, 0.87)',
+            },
+            '& .MuiInputBase-input::placeholder': {
+              color: 'rgba(0, 0, 0, 0.5)',
+              opacity: 1,
+            },
           }}
         />
         {isEmojiPickerOpen ? (
