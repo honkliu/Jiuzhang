@@ -47,6 +47,76 @@ const remarkPlugins = [remarkMath, remarkGfm, restorePipesInMath];
 const rehypePlugins = [rehypeKatex];
 const redTagPattern = /\[red\]([\s\S]*?)\[\/red\]/gi;
 
+/**
+ * Re-inflate GFM tables that arrived flattened onto a single line.
+ *
+ * Some LLM providers (or copy-paste paths) strip the newlines between table
+ * rows, producing strings like:
+ *
+ *   "| H1 | H2 | H3 | | :--- | :--- | :--- | | r1c1 | r1c2 | r1c3 |"
+ *
+ * `remark-gfm` requires each row on its own line, so without this fix it
+ * renders the whole thing as one long paragraph with literal pipes.
+ *
+ * Strategy: only act on lines that contain the GFM alignment row separator
+ * (`:---`, `---`, `:---:`, `---:`) AND have at least one ` | | ` join. When
+ * both conditions hold, replace ` |(\s+)| ` with ` |\n| ` to reintroduce
+ * row boundaries. Code blocks (``` fences) pass through untouched so we
+ * don't damage anything that legitimately uses pipes on one line.
+ */
+const expandFlattenedTables = (input: string): string => {
+  if (!input) return input;
+  // Quick reject: if neither alignment row pattern nor `| |` join exists, skip.
+  if (!/:?-{3,}:?/.test(input) || !/\|\s+\|/.test(input)) return input;
+
+  const out: string[] = [];
+  let inFence = false;
+  for (const line of input.split('\n')) {
+    if (/^```/.test(line.trim())) {
+      inFence = !inFence;
+      out.push(line);
+      continue;
+    }
+    if (inFence) {
+      out.push(line);
+      continue;
+    }
+    const hasAlignRow = /\|\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)+\|/.test(line);
+    const hasRowJoin = /\|\s+\|/.test(line);
+    if (hasAlignRow && hasRowJoin) {
+      // Replace inter-row joins; keep intra-row pipes intact.
+      out.push(line.replace(/\|\s+\|/g, '|\n|'));
+    } else {
+      out.push(line);
+    }
+  }
+  return out.join('\n');
+};
+
+/**
+ * Peek ahead: does an unescaped closing `$` exist later on the same line
+ * (or before the next blank line for block math)? Used to avoid entering
+ * math mode on a bare currency `$142.40` or other unmatched dollar sign.
+ */
+const hasClosingDollar = (input: string, start: number, isDisplay: boolean): boolean => {
+  for (let i = start; i < input.length; i++) {
+    const ch = input[i];
+    if (ch === '\n') {
+      if (!isDisplay) return false;
+      // Display math may span lines, but a blank line ends it.
+      if (input[i + 1] === '\n') return false;
+      continue;
+    }
+    if (ch === '\\' && input[i + 1] === '$') {
+      i++; // skip escaped
+      continue;
+    }
+    if (isDisplay && ch === '$' && input[i + 1] === '$') return true;
+    if (!isDisplay && ch === '$' && input[i + 1] !== '$') return true;
+  }
+  return false;
+};
+
 const escapePipesInMathForGfm = (input: string): string => {
   let out = '';
   let i = 0;
@@ -66,10 +136,26 @@ const escapePipesInMathForGfm = (input: string): string => {
 
       if (ch === '$') {
         if (next === '$') {
+          // Only enter display math mode if a closing `$$` exists ahead.
+          if (!hasClosingDollar(input, i + 2, true)) {
+            out += '$$';
+            i += 2;
+            continue;
+          }
           inMath = true;
           mathDelim = '$$';
           out += '$$';
           i += 2;
+          continue;
+        }
+
+        // Only enter inline math mode if a closing `$` exists on the same line.
+        // Without this, a currency symbol like `$142.40` in a table cell would
+        // start "math mode" and escape every subsequent `|` until end of input,
+        // collapsing the whole row's columns into one cell.
+        if (!hasClosingDollar(input, i + 1, false)) {
+          out += '$';
+          i += 1;
           continue;
         }
 

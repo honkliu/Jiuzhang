@@ -48,6 +48,7 @@ const navItems = [
   { label: 'Help', path: '/help', adminOnly: false },
   { label: 'Receipts', path: '/receipts', adminOnly: false },
   { label: 'FamilyTree', path: '/family', adminOnly: true },
+  { label: 'Stocks', path: '/stocks', adminOnly: false },
   { label: 'Gallery', path: '/gallery', adminOnly: false },
   { label: 'admin.title', path: '/admin', adminOnly: true },
   { label: 'admin.config.menu', path: '/admin/access-config', adminOnly: true },
