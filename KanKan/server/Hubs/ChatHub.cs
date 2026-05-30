@@ -10,6 +10,7 @@ using KanKan.API.Models.Entities;
 using KanKan.API.Models.DTOs.Notification;
 using KanKan.API.Repositories.Interfaces;
 using KanKan.API.Services;
+using KanKan.API.Services.Implementations;
 using KanKan.API.Services.Interfaces;
 
 namespace KanKan.API.Hubs;
@@ -22,7 +23,8 @@ public class ChatHub : Hub
     private readonly IMessageRepository _messageRepository;
     private readonly IUserRepository _userRepository;
     private readonly INotificationRepository _notificationRepository;
-    private readonly IAgentService _agentService;
+    private readonly OpenAiAgentService _chatService;
+    private readonly SemanticKernelAgentService _agentService;
     private readonly IAvatarService _avatarService;
     private readonly IContactRepository _contactRepository;
     private readonly ILogger<ChatHub> _logger;
@@ -31,13 +33,20 @@ public class ChatHub : Hub
     private static readonly Dictionary<string, HashSet<string>> _onlineUsers = new();
     private static readonly object _lock = new();
 
+    // Track agent mode per chat: chatId -> "chat" | "agent"
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, string> _chatModes = new();
+
+    public static string GetChatMode(string chatId) =>
+        _chatModes.TryGetValue(chatId, out var m) ? m : "chat";
+
     public ChatHub(
         IChatRepository chatRepository,
         IChatUserRepository chatUserRepository,
         IMessageRepository messageRepository,
         IUserRepository userRepository,
         INotificationRepository notificationRepository,
-        IAgentService agentService,
+        OpenAiAgentService chatService,
+        SemanticKernelAgentService agentService,
         IAvatarService avatarService,
         IContactRepository contactRepository,
         ILogger<ChatHub> logger)
@@ -47,6 +56,7 @@ public class ChatHub : Hub
         _messageRepository = messageRepository;
         _userRepository = userRepository;
         _notificationRepository = notificationRepository;
+        _chatService = chatService;
         _agentService = agentService;
         _avatarService = avatarService;
         _contactRepository = contactRepository;
@@ -439,10 +449,14 @@ public class ChatHub : Hub
                 isDeleted = false
             });
 
+            // Select service based on chat mode
+            var mode = _chatModes.TryGetValue(chat.Id, out var m) ? m : "chat";
+            IAgentService activeService = mode == "agent" ? _agentService : _chatService;
+
             var fullText = new StringBuilder();
             try
             {
-                await foreach (var chunk in _agentService.StreamReplyAsync(chat.Id, await BuildAgentPromptAsync(newMessage), await BuildHistoryAsync(chat.Id)))
+                await foreach (var chunk in activeService.StreamReplyAsync(chat.Id, await BuildAgentPromptAsync(newMessage), await BuildHistoryAsync(chat.Id)))
                 {
                     fullText.Append(chunk);
                     await Clients.Group(chat.Id).SendAsync("AgentMessageChunk", chat.Id, agentMessageId, chunk);
@@ -490,6 +504,17 @@ public class ChatHub : Hub
                 await Clients.Group(chat.Id).SendAsync("AgentMessageComplete", chat.Id, agentMessageId, reply);
             }
         }
+    }
+
+    public async Task SetMode(string chatId, string mode)
+    {
+        var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId)) return;
+
+        var normalised = mode == "agent" ? "agent" : "chat";
+        _chatModes[chatId] = normalised;
+        _logger.LogInformation("Chat {ChatId} mode set to {Mode} by {UserId}", chatId, normalised, userId);
+        await Clients.Group(chatId).SendAsync("ModeChanged", chatId, normalised);
     }
 
     public async Task TypingIndicator(string chatId, bool isTyping)

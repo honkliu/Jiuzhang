@@ -1,6 +1,22 @@
 import apiClient from '@/utils/api';
 import { User } from '@/services/contact.service';
 
+export interface AgentToolParam {
+  name: string;
+  description: string;
+}
+
+export interface AgentToolItem {
+  id: string;
+  name: string;
+  description: string;
+  urlTemplate: string;
+  method: string;
+  headers: Record<string, string>;
+  parameters: AgentToolParam[];
+  enabled: boolean;
+}
+
 export interface DomainVisibilityRuleConfig {
   sourceDomain: string;
   targetDomain: string;
@@ -98,6 +114,16 @@ class AdminService {
 
   async saveAccessConfig(config: AccessConfig): Promise<AccessConfigResponse> {
     const response = await apiClient.put<AccessConfigResponse>('/admin/access-config', config);
+    return response.data;
+  }
+
+  async getAgentTools(): Promise<AgentToolItem[]> {
+    const response = await apiClient.get<AgentToolItem[]>('/agent-tools');
+    return response.data;
+  }
+
+  async saveAgentTools(tools: AgentToolItem[]): Promise<AgentToolItem[]> {
+    const response = await apiClient.put<AgentToolItem[]>('/agent-tools/bulk', tools);
     return response.data;
   }
 }

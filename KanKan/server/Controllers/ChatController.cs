@@ -1396,7 +1396,13 @@ public class ChatController : ControllerBase
             var chatUserRepository = scope.ServiceProvider.GetRequiredService<IChatUserRepository>();
             var messageRepository = scope.ServiceProvider.GetRequiredService<IMessageRepository>();
             var userRepository = scope.ServiceProvider.GetRequiredService<IUserRepository>();
-            var agentService = scope.ServiceProvider.GetRequiredService<IAgentService>();
+
+            var mode = KanKan.API.Hubs.ChatHub.GetChatMode(chatId);
+            var agentService = mode == "agent"
+                ? (IAgentService)scope.ServiceProvider.GetRequiredService<KanKan.API.Services.Implementations.SemanticKernelAgentService>()
+                : scope.ServiceProvider.GetRequiredService<KanKan.API.Services.Implementations.OpenAiAgentService>();
+            _logger.LogInformation("Agent reply: chatId={ChatId} mode={Mode} service={Service}",
+                chatId, mode, agentService.GetType().Name);
 
             var chat = await chatRepository.GetByIdAsync(chatId);
             if (chat == null)

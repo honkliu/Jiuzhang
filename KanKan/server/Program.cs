@@ -39,93 +39,73 @@ DomainRules.ConfigureVisibility(visibilityRules);
 // Configure Swagger
 builder.Services.AddSwaggerGen();
 
-// Determine storage mode from configuration
-// Supported values: "InMemory", "MongoDB"
-var storageMode = builder.Configuration["StorageMode"]?.ToLower() ?? "inmemory";
-var useInMemory = storageMode == "inmemory";
+// Configure MongoDB for persistent storage
 var mongoCommandCollections = new ConcurrentDictionary<long, string>();
 
-if (useInMemory)
+builder.Services.AddSingleton<IMongoClient>(sp =>
 {
-    Console.WriteLine("🔧 Using IN-MEMORY storage (local development mode)");
-    Console.WriteLine("   ⚠️  Data will NOT persist after restart");
-}
-else if (storageMode == "mongodb")
-{
-    Console.WriteLine("🔧 Using MONGODB storage (persistent mode)");
-    // Configure MongoDB for persistent storage
-    builder.Services.AddSingleton<IMongoClient>(sp =>
+    var configuration = sp.GetRequiredService<IConfiguration>();
+    var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
+    var logger = loggerFactory.CreateLogger("MongoDB.Driver");
+    var connectionString = configuration["MongoDB:ConnectionString"]
+        ?? throw new InvalidOperationException("MongoDB ConnectionString not configured");
+
+    var mongoUrl = new MongoUrl(connectionString);
+    var settings = MongoClientSettings.FromUrl(mongoUrl);
+    // The C# driver defaults to a 64KB socket receive buffer. For queries that return
+    // large binary documents (e.g. full-size avatar images, ~1MB each), this causes
+    // hundreds of small socket reads over WAN, each requiring a round-trip ACK.
+    // 4MB matches OS-level defaults used by pymongo and reduces 14MB fetch from ~31s to ~2s.
+    settings.ClusterConfigurator = cb =>
     {
-        var configuration = sp.GetRequiredService<IConfiguration>();
-        var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
-        var logger = loggerFactory.CreateLogger("MongoDB.Driver");
-        var connectionString = configuration["MongoDB:ConnectionString"]
-            ?? throw new InvalidOperationException("MongoDB ConnectionString not configured");
-
-        var mongoUrl = new MongoUrl(connectionString);
-        var settings = MongoClientSettings.FromUrl(mongoUrl);
-        // The C# driver defaults to a 64KB socket receive buffer. For queries that return
-        // large binary documents (e.g. full-size avatar images, ~1MB each), this causes
-        // hundreds of small socket reads over WAN, each requiring a round-trip ACK.
-        // 4MB matches OS-level defaults used by pymongo and reduces 14MB fetch from ~31s to ~2s.
-        settings.ClusterConfigurator = cb =>
+        cb.ConfigureTcp(tcp => tcp.With(receiveBufferSize: 4 * 1024 * 1024, sendBufferSize: 4 * 1024 * 1024));
+        cb.Subscribe<CommandStartedEvent>(e =>
         {
-            cb.ConfigureTcp(tcp => tcp.With(receiveBufferSize: 4 * 1024 * 1024, sendBufferSize: 4 * 1024 * 1024));
-            cb.Subscribe<CommandStartedEvent>(e =>
-            {
-                // Track in-flight opIds so we can correlate success/failure logs
-                var collection = TryGetCollectionName(e.CommandName, e.Command);
-                if (collection != null && collection.Equals("avatarImages", StringComparison.OrdinalIgnoreCase))
-                {
-                    var opId = e.OperationId ?? -1;
-                    if (opId >= 0) mongoCommandCollections[opId] = collection;
-                }
-            });
-
-            cb.Subscribe<CommandSucceededEvent>(e =>
+            var collection = TryGetCollectionName(e.CommandName, e.Command);
+            if (collection != null && collection.Equals("avatarImages", StringComparison.OrdinalIgnoreCase))
             {
                 var opId = e.OperationId ?? -1;
-                if (opId >= 0 && mongoCommandCollections.TryRemove(opId, out var collection))
-                {
-                    // getMore means BatchSize hint was ignored — the result set didn't fit in one
-                    // response packet. This is worth surfacing because it adds a WAN round-trip.
-                    if (e.CommandName.Equals("getMore", StringComparison.OrdinalIgnoreCase))
-                    {
-                        logger.LogWarning(
-                            "Mongo getMore (BatchSize miss) opId={OperationId} durationMs={DurationMs} collection={Collection}",
-                            e.OperationId, e.Duration.TotalMilliseconds, collection);
-                    }
-                    else
-                    {
-                        logger.LogDebug(
-                            "Mongo {Command} opId={OperationId} durationMs={DurationMs} collection={Collection}",
-                            e.CommandName, e.OperationId, e.Duration.TotalMilliseconds, collection);
-                    }
-                }
-            });
+                if (opId >= 0) mongoCommandCollections[opId] = collection;
+            }
+        });
 
-            cb.Subscribe<CommandFailedEvent>(e =>
+        cb.Subscribe<CommandSucceededEvent>(e =>
+        {
+            var opId = e.OperationId ?? -1;
+            if (opId >= 0 && mongoCommandCollections.TryRemove(opId, out var collection))
             {
-                var opId = e.OperationId ?? -1;
-                if (opId >= 0 && mongoCommandCollections.TryRemove(opId, out var collection))
+                if (e.CommandName.Equals("getMore", StringComparison.OrdinalIgnoreCase))
                 {
                     logger.LogWarning(
-                        e.Failure,
-                        "Mongo {Command} FAILED opId={OperationId} durationMs={DurationMs} collection={Collection}",
+                        "Mongo getMore (BatchSize miss) opId={OperationId} durationMs={DurationMs} collection={Collection}",
+                        e.OperationId, e.Duration.TotalMilliseconds, collection);
+                }
+                else
+                {
+                    logger.LogDebug(
+                        "Mongo {Command} opId={OperationId} durationMs={DurationMs} collection={Collection}",
                         e.CommandName, e.OperationId, e.Duration.TotalMilliseconds, collection);
                 }
-            });
-        };
+            }
+        });
 
-        return new MongoClient(settings);
-    });
+        cb.Subscribe<CommandFailedEvent>(e =>
+        {
+            var opId = e.OperationId ?? -1;
+            if (opId >= 0 && mongoCommandCollections.TryRemove(opId, out var collection))
+            {
+                logger.LogWarning(
+                    e.Failure,
+                    "Mongo {Command} FAILED opId={OperationId} durationMs={DurationMs} collection={Collection}",
+                    e.CommandName, e.OperationId, e.Duration.TotalMilliseconds, collection);
+            }
+        });
+    };
 
-    builder.Services.AddHostedService<KanKan.API.Storage.MongoDbInitializer>();
-}
-else
-{
-    throw new InvalidOperationException($"Unsupported StorageMode: {storageMode}. Valid options are: InMemory, MongoDB");
-}
+    return new MongoClient(settings);
+});
+
+builder.Services.AddHostedService<KanKan.API.Storage.MongoDbInitializer>();
 
 static string? TryGetCollectionName(string commandName, BsonDocument command)
 {
@@ -215,87 +195,53 @@ builder.Services.AddCors(options =>
 // Add SignalR
 builder.Services.AddSignalR();
 
-// Register Repositories and Services based on storage mode
-if (useInMemory)
-{
-    builder.Services.AddSingleton<IUserRepository, InMemoryUserRepository>();
-    builder.Services.AddSingleton<IChatRepository, InMemoryChatRepository>();
-    builder.Services.AddSingleton<IChatUserRepository, InMemoryChatUserRepository>();
-    builder.Services.AddSingleton<IMessageRepository, InMemoryMessageRepository>();
-    builder.Services.AddSingleton<IMomentRepository, InMemoryMomentRepository>();
-    builder.Services.AddSingleton<IContactRepository, InMemoryContactRepository>();
-    builder.Services.AddSingleton<INotificationRepository, InMemoryNotificationRepository>();
-    builder.Services.AddSingleton<IAccessConfigService, ConfigurationAccessConfigService>();
-    builder.Services.AddScoped<IAuthService, InMemoryAuthService>();
-    // Family repos (InMemory stubs — returns empty data, writes are no-ops)
-    builder.Services.AddSingleton<KanKan.API.Repositories.Interfaces.IFamilyTreeRepository, KanKan.API.Repositories.Implementations.InMemoryFamilyRepository>();
-    builder.Services.AddSingleton<KanKan.API.Repositories.Interfaces.IFamilyPersonRepository, KanKan.API.Repositories.Implementations.InMemoryFamilyRepository>();
-    builder.Services.AddSingleton<KanKan.API.Repositories.Interfaces.IFamilyRelationshipRepository, KanKan.API.Repositories.Implementations.InMemoryFamilyRepository>();
-    builder.Services.AddSingleton<KanKan.API.Repositories.Interfaces.IFamilyTreeVisibilityRepository, KanKan.API.Repositories.Implementations.InMemoryFamilyRepository>();
-    builder.Services.AddSingleton<KanKan.API.Repositories.Interfaces.IFamilySectionRepository, KanKan.API.Repositories.Implementations.InMemoryFamilyRepository>();
-    builder.Services.AddSingleton<KanKan.API.Repositories.Interfaces.IFamilyPageRepository, KanKan.API.Repositories.Implementations.InMemoryFamilyRepository>();
-    builder.Services.AddSingleton<KanKan.API.Repositories.Interfaces.INotebookRepository, KanKan.API.Repositories.Implementations.InMemoryNotebookRepository>();
-    builder.Services.AddSingleton<KanKan.API.Repositories.Interfaces.INotebookVisibilityRepository, KanKan.API.Repositories.Implementations.InMemoryNotebookRepository>();
-    builder.Services.AddSingleton<KanKan.API.Repositories.Interfaces.INotebookSectionRepository, KanKan.API.Repositories.Implementations.InMemoryNotebookRepository>();
-    builder.Services.AddSingleton<KanKan.API.Repositories.Interfaces.INotebookPageRepository, KanKan.API.Repositories.Implementations.InMemoryNotebookRepository>();
-    builder.Services.AddSingleton<KanKan.API.Repositories.Interfaces.IReceiptRepository, KanKan.API.Repositories.Implementations.InMemoryReceiptRepository>();
-    builder.Services.AddSingleton<KanKan.API.Repositories.Interfaces.IReceiptVisitRepository, KanKan.API.Repositories.Implementations.InMemoryReceiptRepository>();
-    // Phase 5: MedicalRecordIndex repository
-    builder.Services.AddSingleton<KanKan.API.Repositories.Interfaces.IMedicalRecordIndexRepository, KanKan.API.Repositories.Implementations.InMemoryMedicalRecordIndexRepository>();
-}
-else if (storageMode == "mongodb")
-{
-    builder.Services.AddSingleton<MongoAccessConfigService>();
-    builder.Services.AddSingleton<IAccessConfigService>(sp => sp.GetRequiredService<MongoAccessConfigService>());
-    builder.Services.AddHostedService<AccessConfigHostedService>();
-    builder.Services.AddScoped<IUserRepository, UserRepository>();
-    builder.Services.AddScoped<IChatRepository, ChatRepository>();
-    builder.Services.AddScoped<IChatUserRepository, ChatUserRepository>();
-    builder.Services.AddScoped<IMessageRepository, MessageRepository>();
-    builder.Services.AddScoped<IMomentRepository, MomentRepository>();
-    builder.Services.AddScoped<IContactRepository, ContactRepository>();
-    builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
-    builder.Services.AddScoped<IAuthService, AuthService>();
-    builder.Services.AddScoped<KanKan.API.Repositories.Interfaces.IFamilyTreeRepository, KanKan.API.Repositories.Implementations.FamilyTreeRepository>();
-    builder.Services.AddScoped<KanKan.API.Repositories.Interfaces.IFamilyPersonRepository, KanKan.API.Repositories.Implementations.FamilyPersonRepository>();
-    builder.Services.AddScoped<KanKan.API.Repositories.Interfaces.IFamilyRelationshipRepository, KanKan.API.Repositories.Implementations.FamilyRelationshipRepository>();
-    builder.Services.AddScoped<KanKan.API.Repositories.Interfaces.IFamilyTreeVisibilityRepository, KanKan.API.Repositories.Implementations.FamilyTreeVisibilityRepository>();
-    builder.Services.AddScoped<KanKan.API.Repositories.Interfaces.IFamilySectionRepository, KanKan.API.Repositories.Implementations.FamilySectionRepository>();
-    builder.Services.AddScoped<KanKan.API.Repositories.Interfaces.IFamilyPageRepository, KanKan.API.Repositories.Implementations.FamilyPageRepository>();
-    builder.Services.AddScoped<KanKan.API.Repositories.Interfaces.INotebookRepository, KanKan.API.Repositories.Implementations.NotebookRepository>();
-    builder.Services.AddScoped<KanKan.API.Repositories.Interfaces.INotebookVisibilityRepository, KanKan.API.Repositories.Implementations.NotebookVisibilityRepository>();
-    builder.Services.AddScoped<KanKan.API.Repositories.Interfaces.INotebookSectionRepository, KanKan.API.Repositories.Implementations.NotebookSectionRepository>();
-    builder.Services.AddScoped<KanKan.API.Repositories.Interfaces.INotebookPageRepository, KanKan.API.Repositories.Implementations.NotebookPageRepository>();
-    builder.Services.AddScoped<KanKan.API.Repositories.Interfaces.IReceiptRepository, KanKan.API.Repositories.Implementations.ReceiptRepository>();
-    builder.Services.AddScoped<KanKan.API.Repositories.Interfaces.IReceiptVisitRepository, KanKan.API.Repositories.Implementations.ReceiptVisitRepository>();
-    // Phase 5: MedicalRecordIndex repository
-    builder.Services.AddScoped<KanKan.API.Repositories.Interfaces.IMedicalRecordIndexRepository, KanKan.API.Repositories.Implementations.MedicalRecordIndexRepository>();
-    // Photo album services (MongoDB only)
-    builder.Services.AddScoped<IPhotoRepository, PhotoRepository>();
-    builder.Services.AddScoped<PhotoService>();
-    builder.Services.AddScoped<IAutoAssociateService, AutoAssociateService>();
-    builder.Services.AddScoped<IVisitStatsService, VisitStatsService>();
-}
+// Register repositories and services
+builder.Services.AddSingleton<MongoAccessConfigService>();
+builder.Services.AddSingleton<IAccessConfigService>(sp => sp.GetRequiredService<MongoAccessConfigService>());
+builder.Services.AddHostedService<AccessConfigHostedService>();
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IChatRepository, ChatRepository>();
+builder.Services.AddScoped<IChatUserRepository, ChatUserRepository>();
+builder.Services.AddScoped<IMessageRepository, MessageRepository>();
+builder.Services.AddScoped<IMomentRepository, MomentRepository>();
+builder.Services.AddScoped<IContactRepository, ContactRepository>();
+builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<KanKan.API.Repositories.Interfaces.IFamilyTreeRepository, KanKan.API.Repositories.Implementations.FamilyTreeRepository>();
+builder.Services.AddScoped<KanKan.API.Repositories.Interfaces.IFamilyPersonRepository, KanKan.API.Repositories.Implementations.FamilyPersonRepository>();
+builder.Services.AddScoped<KanKan.API.Repositories.Interfaces.IFamilyRelationshipRepository, KanKan.API.Repositories.Implementations.FamilyRelationshipRepository>();
+builder.Services.AddScoped<KanKan.API.Repositories.Interfaces.IFamilyTreeVisibilityRepository, KanKan.API.Repositories.Implementations.FamilyTreeVisibilityRepository>();
+builder.Services.AddScoped<KanKan.API.Repositories.Interfaces.IFamilySectionRepository, KanKan.API.Repositories.Implementations.FamilySectionRepository>();
+builder.Services.AddScoped<KanKan.API.Repositories.Interfaces.IFamilyPageRepository, KanKan.API.Repositories.Implementations.FamilyPageRepository>();
+builder.Services.AddScoped<KanKan.API.Repositories.Interfaces.INotebookRepository, KanKan.API.Repositories.Implementations.NotebookRepository>();
+builder.Services.AddScoped<KanKan.API.Repositories.Interfaces.INotebookVisibilityRepository, KanKan.API.Repositories.Implementations.NotebookVisibilityRepository>();
+builder.Services.AddScoped<KanKan.API.Repositories.Interfaces.INotebookSectionRepository, KanKan.API.Repositories.Implementations.NotebookSectionRepository>();
+builder.Services.AddScoped<KanKan.API.Repositories.Interfaces.INotebookPageRepository, KanKan.API.Repositories.Implementations.NotebookPageRepository>();
+builder.Services.AddScoped<KanKan.API.Repositories.Interfaces.IReceiptRepository, KanKan.API.Repositories.Implementations.ReceiptRepository>();
+builder.Services.AddScoped<KanKan.API.Repositories.Interfaces.IReceiptVisitRepository, KanKan.API.Repositories.Implementations.ReceiptVisitRepository>();
+builder.Services.AddScoped<KanKan.API.Repositories.Interfaces.IMedicalRecordIndexRepository, KanKan.API.Repositories.Implementations.MedicalRecordIndexRepository>();
+builder.Services.AddScoped<KanKan.API.Repositories.Interfaces.IAgentToolRepository, KanKan.API.Repositories.Implementations.AgentToolRepository>();
+builder.Services.AddScoped<IPhotoRepository, PhotoRepository>();
+builder.Services.AddScoped<PhotoService>();
+builder.Services.AddScoped<IAutoAssociateService, AutoAssociateService>();
+builder.Services.AddScoped<IVisitStatsService, VisitStatsService>();
 
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddHttpClient();
-builder.Services.AddScoped<IAgentService, OpenAiAgentService>();
+builder.Services.AddScoped<OpenAiAgentService>();
+builder.Services.AddScoped<SemanticKernelAgentService>();
+builder.Services.AddScoped<IAgentService>(sp => sp.GetRequiredService<OpenAiAgentService>());
 builder.Services.AddScoped<IDomainGroupService, DomainGroupService>();
 
-// Register Image Generation services (MongoDB only)
-if (storageMode == "mongodb")
+builder.Services.AddSingleton(sp =>
 {
-    builder.Services.AddSingleton(sp =>
-    {
-        var mongoClient = sp.GetRequiredService<IMongoClient>();
-        var databaseName = builder.Configuration["MongoDB:DatabaseName"] ?? "kankan";
-        return mongoClient.GetDatabase(databaseName);
-    });
-
-    builder.Services.AddHttpClient<KanKan.API.Services.IComfyUIService, KanKan.API.Services.Implementations.ComfyUIService>();
-    builder.Services.AddScoped<KanKan.API.Services.IAvatarService, KanKan.API.Services.Implementations.AvatarService>();
-    builder.Services.AddScoped<KanKan.API.Services.IImageGenerationService, KanKan.API.Services.Implementations.ImageGenerationService>();
-}
+    var mongoClient = sp.GetRequiredService<IMongoClient>();
+    var databaseName = builder.Configuration["MongoDB:DatabaseName"] ?? "kankan";
+    return mongoClient.GetDatabase(databaseName);
+});
+builder.Services.AddHttpClient<KanKan.API.Services.IComfyUIService, KanKan.API.Services.Implementations.ComfyUIService>();
+builder.Services.AddScoped<KanKan.API.Services.IAvatarService, KanKan.API.Services.Implementations.AvatarService>();
+builder.Services.AddScoped<KanKan.API.Services.IImageGenerationService, KanKan.API.Services.Implementations.ImageGenerationService>();
 
 // Add logging
 builder.Logging.ClearProviders();
@@ -303,24 +249,6 @@ builder.Logging.AddConsole();
 builder.Logging.AddDebug();
 
 var app = builder.Build();
-
-if (useInMemory)
-{
-    using var scope = app.Services.CreateScope();
-    var users = scope.ServiceProvider.GetRequiredService<IUserRepository>();
-
-    var ai = await users.GetByIdAsync(ChatDomain.AgentUserId)
-        ?? await users.GetByEmailAsync(ChatDomain.AgentEmail);
-    if (ai == null)
-    {
-        await users.CreateAsync(ChatDomain.CreateAgentUser());
-    }
-    else
-    {
-        ChatDomain.ApplyAgentUserDefaults(ai);
-        await users.UpdateAsync(ai);
-    }
-}
 
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())

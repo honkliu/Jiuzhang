@@ -61,7 +61,8 @@ public class MongoDbInitializer : IHostedService
             "imageGenerationJobs",
             _configuration["MongoDB:Collections:Receipts"] ?? "Receipts",
             _configuration["MongoDB:Collections:ReceiptVisits"] ?? "ReceiptVisits",
-            _configuration["MongoDB:Collections:AppAccessConfig"] ?? "AppAccessConfig"
+            _configuration["MongoDB:Collections:AppAccessConfig"] ?? "AppAccessConfig",
+            "AgentTools"
         };
 
         var existingCollections = await (await database.ListCollectionNamesAsync(cancellationToken: cancellationToken))
@@ -82,6 +83,7 @@ public class MongoDbInitializer : IHostedService
 
         // Ensure the assistant user always exists for MongoDB mode.
         await EnsureAssistantUserAsync(database, cancellationToken);
+        await SeedDefaultAgentToolsAsync(database, cancellationToken);
         await SeedPredefinedAvatarsAsync(database, cancellationToken);
         await MigrateZodiacGeneratedAvatarsAsync(database, cancellationToken);
 
@@ -440,6 +442,70 @@ public class MongoDbInitializer : IHostedService
             ".webp" => "image/webp",
             _ => "application/octet-stream"
         };
+    }
+
+    private async Task SeedDefaultAgentToolsAsync(IMongoDatabase database, CancellationToken cancellationToken)
+    {
+        var col = database.GetCollection<AgentTool>("AgentTools");
+        var count = await col.CountDocumentsAsync(FilterDefinition<AgentTool>.Empty, cancellationToken: cancellationToken);
+        if (count > 0)
+            return;
+
+        var now = DateTime.UtcNow;
+        var defaults = new List<AgentTool>
+        {
+            new()
+            {
+                Id = Guid.NewGuid().ToString(),
+                Name = "FetchWebPage",
+                Description = "Fetch and read the content of any web page. Returns the page as clean markdown text. Use this for web search results, news, documentation, or any URL the user mentions.",
+                UrlTemplate = "https://r.jina.ai/{url}",
+                Method = "GET",
+                Headers = new Dictionary<string, string> { ["Accept"] = "text/plain", ["X-No-Cache"] = "true" },
+                Parameters = new List<AgentToolParameter>
+                {
+                    new() { Name = "url", Description = "The full URL of the web page to fetch, e.g. https://example.com" }
+                },
+                Enabled = true,
+                CreatedAt = now,
+                UpdatedAt = now,
+            },
+            new()
+            {
+                Id = Guid.NewGuid().ToString(),
+                Name = "GetWeather",
+                Description = "Get current weather and 3-day forecast for any city. Returns temperature, conditions, humidity and wind.",
+                UrlTemplate = "https://wttr.in/{city}?format=j1",
+                Method = "GET",
+                Headers = new Dictionary<string, string> { ["Accept"] = "application/json" },
+                Parameters = new List<AgentToolParameter>
+                {
+                    new() { Name = "city", Description = "City name in English, e.g. Beijing, London, New York" }
+                },
+                Enabled = true,
+                CreatedAt = now,
+                UpdatedAt = now,
+            },
+            new()
+            {
+                Id = Guid.NewGuid().ToString(),
+                Name = "GetStockPrice",
+                Description = "Get the latest stock price, daily high/low and volume for a ticker symbol.",
+                UrlTemplate = "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?interval=1d&range=1d",
+                Method = "GET",
+                Headers = new Dictionary<string, string> { ["Accept"] = "application/json", ["User-Agent"] = "Mozilla/5.0" },
+                Parameters = new List<AgentToolParameter>
+                {
+                    new() { Name = "symbol", Description = "Stock ticker symbol, e.g. AAPL, MSFT, TSLA, 0700.HK, 600519.SS" }
+                },
+                Enabled = true,
+                CreatedAt = now,
+                UpdatedAt = now,
+            },
+        };
+
+        await col.InsertManyAsync(defaults, cancellationToken: cancellationToken);
+        _logger.LogInformation("Seeded {Count} default agent tools.", defaults.Count);
     }
 
     private async Task EnsureAssistantUserAsync(IMongoDatabase database, CancellationToken cancellationToken)

@@ -8,6 +8,7 @@ import {
   IconButton,
   InputBase,
   Paper,
+  Switch,
   Typography,
 } from '@mui/material';
 import { Add as AddIcon, Delete as DeleteIcon, Refresh as RefreshIcon, Save as SaveIcon } from '@mui/icons-material';
@@ -20,6 +21,8 @@ import {
   AccessConfigResponse,
   AdminUserAccessConfig,
   adminService,
+  AgentToolItem,
+  AgentToolParam,
   DomainVisibilityPreview,
   DomainVisibilityRuleConfig,
   FamilyTreeDomainPermission,
@@ -114,6 +117,8 @@ export const AccessConfigPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [tools, setTools] = useState<AgentToolItem[]>([]);
+  const [toolsSaving, setToolsSaving] = useState(false);
   const canManageAdmins = (user?.email ?? '').trim().toLowerCase() === 'kankan@kankan';
   const canManageGlobalAccess = canManageAdmins;
   const canManageFamilySettings = !canManageGlobalAccess;
@@ -130,9 +135,13 @@ export const AccessConfigPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await adminService.getAccessConfig();
+      const [data, toolData] = await Promise.all([
+        adminService.getAccessConfig(),
+        adminService.getAgentTools(),
+      ]);
       setResponse(data);
       setConfig(data.config);
+      setTools(toolData);
     } catch {
       setError(t('admin.config.loadFailed'));
     } finally {
@@ -163,6 +172,30 @@ export const AccessConfigPage: React.FC = () => {
       setSaving(false);
     }
   };
+
+  const saveTools = async () => {
+    setToolsSaving(true);
+    setError(null);
+    try {
+      const saved = await adminService.saveAgentTools(tools);
+      setTools(saved);
+    } catch {
+      setError(t('admin.agentTools.saveFailed'));
+    } finally {
+      setToolsSaving(false);
+    }
+  };
+
+  const toolsActionButtons = (
+    <BoxAny sx={{ display: 'flex', gap: 0.75, flexShrink: 0 }}>
+      <Button size="small" startIcon={<RefreshIcon />} onClick={loadConfig} disabled={loading || toolsSaving}>
+        {t('admin.refresh')}
+      </Button>
+      <Button size="small" variant="contained" startIcon={<SaveIcon />} onClick={saveTools} disabled={loading || toolsSaving}>
+        {toolsSaving ? t('admin.config.saving') : t('admin.config.save')}
+      </Button>
+    </BoxAny>
+  );
 
   const visibilityRows = useMemo(() => response?.domainVisibilityPreview ?? [], [response]);
   const userExistsByEmail = useMemo(() => {
@@ -220,6 +253,10 @@ export const AccessConfigPage: React.FC = () => {
 
                 <Section title={t('admin.config.familyManagers')}>
                   <EditableFamilyManagers config={config} setConfig={setConfig} userExistsByEmail={userExistsByEmail} />
+                </Section>
+
+                <Section title={t('admin.agentTools.title')} actions={toolsActionButtons} titleMaxWidth={800}>
+                  <AgentToolsEditor tools={tools} onChange={setTools} />
                 </Section>
               </BoxAny>
             )}
@@ -476,7 +513,7 @@ const VisibilityPreviewGrid: React.FC<{ rows: DomainVisibilityPreview[] }> = ({ 
           <Typography variant="body2" color="text.secondary" sx={{ fontSize: 12, fontStyle: 'italic', py: 0.75 }}>
             <EmptyText />
           </Typography>
-        ) : rows.map((row) => (
+        ) : rows.map((row, index) => (
           <BoxAny
             key={`${row.viewerDomain}-${row.targetDomain}`}
             sx={{
@@ -486,6 +523,7 @@ const VisibilityPreviewGrid: React.FC<{ rows: DomainVisibilityPreview[] }> = ({ 
               py: 0.65,
               alignItems: 'center',
               borderBottom: row === rows[rows.length - 1] ? 'none' : '1px solid #e5e7eb',
+              backgroundColor: index % 2 === 0 ? '#ffffff' : '#edf2f7',
             }}
           >
             <ReadOnlyValue value={row.viewerDomain} />
@@ -596,6 +634,7 @@ const ReadOnlyGrid = <T,>({
             py: 0.65,
             alignItems: 'center',
             borderBottom: index === rows.length - 1 ? 'none' : '1px solid #e5e7eb',
+            backgroundColor: index % 2 === 0 ? '#ffffff' : '#edf2f7',
             ...(getRowSx?.(row) ?? {}),
           }}
         >
@@ -669,6 +708,7 @@ const EditableList = <T,>({
             py: 0.65,
             alignItems: 'center',
             borderBottom: index === rows.length - 1 ? 'none' : '1px solid #e5e7eb',
+            backgroundColor: index % 2 === 0 ? '#ffffff' : '#edf2f7',
           }}
         >
           {renderCells(row, index).map((cell, cellIndex) => (
@@ -690,4 +730,143 @@ const EditableList = <T,>({
 const EmptyText: React.FC = () => {
   const { t } = useLanguage();
   return <>{t('admin.config.empty')}</>;
+};
+
+// ─── Agent Tools Editor ───────────────────────────────────────────────────────
+
+const toolGridCols = `${columnWidths.primaryValue} 1fr 40px ${columnWidths.action}`;
+
+const AgentToolsEditor: React.FC<{
+  tools: AgentToolItem[];
+  onChange: (tools: AgentToolItem[]) => void;
+}> = ({ tools, onChange }) => {
+  const { t } = useLanguage();
+  const [draftRows, setDraftRows] = useState<Set<number>>(new Set());
+
+  const addTool = () => {
+    const idx = tools.length;
+    setDraftRows((prev) => new Set(prev).add(idx));
+    onChange([...tools, { id: '', name: '', description: '', urlTemplate: '', method: 'GET', headers: {}, parameters: [], enabled: true }]);
+  };
+
+  const removeRow = (index: number) => {
+    setDraftRows((prev) => new Set([...prev].filter((i) => i !== index).map((i) => (i > index ? i - 1 : i))));
+    onChange(tools.filter((_, i) => i !== index));
+  };
+
+  const update = (index: number, patch: Partial<AgentToolItem>) =>
+    onChange(tools.map((t, i) => (i === index ? { ...t, ...patch } : t)));
+
+  const updateParam = (ti: number, pi: number, patch: Partial<AgentToolParam>) =>
+    update(ti, { parameters: tools[ti].parameters.map((p, i) => (i === pi ? { ...p, ...patch } : p)) });
+
+  const addParam = (ti: number) =>
+    update(ti, { parameters: [...tools[ti].parameters, { name: '', description: '' }] });
+
+  const removeParam = (ti: number, pi: number) =>
+    update(ti, { parameters: tools[ti].parameters.filter((_, i) => i !== pi) });
+
+  return (
+    <BoxAny sx={{ ...sectionSx, maxWidth: 800 }}>
+      <Paper variant="outlined" sx={{ ...configSurfaceSx, width: '100%', maxWidth: 800 }}>
+        {/* Header */}
+        <BoxAny sx={{
+          display: 'grid',
+          gridTemplateColumns: toolGridCols,
+          columnGap: 1,
+          px: 1.25,
+          py: 0.75,
+          alignItems: 'center',
+          backgroundColor: '#f3f4f6',
+          borderBottom: tools.length > 0 ? '1px solid #e5e7eb' : 'none',
+        }}>
+          {[t('admin.agentTools.col.name'), t('admin.agentTools.col.urlTemplate'), t('admin.agentTools.col.enabled')].map((label, i) => (
+            <BoxAny key={i} sx={{ display: 'flex', justifyContent: i === 2 ? 'center' : 'flex-start' }}>
+              <Typography variant="caption" color="text.secondary" sx={{ fontSize: 11 }}>{label}</Typography>
+            </BoxAny>
+          ))}
+          <BoxAny sx={{ display: 'flex', justifyContent: 'center' }}>
+            <IconButton size="small" onClick={addTool} aria-label="add" sx={{ width: 24, height: 24 }}>
+              <AddIcon fontSize="small" />
+            </IconButton>
+          </BoxAny>
+        </BoxAny>
+
+        {/* Empty state */}
+        {tools.length === 0 && (
+          <BoxAny sx={{ px: 1.25, py: 0.35 }}>
+            <Typography variant="body2" color="text.secondary" sx={{ fontSize: 12, fontStyle: 'italic', py: 0.75 }}>
+              <EmptyText />
+            </Typography>
+          </BoxAny>
+        )}
+
+        {/* Rows */}
+        <BoxAny sx={{ px: 1.25, py: 0.35 }}>
+          {tools.map((tool, index) => {
+            const isDraft = draftRows.has(index) || !(tool.name && tool.urlTemplate);
+            return (
+              <BoxAny key={tool.id || `new-${index}`} sx={{ borderBottom: index === tools.length - 1 ? 'none' : '1px solid #e5e7eb', backgroundColor: index % 2 === 0 ? '#ffffff' : '#edf2f7' }}>
+                {/* Main row: Name | URL | Enabled | Delete */}
+                <BoxAny sx={{ display: 'grid', gridTemplateColumns: toolGridCols, columnGap: 1, py: 0.65, alignItems: 'center' }}>
+                  {isDraft
+                    ? <InputBase value={tool.name} onChange={(e) => update(index, { name: e.target.value })} placeholder={t('admin.agentTools.placeholder.name')} sx={inlineInputSx} />
+                    : <ReadOnlyValue value={tool.name} />}
+                  {isDraft
+                    ? <InputBase value={tool.urlTemplate} onChange={(e) => update(index, { urlTemplate: e.target.value })} placeholder="https://api.example.com/{param}" sx={{ ...inlineInputSx, fontFamily: 'monospace', fontSize: 12 }} />
+                    : <ReadOnlyValue value={tool.urlTemplate} monospace />}
+                  <BoxAny sx={{ display: 'flex', justifyContent: 'center' }}>
+                    <Switch size="small" checked={tool.enabled} onChange={(e) => update(index, { enabled: e.target.checked })} />
+                  </BoxAny>
+                  <BoxAny sx={{ display: 'flex', justifyContent: 'center' }}>
+                    <IconButton size="small" onClick={() => removeRow(index)} sx={{ width: 24, height: 24 }}>
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </BoxAny>
+                </BoxAny>
+
+                {/* Description — full width */}
+                {isDraft ? (
+                  <InputBase value={tool.description} onChange={(e) => update(index, { description: e.target.value })} placeholder={t('admin.agentTools.placeholder.description')} sx={{ ...inlineInputSx, width: '100%', mb: 0.5 }} multiline maxRows={3} />
+                ) : tool.description ? (
+                  <Typography variant="caption" color="text.secondary" sx={{ ...readOnlyValueSx, fontSize: 12, display: 'block', pb: 0.35 }}>
+                    {tool.description}
+                  </Typography>
+                ) : null}
+
+                {/* Parameters */}
+                {isDraft ? (
+                  <BoxAny sx={{ pl: 1.5, pb: 0.5 }}>
+                    {tool.parameters.map((param, pi) => (
+                      <BoxAny key={pi} sx={{ display: 'grid', gridTemplateColumns: `100px 1fr ${columnWidths.action}`, columnGap: 1, alignItems: 'center', py: 0.25 }}>
+                        <InputBase value={param.name} onChange={(e) => updateParam(index, pi, { name: e.target.value })} placeholder="{param}" sx={{ ...inlineInputSx, fontFamily: 'monospace', fontSize: 11, backgroundColor: '#f9fafb' }} />
+                        <InputBase value={param.description} onChange={(e) => updateParam(index, pi, { description: e.target.value })} placeholder={t('admin.agentTools.placeholder.paramDesc')} sx={{ ...inlineInputSx, fontSize: 12 }} />
+                        <BoxAny sx={{ display: 'flex', justifyContent: 'center' }}>
+                          <IconButton size="small" onClick={() => removeParam(index, pi)} sx={{ width: 20, height: 20 }}>
+                            <DeleteIcon sx={{ fontSize: 12 }} />
+                          </IconButton>
+                        </BoxAny>
+                      </BoxAny>
+                    ))}
+                    <IconButton size="small" onClick={() => addParam(index)} sx={{ width: 18, height: 18, mt: 0.25 }}>
+                      <AddIcon sx={{ fontSize: 12 }} />
+                    </IconButton>
+                  </BoxAny>
+                ) : tool.parameters.length > 0 ? (
+                  <BoxAny sx={{ pl: 1.5, pb: 0.5 }}>
+                    {tool.parameters.map((param, pi) => (
+                      <Typography key={pi} variant="caption" color="text.secondary" sx={{ fontSize: 11, display: 'block' }}>
+                        <BoxAny component="span" sx={{ fontFamily: 'monospace' }}>{`{${param.name}}`}</BoxAny>
+                        {param.description ? ` — ${param.description}` : ''}
+                      </Typography>
+                    ))}
+                  </BoxAny>
+                ) : null}
+              </BoxAny>
+            );
+          })}
+        </BoxAny>
+      </Paper>
+    </BoxAny>
+  );
 };

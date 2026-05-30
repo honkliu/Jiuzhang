@@ -163,7 +163,7 @@ interface Chat2DSegment {
   fileName?: string;
 }
 
-type ChatCommandId = '/w' | '/wa' | '/h' | '/b' | '/i' | '/r' | '/p' | '/a';
+type ChatCommandId = '/w' | '/wa' | '/h' | '/b' | '/i' | '/r' | '/p' | '/a' | '/e';
 
 interface ChatMessagesProps {
   activeChat: Chat | null;
@@ -1185,6 +1185,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [isRoom3D, setIsRoom3D] = useState(false);
   const [isRoom2D, setIsRoom2D] = useState(false);
+  const [chatMode, setChatMode] = useState<'chat' | 'agent'>('chat');
   const [hasOlderMessagesByChatId, setHasOlderMessagesByChatId] = useState<Record<string, boolean>>({});
   const [otherAvatarImageId, setOtherAvatarImageId] = useState<string | null>(null);
   const [otherLiveAvatarUrl, setOtherLiveAvatarUrl] = useState<string | null>(null);
@@ -1317,6 +1318,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
 
   const room3DStorageKey = activeChat ? `kankan.chat.3d:${activeChat.id}` : null;
   const room2DStorageKey = activeChat ? `kankan.chat.2d:${activeChat.id}` : null;
+  const chatModeStorageKey = activeChat ? `kankan.chat.mode:${activeChat.id}` : null;
 
   useEffect(() => {
     if (!room3DStorageKey) return;
@@ -1329,6 +1331,20 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
     const saved = window.localStorage.getItem(room2DStorageKey);
     setIsRoom2D(saved === '1');
   }, [room2DStorageKey]);
+
+  useEffect(() => {
+    if (!chatModeStorageKey) return;
+    const saved = window.localStorage.getItem(chatModeStorageKey);
+    setChatMode(saved === 'agent' ? 'agent' : 'chat');
+  }, [chatModeStorageKey]);
+
+  useEffect(() => {
+    return signalRService.onModeChanged((id, mode) => {
+      if (id === activeChat?.id) {
+        setChatMode(mode === 'agent' ? 'agent' : 'chat');
+      }
+    });
+  }, [activeChat?.id]);
 
   const handleRenameGroup = async () => {
     if (!activeChat) return;
@@ -1358,6 +1374,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
       { id: '/r' as const, description: t('chat.command.desc.r'), example: `/r ${exampleText}` },
       { id: '/p' as const, description: t('chat.command.desc.p'), example: `/p @name @name ${exampleText}` },
       { id: '/a' as const, description: t('chat.command.desc.a'), example: '/a @name' },
+      { id: '/e' as const, description: t('chat.command.desc.e'), example: '/e agent  |  /e chat' },
     ];
   }, [t]);
 
@@ -1616,6 +1633,22 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
           }
         })();
 
+        return;
+      }
+
+      case '/e': {
+        const subCmd = rest.trim().toLowerCase();
+        if (subCmd !== 'agent' && subCmd !== 'chat') {
+          addLocalInfoMessage(t('chat.command.usage.e'));
+          return;
+        }
+        const newMode = subCmd as 'chat' | 'agent';
+        setChatMode(newMode);
+        if (activeChat?.id) {
+          window.localStorage.setItem(`kankan.chat.mode:${activeChat.id}`, newMode);
+          signalRService.setMode(activeChat.id, newMode).catch(() => {});
+        }
+        addLocalInfoMessage(t(newMode === 'agent' ? 'chat.command.modeAgent' : 'chat.command.modeChat'));
         return;
       }
 
@@ -2498,6 +2531,16 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
           </BoxAny>
 
           <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexShrink: 0, ml: 1 }}>
+            {/* Agent mode indicator */}
+            {displayParticipant?.userId === WA_USER_ID && (
+              <Chip
+                label={chatMode === 'agent' ? t('chat.modeAgent') : t('chat.modeChat')}
+                size="small"
+                color={chatMode === 'agent' ? 'primary' : 'default'}
+                variant={chatMode === 'agent' ? 'filled' : 'outlined'}
+                sx={{ height: 22, fontSize: '0.7rem', fontFamily: 'monospace' }}
+              />
+            )}
             {activeChat.chatType === 'group' && user?.id && activeChat.adminIds?.includes(user.id) && (
               <IconButton edge="end" onClick={handleRenameGroup} title={t('chat.renameTitle')}>
                 <EditIcon />

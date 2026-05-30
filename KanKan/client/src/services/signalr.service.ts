@@ -49,6 +49,7 @@ export type AgentMessageCompleteHandler = (chatId: string, messageId: string, fu
 export type DraftChangedHandler = (chatId: string, userId: string, userName: string, text: string) => void;
 export type NotificationCreatedHandler = (notification: any) => void;
 export type UserUpdatedHandler = (user: { userId: string; displayName: string; avatarUrl: string; gender?: string }) => void;
+export type ModeChangedHandler = (chatId: string, mode: string) => void;
 
 class SignalRService {
   private connection: signalR.HubConnection | null = null;
@@ -67,6 +68,7 @@ class SignalRService {
   private draftChangedHandlers: DraftChangedHandler[] = [];
   private notificationCreatedHandlers: NotificationCreatedHandler[] = [];
   private userUpdatedHandlers: UserUpdatedHandler[] = [];
+  private modeChangedHandlers: ModeChangedHandler[] = [];
   private maxReconnectAttempts = 5;
 
   async connect(): Promise<void> {
@@ -204,6 +206,11 @@ class SignalRService {
       this.userUpdatedHandlers.forEach((handler) => handler(user));
     });
 
+    // Agent mode changed
+    this.connection.on('ModeChanged', (chatId: string, mode: string) => {
+      this.modeChangedHandlers.forEach((handler) => handler(chatId, mode));
+    });
+
     // Connection state changes
     this.connection.onreconnecting((error) => {
       console.log('SignalR reconnecting...', error);
@@ -279,6 +286,13 @@ class SignalRService {
     await this.connect();
     if (this.connection?.state === signalR.HubConnectionState.Connected) {
       await this.connection.invoke('AddReaction', chatId, messageId, emoji);
+    }
+  }
+
+  async setMode(chatId: string, mode: string): Promise<void> {
+    await this.connect();
+    if (this.connection?.state === signalR.HubConnectionState.Connected) {
+      await this.connection.invoke('SetMode', chatId, mode);
     }
   }
 
@@ -378,6 +392,13 @@ class SignalRService {
     this.userUpdatedHandlers.push(handler);
     return () => {
       this.userUpdatedHandlers = this.userUpdatedHandlers.filter((h) => h !== handler);
+    };
+  }
+
+  onModeChanged(handler: ModeChangedHandler): () => void {
+    this.modeChangedHandlers.push(handler);
+    return () => {
+      this.modeChangedHandlers = this.modeChangedHandlers.filter((h) => h !== handler);
     };
   }
 
