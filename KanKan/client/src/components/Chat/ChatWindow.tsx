@@ -478,6 +478,9 @@ const ChatInputPanel: React.FC<ChatInputPanelProps> = React.memo(({
   const skipDraftSaveRef = useRef(false);
   const selectionStartRef = useRef<number | null>(null);
   const selectionEndRef = useRef<number | null>(null);
+  const messageHistoryRef = useRef<string[]>([]);
+  const historyIndexRef = useRef(-1);
+  const draftBeforeHistoryRef = useRef('');
   const [messageText, setMessageText] = useState('');
   const [commandSelectedIndex, setCommandSelectedIndex] = useState(0);
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
@@ -556,6 +559,8 @@ const ChatInputPanel: React.FC<ChatInputPanelProps> = React.memo(({
     skipDraftSaveRef.current = true;
     setMessageText(activeChatId ? readChatInputDraft(activeChatId) : '');
     setIsEmojiPickerOpen(false);
+    historyIndexRef.current = -1;
+    draftBeforeHistoryRef.current = '';
   }, [activeChatId]);
 
   useEffect(() => {
@@ -772,6 +777,11 @@ const ChatInputPanel: React.FC<ChatInputPanelProps> = React.memo(({
       setMessageText('');
       const ok = await onSendMessage(raw);
       if (ok && activeChatId) clearChatInputDraft(activeChatId);
+      if (ok) {
+        messageHistoryRef.current = [...messageHistoryRef.current.slice(-49), raw.trim()];
+        historyIndexRef.current = -1;
+        draftBeforeHistoryRef.current = '';
+      }
       if (!ok) setMessageText(raw);
     }
   };
@@ -812,6 +822,53 @@ const ChatInputPanel: React.FC<ChatInputPanelProps> = React.memo(({
       if (e.key === 'Escape') {
         // Cancel: collapse the picker by inserting a space, breaking the @token.
         return;
+      }
+    }
+
+    // Message history navigation (terminal-style), only when no popups are active
+    if (!mentionState && !isCommandMode) {
+      if (e.key === 'ArrowUp') {
+        const caret = selectionStartRef.current ?? 0;
+        const isOnFirstLine = !messageText.slice(0, caret).includes('\n');
+        if (isOnFirstLine && messageHistoryRef.current.length > 0) {
+          e.preventDefault();
+          if (historyIndexRef.current === -1) {
+            draftBeforeHistoryRef.current = messageText;
+            historyIndexRef.current = messageHistoryRef.current.length - 1;
+          } else {
+            historyIndexRef.current = Math.max(0, historyIndexRef.current - 1);
+          }
+          const prev = messageHistoryRef.current[historyIndexRef.current];
+          setMessageText(prev);
+          window.requestAnimationFrame(() => {
+            inputRef.current?.setSelectionRange(prev.length, prev.length);
+          });
+          return;
+        }
+      }
+
+      if (e.key === 'ArrowDown' && historyIndexRef.current !== -1) {
+        const caret = selectionStartRef.current ?? messageText.length;
+        const isOnLastLine = !messageText.slice(caret).includes('\n');
+        if (isOnLastLine) {
+          e.preventDefault();
+          if (historyIndexRef.current < messageHistoryRef.current.length - 1) {
+            historyIndexRef.current += 1;
+            const next = messageHistoryRef.current[historyIndexRef.current];
+            setMessageText(next);
+            window.requestAnimationFrame(() => {
+              inputRef.current?.setSelectionRange(next.length, next.length);
+            });
+          } else {
+            historyIndexRef.current = -1;
+            const draft = draftBeforeHistoryRef.current;
+            setMessageText(draft);
+            window.requestAnimationFrame(() => {
+              inputRef.current?.setSelectionRange(draft.length, draft.length);
+            });
+          }
+          return;
+        }
       }
     }
 
