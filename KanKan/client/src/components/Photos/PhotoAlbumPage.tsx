@@ -1046,7 +1046,7 @@ const PhotoAlbumPage: React.FC<PhotoAlbumPageProps> = ({
       {content}
     </BoxAny>
   ) : (
-    <BoxAny sx={{ minHeight: '100vh', bgcolor: 'rgba(244, 247, 251, 0.5)', py: 4 }}>
+    <BoxAny sx={{ minHeight: '100vh', bgcolor: 'background.default', py: 4 }}>
       <Container maxWidth="lg">
         {content}
       </Container>

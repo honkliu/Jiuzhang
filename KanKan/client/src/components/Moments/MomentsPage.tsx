@@ -53,8 +53,9 @@ const momentAvatarSize = 44;
 const momentMetaRowHeight = 20;
 
 const momentContentSurfaceSx = {
-  borderRadius: '0px',
-  backgroundColor: 'rgba(15, 23, 42, 0.04)',
+  borderRadius: '4px',
+  border: '1px solid rgba(0,0,0,0.10)',
+  padding: '8px',
 };
 
 const composerActionButtonSx = {
@@ -419,10 +420,6 @@ export const MomentsPage: React.FC = () => {
                 pt: 0,
                 pb: 0,
                 ...momentContentSurfaceSx,
-                transition: 'background-color 0.15s ease, box-shadow 0.15s ease',
-                '&:focus-within': {
-                  backgroundColor: 'rgba(15, 23, 42, 0.06)',
-                },
               }}
             >
               <BoxAny
@@ -539,10 +536,6 @@ export const MomentsPage: React.FC = () => {
                 <BoxAny
                   sx={{
                     mb: moment.content?.text || moment.content?.mediaUrls?.length ? 1 : 0,
-                    px: 0,
-                    pt: 0,
-                    pb: 0,
-                    ...momentContentSurfaceSx,
                   }}
                 >
                   {moment.content?.text ? (

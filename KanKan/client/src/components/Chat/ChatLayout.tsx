@@ -322,7 +322,7 @@ export const ChatLayout: React.FC = () => {
             xs: `calc(${appHeaderHeight}px + env(safe-area-inset-top))`,
             sm: 'calc(64px + env(safe-area-inset-top))',
           },
-          bgcolor: 'background.default',
+          bgcolor: 'background.paper',
           overflow: 'hidden',
           minHeight: 0,
         }}

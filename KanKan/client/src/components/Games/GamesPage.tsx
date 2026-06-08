@@ -1005,7 +1005,7 @@ export const GamesPage: React.FC = () => {
   return (
     <>
       <AppHeader />
-      <BoxAny sx={{ minHeight: '100vh', pt: { xs: 'calc(56px + 8px)', sm: 'calc(64px + 10px)' }, pb: 5, background: 'linear-gradient(180deg, rgba(239,246,255,0.95), rgba(255,250,240,0.9))' }}>
+      <BoxAny sx={{ minHeight: '100vh', pt: { xs: 'calc(56px + 8px)', sm: 'calc(64px + 10px)' }, pb: 5, bgcolor: 'background.default' }}>
         <Container maxWidth="lg">
           <Paper sx={{ p: { xs: 0.25, sm: 0.5 }, mb: 1.25, borderRadius: '10px', background: '#ffffff', boxShadow: '0 8px 24px rgba(15,23,42,0.08)' }}>
             <Tabs

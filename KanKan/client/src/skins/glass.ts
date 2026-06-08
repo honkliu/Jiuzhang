@@ -24,7 +24,7 @@ export const glass: Skin = {
   label: 'WeChat Glass',
   labelZh: '微信玻璃',
   description: 'Translucent green glassmorphism (default).',
-  bodyBackground: '#f4f7fb',
+  bodyBackground: '#ffffff',
   linkColor: '#1976d2',
   logoStyle: 'rounded',
   theme: {
@@ -33,8 +33,8 @@ export const glass: Skin = {
       primary: { main: '#07c160' },
       secondary: { main: '#576b95' },
       background: {
-        default: 'rgba(244, 247, 251, 0.9)',
-        paper: 'rgba(255, 255, 255, 0.6)',
+        default: '#ffffff',
+        paper: '#ffffff',
       },
     },
     typography: { fontFamily: FONT_STACK },
@@ -62,40 +62,42 @@ export const glass: Skin = {
         styleOverrides: {
           root: {
             textTransform: 'none',
-            borderRadius: 12,
-            boxShadow:
-              '0 8px 20px rgba(15, 23, 42, 0.12), inset 0 1px 0 rgba(255,255,255,0.8), inset 0 -1px 0 rgba(255,255,255,0.35)',
+            borderRadius: 8,
+            boxShadow: 'none',
+            '&:hover': { boxShadow: 'none' },
           },
           contained: {
-            background: 'linear-gradient(135deg, rgba(7,193,96,0.9), rgba(35,208,124,0.85))',
-            border: '1px solid rgba(255,255,255,0.4)',
+            background: '#07c160',
+            color: '#ffffff',
+            '&:hover': { background: '#06ad56' },
           },
           outlined: {
-            borderColor: 'rgba(255,255,255,0.5)',
-            background: 'rgba(255,255,255,0.4)',
+            borderColor: 'rgba(15, 23, 42, 0.2)',
+            background: 'transparent',
+            '&:hover': { background: 'rgba(15, 23, 42, 0.04)', borderColor: 'rgba(15, 23, 42, 0.35)' },
           },
         },
       },
       MuiIconButton: {
         styleOverrides: {
           root: {
-            borderRadius: 12,
-            background: 'rgba(255,255,255,0.45)',
-            border: '1px solid rgba(255,255,255,0.5)',
-            boxShadow:
-              '0 8px 20px rgba(15, 23, 42, 0.12), inset 0 1px 0 rgba(255,255,255,0.8), inset 0 -1px 0 rgba(255,255,255,0.35)',
+            borderRadius: 8,
+            background: 'transparent',
+            border: 'none',
+            boxShadow: 'none',
+            '&:hover': { background: 'rgba(15, 23, 42, 0.06)' },
           },
         },
       },
       MuiListItemButton: {
         styleOverrides: {
           root: {
-            borderRadius: 14,
-            margin: '4px 8px',
-            background: 'rgba(255,255,255,0.55)',
-            border: '1px solid rgba(255,255,255,0.5)',
-            boxShadow:
-              '0 8px 20px rgba(15, 23, 42, 0.12), inset 0 1px 0 rgba(255,255,255,0.75), inset 0 -1px 0 rgba(255,255,255,0.3)',
+            borderRadius: 8,
+            margin: '2px 6px',
+            background: 'transparent',
+            border: 'none',
+            boxShadow: 'none',
+            '&:hover': { background: 'rgba(15, 23, 42, 0.04)' },
           },
         },
       },
@@ -115,27 +117,24 @@ export const glass: Skin = {
       MuiPaper: {
         styleOverrides: {
           root: {
-            background: 'rgba(255, 255, 255, 0.6)',
-            border: '1px solid rgba(255, 255, 255, 0.5)',
-            boxShadow: '0 10px 30px rgba(15, 23, 42, 0.08)',
+            background: '#ffffff',
+            boxShadow: 'none',
           },
         },
       },
       MuiCard: {
         styleOverrides: {
           root: {
-            background: 'rgba(255, 255, 255, 0.6)',
-            border: '1px solid rgba(255, 255, 255, 0.5)',
-            boxShadow: '0 10px 30px rgba(15, 23, 42, 0.08)',
+            background: '#ffffff',
+            boxShadow: 'none',
           },
         },
       },
       MuiDialog: {
         styleOverrides: {
           paper: {
-            background: 'rgba(255, 255, 255, 0.7)',
-            border: '1px solid rgba(255, 255, 255, 0.5)',
-            boxShadow: '0 12px 40px rgba(15, 23, 42, 0.12)',
+            background: '#ffffff',
+            boxShadow: '0 8px 32px rgba(15, 23, 42, 0.12)',
           },
         },
       },
@@ -145,11 +144,38 @@ export const glass: Skin = {
         },
         styleOverrides: {
           root: {
-            '& .MuiOutlinedInput-root': { background: 'rgba(255, 255, 255, 0.6)' },
+            '& .MuiOutlinedInput-root': { background: '#ffffff' },
             '& .MuiInputLabel-root': { zIndex: 1 },
             '& .MuiInputLabel-root.MuiInputLabel-shrink': {
               backgroundColor: '#fff',
               padding: '0 4px',
+            },
+          },
+        },
+      },
+      MuiTableBody: {
+        styleOverrides: {
+          root: {
+            '& .MuiTableRow-root:nth-of-type(even)': {
+              backgroundColor: '#f7f8fa',
+            },
+          },
+        },
+      },
+      MuiTableHead: {
+        styleOverrides: {
+          root: {
+            '& .MuiTableRow-root': {
+              backgroundColor: '#f0f2f5',
+            },
+          },
+        },
+      },
+      MuiList: {
+        styleOverrides: {
+          root: {
+            '& .MuiListItem-root:nth-of-type(even)': {
+              backgroundColor: '#f7f8fa',
             },
           },
         },

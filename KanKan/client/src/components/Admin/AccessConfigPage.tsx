@@ -217,7 +217,7 @@ export const AccessConfigPage: React.FC = () => {
   );
 
   return (
-    <BoxAny sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: '#f7f8fa' }}>
+    <BoxAny sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: 'background.default' }}>
       <AppHeader />
       <Container sx={{ py: 3, pt: 10 }} maxWidth="xl">
         <BoxAny sx={{ ...pageShellSx, display: 'flex', justifyContent: 'center', alignItems: 'flex-start', gap: 2, mb: 2 }}>
@@ -766,6 +766,18 @@ const AgentToolsEditor: React.FC<{
   const removeParam = (ti: number, pi: number) =>
     update(ti, { parameters: tools[ti].parameters.filter((_, i) => i !== pi) });
 
+  const updateHeader = (ti: number, hi: number, k: string, v: string) => {
+    const entries = Object.entries(tools[ti].headers);
+    entries[hi] = [k, v];
+    update(ti, { headers: Object.fromEntries(entries) });
+  };
+
+  const addHeader = (ti: number) =>
+    update(ti, { headers: Object.fromEntries([...Object.entries(tools[ti].headers), ['', '']]) });
+
+  const removeHeader = (ti: number, hi: number) =>
+    update(ti, { headers: Object.fromEntries(Object.entries(tools[ti].headers).filter((_, i) => i !== hi)) });
+
   return (
     <BoxAny sx={{ ...sectionSx, maxWidth: 800 }}>
       <Paper variant="outlined" sx={{ ...configSurfaceSx, width: '100%', maxWidth: 800 }}>
@@ -806,7 +818,7 @@ const AgentToolsEditor: React.FC<{
           {tools.map((tool, index) => {
             const isDraft = draftRows.has(index) || !(tool.name && tool.urlTemplate);
             return (
-              <BoxAny key={tool.id || `new-${index}`} sx={{ borderBottom: index === tools.length - 1 ? 'none' : '1px solid #e5e7eb', backgroundColor: index % 2 === 0 ? '#ffffff' : '#edf2f7' }}>
+              <BoxAny key={tool.id || `new-${index}`} sx={{ borderBottom: index === tools.length - 1 ? 'none' : '1px solid #e5e7eb', backgroundColor: index % 2 === 0 ? '#ffffff' : '#edf2f7', mx: -1.25, px: 1.25 }}>
                 {/* Main row: Name | URL | Enabled | Delete */}
                 <BoxAny sx={{ display: 'grid', gridTemplateColumns: toolGridCols, columnGap: 1, py: 0.65, alignItems: 'center' }}>
                   {isDraft
@@ -858,6 +870,37 @@ const AgentToolsEditor: React.FC<{
                       <Typography key={pi} variant="caption" color="text.secondary" sx={{ fontSize: 11, display: 'block' }}>
                         <BoxAny component="span" sx={{ fontFamily: 'monospace' }}>{`{${param.name}}`}</BoxAny>
                         {param.description ? ` — ${param.description}` : ''}
+                      </Typography>
+                    ))}
+                  </BoxAny>
+                ) : null}
+
+                {/* Headers */}
+                {isDraft ? (
+                  <BoxAny sx={{ pl: 1.5, pb: 0.5 }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: 11, display: 'block', mb: 0.25 }}>
+                      {t('admin.agentTools.headers')}
+                    </Typography>
+                    {Object.entries(tool.headers).map(([k, v], hi) => (
+                      <BoxAny key={hi} sx={{ display: 'grid', gridTemplateColumns: `140px 1fr ${columnWidths.action}`, columnGap: 1, alignItems: 'center', py: 0.25 }}>
+                        <InputBase value={k} onChange={(e) => updateHeader(index, hi, e.target.value, v)} placeholder={t('admin.agentTools.placeholder.headerKey')} sx={{ ...inlineInputSx, fontFamily: 'monospace', fontSize: 11, backgroundColor: '#f9fafb' }} />
+                        <InputBase value={v} onChange={(e) => updateHeader(index, hi, k, e.target.value)} placeholder={t('admin.agentTools.placeholder.headerValue')} sx={{ ...inlineInputSx, fontSize: 12 }} />
+                        <BoxAny sx={{ display: 'flex', justifyContent: 'center' }}>
+                          <IconButton size="small" onClick={() => removeHeader(index, hi)} sx={{ width: 20, height: 20 }}>
+                            <DeleteIcon sx={{ fontSize: 12 }} />
+                          </IconButton>
+                        </BoxAny>
+                      </BoxAny>
+                    ))}
+                    <IconButton size="small" onClick={() => addHeader(index)} sx={{ width: 18, height: 18, mt: 0.25 }}>
+                      <AddIcon sx={{ fontSize: 12 }} />
+                    </IconButton>
+                  </BoxAny>
+                ) : Object.keys(tool.headers).length > 0 ? (
+                  <BoxAny sx={{ pl: 1.5, pb: 0.5 }}>
+                    {Object.entries(tool.headers).map(([k, v], hi) => (
+                      <Typography key={hi} variant="caption" color="text.secondary" sx={{ fontSize: 11, display: 'block', fontFamily: 'monospace' }}>
+                        {k}: {v}
                       </Typography>
                     ))}
                   </BoxAny>

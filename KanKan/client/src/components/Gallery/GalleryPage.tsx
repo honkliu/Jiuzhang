@@ -19,7 +19,7 @@ export const GalleryPage: React.FC = () => {
   return (
     <>
       <AppHeader />
-      <BoxAny sx={{ minHeight: '100vh', bgcolor: 'rgba(244, 247, 251, 0.5)', pt: { xs: 'calc(56px + 5px)', sm: 'calc(64px + 5px)' }, pb: 4 }}>
+      <BoxAny sx={{ minHeight: '100vh', bgcolor: 'background.default', pt: { xs: 'calc(56px + 5px)', sm: 'calc(64px + 5px)' }, pb: 4 }}>
         <Container maxWidth="lg">
           <PhotoAlbumPage
             embedded
