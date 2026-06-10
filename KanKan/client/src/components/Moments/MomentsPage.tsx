@@ -111,7 +111,6 @@ const MomentMediaGrid: React.FC<MomentMediaGridProps> = ({
             alt={imageAlt}
             openOnHover
             openOnLongPress
-            openOnTap
           >
             {(previewProps) => (
               <BoxAny

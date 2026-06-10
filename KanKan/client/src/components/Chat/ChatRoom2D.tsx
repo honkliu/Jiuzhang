@@ -431,7 +431,6 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
                   alt="Chat media"
                   openOnHover
                   openOnLongPress
-                  openOnTap
                 >
                   {(previewProps) => (
                     <BoxAny
