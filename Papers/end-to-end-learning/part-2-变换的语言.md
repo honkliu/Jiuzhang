@@ -638,7 +638,24 @@ XOR 就是最简单的证据：原始二维空间里一条直线分不开，但�
 
 ## 第11节：为什么神经网络能表达各种变换
 
-这一节用一个完整代码例子来回答：为什么神经网络可以表达各种 `X -> Y` 变换？先看最简单的直线。训练数据来自 `x in [-100, 100]`，评估时把模型画到更大的 `[-500, 500]`。输入使用原始数值，不做 `x/100` 之类的缩放。
+在回答这个问题之前，先给出理论上的根据。
+
+### 11.0 万能逼近定理（Universal Approximation Theorem）
+
+**Cybenko (1989)** 和 **Hornik 等人 (1989)** 分别独立证明了以下结论：
+
+设 $\sigma: \mathbb{R} \to \mathbb{R}$ 是一个连续的非常数有界函数（例如 sigmoid），$I_n = [0,1]^n$ 是 $n$ 维单位超立方体，$C(I_n)$ 是 $I_n$ 上连续函数组成的空间。则对任意 $f \in C(I_n)$ 以及任意 $\varepsilon > 0$，存在正整数 $N$、实数 $\alpha_i, b_i$ 和向量 $\mathbf{w}_i \in \mathbb{R}^n$，使得：
+
+$$
+\left|\, \sum_{i=1}^{N} \alpha_i\, \sigma\!\left(\mathbf{w}_i^\top \mathbf{x} + b_i\right) - f(\mathbf{x}) \,\right| < \varepsilon
+\qquad \forall\, \mathbf{x} \in I_n
+$$
+
+用一句话概括：**带有足够多神经元的单隐层神经网络，可以在有界紧致域上以任意精度逼近任意连续函数。**
+
+定理强调的是"存在性"——存在某组参数能做到这件事。它不保证梯度下降一定能找到这组参数，也不保证训练区间以外仍然正确。下面三个实验正是用来说明这一点。
+
+这一节用三个完整代码例子来回答：为什么神经网络可以表达各种 `X -> Y` 变换？先看最简单的直线。训练数据来自 `x in [-100, 100]`，评估时把模型画到更大的 `[-500, 500]`。输入使用原始数值，不做 `x/100` 之类的缩放。
 
 ```python
 x_train_raw = torch.linspace(-100, 100, 1000).reshape(-1, 1)
@@ -726,7 +743,7 @@ $$
 y=2x+8
 $$
 
-![Raw 输入网络学习直线](../../outputs/pytorch-raw-residual-600param-comparison-predictions-best.png)
+![Raw 输入网络学习直线](pytorch-raw-residual-600param-comparison-predictions-best.png)
 
 7 个随机 seed 的聚合结果如下：
 
@@ -783,7 +800,7 @@ y_plot_semicircle = semicircle_y(x_plot_raw)
 
 真实半圆只在 `[-400, 400]` 内有定义，图中只画这个有效区间。
 
-![同一个 Raw 输入网络学习半圆](../../outputs/pytorch-raw-residual-600param-semicircle-train150-predictions.png)
+![同一个 Raw 输入网络学习半圆](pytorch-raw-residual-600param-semicircle-train150-predictions.png)
 
 这次运行保存了 dense prediction 和模型参数，因此后续修改图形样式不需要重新训练。评估 MSE 只在真实半圆有效的 `[-400, 400]` 内计算：
 
@@ -800,7 +817,43 @@ y_plot_semicircle = semicircle_y(x_plot_raw)
 
 这就是神经网络强大的地方，也是危险的地方。强大之处在于：同一段代码、同一组参数结构，只要换训练目标，就可以学习直线，也可以学习半圆。危险之处在于：训练区间内拟合得好，不等于区间外一定正确。
 
-万能逼近定理说的是“存在某组参数”可以在有限范围内逼近目标函数，不是说训练一定能找到，也不是说训练区间外一定正确。
+继续把同一组参数预算推到第三个目标：一周的股票价格变化。
+
+### 11.3 用同一个模型学习五日股价模式
+
+真实股价在一周内同时有多个尺度的波动：每日级别的涨跌、日内更小的震荡、以及整体趋势。用多频率正弦叠加来模拟这种结构：
+
+$$
+y(x) = 220 + 0.05x + 15\sin(2.5\pi t) + 6\sin(7.5\pi t + 0.8) + 2.5\sin(15\pi t + 1.4)
+$$
+
+其中 $t = x/100$，三个正弦分量分别对应日线级波动（2.5 个周期 = 5 个交易日）、盘中震荡和小波动。$x$ 在 $[-100, 100]$ 内训练，评估时画到 $[-150, 150]$。
+
+```python
+def stock_y(x):
+    import math
+    t = x / 100.0
+    trend   = 220.0 + 5.0 * t
+    daily   = 15.0 * torch.sin(t * 2.5 * math.pi)
+    session =  6.0 * torch.sin(t * 7.5 * math.pi + 0.8)
+    noise   =  2.5 * torch.sin(t * 15.0 * math.pi + 1.4)
+    return trend + daily + session + noise
+```
+
+模型结构完全不变，601 参数的 PlainSigmoidNet，只改训练目标：
+
+```python
+x_train_stock = torch.linspace(-100, 100, 1000).reshape(-1, 1)
+y_train_stock = stock_y(x_train_stock)
+```
+
+![同一个网络学习五日股价模式](pytorch-raw-residual-600param-stock-predictions.png)
+
+模型在训练区间内很好地捕捉了日线涨跌和盘中波动的复合结构。区间外，模型延续了它学到的振荡模式，但与真实曲线逐渐偏离——这和直线实验的"区间外趋于水平"形成了另一种对比：同样的饱和，展现不同的方式。
+
+三个实验的结论是：同一个约 600 参数的网络，只要换训练数据，就可以学出直线、半圆、以及多尺度的股价波动三种完全不同的形状。这正是万能逼近定理的实验呈现。
+
+万能逼近定理说的是”存在某组参数”可以在有限范围内逼近目标函数，不是说训练一定能找到，也不是说训练区间外一定正确。
 
 这一区别很关键：
 
