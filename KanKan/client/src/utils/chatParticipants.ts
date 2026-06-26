@@ -14,6 +14,12 @@ export const getRealParticipants = (participants: Participant[] | undefined): Pa
   return (participants ?? []).filter((p) => !!p?.userId && !isWaUserId(p.userId));
 };
 
+export const isWaDirectChat = (chat: Chat | undefined | null): chat is Chat => {
+  if (!chat || chat.chatType !== 'direct') return false;
+
+  return getWaParticipant(chat.participants) !== undefined && getRealParticipants(chat.participants).length <= 1;
+};
+
 export const getOtherRealParticipants = (chat: Chat, myUserId?: string | null): Participant[] => {
   return getRealParticipants(chat.participants).filter((p) => !myUserId || p.userId !== myUserId);
 };

@@ -18,7 +18,7 @@ import { photoService, type PhotoDto } from '@/services/photo.service';
 import { chatService } from '@/services/chat.service';
 import { signalRService } from '@/services/signalr.service';
 import { useLanguage } from '@/i18n/LanguageContext';
-import { WA_USER_ID } from '@/utils/chatParticipants';
+import { WA_USER_ID, isWaDirectChat } from '@/utils/chatParticipants';
 import { formatDateZhCN, parseDateInput } from '@/utils/date';
 import { setActiveChat, fetchMessages } from '@/store/chatSlice';
 import type { RootState, AppDispatch } from '@/store';
@@ -528,9 +528,7 @@ export const ReceiptsPage: React.FC = () => {
       }
       const text = serializeReceipts(selectedData, type);
 
-      let waChat = chats.find(c =>
-        c.participants?.some(p => p.userId === WA_USER_ID)
-      );
+      let waChat = chats.find(isWaDirectChat);
       if (!waChat) {
         waChat = await chatService.createChat({
           participantIds: [WA_USER_ID],

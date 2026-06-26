@@ -35,7 +35,7 @@ import type { AppDispatch, RootState } from '@/store';
 import { setActiveChat, fetchMessages } from '@/store/chatSlice';
 import { chatService } from '@/services/chat.service';
 import { signalRService } from '@/services/signalr.service';
-import { WA_USER_ID } from '@/utils/chatParticipants';
+import { WA_USER_ID, isWaDirectChat } from '@/utils/chatParticipants';
 import { AppHeader } from '@/components/Shared/AppHeader';
 import { useLanguage } from '@/i18n/LanguageContext';
 import {
@@ -327,9 +327,7 @@ export const StocksPage: React.FC = () => {
       }
       const text = serializeStocks(picks);
 
-      let waChat = chats.find((c) =>
-        c.participants?.some((p) => p.userId === WA_USER_ID),
-      );
+      let waChat = chats.find(isWaDirectChat);
       if (!waChat) {
         waChat = await chatService.createChat({
           participantIds: [WA_USER_ID],
