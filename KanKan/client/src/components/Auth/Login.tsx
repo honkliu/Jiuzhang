@@ -23,6 +23,7 @@ export const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
+  const [showRegistrationHelp, setShowRegistrationHelp] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { t, language } = useLanguage();
@@ -162,7 +163,7 @@ export const Login: React.FC = () => {
             </Button>
 
             <div className="loginFooter">
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" color="text.secondary" component="div" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', flexWrap: 'wrap' }}>
                 {t('auth.login.noAccount')}{' '}
                 <Link
                   to="/register"
@@ -171,7 +172,23 @@ export const Login: React.FC = () => {
                 >
                   {t('auth.login.create')}
                 </Link>
+                <span>·</span>
+                <button
+                  type="button"
+                  className="loginLink loginLinkStrong"
+                  style={{ border: 0, padding: 0, background: 'transparent', cursor: 'pointer', font: 'inherit', color: skin.linkColor }}
+                  onClick={() => setShowRegistrationHelp((value) => !value)}
+                >
+                  {language === 'zh' ? '注册说明' : 'Registration guide'}
+                </button>
               </Typography>
+              {showRegistrationHelp && (
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 1, lineHeight: 1.7 }}>
+                  {language === 'zh'
+                    ? '先填写邮箱并继续，向管理员索取验证码，然后输入验证码、昵称和密码完成注册。'
+                    : 'Enter your email, ask an admin for the code, then enter the code, name, and password to finish.'}
+                </Typography>
+              )}
             </div>
           </form>
         </Paper>
