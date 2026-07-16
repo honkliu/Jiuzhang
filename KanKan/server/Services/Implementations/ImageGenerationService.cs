@@ -248,6 +248,18 @@ public class ImageGenerationService : IImageGenerationService
         var (folderPath, urlPrefix) = GetGeneratedOutputLocation(sourceUrl);
         var results = FindGeneratedFiles(folderPath, searchPattern, baseName, urlPrefix);
 
+        if (results.Count == 0 || IsNumericSuffixUploadOriginal(folderPath, baseName, extension))
+        {
+            var relatedJobs = await _generationJobs
+                .Find(j => j.SourceType == "chat_image" && j.SourceRef.OriginalMediaUrl == sourceUrl)
+                .SortBy(j => j.CreatedAt)
+                .ToListAsync();
+
+            results.AddRange(relatedJobs
+                .SelectMany(j => j.Results?.GeneratedUrls ?? new List<string>())
+                .Where(url => !string.IsNullOrWhiteSpace(url)));
+        }
+
         return results
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(name => ExtractSuffixIndex(Path.GetFileName(name), baseName))
@@ -498,6 +510,29 @@ public class ImageGenerationService : IImageGenerationService
         return int.TryParse(trailing, out var n) && n > 0
             ? fileStem.Substring(0, lastUnderscore)
             : fileStem;
+    }
+
+    private static bool IsNumericSuffixUploadOriginal(string directoryPath, string fileStem, string extension)
+    {
+        var stripped = StripTrailingEditIndex(fileStem);
+        if (string.Equals(stripped, fileStem, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return !File.Exists(Path.Combine(directoryPath, $"{stripped}{extension}"));
+    }
+
+    private static string GetEditFilePrefix(string directoryPath, string fileStem, string extension)
+    {
+        var stripped = StripTrailingEditIndex(fileStem);
+        if (string.Equals(stripped, fileStem, StringComparison.OrdinalIgnoreCase))
+        {
+            return fileStem;
+        }
+
+        var parentPath = Path.Combine(directoryPath, $"{stripped}{extension}");
+        return File.Exists(parentPath) ? stripped : fileStem;
     }
 
     private static string CombineFileStems(params string[] stems)
@@ -854,11 +889,13 @@ public class ImageGenerationService : IImageGenerationService
             //   in its own namespace as A_B-2_1, A_B-2_2, ...
             //
             // Case 1 — lightbox edit (has MessageId, secondary optional):
-            //   strip the trailing "_N" from the source stem to find the
-            //   namespace, then continue numbering inside it:
+            //   strip the trailing "_N" only when the unsuffixed parent image
+            //   exists, then continue numbering inside that namespace:
             //     A_5     -> namespace "A"     -> A_6, A_7, ...
             //     A_B-3   -> namespace "A_B-3" -> A_B-3_1, A_B-3_2, ...
             //     A_B-3_2 -> namespace "A_B-3" -> A_B-3_3, A_B-3_4, ...
+            //   Uploaded originals can also naturally end in "_N" because the
+            //   server prefixes the original filename with a GUID.
             //   The secondary reference image does not affect filenames here.
             var isPairCase = string.IsNullOrWhiteSpace(request.MessageId)
                 && secondarySource != null
@@ -881,7 +918,7 @@ public class ImageGenerationService : IImageGenerationService
             }
             else
             {
-                filePrefix = StripTrailingEditIndex(sourceImage.FileStem);
+                filePrefix = GetEditFilePrefix(sourceImage.DirectoryPath, sourceImage.FileStem, sourceImage.Extension);
             }
             if (string.IsNullOrWhiteSpace(filePrefix))
             {

@@ -64,7 +64,7 @@ npm install -g bbtalk-0.1.0.tgz
 - Sign in and start chatting:
 
 ```powershell
-bbtalk login <email> <password> --base-url https://kankan.eastasia.cloudapp.azure.com/api
+bbtalk login <email> <password> --base-url https://talko.eastasia.cloudapp.azure.com/api
 ```
 
 - Later, start it:
