@@ -131,18 +131,70 @@ public class SemanticKernelAgentService : IAgentService
     private static async Task<string> ExecuteHttpToolAsync(AgentTool tool, KernelArguments args)
     {
         var url = tool.UrlTemplate;
+        var body = new Dictionary<string, object?>();
         foreach (var param in tool.Parameters)
         {
-            if (args.TryGetValue(param.Name, out var value) && value != null)
-                url = url.Replace($"{{{param.Name}}}", Uri.EscapeDataString(value.ToString()!));
+            if (!args.TryGetValue(param.Name, out var value) || value is null)
+                continue;
+
+            var placeholder = $"{{{param.Name}}}";
+            if (url.Contains(placeholder, StringComparison.Ordinal))
+                url = url.Replace(placeholder, Uri.EscapeDataString(value.ToString()!));
+            else
+                body[param.Name] = value;
         }
 
         using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
-        foreach (var (key, val) in tool.Headers)
-            client.DefaultRequestHeaders.TryAddWithoutValidation(key, val);
+        var method = string.IsNullOrWhiteSpace(tool.Method)
+            ? HttpMethod.Get
+            : new HttpMethod(tool.Method.Trim().ToUpperInvariant());
+        using var request = new HttpRequestMessage(method, url);
 
-        var response = await client.GetStringAsync(url);
-        return response.Length > 6000 ? response[..6000] + "\n...(truncated)" : response;
+        if (method == HttpMethod.Post)
+            request.Content = new StringContent(BuildPostBody(tool, args, body), Encoding.UTF8, "application/json");
+        else if (method != HttpMethod.Get)
+            throw new InvalidOperationException($"Unsupported HTTP method '{method}'.");
+
+        foreach (var (key, val) in tool.Headers)
+        {
+            if (!request.Headers.TryAddWithoutValidation(key, val))
+                request.Content?.Headers.TryAddWithoutValidation(key, val);
+        }
+
+        using var response = await client.SendAsync(request);
+        var content = await response.Content.ReadAsStringAsync();
+        response.EnsureSuccessStatusCode();
+        return content.Length > 6000 ? content[..6000] + "\n...(truncated)" : content;
+    }
+
+    private static string BuildPostBody(
+        AgentTool tool,
+        KernelArguments args,
+        Dictionary<string, object?> fallbackBody)
+    {
+        if (string.IsNullOrWhiteSpace(tool.BodyTemplate))
+            return JsonSerializer.Serialize(fallbackBody);
+
+        var rendered = tool.BodyTemplate;
+        foreach (var param in tool.Parameters)
+        {
+            if (!args.TryGetValue(param.Name, out var value) || value is null)
+                continue;
+
+            var placeholder = JsonSerializer.Serialize($"{{{param.Name}}}");
+            var replacement = JsonSerializer.Serialize(value.ToString());
+            rendered = rendered.Replace(placeholder, replacement, StringComparison.Ordinal);
+        }
+
+        try
+        {
+            using var json = JsonDocument.Parse(rendered);
+            return json.RootElement.GetRawText();
+        }
+        catch (JsonException ex)
+        {
+            throw new InvalidOperationException($"Tool '{tool.Name}' has an invalid JSON body template.", ex);
+        }
     }
 
     public async Task<string> GenerateReplyAsync(
@@ -180,7 +232,7 @@ public class SemanticKernelAgentService : IAgentService
         var chatHistory = new ChatHistory();
         chatHistory.AddSystemMessage(
             "You are River (洛), a helpful AI assistant. " +
-            "You have tools available for fetching web pages, checking weather, and looking up stock prices. " +
+            "You have tools available for real-time information and external services. " +
             "Always use tools when you need real-time information — never guess or make up data. " +
             "Be concise. Never prefix your reply with your own name.");
 

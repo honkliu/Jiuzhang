@@ -2194,16 +2194,12 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
 
 
   const getLatest2DContentFor = (senderId?: string, draftText?: string): { segments: Chat2DSegment[] } => {
-    const prefixLines = (value: string) =>
-      value
-        .split('\n')
-        .map((line) => `\\> ${line}`)
-        .join('\n');
+    const prefixMessage = (value: string) => `\\> ${value}`;
 
     if (!senderId) {
       return {
         segments: draftText?.trim()
-          ? [{ type: 'text', text: prefixLines(draftText.trim()) }]
+          ? [{ type: 'text', text: prefixMessage(draftText.trim()) }]
           : [],
       };
     }
@@ -2217,7 +2213,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
       if (msg.messageType === 'text') {
         const text = (msg.text || '').trim();
         if (text) {
-          segments.push({ type: 'text', text: prefixLines(text) });
+          segments.push({ type: 'text', text: prefixMessage(text) });
         }
         continue;
       }
@@ -2243,7 +2239,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
     }
 
     if (draftText && draftText.trim().length > 0) {
-      segments.push({ type: 'text', text: prefixLines(draftText.trim()) });
+      segments.push({ type: 'text', text: prefixMessage(draftText.trim()) });
     }
 
     return { segments };
@@ -2598,7 +2594,18 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
                 size="small"
                 color={chatMode === 'agent' ? 'primary' : 'default'}
                 variant={chatMode === 'agent' ? 'filled' : 'outlined'}
-                sx={{ height: 22, fontSize: '0.7rem', fontFamily: 'monospace' }}
+                sx={{
+                  height: 28,
+                  borderRadius: '4px',
+                  border: '1px solid',
+                  borderColor: chatMode === 'agent' ? 'primary.dark' : 'divider',
+                  backgroundColor: chatMode === 'agent' ? 'primary.main' : 'background.paper',
+                  color: chatMode === 'agent' ? 'primary.contrastText' : 'text.primary',
+                  fontSize: '0.75rem',
+                  fontFamily: 'inherit',
+                  fontWeight: 700,
+                  '& .MuiChip-label': { px: 1.1 },
+                }}
               />
             )}
             {activeChat.chatType === 'group' && user?.id && activeChat.adminIds?.includes(user.id) && (

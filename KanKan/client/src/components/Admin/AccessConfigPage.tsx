@@ -7,7 +7,9 @@ import {
   Container,
   IconButton,
   InputBase,
+  MenuItem,
   Paper,
+  Select,
   Switch,
   Typography,
 } from '@mui/material';
@@ -742,7 +744,7 @@ const EmptyText: React.FC = () => {
 
 // ─── Agent Tools Editor ───────────────────────────────────────────────────────
 
-const toolGridCols = `${columnWidths.primaryValue} 1fr 40px ${columnWidths.action}`;
+const toolGridCols = `${columnWidths.primaryValue} 88px 1fr 40px ${columnWidths.action}`;
 
 const AgentToolsEditor: React.FC<{
   tools: AgentToolItem[];
@@ -754,7 +756,7 @@ const AgentToolsEditor: React.FC<{
   const addTool = () => {
     const idx = tools.length;
     setDraftRows((prev) => new Set(prev).add(idx));
-    onChange([...tools, { id: '', name: '', description: '', urlTemplate: '', method: 'GET', headers: {}, parameters: [], enabled: true }]);
+    onChange([...tools, { id: '', name: '', description: '', urlTemplate: '', method: 'GET', headers: {}, bodyTemplate: '', parameters: [], enabled: true }]);
   };
 
   const removeRow = (index: number) => {
@@ -801,8 +803,8 @@ const AgentToolsEditor: React.FC<{
           borderBottom: tools.length > 0 ? '1px solid' : 'none',
           borderColor: 'divider',
         }}>
-          {[t('admin.agentTools.col.name'), t('admin.agentTools.col.urlTemplate'), t('admin.agentTools.col.enabled')].map((label, i) => (
-            <BoxAny key={i} sx={{ display: 'flex', justifyContent: i === 2 ? 'center' : 'flex-start' }}>
+          {[t('admin.agentTools.col.name'), t('admin.agentTools.col.method'), t('admin.agentTools.col.urlTemplate'), t('admin.agentTools.col.enabled')].map((label, i) => (
+            <BoxAny key={i} sx={{ display: 'flex', justifyContent: i === 3 ? 'center' : 'flex-start' }}>
               <Typography variant="caption" color="text.secondary" sx={{ fontSize: 11 }}>{label}</Typography>
             </BoxAny>
           ))}
@@ -834,6 +836,19 @@ const AgentToolsEditor: React.FC<{
                     ? <InputBase value={tool.name} onChange={(e) => update(index, { name: e.target.value })} placeholder={t('admin.agentTools.placeholder.name')} sx={inlineInputSx} />
                     : <ReadOnlyValue value={tool.name} />}
                   {isDraft
+                    ? (
+                      <Select
+                        size="small"
+                        value={(tool.method || 'GET').toUpperCase()}
+                        onChange={(e) => update(index, { method: e.target.value })}
+                        sx={{ height: 32, fontSize: 12 }}
+                      >
+                        <MenuItem value="GET">GET</MenuItem>
+                        <MenuItem value="POST">POST</MenuItem>
+                      </Select>
+                    )
+                    : <ReadOnlyValue value={(tool.method || 'GET').toUpperCase()} monospace />}
+                  {isDraft
                     ? <InputBase value={tool.urlTemplate} onChange={(e) => update(index, { urlTemplate: e.target.value })} placeholder="https://api.example.com/{param}" sx={{ ...inlineInputSx, fontFamily: 'monospace', fontSize: 12 }} />
                     : <ReadOnlyValue value={tool.urlTemplate} monospace />}
                   <BoxAny sx={{ display: 'flex', justifyContent: 'center' }}>
@@ -853,6 +868,30 @@ const AgentToolsEditor: React.FC<{
                   <Typography variant="caption" color="text.secondary" sx={{ ...readOnlyValueSx, fontSize: 12, display: 'block', pb: 0.35 }}>
                     {tool.description}
                   </Typography>
+                ) : null}
+
+                {/* JSON request body */}
+                {(tool.method || 'GET').toUpperCase() === 'POST' && (isDraft || tool.bodyTemplate) ? (
+                  <BoxAny sx={{ pl: 1.5, pb: 0.5 }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: 11, display: 'block', mb: 0.25 }}>
+                      {t('admin.agentTools.bodyTemplate')}
+                    </Typography>
+                    {isDraft ? (
+                      <InputBase
+                        value={tool.bodyTemplate || ''}
+                        onChange={(e) => update(index, { bodyTemplate: e.target.value })}
+                        placeholder={'{"query":"{query}"}'}
+                        sx={{ ...inlineInputSx, width: '100%', fontFamily: 'monospace', fontSize: 12 }}
+                        multiline
+                        minRows={3}
+                        maxRows={8}
+                      />
+                    ) : (
+                      <Typography component="pre" sx={{ m: 0, fontFamily: 'monospace', fontSize: 11, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                        {tool.bodyTemplate}
+                      </Typography>
+                    )}
+                  </BoxAny>
                 ) : null}
 
                 {/* Parameters */}

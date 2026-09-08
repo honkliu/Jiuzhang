@@ -8,6 +8,7 @@ public class AgentTool
     public string UrlTemplate { get; set; } = "";
     public string Method { get; set; } = "GET";
     public Dictionary<string, string> Headers { get; set; } = new();
+    public string BodyTemplate { get; set; } = "";
     public List<AgentToolParameter> Parameters { get; set; } = new();
     public bool Enabled { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

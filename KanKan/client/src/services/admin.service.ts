@@ -13,6 +13,7 @@ export interface AgentToolItem {
   urlTemplate: string;
   method: string;
   headers: Record<string, string>;
+  bodyTemplate: string;
   parameters: AgentToolParam[];
   enabled: boolean;
 }
