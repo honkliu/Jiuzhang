@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
 import { DEFAULT_SKIN_ID, SKINS, SKIN_LIST, getSkin } from './index';
 import type { Skin, SkinId } from './types';
+import { createSkinFoundation } from './foundation';
 
 const STORAGE_KEY = 'kankan.skin';
 
@@ -27,7 +28,10 @@ const readSavedSkinId = (): SkinId => {
 export const SkinProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [skinId, setSkinIdState] = useState<SkinId>(() => readSavedSkinId());
   const skin = useMemo(() => getSkin(skinId), [skinId]);
-  const theme = useMemo(() => createTheme(skin.theme), [skin]);
+  const theme = useMemo(() => {
+    const skinTheme = createTheme(skin.theme);
+    return createTheme(skinTheme, createSkinFoundation(skinTheme));
+  }, [skin]);
 
   useEffect(() => {
     try {

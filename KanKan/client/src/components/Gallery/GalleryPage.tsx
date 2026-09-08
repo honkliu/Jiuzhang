@@ -6,6 +6,7 @@ import { AppHeader } from '@/components/Shared/AppHeader';
 import { adminGalleryService } from '@/services/adminGallery.service';
 import type { RootState } from '@/store';
 import { useLanguage } from '@/i18n/LanguageContext';
+import { appPageContentSx, appPageShellSx } from '@/styles/appLayout';
 
 const BoxAny = Box as any;
 
@@ -19,8 +20,8 @@ export const GalleryPage: React.FC = () => {
   return (
     <>
       <AppHeader />
-      <BoxAny sx={{ minHeight: '100vh', bgcolor: 'background.default', pt: { xs: 'calc(56px + 5px)', sm: 'calc(64px + 5px)' }, pb: 4 }}>
-        <Container maxWidth="lg">
+      <BoxAny sx={appPageShellSx}>
+        <Container maxWidth="lg" sx={appPageContentSx}>
           <PhotoAlbumPage
             embedded
             title={t('photos.galleryTitle')}

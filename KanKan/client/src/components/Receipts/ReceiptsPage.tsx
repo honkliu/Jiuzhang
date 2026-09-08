@@ -22,6 +22,7 @@ import { WA_USER_ID, isWaDirectChat } from '@/utils/chatParticipants';
 import { formatDateZhCN, parseDateInput } from '@/utils/date';
 import { setActiveChat, fetchMessages } from '@/store/chatSlice';
 import type { RootState, AppDispatch } from '@/store';
+import { APP_HEADER_OFFSET, appPageContainerSx, appSurfaceSx } from '@/styles/appLayout';
 
 const BoxAny = Box as any;
 
@@ -43,10 +44,11 @@ const BatchPhotoListItem: React.FC<{
           gap: 1.5,
           py: 1.25,
           px: 1.5,
-          borderRadius: '10px',
+          borderRadius: '4px',
           mb: 1,
           alignItems: 'center',
-          border: selected ? '1px solid rgba(7,193,96,0.4)' : '1px solid rgba(15,23,42,0.08)',
+          border: '1px solid',
+          borderColor: selected ? 'primary.main' : 'divider',
           background: selected ? 'rgba(7,193,96,0.08)' : 'rgba(255,255,255,0.92)',
           '&:hover': {
             background: selected ? 'rgba(7,193,96,0.12)' : 'rgba(15,23,42,0.03)',
@@ -61,7 +63,7 @@ const BatchPhotoListItem: React.FC<{
             disableRipple
           />
         </ListItemIcon>
-        <Box sx={{ width: 64, height: 64, borderRadius: 2, overflow: 'hidden', flexShrink: 0, bgcolor: 'rgba(15,23,42,0.06)' }}>
+        <BoxAny sx={{ width: 64, height: 64, borderRadius: 1, overflow: 'hidden', flexShrink: 0, bgcolor: 'rgba(15,23,42,0.06)' }}>
           {imageUrl ? (
             <img
               src={imageUrl}
@@ -69,7 +71,7 @@ const BatchPhotoListItem: React.FC<{
               style={{ width: '100%', height: '100%', objectFit: 'cover' }}
             />
           ) : null}
-        </Box>
+        </BoxAny>
         <ListItemText
           primary={
             <Typography variant="body2" fontWeight={600} noWrap>
@@ -77,13 +79,13 @@ const BatchPhotoListItem: React.FC<{
             </Typography>
           }
           secondary={
-            <Box sx={{ mt: 0.5, display: 'flex', gap: 0.75, flexWrap: 'wrap', alignItems: 'center' }}>
+            <BoxAny sx={{ mt: 0.5, display: 'flex', gap: 0.75, flexWrap: 'wrap', alignItems: 'center' }}>
               <Chip size="small" label={`${Math.max(1, Math.round(photo.fileSize / 1024))} KB`} variant="outlined" />
               <Chip size="small" label="待提取" color="warning" variant="outlined" />
               <Typography variant="caption" color="text.secondary">
                 上传于 {new Date(photo.uploadedAt).toLocaleDateString('zh-CN')}
               </Typography>
-            </Box>
+            </BoxAny>
           }
         />
       </ListItemButton>
@@ -572,16 +574,15 @@ export const ReceiptsPage: React.FC = () => {
   return (
     <>
       <AppHeader />
-      <BoxAny sx={{ maxWidth: 960, mx: 'auto', px: { xs: 1, sm: 2 }, pt: { xs: 8, sm: 9 }, pb: 10 }}>
+      <BoxAny sx={{ maxWidth: 960, mx: 'auto', ...appPageContainerSx, pb: 10 }}>
         <Paper sx={{
+          ...appSurfaceSx,
           p: { xs: 0.25, sm: 0.5 },
           mb: tab === 2 ? 0 : 1.25,
-          borderRadius: tab === 2 ? '10px 10px 0 0' : '10px',
-          background: '#ffffff',
+          borderRadius: tab === 2 ? '4px 4px 0 0' : '4px',
           position: 'sticky',
-          top: { xs: 64, sm: 72 },
+          top: APP_HEADER_OFFSET,
           zIndex: 6,
-          boxShadow: '0 8px 24px rgba(15,23,42,0.08)',
         }}>
           <Tabs
             value={tab}
@@ -615,7 +616,7 @@ export const ReceiptsPage: React.FC = () => {
           {tab !== 2 && (
             <BoxAny sx={{ pt: 0.5, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0.75, flexWrap: 'wrap' }}>
               <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
-                <Button size="small" sx={{ minHeight: 28, px: 1.1 }} onClick={toggleAllChecked} disabled={loading}>
+                <Button size="small" sx={{ height: 32, minHeight: 32, px: 1.1 }} onClick={toggleAllChecked} disabled={loading}>
                   {(() => {
                     const ids = tab === 0
                       ? shoppingReceipts.map(r => r.id)
@@ -627,7 +628,7 @@ export const ReceiptsPage: React.FC = () => {
                   variant="contained"
                   size="small"
                   startIcon={<AutoAwesome />}
-                  sx={{ minHeight: 28, px: 1.1 }}
+                  sx={{ height: 32, minHeight: 32, px: 1.1 }}
                   disabled={askingWa || loading || checkedIds.size === 0}
                   onClick={handleAskWa}
                 >
@@ -730,13 +731,13 @@ export const ReceiptsPage: React.FC = () => {
         {/* Batch Photo Select Dialog */}
         <Dialog open={batchPhotoSelectOpen} onClose={() => setBatchPhotoSelectOpen(false)} maxWidth="md" fullWidth>
           <DialogTitle>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <PhotoIcon />
               选择照片进行 OCR 提取
               {batchSelectedPhotoIds.size > 0 && (
                 <Chip label={`${batchSelectedPhotoIds.size} 已选`} color="primary" size="small" />
               )}
-            </Box>
+            </BoxAny>
           </DialogTitle>
           <DialogContent>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>

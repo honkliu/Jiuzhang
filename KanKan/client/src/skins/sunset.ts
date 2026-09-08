@@ -15,21 +15,21 @@ const FONT_STACK = [
   'sans-serif',
 ].join(',');
 
-const CORAL = '#ff7a45';
-const CORAL_DEEP = '#e85d24';
-const AMBER = '#ffa940';
-const BG_GRADIENT = 'linear-gradient(135deg, #fff1e6 0%, #ffe4d6 60%, #ffd4c0 100%)';
+const CORAL = '#bd6754';
+const CORAL_DEEP = '#9f4f40';
+const AMBER = '#c99758';
+const BG_GRADIENT = '#f6f1ef';
 const SURFACE = '#ffffff';
-const CARD = '#fff8f2';
-const TEXT = '#3d2817';
-const TEXT_SOFT = '#7a5c3f';
-const HAIR = '#f0d8c0';
+const CARD = '#fbf7f5';
+const TEXT = '#382e2a';
+const TEXT_SOFT = '#786762';
+const HAIR = '#eadeda';
 
 export const sunset: Skin = {
   id: 'sunset',
-  label: 'Sunset',
-  labelZh: '夕阳',
-  description: 'Warm coral & amber, friendly rounded pills, cozy paper feel.',
+  label: 'Clay',
+  labelZh: '陶土',
+  description: 'Muted clay and warm white with restrained terracotta accents.',
   bodyBackground: BG_GRADIENT,
   linkColor: CORAL_DEEP,
   logoStyle: 'circle',

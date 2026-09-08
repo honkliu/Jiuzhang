@@ -323,9 +323,9 @@ export const EmotionAvatarGallery: React.FC<EmotionAvatarGalleryProps> = ({ user
             title={t('avatar.promptHelp')}
             onClick={(event) => setHelpAnchorEl(event.currentTarget)}
             sx={{
-              minWidth: 31,
-              width: 31,
-              height: 31,
+              minWidth: 32,
+              width: 32,
+              height: 32,
               px: 0,
               py: 0,
             }}
@@ -340,6 +340,7 @@ export const EmotionAvatarGallery: React.FC<EmotionAvatarGalleryProps> = ({ user
               void handlePromptSubmit();
             }}
             disabled={generating !== null || generatingAll || !avatarId}
+            sx={{ height: 32 }}
           >
             {generatingAll ? t('avatar.generatingAll') : t('avatar.generateAll')}
           </Button>
@@ -452,8 +453,10 @@ export const EmotionAvatarGallery: React.FC<EmotionAvatarGalleryProps> = ({ user
           sx={{
             display: 'grid',
             gridTemplateColumns: 'repeat(3, 1fr)',
-            columnGap: '22px',
-            rowGap: 0,
+            gap: 1,
+            width: '100%',
+            maxWidth: 420,
+            mx: 'auto',
           }}
         >
           {emotionLabels.map((label) => {
@@ -479,22 +482,40 @@ export const EmotionAvatarGallery: React.FC<EmotionAvatarGalleryProps> = ({ user
                     {(previewProps) => (
                       <BoxAny
                         {...previewProps}
-                        component="img"
-                        src={match.thumbnailDataUrl || buildThumbnailUrl(match.imageUrl, cacheBust[match.avatarImageId])}
-                        alt={match.emotion || label}
                         sx={{
                           width: '100%',
                           aspectRatio: '1 / 1',
-                          objectFit: 'cover',
-                          borderRadius: '5px',
-                          display: 'block',
+                          boxSizing: 'border-box',
+                          border: '1px solid',
+                          borderColor: 'divider',
+                          borderRadius: '4px',
+                          bgcolor: 'background.paper',
+                          p: '2px',
                           cursor: 'pointer',
-                          WebkitTouchCallout: 'none',
-                          WebkitUserSelect: 'none',
-                          userSelect: 'none',
-                          WebkitUserDrag: 'none',
+                          transition: 'border-color 120ms ease, background-color 120ms ease',
+                          '&:hover': {
+                            borderColor: 'primary.main',
+                            bgcolor: 'action.hover',
+                          },
                         }}
-                      />
+                      >
+                        <BoxAny
+                          component="img"
+                          src={match.thumbnailDataUrl || buildThumbnailUrl(match.imageUrl, cacheBust[match.avatarImageId])}
+                          alt={match.emotion || label}
+                          sx={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                            borderRadius: '2px',
+                            display: 'block',
+                            WebkitTouchCallout: 'none',
+                            WebkitUserSelect: 'none',
+                            userSelect: 'none',
+                            WebkitUserDrag: 'none',
+                          }}
+                        />
+                      </BoxAny>
                     )}
                   </ImageHoverPreview>
                 ) : (
@@ -502,12 +523,14 @@ export const EmotionAvatarGallery: React.FC<EmotionAvatarGalleryProps> = ({ user
                     sx={{
                       width: '100%',
                       aspectRatio: '1 / 1',
-                      background: '#f0f0f0',
-                      borderRadius: '5px',
+                      background: 'action.hover',
+                      borderRadius: '4px',
+                      border: '1px solid',
+                      borderColor: 'divider',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      color: '#888',
+                      color: 'text.secondary',
                       fontSize: 12,
                     }}
                   >

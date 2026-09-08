@@ -25,6 +25,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { updateUser } from '@/store/authSlice';
 import type { AppDispatch, RootState } from '@/store';
 import { FamilyNotebook } from './FamilyNotebook';
+import { APP_HEADER_OFFSET } from '@/styles/appLayout';
 
 const BoxAny = Box as any;
 
@@ -456,15 +457,16 @@ export const FamilyPage: React.FC = () => {
     width: '100%',
     fontSize: 13,
     lineHeight: 1.35,
-    borderRadius: '8px',
-    backgroundColor: '#ffffff',
-    boxShadow: 'inset 0 0 0 1px #d1d5db',
+    borderRadius: '4px',
+    backgroundColor: 'background.paper',
+    border: '1px solid',
+    borderColor: 'divider',
     '& input': {
       padding: 0,
     },
     '&.Mui-disabled': {
-      backgroundColor: '#f3f4f6',
-      boxShadow: 'inset 0 0 0 1px #d1d5db',
+      backgroundColor: 'action.disabledBackground',
+      borderColor: 'divider',
     },
   };
   const compactVisibilityToggleSx = {
@@ -474,30 +476,30 @@ export const FamilyPage: React.FC = () => {
     py: 0.2,
     fontSize: 12,
     lineHeight: 1.2,
-    borderRadius: '8px',
+    borderRadius: '4px',
     justifySelf: 'center',
   };
   const visibilityTableSurfaceSx = {
     overflow: 'hidden',
-    borderRadius: '8px',
-    backgroundColor: '#ffffff',
-    borderColor: '#d1d5db',
+    borderRadius: '4px',
+    backgroundColor: 'background.paper',
+    borderColor: 'divider',
     backgroundImage: 'none',
   };
   const createDialogTextFieldSx = {
     '& .MuiOutlinedInput-root': {
-      borderRadius: '5px',
-      backgroundColor: '#ffffff',
+      borderRadius: '4px',
+      backgroundColor: 'background.paper',
     },
   };
   const createDialogSelectMenuProps = {
     disableScrollLock: true,
     PaperProps: {
       sx: {
-        backgroundColor: '#ffffff',
+        backgroundColor: 'background.paper',
         backgroundImage: 'none',
-        border: '1px solid rgba(15, 23, 42, 0.08)',
-        boxShadow: '0 12px 32px rgba(15, 23, 42, 0.12)',
+        border: '1px solid',
+        borderColor: 'divider',
         backdropFilter: 'none',
         opacity: 1,
       },
@@ -1057,7 +1059,7 @@ export const FamilyPage: React.FC = () => {
 
   if (!currentUser?.canViewFamilyTree) {
     return (
-      <BoxAny sx={{ display: 'flex', flexDirection: 'column', height: '100vh', pt: '61px' }}>
+      <BoxAny sx={{ display: 'flex', flexDirection: 'column', height: '100dvh', pt: APP_HEADER_OFFSET }}>
         <AppHeader />
         <BoxAny sx={{ flex: 1, p: 3 }}>
           <Alert severity="warning">当前账号未开通家谱访问权限。</Alert>
@@ -1067,7 +1069,7 @@ export const FamilyPage: React.FC = () => {
   }
 
   return (
-    <BoxAny sx={{ display: 'flex', flexDirection: 'column', height: '100vh', pt: '61px' }}>
+    <BoxAny sx={{ display: 'flex', flexDirection: 'column', height: '100dvh', pt: APP_HEADER_OFFSET }}>
       <AppHeader />
 
       {/* Main content */}
@@ -1098,7 +1100,7 @@ export const FamilyPage: React.FC = () => {
                 borderRight: '1px solid rgba(15,23,42,0.08)',
                 ...(viewMode === 'tree' ? {
                   position: 'absolute', left: 0, top: 0, bottom: 0, zIndex: 10,
-                  background: '#fff',
+                  background: 'background.paper',
                   boxShadow: '2px 0 12px rgba(0,0,0,0.08)',
                 } : {}),
               }}>
@@ -1130,7 +1132,7 @@ export const FamilyPage: React.FC = () => {
                     borderTopLeftRadius: 8,
                     borderTopRightRadius: 8,
                     maxHeight: '80vh',
-                    background: '#fff',
+                    background: 'background.paper',
                     backgroundImage: 'none',
                   },
                 }}
@@ -1309,16 +1311,16 @@ export const FamilyPage: React.FC = () => {
 
       {/* Notebook view (谱志) — same layout as 札记 */}
       {notebookDialogOpen && selectedTreeId && (
-        <BoxAny sx={{ position: 'fixed', top: 61, left: 0, right: 0, bottom: 0, zIndex: 5, display: 'flex', flexDirection: 'column', background: '#fff' }}>
+        <BoxAny sx={{ position: 'fixed', top: APP_HEADER_OFFSET, left: 0, right: 0, bottom: 0, zIndex: 5, display: 'flex', flexDirection: 'column', background: 'background.paper' }}>
           <BoxAny sx={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
             <FamilyNotebook treeId={selectedTreeId} />
           </BoxAny>
           <BoxAny sx={{
-            borderTop: '1px solid rgba(15,23,42,0.08)', background: 'rgba(255,255,255,0.95)',
+            borderTop: '1px solid', borderColor: 'divider', background: 'background.paper',
             px: 2, py: 1, display: 'flex', justifyContent: 'flex-end',
           }}>
             <Button onClick={() => setNotebookDialogOpen(false)} size="small" variant="outlined"
-              sx={{ minHeight: 30, px: 0.5, fontSize: 14, lineHeight: 1.35, textTransform: 'none', borderColor: 'rgba(15,23,42,0.23)', color: 'text.primary', '&:hover': { borderColor: 'rgba(15,23,42,0.35)', backgroundColor: 'rgba(15,23,42,0.03)' } }}>
+              sx={{ height: 32, minHeight: 32, px: 1.25, fontSize: 14, lineHeight: 1.35, textTransform: 'none', color: 'text.primary' }}>
               返回族谱
             </Button>
           </BoxAny>
@@ -1327,8 +1329,9 @@ export const FamilyPage: React.FC = () => {
 
       {/* Bottom control bar */}
       <BoxAny sx={{
-        borderTop: '1px solid rgba(15,23,42,0.08)',
-        background: 'rgba(255,255,255,0.95)',
+        borderTop: '1px solid',
+        borderColor: 'divider',
+        background: 'background.paper',
         px: 2, py: 1,
         display: 'flex', justifyContent: 'flex-end',
         ...(isMobile ? {
@@ -1351,22 +1354,11 @@ export const FamilyPage: React.FC = () => {
           {currentUser?.canEditFamilyTree && (
             <Button
               size="small"
-              variant="outlined"
+              variant="contained"
               onClick={handleOpenCreateDialog}
               sx={{
-                minHeight: 30,
                 minWidth: 0,
-                borderColor: 'rgba(15, 23, 42, 0.23)',
-                color: 'text.primary',
                 ...(isMobile ? { flexShrink: 0 } : {}),
-                px: 0.5,
-                fontSize: 14,
-                lineHeight: 1.35,
-                textTransform: 'none',
-                '&:hover': {
-                  borderColor: 'rgba(15, 23, 42, 0.35)',
-                  backgroundColor: 'rgba(15, 23, 42, 0.03)',
-                },
               }}
             >
               新建
@@ -1378,19 +1370,8 @@ export const FamilyPage: React.FC = () => {
               variant="outlined"
               onClick={handleOpenVisibilityDialog}
               sx={{
-                minHeight: 30,
                 minWidth: 0,
-                borderColor: 'rgba(15, 23, 42, 0.23)',
-                color: 'text.primary',
                 ...(isMobile ? { flexShrink: 0 } : {}),
-                px: 0.5,
-                fontSize: 14,
-                lineHeight: 1.35,
-                textTransform: 'none',
-                '&:hover': {
-                  borderColor: 'rgba(15, 23, 42, 0.35)',
-                  backgroundColor: 'rgba(15, 23, 42, 0.03)',
-                },
               }}
             >
               设置
@@ -1402,19 +1383,8 @@ export const FamilyPage: React.FC = () => {
               variant="outlined"
               onClick={() => setNotebookDialogOpen(true)}
               sx={{
-                minHeight: 30,
                 minWidth: 0,
-                borderColor: 'rgba(15, 23, 42, 0.23)',
-                color: 'text.primary',
                 ...(isMobile ? { flexShrink: 0 } : {}),
-                px: 0.5,
-                fontSize: 14,
-                lineHeight: 1.35,
-                textTransform: 'none',
-                '&:hover': {
-                  borderColor: 'rgba(15, 23, 42, 0.35)',
-                  backgroundColor: 'rgba(15, 23, 42, 0.03)',
-                },
               }}
             >
               谱志
@@ -1450,10 +1420,10 @@ export const FamilyPage: React.FC = () => {
                 <Paper
                   {...paperProps}
                   sx={{
-                    backgroundColor: '#f5f7fb',
+                    backgroundColor: 'background.paper',
                     backgroundImage: 'none',
-                    border: '1px solid rgba(15, 23, 42, 0.08)',
-                    boxShadow: '0 12px 32px rgba(15, 23, 42, 0.12)',
+                    border: '1px solid',
+                    borderColor: 'divider',
                     backdropFilter: 'none',
                     opacity: 1,
                     mt: 0.5,
@@ -1491,9 +1461,9 @@ export const FamilyPage: React.FC = () => {
               sx={{
                 ...(isMobile ? { width: 96, flexShrink: 0 } : { width: 144 }),
                 '& .MuiOutlinedInput-root': {
-                  height: 30,
-                  minHeight: 30,
-                  backgroundColor: '#fff',
+                  height: 32,
+                  minHeight: 32,
+                  backgroundColor: 'background.paper',
                   backgroundImage: 'none',
                   borderRadius: 1,
                   alignItems: 'center',
@@ -1546,7 +1516,7 @@ export const FamilyPage: React.FC = () => {
               value={selectedTreeId ?? ''}
               onChange={e => setSelectedTreeId(e.target.value as string)}
               sx={{
-                minHeight: 30,
+                minHeight: 32,
                 '& .MuiSelect-select': {
                   fontSize: 14,
                   lineHeight: 1.35,
@@ -1563,10 +1533,10 @@ export const FamilyPage: React.FC = () => {
                 disableScrollLock: true,
                 PaperProps: {
                   sx: {
-                    backgroundColor: '#f5f7fb',
+                    backgroundColor: 'background.paper',
                     backgroundImage: 'none',
-                    border: '1px solid rgba(15, 23, 42, 0.08)',
-                    boxShadow: '0 12px 32px rgba(15, 23, 42, 0.12)',
+                    border: '1px solid',
+                    borderColor: 'divider',
                     backdropFilter: 'none',
                     opacity: 1,
                   },
@@ -1598,7 +1568,7 @@ export const FamilyPage: React.FC = () => {
               value={viewMode}
               onChange={(e) => setViewMode(e.target.value as ViewMode)}
               sx={{
-                minHeight: 30,
+                minHeight: 32,
                 '& .MuiSelect-select': {
                   fontSize: 14,
                   lineHeight: 1.35,
@@ -1615,10 +1585,10 @@ export const FamilyPage: React.FC = () => {
                 disableScrollLock: true,
                 PaperProps: {
                   sx: {
-                    backgroundColor: '#f5f7fb',
+                    backgroundColor: 'background.paper',
                     backgroundImage: 'none',
-                    border: '1px solid rgba(15, 23, 42, 0.08)',
-                    boxShadow: '0 12px 32px rgba(15, 23, 42, 0.12)',
+                    border: '1px solid',
+                    borderColor: 'divider',
                     backdropFilter: 'none',
                     opacity: 1,
                   },
@@ -1675,22 +1645,22 @@ export const FamilyPage: React.FC = () => {
               sm: '32px',
             },
             borderRadius: '8px',
-            backgroundColor: '#ffffff',
+            backgroundColor: 'background.paper',
             backgroundImage: 'none',
           },
         }}
       >
-        <DialogContent sx={{ backgroundColor: '#ffffff', borderTop: 'none', borderBottom: 'none', px: 2.25, pt: 2, pb: 1 }}>
+        <DialogContent sx={{ backgroundColor: 'background.paper', borderTop: 'none', borderBottom: 'none', px: 2.25, pt: 2, pb: 1 }}>
           <BoxAny sx={{ display: 'grid', gap: 0.9 }}>
             {createTreeError && <Alert severity="error">{createTreeError}</Alert>}
-            <Paper variant="outlined" sx={{ overflow: 'hidden', borderRadius: '8px', backgroundColor: '#f8fafc', backgroundImage: 'none' }}>
+            <Paper variant="outlined" sx={{ overflow: 'hidden', borderRadius: '4px', backgroundColor: 'action.hover', backgroundImage: 'none' }}>
               <Tabs
                 value={createTreeMode}
                 onChange={(_, value: CreateTreeMode) => handleSelectCreateMode(value)}
                 variant="fullWidth"
                 sx={{
                   minHeight: 42,
-                  backgroundColor: '#f8fafc',
+                  backgroundColor: 'action.hover',
                   '& .MuiTabs-indicator': {
                     height: 2.5,
                   },
@@ -1707,7 +1677,7 @@ export const FamilyPage: React.FC = () => {
               </Tabs>
             </Paper>
 
-            <Paper variant="outlined" sx={{ p: 1, borderRadius: '8px', backgroundColor: '#f8fafc', backgroundImage: 'none' }}>
+            <Paper variant="outlined" sx={{ p: 1, borderRadius: '4px', backgroundColor: 'action.hover', backgroundImage: 'none' }}>
               <BoxAny
                 sx={{
                   display: 'grid',
@@ -1746,7 +1716,7 @@ export const FamilyPage: React.FC = () => {
                   }}
                 >
                   {editableFamilyDomains.map(domain => (
-                    <MenuItem key={domain} value={domain} sx={{ fontSize: 14, lineHeight: 1.35, minHeight: 30, py: 0.5 }}>
+                    <MenuItem key={domain} value={domain} sx={{ fontSize: 14, lineHeight: 1.35, minHeight: 32, py: 0.5 }}>
                       {domain}
                     </MenuItem>
                   ))}
@@ -1764,7 +1734,7 @@ export const FamilyPage: React.FC = () => {
             </Paper>
 
             {createTreeMode === 'text' ? (
-              <Paper variant="outlined" sx={{ overflow: 'visible', borderRadius: '8px', backgroundColor: '#ffffff', backgroundImage: 'none' }}>
+              <Paper variant="outlined" sx={{ overflow: 'visible', borderRadius: '4px', backgroundColor: 'background.paper', backgroundImage: 'none' }}>
                 <TextField
                   label="输入人物，一行一人；子女前加两个空格"
                   value={createTreeText}
@@ -1775,7 +1745,7 @@ export const FamilyPage: React.FC = () => {
                   inputRef={createTreeTextInputRef}
                   sx={createDialogTextFieldSx}
                 />
-                <Paper variant="outlined" sx={{ mt: '-1px', p: 1, bgcolor: '#f8fafc', backgroundImage: 'none', borderRadius: 0 }}>
+                <Paper variant="outlined" sx={{ mt: '-1px', p: 1, bgcolor: 'action.hover', backgroundImage: 'none', borderRadius: 0 }}>
                   <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
                     示例：姓名，性别，配偶，配偶性别，出生年，去世年
                   </Typography>
@@ -1785,7 +1755,7 @@ export const FamilyPage: React.FC = () => {
                 </Paper>
               </Paper>
             ) : (
-              <Paper variant="outlined" sx={{ p: 1, borderRadius: '8px', backgroundColor: '#f8fafc', backgroundImage: 'none' }}>
+              <Paper variant="outlined" sx={{ p: 1, borderRadius: '4px', backgroundColor: 'action.hover', backgroundImage: 'none' }}>
                 <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                   <Button size="small" variant="outlined" onClick={() => createArchiveInputRef.current?.click()}>
                     {createArchiveFile ? '更换家谱' : '选择家谱'}
@@ -1812,7 +1782,7 @@ export const FamilyPage: React.FC = () => {
             )}
           </BoxAny>
         </DialogContent>
-        <DialogActions sx={{ backgroundColor: '#ffffff' }}>
+        <DialogActions sx={{ backgroundColor: 'background.paper' }}>
           <Button onClick={handleCloseCreateDialog} disabled={creatingTree}>取消</Button>
           <Button onClick={handleCreateTree} variant="contained" disabled={creatingTree}>
             {creatingTree ? (isArchiveImportMode ? '导入中…' : '创建中…') : (isArchiveImportMode ? '导入家谱' : '创建')}
@@ -1847,15 +1817,15 @@ export const FamilyPage: React.FC = () => {
               sm: '32px',
             },
             borderRadius: {
-              xs: '12px 12px 0 0',
+              xs: '8px 8px 0 0',
               sm: '8px',
             },
-            backgroundColor: '#ffffff',
+            backgroundColor: 'background.paper',
             backgroundImage: 'none',
           },
         }}
       >
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, backgroundColor: '#ffffff' }}>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, backgroundColor: 'background.paper' }}>
           <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0, flex: 1 }}>
             <BoxAny component="span" sx={{ flexShrink: 0 }}>家谱权限</BoxAny>
             {selectedTree && (
@@ -1871,13 +1841,8 @@ export const FamilyPage: React.FC = () => {
               onClick={handleExportSelectedTreeArchive}
               disabled={exportingTreeArchive}
               sx={{
-                minHeight: 30,
                 minWidth: 0,
                 flexShrink: 0,
-                px: 0.75,
-                fontSize: 14,
-                lineHeight: 1.35,
-                textTransform: 'none',
               }}
             >
               {exportingTreeArchive ? '导出中…' : '导出'}
@@ -1891,26 +1856,15 @@ export const FamilyPage: React.FC = () => {
               onClick={handleDeleteSelectedTree}
               disabled={deletingTree}
               sx={{
-                minHeight: 30,
                 minWidth: 0,
                 flexShrink: 0,
-                borderColor: 'rgba(220, 38, 38, 0.35)',
-                color: '#b91c1c',
-                px: 0.75,
-                fontSize: 14,
-                lineHeight: 1.35,
-                textTransform: 'none',
-                '&:hover': {
-                  borderColor: 'rgba(185, 28, 28, 0.55)',
-                  backgroundColor: 'rgba(220, 38, 38, 0.04)',
-                },
               }}
             >
               {deletingTree ? '删除中…' : '删除'}
             </Button>
           ) : null}
         </DialogTitle>
-        <DialogContent sx={{ backgroundColor: '#ffffff', borderTop: 'none', borderBottom: 'none', px: 2.25, pt: 2, pb: 1 }}>
+        <DialogContent sx={{ backgroundColor: 'background.paper', borderTop: 'none', borderBottom: 'none', px: 2.25, pt: 2, pb: 1 }}>
           <BoxAny sx={{ display: 'grid', gap: 1.25, pt: 0.5 }}>
             {visibilityError && <Alert severity="error">{visibilityError}</Alert>}
             {loadingVisibility ? (
@@ -1929,8 +1883,9 @@ export const FamilyPage: React.FC = () => {
                     px: 1.25,
                     py: 0.75,
                     alignItems: 'center',
-                    backgroundColor: '#f3f4f6',
-                    borderBottom: visibilityRules.length > 0 ? '1px solid #e5e7eb' : 'none',
+                    backgroundColor: 'action.hover',
+                    borderBottom: visibilityRules.length > 0 ? '1px solid' : 'none',
+                    borderColor: 'divider',
                   }}
                 >
                   <BoxAny sx={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
@@ -1941,7 +1896,7 @@ export const FamilyPage: React.FC = () => {
                       <Button
                         size="small"
                         onClick={handleAddVisibilityRule}
-                        sx={{ ml: 'auto', flexShrink: 0, minWidth: 30, px: 0.5, fontSize: 18, lineHeight: 1, fontWeight: 500 }}
+                        sx={{ ml: 'auto', flexShrink: 0, minWidth: 32, height: 32, px: 0.5, fontSize: 18, lineHeight: 1, fontWeight: 500 }}
                       >
                         +
                       </Button>
@@ -1976,7 +1931,8 @@ export const FamilyPage: React.FC = () => {
                           columnGap: 1,
                           py: 0.65,
                           alignItems: 'center',
-                          borderBottom: index === visibilityRules.length - 1 ? 'none' : '1px solid #e5e7eb',
+                          borderBottom: index === visibilityRules.length - 1 ? 'none' : '1px solid',
+                          borderColor: 'divider',
                         }}
                       >
                         <BoxAny sx={{ minWidth: 0 }}>
@@ -2026,10 +1982,10 @@ export const FamilyPage: React.FC = () => {
             )}
           </BoxAny>
         </DialogContent>
-        <DialogActions sx={{ backgroundColor: '#ffffff', borderTop: 'none', px: 3, pt: 0.25, pb: 2 }}>
-          <Button onClick={handleCloseVisibilityDialog} disabled={savingVisibility} sx={{ borderRadius: '8px', '&:hover': { backgroundColor: '#f3f4f6' } }}>取消</Button>
+        <DialogActions sx={{ backgroundColor: 'background.paper', borderTop: 'none', px: 3, pt: 0.25, pb: 2 }}>
+          <Button onClick={handleCloseVisibilityDialog} disabled={savingVisibility} sx={{ borderRadius: '4px', '&:hover': { backgroundColor: 'action.hover' } }}>取消</Button>
           {canManageSelectedTreePermissions && (
-            <Button onClick={handleSaveVisibility} variant="contained" disabled={loadingVisibility || savingVisibility} sx={{ borderRadius: '8px', boxShadow: 'none' }}>
+            <Button onClick={handleSaveVisibility} variant="contained" disabled={loadingVisibility || savingVisibility} sx={{ borderRadius: '4px', boxShadow: 'none' }}>
               保存
             </Button>
           )}

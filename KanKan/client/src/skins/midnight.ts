@@ -14,21 +14,21 @@ const FONT_STACK = [
   'sans-serif',
 ].join(',');
 
-const BG = '#0d1117';
-const SURFACE = '#161b22';
-const RAISED = '#1c2128';
-const BORDER = '#30363d';
-const TEXT = '#e6edf3';
-const TEXT_SOFT = '#8b949e';
-const LAVENDER = '#7c9ce8';
-const LAVENDER_DEEP = '#5c7ed1';
-const GOLD = '#f7b955';
+const BG = '#111513';
+const SURFACE = '#191f1c';
+const RAISED = '#202723';
+const BORDER = '#303a34';
+const TEXT = '#edf2ef';
+const TEXT_SOFT = '#9aa69f';
+const LAVENDER = '#79a98b';
+const LAVENDER_DEEP = '#5f8e72';
+const GOLD = '#c7a86b';
 
 export const midnight: Skin = {
   id: 'midnight',
   label: 'Midnight',
   labelZh: '深夜',
-  description: 'Sophisticated dark: near-black canvas, muted lavender accent, pale gold highlights.',
+  description: 'Deep charcoal surfaces with a subdued jade accent.',
   bodyBackground: BG,
   linkColor: LAVENDER,
   logoStyle: 'rounded',

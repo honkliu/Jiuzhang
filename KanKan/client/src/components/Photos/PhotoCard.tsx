@@ -27,11 +27,13 @@ const PhotoCard: React.FC<PhotoCardProps> = ({ photo, onClick, onDelete, onExtra
         sx={{
           position: 'relative',
           cursor: 'pointer',
-          borderRadius: '8px',
+          borderRadius: '4px',
           overflow: 'hidden',
-          border: isSelected ? '2px solid #2196f3' : '2px solid transparent',
-          transition: 'transform 0.2s, box-shadow 0.2s, border-color 0.2s',
-          '&:hover': { transform: 'translateY(-1px)', boxShadow: 4 },
+          border: '1px solid',
+          borderColor: isSelected ? 'primary.main' : 'divider',
+          boxShadow: isSelected ? 'inset 0 0 0 1px #07c160' : 'none',
+          transition: 'border-color 120ms ease, background-color 120ms ease',
+          '&:hover': { borderColor: 'primary.main' },
         }}
         onClick={onClick}
       >
@@ -42,7 +44,7 @@ const PhotoCard: React.FC<PhotoCardProps> = ({ photo, onClick, onDelete, onExtra
           }}>
             <Checkbox size="small" checked={isSelected}
               onClick={(e: React.MouseEvent) => { e.stopPropagation(); onToggleSelect(photo.id); }}
-              sx={{ '&.Mui-checked': { color: '#2196f3' } }} />
+              sx={{ '&.Mui-checked': { color: 'primary.main' } }} />
           </Box>
         )}
         <Box
@@ -93,7 +95,7 @@ const PhotoCard: React.FC<PhotoCardProps> = ({ photo, onClick, onDelete, onExtra
                 minWidth: 0,
                 px: '6px',
                 py: '2px',
-                borderRadius: '999px',
+                borderRadius: '4px',
                 textTransform: 'none',
                 boxShadow: 'none',
                 fontSize: '0.72rem',
@@ -119,12 +121,12 @@ const PhotoCard: React.FC<PhotoCardProps> = ({ photo, onClick, onDelete, onExtra
                 minWidth: 0,
                 px: '6px',
                 py: '2px',
-                borderRadius: '999px',
+                borderRadius: '4px',
                 textTransform: 'none',
                 fontSize: '0.72rem',
                 lineHeight: 1,
                 bgcolor: 'rgba(255,255,255,0.92)',
-                borderColor: 'rgba(25,118,210,0.35)',
+                borderColor: 'divider',
               }}
             >
               票据

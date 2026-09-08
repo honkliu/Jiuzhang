@@ -283,9 +283,14 @@ const hasMarkdownSyntax = (text: string): boolean =>
 
 const plainTextSx = {
   whiteSpace: 'pre-wrap' as const,
+  minWidth: 0,
+  maxWidth: '100%',
+  overflowWrap: 'anywhere' as const,
+  fontSize: '0.9375rem',
+  lineHeight: 1.65,
   '& .katex-display': { margin: '0.5em 0', overflowX: 'auto', overflowY: 'hidden' },
   '& .katex': { fontSize: '1.1em' },
-  '& table': { width: '100%', borderCollapse: 'collapse', margin: '8px 0' },
+  '& table': { display: 'block', width: '100%', maxWidth: '100%', overflowX: 'auto', borderCollapse: 'collapse', margin: '8px 0' },
   '& th, & td': { border: '1px solid rgba(0,0,0,0.1)', padding: '4px 8px', textAlign: 'left' },
   '& th': { backgroundColor: 'rgba(0,0,0,0.03)', fontWeight: 600 },
   '& code': { backgroundColor: 'rgba(0,0,0,0.05)', padding: '2px 4px', borderRadius: '3px', fontFamily: 'monospace', fontSize: '0.9em' },
@@ -295,7 +300,11 @@ const plainTextSx = {
 
 const markdownSx = {
   whiteSpace: 'normal' as const,
-  lineHeight: 1.6,
+  minWidth: 0,
+  maxWidth: '100%',
+  overflowWrap: 'anywhere' as const,
+  fontSize: '0.9375rem',
+  lineHeight: 1.65,
   '& .katex-display': { margin: '0.5em 0', overflowX: 'auto', overflowY: 'hidden' },
   '& .katex': { fontSize: '1.1em' },
   '& p': { margin: '0.4em 0' },
@@ -309,7 +318,7 @@ const markdownSx = {
   '& li': { margin: '0.15em 0' },
   '& li > p': { margin: 0, display: 'inline' },
   '& blockquote': { margin: '0.4em 0', paddingLeft: '0.75em', borderLeft: '3px solid rgba(0,0,0,0.15)', color: 'inherit' },
-  '& table': { width: '100%', borderCollapse: 'collapse', margin: '0.5em 0' },
+  '& table': { display: 'block', width: '100%', maxWidth: '100%', overflowX: 'auto', borderCollapse: 'collapse', margin: '0.5em 0' },
   '& th, & td': { border: '1px solid rgba(0,0,0,0.1)', padding: '4px 8px', textAlign: 'left' },
   '& th': { backgroundColor: 'rgba(0,0,0,0.03)', fontWeight: 600 },
   '& code': { backgroundColor: 'rgba(0,0,0,0.05)', padding: '2px 4px', borderRadius: '3px', fontFamily: 'monospace', fontSize: '0.9em' },
@@ -551,10 +560,16 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
           sx={{
             display: 'block',
             textAlign: 'center',
-            color: 'text.secondary',
-            fontSize: '0.72rem',
-            py: 1,
-            opacity: 0.7,
+            color: '#ffffff',
+            bgcolor: '#c7c7c7',
+            fontSize: '0.6875rem',
+            lineHeight: 1.5,
+            px: 0.75,
+            py: 0.125,
+            mb: 1.5,
+            mx: 'auto',
+            width: 'fit-content',
+            borderRadius: 0.5,
           }}
         >
           {timeSeparator}
@@ -566,14 +581,14 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
           flexDirection: isOwn ? 'row-reverse' : 'row',
           justifyContent: isOwn ? 'flex-end' : 'flex-start',
           alignItems: 'flex-start', // Adjusted alignment to top-align the avatar
-          gap: 0.5,
-          mb: 0.5,
+          gap: 0.25,
+          mb: 1.5,
           width: '100%',
-          mx: -0.5,
+          mx: 0,
         }}
       >
       {/* Avatar */}
-      <BoxAny sx={{ width: 56, flexShrink: 0, textAlign: 'center' }}>
+      <BoxAny sx={{ width: 48, flexShrink: 0, textAlign: 'center' }}>
         {showAvatar && (
           <UserAvatar
             src={message.senderAvatar || (message.senderAvatarSourceId ? `/api/avatar/image/${message.senderAvatarSourceId}` : '')}
@@ -582,11 +597,11 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
             variant="rounded"
             previewMode={isHoverCapable ? 'hover' : 'tap'}
             closePreviewOnClick
-            sx={{ width: 40, height: 40, mx: 'auto' }}
+            sx={{ width: 40, height: 40, mx: 'auto', borderRadius: 1 }}
           />
         )}
         {showAvatar && (
-          <Typography variant="caption" sx={{ display: 'block', mt: 0.5 }}>
+          <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block', mt: 0.375, px: 0.25, fontSize: '0.625rem' }}>
             {isAgent ? t('Wa') : message.senderName}
           </Typography>
         )}
@@ -596,26 +611,26 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
       <Paper
         elevation={0}
         sx={{
-          maxWidth: '76%',
+          maxWidth: { xs: '78%', sm: '72%' },
+          minWidth: 0,
+          width: 'fit-content',
           px: message.messageType === 'image' ? 0 : 1.5,
-          py: message.messageType === 'image' ? 0 : 0.75,
+          py: message.messageType === 'image' ? 0 : 1,
           position: 'relative',
             overflow: message.messageType === 'image' ? 'hidden' : 'visible',
           bgcolor: message.messageType === 'image'
             ? 'transparent'
-            : (isOwn ? '#07c160' : '#ffffff'),
-          // Bubble text color is hardcoded (not `text.primary`) so it stays
-          // legible under every skin — otherwise midnight's near-white
-          // text.primary would vanish on the white "other" bubble.
-          color: 'rgba(0, 0, 0, 0.87)',
-            borderRadius: '4px',
+            : (isOwn ? '#95ec69' : 'background.paper'),
+          color: isOwn ? 'rgba(0, 0, 0, 0.87)' : 'text.primary',
+          borderRadius: '4px',
           ml: isOwn ? 'auto' : 0,
           border: message.messageType === 'image'
             ? 'none'
-            : (isOwn ? 'none' : '1px solid #d9d9d9'),
+            : '1px solid',
+          borderColor: message.messageType === 'image' ? 'transparent' : 'divider',
           boxShadow: message.messageType === 'image'
             ? 'none'
-            : '0 1px 2px rgba(0,0,0,0.10)',
+            : '0 1px 1px rgba(0, 0, 0, 0.04)',
           ...(message.messageType !== 'image' ? {
             '&::before': {
               content: '""',
@@ -627,12 +642,12 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
                 right: '-5px',
                 borderWidth: '5px 0 5px 5px',
                 borderStyle: 'solid',
-                borderColor: 'transparent transparent transparent #07c160',
+                borderColor: 'transparent transparent transparent #95ec69',
               } : {
                 left: '-6px',
                 borderWidth: '5px 6px 5px 0',
                 borderStyle: 'solid',
-                borderColor: 'transparent #d9d9d9 transparent transparent',
+                borderColor: `transparent ${theme.palette.divider} transparent transparent`,
               }),
             },
             ...(!isOwn ? {
@@ -645,7 +660,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
                 height: 0,
                 borderWidth: '5px 5px 5px 0',
                 borderStyle: 'solid',
-                borderColor: 'transparent #ffffff transparent transparent',
+                borderColor: `transparent ${theme.palette.background.paper} transparent transparent`,
               },
             } : {}),
           } : {}),

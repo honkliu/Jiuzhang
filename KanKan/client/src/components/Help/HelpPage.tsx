@@ -8,6 +8,7 @@ import adminHelpEn from './admin-help.en.md?raw';
 import adminHelpZh from './admin-help.zh.md?raw';
 import userHelpEn from './user-help.en.md?raw';
 import userHelpZh from './user-help.zh.md?raw';
+import { appPageContentSx, appPageShellSx, appSurfaceSx } from '@/styles/appLayout';
 
 const BoxAny = Box as any;
 
@@ -65,6 +66,21 @@ const markdownSx = {
     backgroundColor: 'rgba(15, 23, 42, 0.08)',
     fontSize: '0.92em',
   },
+  '& pre': {
+    maxWidth: '100%',
+    overflowX: 'auto',
+    my: 1,
+    p: 1.25,
+    borderRadius: '4px',
+    backgroundColor: '#f5f5f5',
+    border: '1px solid',
+    borderColor: 'divider',
+  },
+  '& pre code': {
+    p: 0,
+    backgroundColor: 'transparent',
+    whiteSpace: 'pre',
+  },
 };
 
 export const HelpPage: React.FC = () => {
@@ -81,9 +97,9 @@ export const HelpPage: React.FC = () => {
   return (
     <>
       <AppHeader />
-      <BoxAny sx={{ minHeight: '100vh', pt: { xs: 'calc(56px + 8px)', sm: 'calc(64px + 10px)' }, pb: 5, bgcolor: 'background.default' }}>
-        <Container maxWidth="md">
-          <Paper sx={{ p: { xs: 0.25, sm: 0.5 }, mb: 1.25, borderRadius: '10px', background: '#ffffff', boxShadow: '0 8px 24px rgba(15,23,42,0.08)' }}>
+      <BoxAny sx={appPageShellSx}>
+        <Container maxWidth="md" sx={appPageContentSx}>
+          <Paper variant="outlined" sx={{ ...appSurfaceSx, p: { xs: 0.25, sm: 0.5 }, mb: 1.25 }}>
             <Tabs
               value={tab}
               onChange={(_, value) => setTab(value)}
@@ -100,7 +116,7 @@ export const HelpPage: React.FC = () => {
             </Tabs>
           </Paper>
 
-          <Paper sx={{ p: { xs: 2.25, sm: 3 }, borderRadius: '10px', background: '#ffffff', boxShadow: '0 8px 24px rgba(15,23,42,0.08)' }}>
+          <Paper variant="outlined" sx={{ ...appSurfaceSx, p: { xs: 2, sm: 2.5 } }}>
             <BoxAny sx={markdownSx}>
               <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
             </BoxAny>

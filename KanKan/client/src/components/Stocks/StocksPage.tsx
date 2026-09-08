@@ -38,6 +38,7 @@ import { signalRService } from '@/services/signalr.service';
 import { WA_USER_ID, isWaDirectChat } from '@/utils/chatParticipants';
 import { AppHeader } from '@/components/Shared/AppHeader';
 import { useLanguage } from '@/i18n/LanguageContext';
+import { APP_HEADER_OFFSET, appPageContentSx } from '@/styles/appLayout';
 import {
   HARDWARE_STOCKS,
   CATEGORY_GROUP_ORDER,
@@ -447,13 +448,12 @@ export const StocksPage: React.FC = () => {
   const errCount = rows.filter((r) => r.state.kind === 'error').length;
 
   return (
-    <BoxAny sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
+    <BoxAny sx={{ minHeight: '100dvh', bgcolor: 'background.default' }}>
       <AppHeader />
 
-      {/* Spacer for fixed AppBar */}
-      <BoxAny sx={{ height: { xs: 53, sm: 61 } }} />
+      <BoxAny sx={{ height: APP_HEADER_OFFSET }} />
 
-      <BoxAny sx={{ maxWidth: 1600, mx: 'auto', px: { xs: 1.25, sm: 2.5 }, py: 2 }}>
+      <BoxAny sx={{ maxWidth: 1440, mx: 'auto', ...appPageContentSx }}>
         {/* Title + meta */}
         <BoxAny sx={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', gap: 1.5, mb: 1 }}>
           <Typography variant="h5" fontWeight={700}>
@@ -614,7 +614,7 @@ export const StocksPage: React.FC = () => {
           <Table size="small" stickyHeader>
             <TableHead>
               <TableRow>
-                <TableCell padding="checkbox" sx={{ bgcolor: '#f5f7fb' }}>
+                <TableCell padding="checkbox" sx={{ bgcolor: 'background.paper' }}>
                   {(() => {
                     const eligible = sorted.filter((r) => r.state.kind === 'ok');
                     const eligibleSymbols = eligible.map((r) => r.symbol);
@@ -649,7 +649,7 @@ export const StocksPage: React.FC = () => {
                     sx={{
                       fontWeight: 700,
                       whiteSpace: 'nowrap',
-                      bgcolor: '#f5f7fb',
+                      bgcolor: 'background.paper',
                       ...(col.width ? { width: col.width, maxWidth: col.width } : {}),
                     }}
                   >

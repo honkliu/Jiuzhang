@@ -24,6 +24,7 @@ import {
   Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import { AppHeader } from '@/components/Shared/AppHeader';
+import { appPageContentSx, appPageShellSx, appSurfaceSx } from '@/styles/appLayout';
 
 const BoxAny = Box as any;
 
@@ -588,6 +589,7 @@ const TetrisGame: React.FC = () => {
               sx={{
                 '& .MuiButton-root': {
                   flex: 1,
+                  height: 40,
                   minWidth: 0,
                   px: { xs: 0.75, sm: 1.25 },
                   color: '#d9a86c',
@@ -612,8 +614,8 @@ const TetrisGame: React.FC = () => {
         <Stack spacing={2}>
           <Card><CardContent>
             <Stack direction="row" spacing={1}>
-              <Button variant="contained" startIcon={!started || paused ? <PlayIcon /> : <PauseIcon />} onClick={toggleRun}>{!started ? '开始' : paused ? '继续' : '暂停'}</Button>
-              <Button startIcon={<RefreshIcon />} onClick={reset}>重开</Button>
+              <Button variant="contained" startIcon={!started || paused ? <PlayIcon /> : <PauseIcon />} onClick={toggleRun} sx={{ height: 40 }}>{!started ? '开始' : paused ? '继续' : '暂停'}</Button>
+              <Button startIcon={<RefreshIcon />} onClick={reset} sx={{ height: 40 }}>重开</Button>
             </Stack>
           </CardContent></Card>
         </Stack>
@@ -1005,9 +1007,9 @@ export const GamesPage: React.FC = () => {
   return (
     <>
       <AppHeader />
-      <BoxAny sx={{ minHeight: '100vh', pt: { xs: 'calc(56px + 8px)', sm: 'calc(64px + 10px)' }, pb: 5, bgcolor: 'background.default' }}>
-        <Container maxWidth="lg">
-          <Paper sx={{ p: { xs: 0.25, sm: 0.5 }, mb: 1.25, borderRadius: '10px', background: '#ffffff', boxShadow: '0 8px 24px rgba(15,23,42,0.08)' }}>
+      <BoxAny sx={appPageShellSx}>
+        <Container maxWidth="lg" sx={appPageContentSx}>
+          <Paper variant="outlined" sx={{ ...appSurfaceSx, p: { xs: 0.25, sm: 0.5 }, mb: 1.25 }}>
             <Tabs
               value={tab}
               onChange={handleTabChange}

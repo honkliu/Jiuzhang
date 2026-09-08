@@ -1,8 +1,22 @@
+.authPage {
+  min-height: 100dvh;
+  display: flex !important;
+  align-items: center;
+  padding-top: 24px;
+  padding-bottom: 24px;
+}
+
 .loginContainer {
-  margin-top: 64px;
+  width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
+}
+
+.authPanel {
+  border: 1px solid #e5e5e5;
+  border-radius: 8px !important;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.06) !important;
 }
 
 .loginTitleRow {
@@ -10,20 +24,20 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 
 .loginLogo {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   object-fit: cover;
-  border-radius: 15px;
+  border-radius: 8px;
   display: block;
   cursor: pointer;
 }
 
 .loginTitleText {
-  line-height: 1;
+  line-height: 1.2;
   margin: 0;
   display: block;
   transform: translateY(-2px);
@@ -37,7 +51,7 @@
 }
 
 .loginLink {
-  color: #1976d2;
+  color: #576b95;
   text-decoration: none;
 }
 
@@ -51,4 +65,17 @@
 
 .loginFooter {
   text-align: center;
+}
+
+@media (max-width: 480px) {
+  .authPage {
+    align-items: flex-start;
+    padding-top: 40px;
+  }
+
+  .authPanel {
+    border-left: 0;
+    border-right: 0;
+    box-shadow: none !important;
+  }
 }

@@ -299,7 +299,7 @@ export const ChatLayout: React.FC = () => {
     setShowSidebar(true);
   };
 
-  const appHeaderHeight = isCompactHeader ? 56 : 64;
+  const appHeaderHeight = 56;
 
   return (
     <BoxAny
@@ -316,11 +316,11 @@ export const ChatLayout: React.FC = () => {
           display: 'flex',
           height: {
             xs: `calc(100dvh - ${appHeaderHeight}px - env(safe-area-inset-top))`,
-            sm: `calc(100dvh - 64px - env(safe-area-inset-top))`,
+            sm: `calc(100dvh - ${appHeaderHeight}px - env(safe-area-inset-top))`,
           },
           mt: {
             xs: `calc(${appHeaderHeight}px + env(safe-area-inset-top))`,
-            sm: 'calc(64px + env(safe-area-inset-top))',
+            sm: `calc(${appHeaderHeight}px + env(safe-area-inset-top))`,
           },
           bgcolor: 'background.paper',
           overflow: 'hidden',
@@ -333,7 +333,7 @@ export const ChatLayout: React.FC = () => {
             onNewChat={() => setNewChatOpen(true)}
             onCollapse={() => setShowSidebar(false)}
             sx={{
-              width: isCompact ? '100%' : 300,
+              width: isCompact ? '100%' : 280,
               flexShrink: 0,
               height: '100%',
               minHeight: 0,

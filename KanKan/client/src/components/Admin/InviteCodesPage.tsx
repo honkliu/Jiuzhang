@@ -19,6 +19,7 @@ import { AppHeader } from '@/components/Shared/AppHeader';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { useSelector } from 'react-redux';
 import { Navigate } from 'react-router-dom';
+import { appPageContainerSx } from '@/styles/appLayout';
 
 const BoxAny = Box as any;
 const statusTextColorMap = {
@@ -81,9 +82,9 @@ export const InviteCodesPage: React.FC = () => {
   };
 
   return (
-    <BoxAny sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+    <BoxAny sx={{ display: 'flex', flexDirection: 'column', minHeight: '100dvh' }}>
       <AppHeader />
-      <Container sx={{ py: 3, pt: 10 }} maxWidth="md">
+      <Container sx={appPageContainerSx} maxWidth="md">
         <BoxAny sx={{ maxWidth: 700, mx: 'auto' }}>
           <BoxAny sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
             <Typography variant="h5">{t('admin.title')}</Typography>

@@ -30,6 +30,7 @@ import {
   FamilyTreeManagerAccessConfig,
   FeatureDomainAccessConfig,
 } from '@/services/admin.service';
+import { appPageContainerSx } from '@/styles/appLayout';
 
 const BoxAny = Box as any;
 
@@ -49,9 +50,10 @@ const inlineInputSx = {
   width: '100%',
   fontSize: 13,
   lineHeight: 1.35,
-  borderRadius: '8px',
-  backgroundColor: '#ffffff',
-  boxShadow: 'inset 0 0 0 1px #d1d5db',
+  borderRadius: '4px',
+  backgroundColor: 'background.paper',
+  border: '1px solid',
+  borderColor: 'divider',
   '& input': {
     padding: 0,
   },
@@ -60,12 +62,12 @@ const inlineInputSx = {
 const configSurfaceSx = {
   overflowX: 'auto',
   overflowY: 'hidden',
-  borderRadius: '8px',
+  borderRadius: '4px',
   width: 'fit-content',
   maxWidth: '100%',
   mx: 'auto',
-  backgroundColor: '#ffffff',
-  borderColor: '#d1d5db',
+  backgroundColor: 'background.paper',
+  borderColor: 'divider',
   backgroundImage: 'none',
 };
 
@@ -217,9 +219,9 @@ export const AccessConfigPage: React.FC = () => {
   );
 
   return (
-    <BoxAny sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: 'background.default' }}>
+    <BoxAny sx={{ display: 'flex', flexDirection: 'column', minHeight: '100dvh', bgcolor: 'background.default' }}>
       <AppHeader />
-      <Container sx={{ py: 3, pt: 10 }} maxWidth="xl">
+      <Container sx={appPageContainerSx} maxWidth="xl">
         <BoxAny sx={{ ...pageShellSx, display: 'flex', justifyContent: 'center', alignItems: 'flex-start', gap: 2, mb: 2 }}>
           <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 620, mx: 'auto', textAlign: 'center' }}>{t('admin.config.subtitle')}</Typography>
         </BoxAny>
@@ -497,8 +499,9 @@ const VisibilityPreviewGrid: React.FC<{ rows: DomainVisibilityPreview[] }> = ({ 
           px: 1.25,
           py: 0.75,
           alignItems: 'center',
-          backgroundColor: '#f3f4f6',
-          borderBottom: rows.length > 0 ? '1px solid #e5e7eb' : 'none',
+          backgroundColor: 'action.hover',
+          borderBottom: rows.length > 0 ? '1px solid' : 'none',
+          borderColor: 'divider',
         }}
       >
         {columns.map((column) => (
@@ -522,8 +525,9 @@ const VisibilityPreviewGrid: React.FC<{ rows: DomainVisibilityPreview[] }> = ({ 
               columnGap: 1,
               py: 0.65,
               alignItems: 'center',
-              borderBottom: row === rows[rows.length - 1] ? 'none' : '1px solid #e5e7eb',
-              backgroundColor: index % 2 === 0 ? '#ffffff' : '#edf2f7',
+              borderBottom: row === rows[rows.length - 1] ? 'none' : '1px solid',
+              borderColor: 'divider',
+              backgroundColor: index % 2 === 0 ? 'background.paper' : 'action.hover',
             }}
           >
             <ReadOnlyValue value={row.viewerDomain} />
@@ -608,8 +612,9 @@ const ReadOnlyGrid = <T,>({
         px: 1.25,
         py: 0.75,
         alignItems: 'center',
-        backgroundColor: '#f3f4f6',
-        borderBottom: rows.length > 0 ? '1px solid #e5e7eb' : 'none',
+        backgroundColor: 'action.hover',
+        borderBottom: rows.length > 0 ? '1px solid' : 'none',
+        borderColor: 'divider',
       }}
     >
       {columns.map((column) => (
@@ -633,8 +638,9 @@ const ReadOnlyGrid = <T,>({
             columnGap: 1,
             py: 0.65,
             alignItems: 'center',
-            borderBottom: index === rows.length - 1 ? 'none' : '1px solid #e5e7eb',
-            backgroundColor: index % 2 === 0 ? '#ffffff' : '#edf2f7',
+            borderBottom: index === rows.length - 1 ? 'none' : '1px solid',
+            borderColor: 'divider',
+            backgroundColor: index % 2 === 0 ? 'background.paper' : 'action.hover',
             ...(getRowSx?.(row) ?? {}),
           }}
         >
@@ -675,8 +681,9 @@ const EditableList = <T,>({
         px: 1.25,
         py: 0.75,
         alignItems: 'center',
-        backgroundColor: '#f3f4f6',
-        borderBottom: rows.length > 0 ? '1px solid #e5e7eb' : 'none',
+        backgroundColor: 'action.hover',
+        borderBottom: rows.length > 0 ? '1px solid' : 'none',
+        borderColor: 'divider',
       }}
     >
       {columns.map((column, index) => (
@@ -707,8 +714,9 @@ const EditableList = <T,>({
             columnGap: 1,
             py: 0.65,
             alignItems: 'center',
-            borderBottom: index === rows.length - 1 ? 'none' : '1px solid #e5e7eb',
-            backgroundColor: index % 2 === 0 ? '#ffffff' : '#edf2f7',
+            borderBottom: index === rows.length - 1 ? 'none' : '1px solid',
+            borderColor: 'divider',
+            backgroundColor: index % 2 === 0 ? 'background.paper' : 'action.hover',
           }}
         >
           {renderCells(row, index).map((cell, cellIndex) => (
@@ -789,8 +797,9 @@ const AgentToolsEditor: React.FC<{
           px: 1.25,
           py: 0.75,
           alignItems: 'center',
-          backgroundColor: '#f3f4f6',
-          borderBottom: tools.length > 0 ? '1px solid #e5e7eb' : 'none',
+          backgroundColor: 'action.hover',
+          borderBottom: tools.length > 0 ? '1px solid' : 'none',
+          borderColor: 'divider',
         }}>
           {[t('admin.agentTools.col.name'), t('admin.agentTools.col.urlTemplate'), t('admin.agentTools.col.enabled')].map((label, i) => (
             <BoxAny key={i} sx={{ display: 'flex', justifyContent: i === 2 ? 'center' : 'flex-start' }}>
@@ -818,7 +827,7 @@ const AgentToolsEditor: React.FC<{
           {tools.map((tool, index) => {
             const isDraft = draftRows.has(index) || !(tool.name && tool.urlTemplate);
             return (
-              <BoxAny key={tool.id || `new-${index}`} sx={{ borderBottom: index === tools.length - 1 ? 'none' : '1px solid #e5e7eb', backgroundColor: index % 2 === 0 ? '#ffffff' : '#edf2f7', mx: -1.25, px: 1.25 }}>
+              <BoxAny key={tool.id || `new-${index}`} sx={{ borderBottom: index === tools.length - 1 ? 'none' : '1px solid', borderColor: 'divider', backgroundColor: index % 2 === 0 ? 'background.paper' : 'action.hover', mx: -1.25, px: 1.25 }}>
                 {/* Main row: Name | URL | Enabled | Delete */}
                 <BoxAny sx={{ display: 'grid', gridTemplateColumns: toolGridCols, columnGap: 1, py: 0.65, alignItems: 'center' }}>
                   {isDraft

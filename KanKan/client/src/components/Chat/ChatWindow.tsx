@@ -386,7 +386,7 @@ const ChatMessages: React.FC<ChatMessagesProps> = React.memo(({
           <CircularProgress size={18} />
         </BoxAny>
       ) : null}
-      <BoxAny ref={scrollContentRef} sx={{ px: 0.125, py: 1.5, minHeight: '100%' }}>
+      <BoxAny ref={scrollContentRef} sx={{ px: { xs: 1, sm: 2 }, py: 2, minHeight: '100%' }}>
         {mergedMessages.map((message, index) => {
           const prevMessage = index > 0 ? mergedMessages[index - 1] : null;
           const showAvatar = !prevMessage || prevMessage.senderId !== message.senderId;
@@ -469,6 +469,7 @@ const ChatInputPanel: React.FC<ChatInputPanelProps> = React.memo(({
   onCancelVoiceRecording,
   t,
 }) => {
+  const theme = useTheme();
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const emojiButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -910,7 +911,7 @@ const ChatInputPanel: React.FC<ChatInputPanelProps> = React.memo(({
           disabled={isRecordingVoice}
           title={t('chat.emoji')}
           aria-label={t('chat.emoji')}
-          sx={{ p: 0.5, color: 'primary.main' }}
+          sx={{ p: 0.5, color: 'text.secondary' }}
         >
           <EmojiIcon />
         </IconButton>
@@ -920,7 +921,7 @@ const ChatInputPanel: React.FC<ChatInputPanelProps> = React.memo(({
           disabled={uploading || sending || isRecordingVoice}
           title={t('chat.attach')}
           aria-label={t('chat.attach')}
-          sx={{ p: 0.5, color: 'primary.main' }}
+          sx={{ p: 0.5, color: 'text.secondary' }}
         >
           {uploading ? <CircularProgress size={18} /> : <AttachFileIcon />}
         </IconButton>
@@ -930,7 +931,7 @@ const ChatInputPanel: React.FC<ChatInputPanelProps> = React.memo(({
           disabled={uploading || sending}
           title={isRecordingVoice ? t('chat.voice.stop') : t('chat.voice.record')}
           aria-label={isRecordingVoice ? t('chat.voice.stop') : t('chat.voice.record')}
-          sx={{ p: 0.5, color: isRecordingVoice ? 'error.main' : 'primary.main' }}
+          sx={{ p: 0.5, color: isRecordingVoice ? 'error.main' : 'text.secondary' }}
         >
           {isRecordingVoice ? <StopCircleIcon /> : <MicIcon />}
         </IconButton>
@@ -964,19 +965,20 @@ const ChatInputPanel: React.FC<ChatInputPanelProps> = React.memo(({
           }}
           InputProps={{
             sx: {
-              alignItems: 'flex-start',
+              alignItems: 'center',
+              minHeight: 40,
               '& textarea': {
-                paddingTop: '6px !important',
-                paddingBottom: '0px !important',
-                lineHeight: 1.25,
+                paddingTop: '0 !important',
+                paddingBottom: '0 !important',
+                lineHeight: 1.5,
                 boxSizing: 'border-box',
               },
             },
           }}
           sx={{
             '& .MuiOutlinedInput-root': {
-              borderRadius: '8px',
-              bgcolor: 'grey.100',
+              borderRadius: '4px',
+              bgcolor: 'background.paper',
               py: 0,
               paddingLeft: '8px !important',
               paddingRight: '8px !important',
@@ -986,12 +988,13 @@ const ChatInputPanel: React.FC<ChatInputPanelProps> = React.memo(({
             // `text.primary` near-white, which would render invisible on the
             // hardcoded light-grey input bg above.
             '& .MuiInputBase-input': {
-              color: 'rgba(0, 0, 0, 0.87)',
-              WebkitTextFillColor: 'rgba(0, 0, 0, 0.87)',
-              caretColor: 'rgba(0, 0, 0, 0.87)',
+              color: 'text.primary',
+              WebkitTextFillColor: theme.palette.text.primary,
+              caretColor: theme.palette.text.primary,
             },
             '& .MuiInputBase-input::placeholder': {
-              color: 'rgba(0, 0, 0, 0.5)',
+              color: 'text.secondary',
+              WebkitTextFillColor: theme.palette.text.secondary,
               opacity: 1,
             },
           }}
@@ -1009,14 +1012,14 @@ const ChatInputPanel: React.FC<ChatInputPanelProps> = React.memo(({
                 sx={{
                   mb: 1,
                   overflow: 'hidden',
-                  bgcolor: '#ffffff',
+                  bgcolor: 'background.paper',
                   width: `${EMOJI_PICKER_WIDTH}px`,
                   maxWidth: `${EMOJI_PICKER_WIDTH}px`,
-                  borderRadius: '10px',
+                  borderRadius: '8px',
                   '& .EmojiPickerReact': {
                     '--epr-horizontal-padding': '8px',
                     '--epr-header-padding': '8px var(--epr-horizontal-padding)',
-                    '--epr-picker-border-radius': '10px',
+                    '--epr-picker-border-radius': '8px',
                     '--epr-category-navigation-button-size': '20px',
                     '--epr-category-label-height': '0px',
                     '--epr-category-label-padding': '0',
@@ -2510,7 +2513,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          bgcolor: 'grey.50',
+          bgcolor: 'background.default',
           ...sx,
         }}
       >
@@ -2529,14 +2532,14 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
       sx={{
         display: 'flex',
         flexDirection: 'column',
-        bgcolor: 'grey.100',
+        bgcolor: 'background.default',
         minHeight: 0,
         ...sx,
       }}
     >
       {/* Header */}
-      <AppBar position="static" color="default" elevation={1}>
-        <Toolbar sx={{ minHeight: { xs: 53, sm: 61 }, py: 0.25, pl: { xs: 1, sm: 1.5 }, pr: { xs: 0.75, sm: 1.25 } }}>
+      <AppBar position="static" color="default" elevation={0}>
+        <Toolbar sx={{ minHeight: 56, py: 0, pl: { xs: 1, sm: 1.5 }, pr: { xs: 0.75, sm: 1.25 } }}>
           {onToggleSidebar && (
             <IconButton edge="start" onClick={onToggleSidebar} sx={{ mr: 1 }}>
               <MenuIcon />
@@ -2549,8 +2552,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
           )}
           {isGroup ? (
             <GroupAvatar
-              size={40}
-              sx={{ mr: 2 }}
+              size={36}
+              sx={{ mr: 1.25 }}
               members={(() => {
                 const others = getOtherRealParticipants(activeChat, user?.id);
                 const source = others.length > 0 ? others : getRealParticipants(activeChat.participants);
@@ -2565,7 +2568,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
             <UserAvatar
               src={otherLiveAvatarUrl || displayParticipant?.avatarUrl || activeChat.avatar}
               gender={displayParticipant?.gender}
-              sx={{ width: 40, height: 40, mr: 2 }}
+              sx={{ width: 36, height: 36, mr: 1.25 }}
               fallbackText={localizedDisplayParticipantName || activeChatTitle || activeChat.name}
               variant="rounded"
               previewMode={isHoverCapable ? 'hover' : 'tap'}
@@ -2573,7 +2576,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
             />
           )}
           <BoxAny sx={{ flexGrow: 1, minWidth: 0, overflow: 'hidden' }}>
-            <Typography variant="subtitle1" fontWeight="bold" noWrap>
+            <Typography variant="subtitle1" fontWeight={500} noWrap>
               {activeChatTitle || activeChat.name}
             </Typography>
             <Typography variant="caption" color="text.secondary" noWrap>
@@ -2608,7 +2611,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
               <Tooltip title={isRoom2D ? t('chat.exit2d') : t('chat.enter2d')}>
                 <IconButton
                   size="small"
-                  sx={{ p: 0, width: 36, height: 31 }}
+                  sx={{ p: 0, width: 32, height: 32 }}
                   onClick={() => {
                     if (!room2DStorageKey) return;
                     setIsRoom2D((prev) => {
@@ -2634,7 +2637,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
             <Tooltip title={isRoom3D ? t('chat.exit3d') : t('chat.enter3d')}>
               <IconButton
                 size="small"
-                sx={{ p: 0, width: 36, height: 31 }}
+                sx={{ p: 0, width: 32, height: 32 }}
                 onClick={() => {
                   if (!room3DStorageKey) return;
                   setIsRoom3D((prev) => {
@@ -2687,10 +2690,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
       {/* Input */}
       <BoxAny
         sx={{
-          pt: 2,
-          pb: 2,
-          pl: 0.75,
-          pr: 1,
+          py: 1.25,
+          pl: 1,
+          pr: 1.25,
           bgcolor: 'background.paper',
           borderTop: '1px solid',
           borderColor: 'divider',

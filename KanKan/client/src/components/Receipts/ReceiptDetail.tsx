@@ -18,6 +18,7 @@ import type { ReceiptDto } from '@/services/receipt.service';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { formatDateZhCN } from '@/utils/date';
 import { ImageLightbox } from '@/components/Shared/ImageLightbox';
+import { appPageContainerSx } from '@/styles/appLayout';
 
 const BoxAny = Box as any;
 
@@ -356,7 +357,7 @@ export const ReceiptDetail: React.FC<ReceiptDetailProps> = ({ receipt, allReceip
   const dateStr = formatDateZhCN(receipt.receiptDate);
 
   return (
-    <BoxAny sx={{ maxWidth: 800, mx: 'auto', px: { xs: 1, sm: 2 }, pt: { xs: 9, sm: 10 }, pb: 4 }}>
+    <BoxAny sx={{ maxWidth: 800, mx: 'auto', ...appPageContainerSx }}>
       {/* Navigation */}
       <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
         <IconButton onClick={onBack} sx={{ bgcolor: 'rgba(0,0,0,0.04)', '&:hover': { bgcolor: 'rgba(0,0,0,0.08)' } }}>

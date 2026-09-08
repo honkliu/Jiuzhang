@@ -49,13 +49,16 @@ export const GroupAvatar: React.FC<GroupAvatarProps> = ({ members, size = 48, sx
       sx={{
         width: size,
         height: size,
-        borderRadius: '10px',
+        borderRadius: '4px',
         overflow: 'hidden',
         display: 'grid',
         gridTemplateColumns: `repeat(${cols}, 1fr)`,
         gridTemplateRows: `repeat(${rows}, 1fr)`,
-        bgcolor: 'rgba(2, 6, 23, 0.02)',
-        border: '1px solid rgba(15, 23, 42, 0.10)',
+        gap: '1px',
+        p: '1px',
+        bgcolor: 'divider',
+        border: '1px solid',
+        borderColor: 'divider',
         boxSizing: 'border-box',
         ...(sx as any),
       }}
@@ -63,7 +66,7 @@ export const GroupAvatar: React.FC<GroupAvatarProps> = ({ members, size = 48, sx
       {Array.from({ length: cellCount }).map((_, idx) => {
         const m = items[idx];
         if (!m) {
-          return <BoxAny key={`blank_${idx}`} sx={{ bgcolor: 'transparent' }} />;
+          return <BoxAny key={`blank_${idx}`} sx={{ bgcolor: 'background.paper' }} />;
         }
 
         return (

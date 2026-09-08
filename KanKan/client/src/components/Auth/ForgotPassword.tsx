@@ -15,6 +15,7 @@ import {
 } from '@mui/material';
 import { authService } from '@/services/auth.service';
 import { useLanguage } from '@/i18n/LanguageContext';
+import './Login.css';
 
 export const ForgotPassword: React.FC = () => {
   const [activeStep, setActiveStep] = useState(0);
@@ -85,9 +86,9 @@ export const ForgotPassword: React.FC = () => {
   };
 
   return (
-    <Container component="main" maxWidth="sm">
-      <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <Paper elevation={3} sx={{ p: 4, width: '100%' }}>
+    <Container component="main" maxWidth="xs" className="authPage">
+      <div className="loginContainer">
+        <Paper elevation={0} className="authPanel" sx={{ p: { xs: 3, sm: 4 }, width: '100%' }}>
           <Typography component="h1" variant="h4" align="center" gutterBottom>
             {t('auth.forgot.title')}
           </Typography>
@@ -143,7 +144,7 @@ export const ForgotPassword: React.FC = () => {
               <div style={{ textAlign: 'center', marginTop: 8 }}>
                 <Typography variant="body2" color="text.secondary">
                   {t('auth.forgot.remembered')}{' '}
-                  <Link to="/login" style={{ color: '#1976d2', textDecoration: 'none' }}>
+                  <Link to="/login" style={{ color: '#576b95', textDecoration: 'none' }}>
                     {t('auth.login.signIn')}
                   </Link>
                 </Typography>

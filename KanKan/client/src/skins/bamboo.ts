@@ -21,20 +21,20 @@ const SANS = [
   'sans-serif',
 ].join(',');
 
-const BAMBOO = '#4a7c59';
-const BAMBOO_DARK = '#365e44';
-const WOOD = '#b08968';
-const RICE = '#f5f1e8';
-const CREAM = '#fffdf7';
-const TEXT = '#2a3a2f';
-const TEXT_SOFT = '#6b6356';
-const HAIR = '#d6cdb8';
+const BAMBOO = '#4d765b';
+const BAMBOO_DARK = '#385c45';
+const WOOD = '#8a7564';
+const RICE = '#f1f4f1';
+const CREAM = '#fcfdfc';
+const TEXT = '#25332a';
+const TEXT_SOFT = '#68736b';
+const HAIR = '#dce4de';
 
 export const bamboo: Skin = {
   id: 'bamboo',
-  label: 'Bamboo & Stone',
+  label: 'Bamboo',
   labelZh: '竹石',
-  description: 'Calmer Chinese aesthetic: bamboo green, warm wood, cream paper.',
+  description: 'Soft botanical neutrals with a calm bamboo-green accent.',
   bodyBackground: RICE,
   linkColor: BAMBOO_DARK,
   logoStyle: 'square',

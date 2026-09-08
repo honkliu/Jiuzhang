@@ -41,19 +41,20 @@ const PhotoReceiptGroupedView: React.FC<PhotoReceiptGroupedViewProps> = ({
   groups, ungroupedPhotos = [], onPhotoClick, onDelete, onExtract, onOpenReceipt, selectedPhotoIds = new Set(), onToggleSelect,
 }) => {
   const { t } = useLanguage();
-  const groupCardBorderRadius = '10px';
+  const groupCardBorderRadius = '4px';
   const groupHeaderVerticalPadding = 0.8;
   const groupDateFontSize = '0.82rem';
 
   return (
     <Box>
       {groups.map((group) => (
-        <Paper key={group.id} sx={{ mb: '3px', borderRadius: groupCardBorderRadius, overflow: 'hidden' }}>
+        <Paper key={group.id} variant="outlined" sx={{ mb: '3px', borderRadius: groupCardBorderRadius, overflow: 'hidden' }}>
           <Box
             sx={{
               px: 3, py: groupHeaderVerticalPadding, display: 'flex', alignItems: 'center', gap: 1.5,
-              bgcolor: '#ffffff',
-              borderBottom: '1px solid rgba(0,0,0,0.08)',
+              bgcolor: 'background.paper',
+              borderBottom: '1px solid',
+              borderColor: 'divider',
             }}
           >
             <Typography sx={{ fontSize: groupDateFontSize, fontWeight: 600, lineHeight: 1.2 }}>
@@ -78,7 +79,7 @@ const PhotoReceiptGroupedView: React.FC<PhotoReceiptGroupedViewProps> = ({
       ))}
 
       {ungroupedPhotos.length > 0 && (
-        <Paper sx={{ mb: '3px', borderRadius: groupCardBorderRadius, overflow: 'hidden' }}>
+        <Paper variant="outlined" sx={{ mb: '3px', borderRadius: groupCardBorderRadius, overflow: 'hidden' }}>
           <Box
             sx={{ px: 3, py: 2, display: 'flex', alignItems: 'center', gap: 1.5,
               bgcolor: 'rgba(158,158,158,0.08)' }}

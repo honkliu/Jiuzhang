@@ -40,23 +40,23 @@ import { Lunar, Solar } from 'lunar-typescript';
 
 const BoxAny = Box as any;
 const WEEKDAY_LABELS = ['日', '一', '二', '三', '四', '五', '六'];
-const editableSurfaceColor = 'rgba(8,145,178,0.08)';
-const editableSurfaceBorder = 'rgba(8,145,178,0.2)';
+const editableSurfaceColor = 'action.hover';
+const editableSurfaceBorder = 'divider';
 const panelHeaderPaddingSx = { pl: 2.25, pr: 3 };
 const panelSectionPaddingSx = { pl: 2.25, pr: 3 };
 const roundedTextFieldSx = {
   '& .MuiOutlinedInput-root': {
-    borderRadius: '5px',
+    borderRadius: '4px',
     backgroundColor: editableSurfaceColor,
     transition: 'background-color 120ms ease, box-shadow 120ms ease, border-color 120ms ease',
     '& fieldset': {
-      borderColor: editableSurfaceBorder,
+      borderColor: 'divider',
     },
     '&:hover fieldset': {
-      borderColor: 'rgba(8,145,178,0.32)',
+      borderColor: 'primary.main',
     },
     '&.Mui-focused fieldset': {
-      borderColor: '#0891b2',
+      borderColor: 'primary.main',
     },
   },
 };
@@ -65,44 +65,45 @@ const inlineRowInputSx = {
   color: '#0f172a',
   px: 0.6,
   py: 0.3,
-  borderRadius: '5px',
+  borderRadius: '4px',
   backgroundColor: editableSurfaceColor,
-  boxShadow: `inset 0 0 0 1px ${editableSurfaceBorder}`,
+  border: '1px solid',
+  borderColor: editableSurfaceBorder,
   transition: 'background-color 120ms ease, box-shadow 120ms ease',
   '& input, & textarea': {
     p: 0,
   },
   '&:focus-within': {
-    boxShadow: 'inset 0 0 0 1px #0891b2',
-    backgroundColor: 'rgba(8,145,178,0.1)',
+    borderColor: 'primary.main',
+    backgroundColor: 'action.selected',
   },
 };
-const linkSelectSurfaceColor = '#eef9fc';
-const linkSelectSurfaceHoverColor = '#e0f4f8';
-const linkSelectSurfaceBorder = '#b7dce6';
+const linkSelectSurfaceColor = 'background.paper';
+const linkSelectSurfaceHoverColor = 'action.hover';
+const linkSelectSurfaceBorder = 'divider';
 const linkSelectMenuProps = {
   PaperProps: {
     sx: {
-      background: '#f8fcfd',
+      background: 'background.paper',
       backgroundImage: 'none',
-      border: '1px solid #cfe3ea',
-      boxShadow: '0 10px 24px rgba(15,23,42,0.12)',
+      border: '1px solid',
+      borderColor: 'divider',
       '& .MuiMenuItem-root': {
         fontSize: 13,
-        color: '#0f172a',
+        color: 'text.primary',
       },
       '& .MuiMenuItem-root.Mui-selected': {
-        backgroundColor: 'rgba(8,145,178,0.12)',
+        backgroundColor: 'action.selected',
       },
       '& .MuiMenuItem-root.Mui-selected:hover': {
-        backgroundColor: 'rgba(8,145,178,0.18)',
+        backgroundColor: 'action.hover',
       },
     },
   },
 } as const;
 const inlineRowSelectSx = {
   width: '100%',
-  borderRadius: '5px',
+  borderRadius: '4px',
   backgroundColor: linkSelectSurfaceColor,
   boxShadow: `inset 0 0 0 1px ${linkSelectSurfaceBorder}`,
   transition: 'background-color 120ms ease, box-shadow 120ms ease',
@@ -110,23 +111,23 @@ const inlineRowSelectSx = {
     px: 0.6,
     py: 0.55,
     fontSize: 13,
-    color: '#0f172a',
+    color: 'text.primary',
     opacity: 1,
   },
   '& .MuiSelect-icon': {
-    color: '#475569',
+    color: 'text.secondary',
     opacity: 1,
   },
   '& .MuiInputBase-input': {
-    color: '#0f172a',
+    color: 'text.primary',
     opacity: 1,
   },
   '&:hover': {
     backgroundColor: linkSelectSurfaceHoverColor,
   },
   '&.Mui-focused': {
-    boxShadow: 'inset 0 0 0 1px #0891b2',
-    backgroundColor: '#d8f0f5',
+    borderColor: 'primary.main',
+    backgroundColor: 'action.selected',
   },
 };
 const linkSelectInputSx = {
@@ -135,8 +136,8 @@ const linkSelectInputSx = {
   backgroundColor: linkSelectSurfaceColor,
   boxShadow: `inset 0 0 0 1px ${linkSelectSurfaceBorder}`,
   '&:focus-within': {
-    boxShadow: 'inset 0 0 0 1px #0891b2',
-    backgroundColor: '#d8f0f5',
+    borderColor: 'primary.main',
+    backgroundColor: 'action.selected',
   },
 };
 const compactRowSx = {
@@ -164,7 +165,7 @@ const relationTableSurfaceSx = {
   mb: 0.2,
   px: 0.8,
   py: 0.3,
-  borderRadius: '8px',
+  borderRadius: '4px',
   backgroundImage: relationTableBackground,
   boxShadow: 'inset 0 0 0 1px rgba(15,23,42,0.05)',
 };
@@ -1144,19 +1145,20 @@ const FamilyDateEditor: React.FC<{
                     minHeight: 56,
                     px: 0.75,
                     py: 0.75,
-                    borderRadius: '5px',
-                    border: isSelected ? '1px solid rgb(42,175,71)' : '1px solid rgba(15,23,42,0.08)',
-                    background: isSelected
-                      ? 'rgba(42,175,71,0.12)'
+                    borderRadius: '4px',
+                    border: '1px solid',
+                    borderColor: isSelected ? 'primary.main' : 'divider',
+                    backgroundColor: isSelected
+                      ? 'action.selected'
                       : cell.currentMonth
-                        ? '#fff'
-                        : 'rgba(148,163,184,0.08)',
-                    color: cell.currentMonth ? '#0f172a' : '#94a3b8',
+                        ? 'background.paper'
+                        : 'action.hover',
+                    color: cell.currentMonth ? 'text.primary' : 'text.secondary',
                     textAlign: 'left',
                     cursor: 'pointer',
                     transition: 'border-color 120ms ease, transform 120ms ease, background 120ms ease',
                     '&:hover': {
-                      borderColor: 'rgb(42,175,71)',
+                      borderColor: 'primary.main',
                       transform: 'translateY(-1px)',
                     },
                   }}
@@ -3199,7 +3201,7 @@ export const FamilyPersonPanel: React.FC<Props> = ({
                 {editorState.photos.length > 0 && (
                   <BoxAny sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(88px, 1fr))', gap: 1, py: 0.75 }}>
                     {editorState.photos.map(photo => (
-                      <BoxAny key={photo.id} sx={{ position: 'relative', borderRadius: '5px', overflow: 'hidden', border: '1px solid rgba(15,23,42,0.08)' }}>
+                          <BoxAny key={photo.id} sx={{ position: 'relative', borderRadius: '4px', overflow: 'hidden', border: '1px solid', borderColor: 'divider' }}>
                         <BoxAny component="img" src={photo.url} alt={photo.caption ?? person.name} sx={{ width: '100%', height: 88, objectFit: 'cover', display: 'block' }} />
                         <IconButton
                           size="small"
@@ -3242,8 +3244,9 @@ export const FamilyPersonPanel: React.FC<Props> = ({
                 cursor: 'pointer',
                 outline: 'none',
                 '&:focus-visible': {
-                  borderRadius: '5px',
-                  boxShadow: '0 0 0 3px rgba(59,130,246,0.35)',
+                  borderRadius: '4px',
+                  boxShadow: '0 0 0 2px',
+                  color: 'primary.main',
                 },
               }}
             >
@@ -3255,7 +3258,7 @@ export const FamilyPersonPanel: React.FC<Props> = ({
                     sx={{
                       position: 'absolute',
                       inset: 0,
-                      borderRadius: '5px',
+                      borderRadius: '4px',
                       overflow: 'hidden',
                       border: '1px solid rgba(255,255,255,0.72)',
                       boxShadow: layer === 0

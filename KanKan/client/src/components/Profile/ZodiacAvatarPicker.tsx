@@ -47,26 +47,27 @@ const AvatarOptionTile: React.FC<AvatarOptionTileProps> = ({
           sx={{
             width: size,
             height: size,
-            // IMPORTANT: use explicit px radius (not MUI numeric scaling)
-            // so the tile never becomes a circle under a custom theme.
             borderRadius: '4px',
             overflow: 'hidden',
+            boxSizing: 'border-box',
+            p: '2px',
             cursor: disabled ? 'not-allowed' : 'pointer',
             opacity: disabled ? 0.6 : 1,
-            border: selected
-              ? '2px solid rgba(25, 118, 210, 0.95)'
-              : '1px solid rgba(15, 23, 42, 0.12)',
-            backgroundColor: 'rgba(2, 6, 23, 0.02)',
-            boxShadow: selected ? '0 10px 24px rgba(25, 118, 210, 0.20)' : 'none',
-            transition: 'transform 120ms ease, box-shadow 120ms ease',
+            border: '1px solid',
+            borderColor: selected ? 'primary.main' : 'divider',
+            backgroundColor: 'background.paper',
+            outline: selected ? '2px solid' : 'none',
+            outlineColor: 'primary.main',
+            outlineOffset: '-2px',
+            transition: 'border-color 120ms ease, background-color 120ms ease',
             '&:hover': disabled
               ? undefined
               : {
-                  transform: 'translateY(-1px)',
-                  boxShadow: '0 10px 24px rgba(2, 6, 23, 0.10)',
+                  borderColor: 'primary.main',
+                  backgroundColor: 'action.hover',
                 },
             '&:focus-visible': {
-              boxShadow: '0 0 0 3px rgba(25, 118, 210, 0.25)',
+              boxShadow: '0 0 0 2px rgba(7, 193, 96, 0.24)',
               outline: 'none',
             },
           }}
@@ -82,10 +83,8 @@ const AvatarOptionTile: React.FC<AvatarOptionTileProps> = ({
               width: '100%',
               height: '100%',
               display: 'block',
-              // Fill the square consistently so no option appears tall/narrow.
-              // Crops if the source image isn't square.
               objectFit: 'cover',
-              borderRadius: 'inherit',
+              borderRadius: '2px',
               WebkitTouchCallout: 'none',
               WebkitUserSelect: 'none',
               userSelect: 'none',
@@ -151,7 +150,7 @@ export const ZodiacAvatarPicker: React.FC<ZodiacAvatarPickerProps> = ({
   const pagedAvatars = useMemo(() => avatars, [avatars]);
 
   return (
-    <BoxAny sx={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+    <BoxAny sx={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: { xs: 'center', sm: 'flex-end' } }}>
       <BoxAny
         sx={{
           width: 'fit-content',
@@ -164,7 +163,7 @@ export const ZodiacAvatarPicker: React.FC<ZodiacAvatarPickerProps> = ({
             display: 'grid',
             gridTemplateColumns: `repeat(4, ${tileSize}px)`,
             gap: 0.5,
-            alignItems: 'center',
+            alignItems: 'start',
             justifyContent: 'flex-start',
           }}
         >

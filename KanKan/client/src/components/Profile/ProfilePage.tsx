@@ -24,12 +24,13 @@ import { useLanguage } from '@/i18n/LanguageContext';
 import { AvatarUpload } from '@/components/Avatar/AvatarUpload';
 import { EmotionAvatarGallery } from '@/components/Avatar/EmotionAvatarGallery';
 import { authService } from '@/services/auth.service';
+import { appPageContainerSx } from '@/styles/appLayout';
 
 // Work around TS2590 (“union type too complex”) from MUI Box typings in some TS versions.
 const BoxAny = Box as any;
 const roundedTextFieldSx = {
   '& .MuiOutlinedInput-root': {
-    borderRadius: '5px',
+    borderRadius: '4px',
   },
 };
 
@@ -134,9 +135,9 @@ export const ProfilePage: React.FC = () => {
 
 
   return (
-    <BoxAny sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+    <BoxAny sx={{ display: 'flex', flexDirection: 'column', minHeight: '100dvh' }}>
       <AppHeader />
-      <Container sx={{ py: 3, pt: 10, px: { xs: 1.5, sm: 2 } }} maxWidth="sm">
+      <Container sx={appPageContainerSx} maxWidth="sm">
 
         {loading ? (
           <BoxAny sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
@@ -156,10 +157,10 @@ export const ProfilePage: React.FC = () => {
             >
               <Stack
                 spacing={0}
-                alignItems="flex-start"
+                alignItems={isMobile ? 'center' : 'flex-start'}
                 justifyContent="space-between"
                 sx={{
-                  flex: `0 0 ${avatarDisplaySize}px`,
+                  flex: { xs: '1 1 100%', sm: `0 0 ${avatarDisplaySize}px` },
                   height: `${pickerTotalHeight}px`,
                 }}
               >
@@ -182,7 +183,7 @@ export const ProfilePage: React.FC = () => {
                 />
               </Stack>
 
-              <BoxAny sx={{ flex: '1 1 auto', maxWidth: '100%', minWidth: 0, display: 'flex', justifyContent: 'flex-end' }}>
+              <BoxAny sx={{ flex: '1 1 auto', maxWidth: '100%', minWidth: 0, display: 'flex', justifyContent: { xs: 'center', sm: 'flex-end' } }}>
                 <ZodiacAvatarPicker
                   disabled={saving}
                   value={avatarImageId ?? undefined}

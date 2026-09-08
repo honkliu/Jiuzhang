@@ -21,40 +21,56 @@ const FONT_STACK = [
 
 export const glass: Skin = {
   id: 'glass',
-  label: 'WeChat Glass',
-  labelZh: '微信玻璃',
-  description: 'Translucent green glassmorphism (default).',
-  bodyBackground: '#ffffff',
-  linkColor: '#1976d2',
+  label: 'WeChat',
+  labelZh: '微信',
+  description: 'Quiet WeChat-inspired neutrals with compact typography and restrained green accents.',
+  bodyBackground: '#f5f5f5',
+  linkColor: '#576b95',
   logoStyle: 'rounded',
   theme: {
-    shape: { borderRadius: 16 },
+    shape: { borderRadius: 4 },
     palette: {
-      primary: { main: '#07c160' },
+      mode: 'light',
+      primary: { main: '#07c160', contrastText: '#ffffff' },
       secondary: { main: '#576b95' },
+      text: {
+        primary: '#191919',
+        secondary: '#7f7f7f',
+      },
+      divider: '#e5e5e5',
       background: {
-        default: '#ffffff',
+        default: '#f5f5f5',
         paper: '#ffffff',
       },
+      action: {
+        hover: 'rgba(0, 0, 0, 0.04)',
+        selected: 'rgba(0, 0, 0, 0.08)',
+      },
     },
-    typography: { fontFamily: FONT_STACK },
+    typography: {
+      fontFamily: FONT_STACK,
+      fontSize: 14,
+      h1: { fontWeight: 600, fontSize: '1.75rem', lineHeight: 1.35 },
+      h2: { fontWeight: 600, fontSize: '1.5rem', lineHeight: 1.4 },
+      h3: { fontWeight: 600, fontSize: '1.25rem', lineHeight: 1.4 },
+      h4: { fontWeight: 600, fontSize: '1.125rem', lineHeight: 1.45 },
+      h5: { fontWeight: 600, fontSize: '1rem', lineHeight: 1.5 },
+      h6: { fontWeight: 500, fontSize: '0.9375rem', lineHeight: 1.5 },
+      body1: { fontSize: '0.9375rem', lineHeight: 1.65 },
+      body2: { fontSize: '0.875rem', lineHeight: 1.6 },
+      caption: { fontSize: '0.75rem', lineHeight: 1.5 },
+      button: { fontWeight: 500, fontSize: '0.875rem' },
+    },
     components: {
       MuiAvatar: {
         styleOverrides: {
           root: {
-            borderRadius: 5,
-            border: '1px solid rgba(255, 255, 255, 0.6)',
+            borderRadius: 4,
+            border: '1px solid rgba(0, 0, 0, 0.06)',
             boxSizing: 'border-box',
-            backgroundClip: 'padding-box',
-            backgroundImage:
-              'linear-gradient(135deg, rgba(255,255,255,0.95), rgba(210,230,255,0.75)),\
-               linear-gradient(135deg, rgba(255,255,255,0.9), rgba(255,255,255,0.2))',
-            backgroundOrigin: 'border-box',
-            backgroundBlendMode: 'overlay',
-            boxShadow:
-              '0 6px 18px rgba(15, 23, 42, 0.15), inset 0 1px 0 rgba(255,255,255,0.8), inset 0 -1px 0 rgba(255,255,255,0.35)',
-            background:
-              'linear-gradient(135deg, rgba(255,255,255,0.9), rgba(210,230,255,0.7))',
+            background: '#f0f0f0',
+            backgroundImage: 'none',
+            boxShadow: 'none',
           },
         },
       },
@@ -62,8 +78,9 @@ export const glass: Skin = {
         styleOverrides: {
           root: {
             textTransform: 'none',
-            borderRadius: 8,
+            borderRadius: 4,
             boxShadow: 'none',
+            minHeight: 36,
             '&:hover': { boxShadow: 'none' },
           },
           contained: {
@@ -72,45 +89,55 @@ export const glass: Skin = {
             '&:hover': { background: '#06ad56' },
           },
           outlined: {
-            borderColor: 'rgba(15, 23, 42, 0.2)',
-            background: 'transparent',
-            '&:hover': { background: 'rgba(15, 23, 42, 0.04)', borderColor: 'rgba(15, 23, 42, 0.35)' },
+            borderColor: '#d9d9d9',
+            background: '#ffffff',
+            color: '#191919',
+            '&:hover': { background: '#f7f7f7', borderColor: '#bfbfbf' },
           },
+          text: { color: '#576b95' },
         },
       },
       MuiIconButton: {
         styleOverrides: {
           root: {
-            borderRadius: 8,
+            borderRadius: 4,
             background: 'transparent',
             border: 'none',
             boxShadow: 'none',
-            '&:hover': { background: 'rgba(15, 23, 42, 0.06)' },
+            color: '#4c4c4c',
+            '&:hover': { background: 'rgba(0, 0, 0, 0.05)' },
           },
         },
       },
       MuiListItemButton: {
         styleOverrides: {
           root: {
-            borderRadius: 8,
-            margin: '2px 6px',
-            background: 'transparent',
+            borderRadius: 0,
+            margin: 0,
+            backgroundColor: 'transparent',
             border: 'none',
             boxShadow: 'none',
-            '&:hover': { background: 'rgba(15, 23, 42, 0.04)' },
+            '&:hover': { backgroundColor: '#f5f5f5' },
+            '&.Mui-selected': { backgroundColor: '#e9e9e9' },
+            '&.Mui-selected:hover': { backgroundColor: '#e5e5e5' },
           },
         },
       },
       MuiCssBaseline: {
         styleOverrides: {
-          body: { backgroundColor: 'transparent' },
+          body: {
+            backgroundColor: '#f5f5f5',
+            color: '#191919',
+          },
         },
       },
       MuiAppBar: {
         styleOverrides: {
           root: {
-            background: '#eef2f6',
-            borderBottom: '1px solid rgba(15, 23, 42, 0.08)',
+            background: '#ededed',
+            color: '#191919',
+            borderBottom: '1px solid #d9d9d9',
+            boxShadow: 'none',
           },
         },
       },
@@ -119,6 +146,7 @@ export const glass: Skin = {
           root: {
             background: '#ffffff',
             boxShadow: 'none',
+            backgroundImage: 'none',
           },
         },
       },
@@ -127,6 +155,8 @@ export const glass: Skin = {
           root: {
             background: '#ffffff',
             boxShadow: 'none',
+            border: '1px solid #e5e5e5',
+            borderRadius: 4,
           },
         },
       },
@@ -134,7 +164,26 @@ export const glass: Skin = {
         styleOverrides: {
           paper: {
             background: '#ffffff',
-            boxShadow: '0 8px 32px rgba(15, 23, 42, 0.12)',
+            borderRadius: 8,
+            boxShadow: '0 8px 30px rgba(0, 0, 0, 0.16)',
+          },
+        },
+      },
+      MuiPopover: {
+        styleOverrides: {
+          paper: {
+            borderRadius: 8,
+            border: '1px solid #e5e5e5',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)',
+          },
+        },
+      },
+      MuiMenu: {
+        styleOverrides: {
+          paper: {
+            borderRadius: 8,
+            border: '1px solid #e5e5e5',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)',
           },
         },
       },
@@ -144,20 +193,37 @@ export const glass: Skin = {
         },
         styleOverrides: {
           root: {
-            '& .MuiOutlinedInput-root': { background: '#ffffff' },
+            '& .MuiOutlinedInput-root': {
+              background: '#ffffff',
+              borderRadius: 4,
+            },
             '& .MuiInputLabel-root': { zIndex: 1 },
             '& .MuiInputLabel-root.MuiInputLabel-shrink': {
               backgroundColor: '#fff',
               padding: '0 4px',
             },
+            '& .MuiOutlinedInput-notchedOutline': { borderColor: '#d9d9d9' },
+            '& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#bfbfbf' },
+            '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
+              borderColor: '#07c160',
+              borderWidth: 1,
+            },
           },
+        },
+      },
+      MuiDivider: {
+        styleOverrides: { root: { borderColor: '#e5e5e5' } },
+      },
+      MuiChip: {
+        styleOverrides: {
+          root: { borderRadius: 4, background: '#f0f0f0' },
         },
       },
       MuiTableBody: {
         styleOverrides: {
           root: {
             '& .MuiTableRow-root:nth-of-type(even)': {
-              backgroundColor: '#f7f8fa',
+              backgroundColor: '#fafafa',
             },
           },
         },
@@ -166,18 +232,14 @@ export const glass: Skin = {
         styleOverrides: {
           root: {
             '& .MuiTableRow-root': {
-              backgroundColor: '#f0f2f5',
+              backgroundColor: '#f5f5f5',
             },
           },
         },
       },
       MuiList: {
         styleOverrides: {
-          root: {
-            '& .MuiListItem-root:nth-of-type(even)': {
-              backgroundColor: '#f7f8fa',
-            },
-          },
+          root: { backgroundImage: 'none' },
         },
       },
     },

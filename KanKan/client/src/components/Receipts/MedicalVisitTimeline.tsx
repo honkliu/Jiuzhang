@@ -192,7 +192,7 @@ export const MedicalVisitTimeline: React.FC<MedicalVisitTimelineProps> = ({
         const allChecked = onToggleChecked && allGroupIds.every(id => checkedIds?.has(id));
 
         return (
-          <Paper key={group.key} sx={{ mb: 2, borderRadius: '10px', overflow: 'hidden' }}>
+          <Paper key={group.key} variant="outlined" sx={{ mb: 2, borderRadius: '4px', overflow: 'hidden' }}>
             {/* Hospital header */}
             <BoxAny
               sx={{ display: 'flex', alignItems: 'center', p: 2, cursor: 'pointer', bgcolor: 'rgba(7,193,96,0.06)' }}

@@ -20,10 +20,11 @@ import { AppHeader } from '@/components/Shared/AppHeader';
 import { UserAvatar } from '@/components/Shared/UserAvatar';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { WA_USER_ID } from '@/utils/chatParticipants';
+import { appPageContainerSx } from '@/styles/appLayout';
 
 // Work around TS2590 (“union type too complex”) from MUI Box typings in some TS versions.
 const BoxAny = Box as any;
-const compactAvatarSx = { width: 42, height: 42 };
+const compactAvatarSx = { width: 40, height: 40 };
 const compactListItemSx = {
   position: 'relative',
   py: 0.5,
@@ -38,11 +39,12 @@ const compactListItemSx = {
   '&.MuiListItem-divider::after': {
     content: '""',
     position: 'absolute',
-    left: 20,
+    left: 76,
     right: 0,
     bottom: 0,
     borderBottom: '1px solid',
     borderColor: 'divider',
+    opacity: 0.7,
   },
 };
 const compactActionButtonSx = {
@@ -55,26 +57,26 @@ const compactListSx = {
   py: 0,
   mb: 0,
 };
+const compactSubtitleSx = {
+  display: 'block',
+  fontSize: 12,
+  lineHeight: 1.45,
+  pb: '1px',
+};
 const compactSectionTitleSx = {
-  mt: 0.25,
-  mb: 0.25,
+  mt: 1,
+  mb: 0.375,
+  px: 0.5,
   display: 'flex',
   alignItems: 'center',
-  gap: 0.75,
-};
-const compactSectionLineSx = {
-  height: '1px',
-  bgcolor: 'divider',
 };
 
 const SectionHeader: React.FC<{ title: string }> = ({ title }) => {
   return (
     <BoxAny sx={compactSectionTitleSx}>
-      <BoxAny sx={{ ...compactSectionLineSx, width: 14, flex: '0 0 14px' }} />
-      <Typography variant="subtitle2" fontWeight="bold" sx={{ lineHeight: 1.2, whiteSpace: 'nowrap' }}>
+      <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.5, whiteSpace: 'nowrap', fontWeight: 500 }}>
         {title}
       </Typography>
-      <BoxAny sx={{ ...compactSectionLineSx, flex: 1, minWidth: 0 }} />
     </BoxAny>
   );
 };
@@ -243,9 +245,9 @@ export const ContactsPage: React.FC = () => {
   };
 
   return (
-    <BoxAny sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+    <BoxAny sx={{ display: 'flex', flexDirection: 'column', minHeight: '100dvh' }}>
       <AppHeader />
-      <Container sx={{ py: 2, flexGrow: 1, pt: 10 }} maxWidth="md">
+      <Container sx={{ ...appPageContainerSx, flexGrow: 1 }} maxWidth="md">
         <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1.25, mb: 1.5 }}>
           <Typography variant="h6" fontWeight="bold" sx={{ flex: '0 0 auto', whiteSpace: 'nowrap' }}>
             {t('contacts.title')}
@@ -335,7 +337,7 @@ export const ContactsPage: React.FC = () => {
                     </ListItemAvatar>
                     <ListItemText
                       primary={<Typography fontWeight={600} variant="body2" noWrap>{req.fromUser.displayName}</Typography>}
-                      secondary={<Typography noWrap sx={{ fontSize: 12, lineHeight: 1.2 }}>{getUserSubtitle(req.fromUser)}</Typography>}
+                      secondary={<Typography noWrap sx={compactSubtitleSx}>{getUserSubtitle(req.fromUser)}</Typography>}
                     />
                   </ListItem>
                 ))}
@@ -432,7 +434,7 @@ export const ContactsPage: React.FC = () => {
                         </BoxAny>
                       }
                       secondary={
-                        <Typography noWrap sx={{ fontSize: 12, lineHeight: 1.2 }}>{getUserSubtitle(user, t('contacts.friend'))}</Typography>
+                        <Typography noWrap sx={compactSubtitleSx}>{getUserSubtitle(user, t('contacts.friend'))}</Typography>
                       }
                     />
                   </ListItem>
@@ -501,7 +503,7 @@ export const ContactsPage: React.FC = () => {
                           {user.isDisabled && <Typography variant="caption" sx={{ color: 'warning.main', whiteSpace: 'nowrap' }}>{t('contacts.disabled')}</Typography>}
                         </BoxAny>
                       }
-                      secondary={getUserSubtitle(user) ? <Typography noWrap sx={{ fontSize: 12, lineHeight: 1.2 }}>{getUserSubtitle(user)}</Typography> : null}
+                      secondary={getUserSubtitle(user) ? <Typography noWrap sx={compactSubtitleSx}>{getUserSubtitle(user)}</Typography> : null}
                     />
                   </ListItem>
                 ))}

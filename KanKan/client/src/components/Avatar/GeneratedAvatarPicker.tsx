@@ -211,10 +211,12 @@ export const GeneratedAvatarPicker: React.FC<GeneratedAvatarPickerProps> = ({
       transformOrigin={{ vertical: 'top', horizontal: 'right' }}
       PaperProps={{
         sx: {
-          backgroundColor: '#f5f7fb',
+          backgroundColor: 'background.paper',
           backgroundImage: 'none',
-          border: '1px solid rgba(15, 23, 42, 0.08)',
-          boxShadow: '0 12px 32px rgba(15, 23, 42, 0.12)',
+          border: '1px solid',
+          borderColor: 'divider',
+          borderRadius: '8px',
+          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)',
           backdropFilter: 'none',
           opacity: 1,
           px: 1.25,
@@ -266,8 +268,10 @@ export const GeneratedAvatarPicker: React.FC<GeneratedAvatarPickerProps> = ({
                     width: tileW,
                     height: tileW,
                     borderRadius: '4px',
-                    bgcolor: '#fff',
-                    border: '1px solid rgba(15, 23, 42, 0.12)',
+                    bgcolor: 'background.paper',
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    boxSizing: 'border-box',
                   }}
                 />
               );
@@ -294,17 +298,21 @@ export const GeneratedAvatarPicker: React.FC<GeneratedAvatarPickerProps> = ({
                       height: tileW,
                       borderRadius: '4px',
                       overflow: 'hidden',
-                      border: isSelected
-                        ? '2px solid rgba(25, 118, 210, 0.95)'
-                        : '1px solid rgba(15, 23, 42, 0.12)',
-                      boxShadow: isSelected ? '0 10px 24px rgba(25, 118, 210, 0.20)' : 'none',
-                      transition: 'transform 120ms ease, box-shadow 120ms ease',
+                      boxSizing: 'border-box',
+                      p: '2px',
+                      border: '1px solid',
+                      borderColor: isSelected ? 'primary.main' : 'divider',
+                      bgcolor: 'background.paper',
+                      outline: isSelected ? '2px solid' : 'none',
+                      outlineColor: 'primary.main',
+                      outlineOffset: '-2px',
+                      transition: 'border-color 120ms ease, background-color 120ms ease',
                       '&:hover': {
-                        transform: 'translateY(-1px)',
-                        boxShadow: '0 10px 24px rgba(2, 6, 23, 0.10)',
+                        borderColor: 'primary.main',
+                        bgcolor: 'action.hover',
                       },
                       '&:focus-visible': {
-                        boxShadow: '0 0 0 3px rgba(25, 118, 210, 0.25)',
+                        boxShadow: '0 0 0 2px rgba(7, 193, 96, 0.24)',
                         outline: 'none',
                       },
                     }}
@@ -320,6 +328,7 @@ export const GeneratedAvatarPicker: React.FC<GeneratedAvatarPickerProps> = ({
                         height: '100%',
                         display: 'block',
                         objectFit: 'cover',
+                        borderRadius: '2px',
                         WebkitTouchCallout: 'none',
                         WebkitUserSelect: 'none',
                         userSelect: 'none',

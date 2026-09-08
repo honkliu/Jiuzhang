@@ -12,18 +12,18 @@ const SERIF = [
   'serif',
 ].join(',');
 
-const INK = '#1f1f1f';
-const INK_SOFT = '#3a3a3a';
-const PAPER = '#fffaf0';
-const RICE = '#f4ecd8';
-const SEAL = '#9b2a1f';
-const RULE = '#8b7d6b';
+const INK = '#30332f';
+const INK_SOFT = '#69675f';
+const PAPER = '#fbfaf6';
+const RICE = '#f1efe9';
+const SEAL = '#8c4038';
+const RULE = '#dedad0';
 
 export const ink: Skin = {
   id: 'ink',
-  label: 'Ink & Paper',
-  labelZh: '水墨家谱',
-  description: 'Heritage Chinese: ink black on rice paper, vermilion seal accents.',
+  label: 'Rice Paper',
+  labelZh: '宣纸',
+  description: 'Warm paper neutrals with a restrained seal-red accent.',
   bodyBackground: RICE,
   linkColor: SEAL,
   logoStyle: 'square',
@@ -31,8 +31,8 @@ export const ink: Skin = {
     shape: { borderRadius: 2 },
     palette: {
       mode: 'light',
-      primary: { main: INK, contrastText: PAPER },
-      secondary: { main: SEAL, contrastText: PAPER },
+      primary: { main: SEAL, contrastText: PAPER },
+      secondary: { main: INK, contrastText: PAPER },
       background: { default: RICE, paper: PAPER },
       text: { primary: '#1a1a1a', secondary: '#5d5345' },
       divider: RULE,

@@ -233,7 +233,7 @@ export const NewChatDialog: React.FC<NewChatDialogProps> = ({ open, onClose }) =
                   secondary={user.id === WA_USER_ID ? t('chat.new.alwaysAvailable') : (user.bio || '')}
                   secondaryTypographyProps={{
                     noWrap: true,
-                    sx: { fontSize: '0.81rem', lineHeight: 1.2 },
+                    sx: { fontSize: '0.81rem', lineHeight: 1.45, pb: '1px' },
                     title: user.id === WA_USER_ID ? t('chat.new.alwaysAvailable') : (user.bio || ''),
                   }}
                 />

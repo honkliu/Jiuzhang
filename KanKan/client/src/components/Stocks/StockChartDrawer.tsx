@@ -339,7 +339,7 @@ export const StockChartDrawer: React.FC<StockChartDrawerProps> = ({
       PaperProps={{
         sx: {
           width: '100%',
-          backgroundColor: '#ffffff',
+          backgroundColor: 'background.paper',
           backgroundImage: 'none',
         },
       }}

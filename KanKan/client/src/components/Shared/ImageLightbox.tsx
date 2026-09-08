@@ -1786,7 +1786,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
                 bgcolor: 'background.paper',
                 backgroundImage: 'none',
                 opacity: 1,
-                borderRadius: '10px',
+                borderRadius: '8px',
               },
             }}
           >
@@ -1824,21 +1824,23 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
                           sx={{
                             display: 'block',
                             width: '100%',
-                            borderRadius: '5px',
-                            border: isSelected ? '2px solid' : '1px solid',
+                            borderRadius: '4px',
+                            boxSizing: 'border-box',
+                            p: '2px',
+                            border: '1px solid',
                             borderColor: isSelected ? 'primary.main' : 'divider',
                             cursor: 'pointer',
                             overflow: 'hidden',
                             lineHeight: 0,
                             backgroundColor: 'rgba(2, 6, 23, 0.02)',
-                            boxShadow: isSelected ? '0 10px 24px rgba(25, 118, 210, 0.20)' : 'none',
-                            transition: 'transform 120ms ease, box-shadow 120ms ease',
+                            boxShadow: isSelected ? 'inset 0 0 0 1px #07c160' : 'none',
+                            transition: 'border-color 120ms ease, background-color 120ms ease',
                             '&:hover': {
-                              transform: 'translateY(-1px)',
-                              boxShadow: '0 10px 24px rgba(2, 6, 23, 0.10)',
+                              borderColor: 'primary.main',
+                              backgroundColor: '#f7f7f7',
                             },
                             '&:focus-visible': {
-                              boxShadow: '0 0 0 3px rgba(25, 118, 210, 0.25)',
+                              boxShadow: '0 0 0 2px rgba(7, 193, 96, 0.24)',
                               outline: 'none',
                             },
                           }}
@@ -1849,7 +1851,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
                             alt={item.label}
                             loading="eager"
                             decoding="sync"
-                            sx={{ display: 'block', width: '100%', aspectRatio: '1 / 1', objectFit: 'cover', borderRadius: 'inherit' }}
+                            sx={{ display: 'block', width: '100%', aspectRatio: '1 / 1', objectFit: 'cover', borderRadius: '2px' }}
                           />
                         </ButtonBase>
                       )}

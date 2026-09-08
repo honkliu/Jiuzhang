@@ -389,7 +389,8 @@ export const Notebook: React.FC<NotebookProps> = ({ notebookId, canEdit }) => {
                   background: isActive ? activeColors[ci] : colors[ci],
                   color: isActive ? '#1e293b' : '#475569',
                   borderRight: '1px solid rgba(15,23,42,0.10)',
-                  borderBottom: isActive ? '2px solid #1e40af' : '2px solid transparent',
+                  borderBottom: isActive ? '2px solid' : '2px solid transparent',
+                  borderColor: isActive ? 'primary.main' : 'transparent',
                   borderTopLeftRadius: 6, borderTopRightRadius: 6,
                   '&:hover': { background: activeColors[ci] },
                   whiteSpace: 'nowrap',
@@ -448,15 +449,15 @@ export const Notebook: React.FC<NotebookProps> = ({ notebookId, canEdit }) => {
                 {sortedPages.length > 0 && (
                   <>
                     <BoxAny onClick={() => { if (hasPrev) confirmIfUnsaved(() => setActivePageId(sortedPages[activeIdx - 1].id)); }}
-                      sx={{ ...navSx, color: hasPrev ? '#475569' : '#cbd5e1', cursor: hasPrev ? 'pointer' : 'default', '&:hover': hasPrev ? { color: '#1e40af' } : {} }}>
+                      sx={{ ...navSx, color: hasPrev ? 'text.secondary' : 'action.disabled', cursor: hasPrev ? 'pointer' : 'default', '&:hover': hasPrev ? { color: 'primary.main' } : {} }}>
                       <PrevIcon sx={{ fontSize: 18 }} />
                     </BoxAny>
                     <BoxAny onContextMenu={(e: React.MouseEvent<HTMLElement>) => { if (canEdit && activePageId) { e.preventDefault(); setPageContextMenu({ pageId: activePageId, anchorEl: e.currentTarget }); } }}
-                      sx={{ ...navSx, fontWeight: 600, color: '#fff', cursor: 'default', px: 0.75, bgcolor: '#3b82f6', borderRadius: '4px', mx: 0.25 }}>
+                      sx={{ ...navSx, fontWeight: 600, color: 'primary.contrastText', cursor: 'default', px: 0.75, bgcolor: 'primary.main', borderRadius: '4px', mx: 0.25 }}>
                       {currentNum}
                     </BoxAny>
                     <BoxAny onClick={() => { if (hasNext) confirmIfUnsaved(() => setActivePageId(sortedPages[activeIdx + 1].id)); }}
-                      sx={{ ...navSx, color: hasNext ? '#475569' : '#cbd5e1', cursor: hasNext ? 'pointer' : 'default', '&:hover': hasNext ? { color: '#1e40af' } : {} }}>
+                      sx={{ ...navSx, color: hasNext ? 'text.secondary' : 'action.disabled', cursor: hasNext ? 'pointer' : 'default', '&:hover': hasNext ? { color: 'primary.main' } : {} }}>
                       <NextIcon sx={{ fontSize: 18 }} />
                     </BoxAny>
                   </>
@@ -469,7 +470,7 @@ export const Notebook: React.FC<NotebookProps> = ({ notebookId, canEdit }) => {
                 )}
                 <Tooltip title={PAGE_STYLES[pageStyle].name}><span>
                   <BoxAny onClick={() => setPageStyle(s => (s + 1) % PAGE_STYLES.length)}
-                    sx={{ px: 0.5, fontSize: 12, cursor: 'pointer', color: '#475569', display: 'flex', alignItems: 'center', height: 36, userSelect: 'none', '&:hover': { color: '#1e40af' } }}>
+                    sx={{ px: 0.5, fontSize: 12, cursor: 'pointer', color: 'text.secondary', display: 'flex', alignItems: 'center', height: 36, userSelect: 'none', '&:hover': { color: 'primary.main' } }}>
                     {PAGE_STYLES[pageStyle].icon}
                   </BoxAny>
                 </span></Tooltip>
@@ -516,7 +517,7 @@ export const Notebook: React.FC<NotebookProps> = ({ notebookId, canEdit }) => {
         <BoxAny sx={{
           display: { xs: 'flex', md: 'none' }, alignItems: 'center', px: 0.5, minHeight: 28,
           borderBottom: '1px solid rgba(15,23,42,0.06)',
-          background: '#f8fafc',
+          background: 'background.default',
           overflowX: 'auto', scrollbarWidth: 'none', '&::-webkit-scrollbar': { display: 'none' },
         }}
           onClick={(e: React.MouseEvent) => e.stopPropagation()}
@@ -574,7 +575,7 @@ export const Notebook: React.FC<NotebookProps> = ({ notebookId, canEdit }) => {
 
       {/* Unsaved changes confirmation dialog */}
       <Dialog open={Boolean(unsavedDialog)} onClose={() => setUnsavedDialog(null)}
-        PaperProps={{ sx: { borderRadius: '12px', backgroundColor: '#fff', backgroundImage: 'none', minWidth: 320 } }}>
+        PaperProps={{ sx: { borderRadius: '8px', backgroundColor: 'background.paper', backgroundImage: 'none', minWidth: 320 } }}>
         <DialogTitle sx={{ fontSize: 15, fontWeight: 600, pb: 0.5 }}>未保存的更改</DialogTitle>
         <DialogContent sx={{ pb: 1 }}>
           <Typography variant="body2" color="text.secondary">当前页面有未保存的更改，离开后将丢失。</Typography>

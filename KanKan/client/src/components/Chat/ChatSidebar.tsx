@@ -41,9 +41,9 @@ import { useLanguage } from '@/i18n/LanguageContext';
 const BoxAny = Box as any;
 
 const sidebarHeaderActionButtonSx = {
-  width: 36,
-  height: 31,
-  minWidth: 36,
+  width: 32,
+  height: 32,
+  minWidth: 32,
   p: 0,
 };
 
@@ -160,8 +160,8 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
     >
       {/* Header */}
       <AppBar position="static" color="default" elevation={0}>
-        <Toolbar sx={{ justifyContent: 'space-between' }}>
-          <Typography variant="subtitle1" fontWeight="bold">
+        <Toolbar sx={{ justifyContent: 'space-between', minHeight: 56, px: 1.5 }}>
+          <Typography variant="subtitle1" fontWeight={600}>
             {t('chat.title')}
           </Typography>
           <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -178,18 +178,18 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
       </AppBar>
 
       {/* Search */}
-      <BoxAny sx={{ p: 1 }}>
+      <BoxAny sx={{ px: 1, py: 0.75 }}>
         <BoxAny
           sx={{
             display: 'flex',
             alignItems: 'center',
-            bgcolor: 'action.hover',
-            borderRadius: 2,
-            px: 2,
-            py: 0.5,
+            bgcolor: 'background.default',
+            borderRadius: 1,
+            px: 1,
+            py: 0.375,
           }}
         >
-          <SearchIcon sx={{ color: 'text.secondary', mr: 1 }} />
+          <SearchIcon sx={{ color: 'text.secondary', mr: 0.75, fontSize: 20 }} />
           <InputBase
             placeholder={t('chat.search')}
             value={searchQuery}
@@ -224,19 +224,31 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
             const displayChatName = directDisplayParticipant?.userId === WA_USER_ID
               ? t('Wa')
               : chat.name;
+            const isActive = activeChat?.id === chat.id;
 
             return (
             <ListItemButton
               key={chat.id}
-              selected={activeChat?.id === chat.id}
+              selected={isActive}
+              aria-current={isActive ? 'page' : undefined}
               onClick={handleChatClick(chat)}
               onPointerUp={handleChatPointerUp(chat)}
               sx={{
-                py: '6px',
-                pl: 1,
-                borderRadius: '3px',
+                minHeight: 58,
+                py: 0.75,
+                pl: 1.25,
+                borderRadius: 0,
                 position: 'relative',
-                pr: 5,
+                pr: 4.5,
+                '&::after': {
+                  content: '""',
+                  position: 'absolute',
+                  left: 60,
+                  right: 0,
+                  bottom: 0,
+                  borderBottom: '1px solid',
+                  borderColor: 'divider',
+                },
                 '& .chatRowActions': {
                   opacity: 0,
                   pointerEvents: 'none',
@@ -251,20 +263,18 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
                   pointerEvents: 'auto',
                 },
                 ...(showUnread && activeChat?.id !== chat.id
-                  ? { bgcolor: 'rgba(25, 118, 210, 0.06)' }
+                  ? { bgcolor: 'rgba(7, 193, 96, 0.04)' }
                   : null),
                 '&.Mui-selected': {
-                  bgcolor: 'action.selected',
+                  backgroundColor: `${theme.palette.primary.main}20 !important`,
+                  boxShadow: `inset 3px 0 0 ${theme.palette.primary.main}`,
                 },
-                '&.Mui-selected .MuiTypography-root': {
-                  color: 'primary.main',
-                },
-                '&.Mui-selected .MuiTypography-root.MuiTypography-caption': {
-                  color: 'primary.main',
+                '&.Mui-selected:hover': {
+                  backgroundColor: `${theme.palette.primary.main}2b !important`,
                 },
               }}
             >
-              <ListItemAvatar>
+              <ListItemAvatar sx={{ minWidth: 50 }}>
                 <Badge
                   overlap="rectangular"
                   anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
@@ -279,8 +289,8 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
                 >
                   {isGroup ? (
                     <GroupAvatar
-                      size={48}
-                      sx={{ borderRadius: '3px' }}
+                      size={40}
+                      sx={{ borderRadius: '4px' }}
                       members={(() => {
                         const others = getOtherRealParticipants(chat, meId);
                         const source = others.length > 0 ? others : chat.participants.filter((p) => p.userId !== WA_USER_ID);
@@ -301,10 +311,10 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
                           fallbackText={getLocalizedParticipantName(m?.userId, m?.displayName) || displayChatName}
                           variant="rounded"
                           sx={{
-                            width: 48,
-                            height: 48,
-                            borderRadius: '3px',
-                            '& .MuiAvatar-img': { borderRadius: '3px' },
+                            width: 40,
+                            height: 40,
+                            borderRadius: '4px',
+                            '& .MuiAvatar-img': { borderRadius: '4px' },
                           }}
                         />
                       );
@@ -313,6 +323,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
                 </Badge>
               </ListItemAvatar>
               <ListItemText
+                sx={{ my: 0 }}
                 primary={
                   <BoxAny sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1 }}>
                     <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0, flex: 1 }}>
@@ -320,9 +331,9 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
                         variant="subtitle2"
                         fontWeight={showUnread ? 'bold' : 'medium'}
                         noWrap
-                        sx={{ minWidth: 0, flex: 1 }}
+                        sx={{ minWidth: 0, flex: 1, fontWeight: isActive ? 600 : undefined }}
                       >
-                        {activeChat?.id === chat.id ? `${displayChatName} *` : displayChatName}
+                        {displayChatName}
                       </Typography>
                     </BoxAny>
                     <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexShrink: 0, justifyContent: 'flex-end' }}>
@@ -352,7 +363,11 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
                         <Typography
                           variant="caption"
                           color="text.secondary"
-                          sx={{ whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}
+                          sx={{
+                            whiteSpace: 'nowrap',
+                            fontVariantNumeric: 'tabular-nums',
+                            color: isActive ? 'text.secondary' : undefined,
+                          }}
                           title={chat.lastMessage.timestamp}
                         >
                           {formatLastMessageTime(chat.lastMessage.timestamp)}

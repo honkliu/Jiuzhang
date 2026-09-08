@@ -497,7 +497,7 @@ export const StockCompareDrawer: React.FC<StockCompareDrawerProps> = ({
       PaperProps={{
         sx: {
           width: '100%',
-          backgroundColor: '#ffffff',
+          backgroundColor: 'background.paper',
           backgroundImage: 'none',
         },
       }}

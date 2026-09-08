@@ -56,18 +56,19 @@ const navItems = [
 
 const headerNavButtonSx = {
   minWidth: 'auto',
+  minHeight: 56,
   px: { xs: 1, sm: 1.25 },
-  py: { xs: 0.45, md: 0.55 },
-  fontSize: { xs: '0.94rem', sm: '1.02rem', md: '1.07rem' },
+  py: 0,
+  fontSize: { xs: '0.875rem', sm: '0.875rem' },
   whiteSpace: 'nowrap',
-  borderRadius: 2,
+  borderRadius: 0,
   boxShadow: 'none',
   border: 'none',
-  background: 'rgba(15, 23, 42, 0.04)',
+  background: 'transparent',
   cursor: 'pointer',
   '&:hover': {
     boxShadow: 'none',
-    background: 'rgba(15, 23, 42, 0.09)',
+    background: 'rgba(0, 0, 0, 0.035)',
   },
 };
 
@@ -79,9 +80,9 @@ const headerNavMenuItemSx = {
 };
 
 const headerUtilityButtonSx = {
-  width: 36,
-  height: 31,
-  minWidth: 36,
+  width: 32,
+  height: 32,
+  minWidth: 32,
 };
 
 interface AppHeaderProps {
@@ -278,8 +279,8 @@ export const AppHeader: React.FC<AppHeaderProps> = () => {
 
   return (
     <AppBar position="fixed" color="default" elevation={0} sx={{ pt: 'env(safe-area-inset-top)' }}>
-      <Toolbar sx={{ gap: 1.25, minHeight: { xs: 53, sm: 61 }, py: 0.25, px: { xs: 1, sm: 1.5 } }}>
-        <BoxAny ref={leftNavRef} sx={{ display: 'flex', alignItems: 'center', gap: 1, flexGrow: 1, minWidth: 0 }}>
+      <Toolbar sx={{ gap: 1, minHeight: '56px !important', py: 0, px: { xs: 1, sm: 1.5 } }}>
+        <BoxAny ref={leftNavRef} sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexGrow: 1, minWidth: 0 }}>
           {/* Skin switcher — clicking the 侃侃 logo cycles through skins,
               matching the login screen behavior. Silent: no name shown. */}
           <BoxAny
@@ -299,14 +300,14 @@ export const AppHeader: React.FC<AppHeaderProps> = () => {
             sx={{
               width: { xs: 28, sm: 32 },
               height: { xs: 28, sm: 32 },
-              borderRadius: '10px',
+              borderRadius: '4px',
               objectFit: 'cover',
               cursor: 'pointer',
               flexShrink: 0,
               display: 'block',
             }}
           />
-          <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: isCompactNav ? 0.5 : 1, minWidth: 0, overflow: 'hidden' }}>
+          <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 0, minWidth: 0, overflow: 'hidden' }}>
             {compactVisibleNavItems.map((item) => (
               <Button
                 key={item.path}
@@ -316,18 +317,24 @@ export const AppHeader: React.FC<AppHeaderProps> = () => {
                 sx={{
                   ...headerNavButtonSx,
                   px: isCompactNav ? headerNavButtonSx.px : 1.5,
-                  py: isCompactNav ? headerNavButtonSx.py : 0.5,
-                  fontSize: isCompactNav ? headerNavButtonSx.fontSize : '0.92rem',
+                  py: 0,
+                  fontSize: '0.875rem',
                   color: location.pathname.startsWith(item.path) ? 'primary.main' : 'text.primary',
-                  fontWeight: location.pathname.startsWith(item.path) ? 700 : 500,
-                  background: location.pathname.startsWith(item.path)
-                    ? 'rgba(25, 118, 210, 0.14)'
-                    : headerNavButtonSx.background,
+                  fontWeight: location.pathname.startsWith(item.path) ? 600 : 400,
+                  background: 'transparent',
+                  position: 'relative',
+                  '&::after': {
+                    content: '""',
+                    position: 'absolute',
+                    left: 12,
+                    right: 12,
+                    bottom: 0,
+                    height: 2,
+                    bgcolor: location.pathname.startsWith(item.path) ? 'primary.main' : 'transparent',
+                  },
                   '&:hover': {
                     ...headerNavButtonSx['&:hover'],
-                    background: location.pathname.startsWith(item.path)
-                      ? 'rgba(25, 118, 210, 0.2)'
-                      : 'rgba(15, 23, 42, 0.09)',
+                    background: 'rgba(0, 0, 0, 0.035)',
                   },
                 }}
               >
@@ -351,14 +358,14 @@ export const AppHeader: React.FC<AppHeaderProps> = () => {
                 variant="rounded"
                 previewMode={isHoverCapable ? 'hover' : 'tap'}
                 closePreviewOnClick
-                sx={{ width: 48, height: 48 }}
+                sx={{ width: 36, height: 36 }}
               />
             </BoxAny>
             <BoxAny
               sx={{
                 display: { xs: 'flex', sm: 'flex' },
-                flexDirection: 'column',
-                alignItems: 'flex-start',
+                flexDirection: 'row',
+                alignItems: 'center',
                 minWidth: 0,
                 cursor: 'pointer',
               }}
@@ -374,7 +381,7 @@ export const AppHeader: React.FC<AppHeaderProps> = () => {
             >
               <Typography
                 variant="subtitle2"
-                fontWeight="bold"
+                fontWeight={500}
                 sx={{
                   maxWidth: 160,
                   overflow: 'hidden',
@@ -388,9 +395,9 @@ export const AppHeader: React.FC<AppHeaderProps> = () => {
                 onClick={handleOpenAvatarPicker}
                 title={t('nav.chooseMood')}
                 size="small"
-                sx={{ p: 0.5, minWidth: 0, ml: 0.25, bgcolor: 'rgba(7, 193, 96, 0.12)' }}
+                sx={{ p: 0.25, minWidth: 0, ml: 0.125 }}
               >
-                <ExpandMoreIcon sx={{ fontSize: '1.05rem', color: 'primary.main' }} />
+                <ExpandMoreIcon sx={{ fontSize: '1rem', color: 'text.secondary' }} />
               </IconButton>
             </BoxAny>
           </BoxAny>
@@ -425,8 +432,9 @@ export const AppHeader: React.FC<AppHeaderProps> = () => {
           anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
           PaperProps={{
             sx: {
-              background: '#f5f7fb',
-              border: '1px solid rgba(15, 23, 42, 0.08)',
+              background: 'background.paper',
+              border: '1px solid',
+              borderColor: 'divider',
             },
           }}
         >
@@ -491,8 +499,9 @@ export const AppHeader: React.FC<AppHeaderProps> = () => {
           anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
           PaperProps={{
             sx: {
-              background: '#f5f7fb',
-              border: '1px solid rgba(15, 23, 42, 0.08)',
+              background: 'background.paper',
+              border: '1px solid',
+              borderColor: 'divider',
               width: 420,
               maxWidth: '92vw',
               maxHeight: '70vh',

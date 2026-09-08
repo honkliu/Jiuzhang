@@ -64,9 +64,9 @@ export const Login: React.FC = () => {
   };
 
   return (
-    <Container component="main" maxWidth="xs">
+    <Container component="main" maxWidth="xs" className="authPage">
       <div className="loginContainer">
-        <Paper elevation={3} sx={{ p: 4, width: '100%' }}>
+        <Paper elevation={0} className="authPanel" sx={{ p: { xs: 3, sm: 4 }, width: '100%' }}>
           <div className="loginTitleRow">
             {/* Clicking the 侃侃 logo cycles through the skins (silent — no
                 name is shown). It's the only skin affordance on this page. */}

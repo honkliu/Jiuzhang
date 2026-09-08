@@ -143,7 +143,7 @@ export const ReceiptList: React.FC<ReceiptListProps> = ({ receipts, allReceipts,
 
   return (
     <BoxAny>
-      <Paper sx={{ borderRadius: '10px', overflow: 'hidden' }}>
+      <Paper variant="outlined" sx={{ borderRadius: '4px', overflow: 'hidden' }}>
         {receipts.map((r, idx) => (
           <BoxAny
             key={r.id}
@@ -289,7 +289,7 @@ const ItemHistoryPanel: React.FC<{ entries: ItemHistoryEntry[]; currentReceiptId
     <BoxAny
       sx={{
         my: 0.3, borderLeft: '2px solid', borderColor: 'primary.light',
-        bgcolor: 'rgba(25, 118, 210, 0.04)', borderRadius: '0 4px 4px 0', py: 0.3, pl: 0.5,
+        bgcolor: 'rgba(7, 193, 96, 0.05)', borderRadius: '0 4px 4px 0', py: 0.3, pl: 0.5,
       }}
       onClick={(e: React.MouseEvent) => e.stopPropagation()}
     >

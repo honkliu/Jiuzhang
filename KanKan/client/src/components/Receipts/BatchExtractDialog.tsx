@@ -29,7 +29,7 @@ export const BatchExtractDialog: React.FC<BatchExtractDialogProps> = ({
   open, selectedPhotoIds, selectedPhotos, onClose, onSaved,
 }) => {
   const dialogPaperSx = {
-    bgcolor: '#ffffff',
+    bgcolor: 'background.paper',
     backgroundImage: 'none',
   } as const;
   const [step, setStep] = useState(0); // 0=preview, 1=extracting, 2=done

@@ -88,13 +88,15 @@ export const UserProfilePopover: React.FC<UserProfilePopoverProps> = ({
         paper: {
           sx: {
             width: 224,
-            borderRadius: '10px',
+            borderRadius: '8px',
             overflow: 'hidden',
-            backgroundColor: '#ffffff',
+            backgroundColor: 'background.paper',
             backgroundImage: 'none',
             backdropFilter: 'none',
             opacity: 1,
-            boxShadow: '0 4px 20px rgba(0,0,0,0.18)',
+            border: '1px solid',
+            borderColor: 'divider',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
           },
         },
       }}

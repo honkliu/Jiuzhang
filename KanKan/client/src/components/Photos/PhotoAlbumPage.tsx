@@ -552,8 +552,10 @@ const PhotoAlbumPage: React.FC<PhotoAlbumPageProps> = ({
   const modeButtons = allModeButtons.filter((button) => configuredViewModes.includes(button.key));
 
   const actionButtonSx = {
-    minHeight: embedded ? 28 : 30,
-    borderRadius: '999px',
+    height: 32,
+    minHeight: 32,
+    boxSizing: 'border-box',
+    borderRadius: '4px',
     px: embedded ? 1.1 : 1.25,
     textTransform: 'none',
     fontWeight: 600,
@@ -563,43 +565,45 @@ const PhotoAlbumPage: React.FC<PhotoAlbumPageProps> = ({
 
   const embeddedControlButtonSx = {
     ...actionButtonSx,
-    bgcolor: '#ffffff',
+    bgcolor: 'background.paper',
     color: 'text.primary',
-    border: '1px solid rgba(15,23,42,0.08)',
+    border: '1px solid',
+    borderColor: 'divider',
     '&:hover': {
-      bgcolor: '#ffffff',
-      borderColor: 'rgba(15,23,42,0.16)',
+      bgcolor: 'action.hover',
+      borderColor: 'primary.main',
     },
   } as const;
 
   const embeddedActiveControlButtonSx = {
     ...embeddedControlButtonSx,
     color: 'primary.main',
-    borderColor: 'rgba(25,118,210,0.28)',
-    bgcolor: '#ffffff',
+    borderColor: 'primary.main',
+    bgcolor: 'action.selected',
     '&:hover': {
-      bgcolor: '#ffffff',
-      borderColor: 'rgba(25,118,210,0.4)',
+      bgcolor: 'action.hover',
+      borderColor: 'primary.dark',
     },
   } as const;
 
   const solidActionButtonSx = {
     ...actionButtonSx,
-    bgcolor: '#ffffff',
+    bgcolor: 'background.paper',
     color: 'text.primary',
-    border: '1px solid rgba(15,23,42,0.08)',
+    border: '1px solid',
+    borderColor: 'divider',
     '&:hover': {
-      bgcolor: '#ffffff',
-      borderColor: 'rgba(15,23,42,0.16)',
+      bgcolor: 'action.hover',
+      borderColor: 'primary.main',
       boxShadow: 'none',
     },
   } as const;
 
-  const groupedSectionBorderRadius = '10px';
+  const groupedSectionBorderRadius = '4px';
   const groupedSectionHeaderVerticalPadding = 0.8;
   const groupedSectionHeaderFontSize = '0.82rem';
   const dialogPaperSx = {
-    bgcolor: '#ffffff',
+    bgcolor: 'background.paper',
     backgroundImage: 'none',
   } as const;
 
@@ -608,15 +612,15 @@ const PhotoAlbumPage: React.FC<PhotoAlbumPageProps> = ({
         p: 0,
         mb: 0,
         borderRadius: 0,
-        backgroundColor: '#ffffff',
+        backgroundColor: 'background.paper',
         backgroundImage: 'none',
         boxShadow: 'none',
       }
     : {
         p: { xs: 0.75, sm: 1 },
         mb: 1.5,
-        borderRadius: '10px',
-        backgroundColor: '#ffffff',
+        borderRadius: '4px',
+        backgroundColor: 'background.paper',
         backgroundImage: 'none',
         boxShadow: 'none',
       };
@@ -668,7 +672,7 @@ const PhotoAlbumPage: React.FC<PhotoAlbumPageProps> = ({
                     color="primary"
                     variant="outlined"
                     size="small"
-                    sx={{ height: 24, borderColor: 'rgba(25,118,210,0.35)', bgcolor: 'rgba(25,118,210,0.04)' }}
+                    sx={{ height: 24, borderColor: 'primary.main', bgcolor: 'rgba(7,193,96,0.06)' }}
                   />
                 )}
                 {showUpload && (
@@ -759,9 +763,10 @@ const PhotoAlbumPage: React.FC<PhotoAlbumPageProps> = ({
                           sx={{
                             px: 1,
                             py: 0.5,
-                            borderRadius: '999px',
-                            border: '1px solid rgba(15,23,42,0.08)',
-                            background: '#ffffff',
+                            borderRadius: '4px',
+                            border: '1px solid',
+                            borderColor: 'divider',
+                            background: 'background.paper',
                             display: 'flex',
                             alignItems: 'baseline',
                             gap: 0.5,
@@ -802,7 +807,7 @@ const PhotoAlbumPage: React.FC<PhotoAlbumPageProps> = ({
                         color="primary"
                         variant="outlined"
                         size="small"
-                        sx={{ height: 24, borderColor: 'rgba(25,118,210,0.35)', bgcolor: 'rgba(25,118,210,0.04)' }}
+                        sx={{ height: 24, borderColor: 'primary.main', bgcolor: 'rgba(7,193,96,0.06)' }}
                       />
                     )}
                     {showUpload && (
@@ -1042,11 +1047,11 @@ const PhotoAlbumPage: React.FC<PhotoAlbumPageProps> = ({
   );
 
   return embedded ? (
-    <BoxAny sx={{ backgroundColor: '#ffffff', borderRadius: '0 0 10px 10px', px: { xs: 0.75, sm: 1 }, pb: 1.25 }}>
+    <BoxAny sx={{ backgroundColor: 'background.paper', borderRadius: '0 0 4px 4px', px: { xs: 0.75, sm: 1 }, pb: 1.25 }}>
       {content}
     </BoxAny>
   ) : (
-    <BoxAny sx={{ minHeight: '100vh', bgcolor: 'background.default', py: 4 }}>
+    <BoxAny sx={{ minHeight: '100dvh', bgcolor: 'background.default', py: 4 }}>
       <Container maxWidth="lg">
         {content}
       </Container>

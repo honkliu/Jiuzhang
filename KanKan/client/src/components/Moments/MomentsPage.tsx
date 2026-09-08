@@ -26,12 +26,13 @@ import { UserProfilePopover } from '@/components/Shared/UserProfilePopover';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/store';
 import { useLanguage } from '@/i18n/LanguageContext';
+import { appPageContainerSx } from '@/styles/appLayout';
 
 // Work around TS2590 ("union type too complex") from MUI Box typings in some TS versions.
 const BoxAny = Box as any;
 
 const momentCardSx = {
-  borderRadius: 0,
+  borderRadius: 1,
 };
 
 const momentImageSx = {
@@ -40,7 +41,8 @@ const momentImageSx = {
   maxWidth: '100%',
   objectFit: 'cover',
   borderRadius: '4px',
-  border: '1px solid rgba(15, 23, 42, 0.12)',
+  border: '1px solid',
+  borderColor: 'divider',
   cursor: 'pointer',
   transition: 'opacity 0.15s',
   '&:hover': { opacity: 0.85 },
@@ -49,12 +51,13 @@ const momentImageSx = {
   userSelect: 'none',
 };
 
-const momentAvatarSize = 44;
+const momentAvatarSize = 40;
 const momentMetaRowHeight = 20;
 
 const momentContentSurfaceSx = {
   borderRadius: '4px',
-  border: '1px solid rgba(0,0,0,0.10)',
+  border: '1px solid',
+  borderColor: 'divider',
   padding: '8px',
 };
 
@@ -65,7 +68,7 @@ const composerActionButtonSx = {
 };
 
 const momentFeedbackButtonSx = {
-  minHeight: 28,
+  minHeight: 32,
   px: 0.5,
   py: 0.25,
 };
@@ -369,9 +372,9 @@ export const MomentsPage: React.FC = () => {
   };
 
   return (
-    <BoxAny sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+    <BoxAny sx={{ display: 'flex', flexDirection: 'column', minHeight: '100dvh' }}>
       <AppHeader />
-      <Container sx={{ py: 3, pt: 10 }} maxWidth="md">
+      <Container sx={appPageContainerSx} maxWidth="md">
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
             {error}

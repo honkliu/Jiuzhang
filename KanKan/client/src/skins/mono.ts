@@ -24,17 +24,18 @@ const SANS_STACK = [
   'sans-serif',
 ].join(',');
 
-const BLACK = '#000000';
+const BLACK = '#292d30';
 const WHITE = '#ffffff';
-const HOT = '#ff5500';
-const GREY_BG = '#f4f4f4';
-const GREY_MID = '#555555';
+const HOT = '#4d646f';
+const GREY_BG = '#f3f4f5';
+const GREY_MID = '#6b7074';
+const GREY_RULE = '#dde0e3';
 
 export const mono: Skin = {
   id: 'mono',
-  label: 'Brutalist Mono',
-  labelZh: '极简黑白',
-  description: 'Bauhaus brutalism: pure black on white, mono, no radius, one hot accent.',
+  label: 'Graphite',
+  labelZh: '石墨',
+  description: 'Crisp graphite neutrals with quiet, editorial contrast.',
   bodyBackground: GREY_BG,
   linkColor: HOT,
   logoStyle: 'square',
@@ -46,7 +47,7 @@ export const mono: Skin = {
       secondary: { main: HOT, contrastText: WHITE },
       background: { default: GREY_BG, paper: WHITE },
       text: { primary: BLACK, secondary: GREY_MID },
-      divider: BLACK,
+      divider: GREY_RULE,
       error: { main: HOT },
       action: { hover: 'rgba(0,0,0,0.06)', selected: 'rgba(255,85,0,0.08)' },
     },

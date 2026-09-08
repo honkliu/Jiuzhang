@@ -13,6 +13,7 @@ import { Notebook } from './Notebook';
 import { notebookService, type NotebookDto, type NotebookVisibilityDto } from '@/services/notebook.service';
 import { useSelector } from 'react-redux';
 import type { RootState } from '@/store';
+import { APP_HEADER_OFFSET } from '@/styles/appLayout';
 
 const BoxAny = Box as any;
 
@@ -103,9 +104,9 @@ function inferType(subject: string) { return subject.includes('@') ? '用户' : 
 function formatPerm(p: 'view' | 'edit') { return p === 'edit' ? '编辑' : '浏览'; }
 function togglePerm(p: 'view' | 'edit'): 'view' | 'edit' { return p === 'edit' ? 'view' : 'edit'; }
 
-const tableSurfaceSx = { borderRadius: '8px', overflow: 'hidden', backgroundColor: '#ffffff', backgroundImage: 'none' };
+const tableSurfaceSx = { borderRadius: '4px', overflow: 'hidden', backgroundColor: 'background.paper', backgroundImage: 'none' };
 const inlineInputSx = { px: 0.75, py: 0.35, width: '100%', fontSize: 13, '& input': { padding: 0, fontSize: 13 } };
-const toggleBtnSx = { minWidth: 48, fontSize: 11, textTransform: 'none', px: 0.5, minHeight: 26 };
+const toggleBtnSx = { minWidth: 48, fontSize: 11, textTransform: 'none', px: 0.5, minHeight: 32 };
 
 export const NotebookPage: React.FC = () => {
   const currentUser = useSelector((state: RootState) => state.auth.user);
@@ -244,7 +245,7 @@ export const NotebookPage: React.FC = () => {
   }, [selectedId]);
 
   return (
-    <BoxAny sx={{ display: 'flex', flexDirection: 'column', height: '100vh', pt: '61px' }}>
+    <BoxAny sx={{ display: 'flex', flexDirection: 'column', height: '100dvh', pt: APP_HEADER_OFFSET }}>
       <AppHeader />
 
       <BoxAny sx={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
@@ -266,7 +267,7 @@ export const NotebookPage: React.FC = () => {
 
       {/* Bottom bar */}
       <BoxAny sx={{
-        borderTop: '1px solid rgba(15,23,42,0.08)', background: 'rgba(255,255,255,0.95)',
+        borderTop: '1px solid', borderColor: 'divider', background: 'background.paper',
         px: 2, py: 1, display: 'flex', justifyContent: 'flex-end',
         ...(isMobile ? { position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 20, px: 1, py: 1, minHeight: 52, overflow: 'visible' } : {}),
       }}>
@@ -274,14 +275,11 @@ export const NotebookPage: React.FC = () => {
           display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', justifyContent: 'flex-end',
           ...(isMobile ? { width: '100%', flexWrap: 'nowrap', gap: 0.5, justifyContent: 'flex-start', overflowX: 'auto' } : {}),
         }}>
-          <Button size="small" variant="outlined"
+          <Button size="small" variant="contained"
             onClick={() => { setCreateName(''); setCreateError(null); setCreateOpen(true); }}
             sx={{
-              minHeight: 30, minWidth: 0,
-              borderColor: 'rgba(15, 23, 42, 0.23)', color: 'text.primary',
+              minWidth: 0,
               ...(isMobile ? { flexShrink: 0 } : {}),
-              px: 0.5, fontSize: 14, lineHeight: 1.35, textTransform: 'none',
-              '&:hover': { borderColor: 'rgba(15, 23, 42, 0.35)', backgroundColor: 'rgba(15, 23, 42, 0.03)' },
             }}>
             新建
           </Button>
@@ -289,11 +287,8 @@ export const NotebookPage: React.FC = () => {
             <Button size="small" variant="outlined"
               onClick={() => importRef.current?.click()}
               sx={{
-                minHeight: 30, minWidth: 0,
-                borderColor: 'rgba(15, 23, 42, 0.23)', color: 'text.primary',
+                minWidth: 0,
                 ...(isMobile ? { flexShrink: 0 } : {}),
-                px: 0.5, fontSize: 14, lineHeight: 1.35, textTransform: 'none',
-                '&:hover': { borderColor: 'rgba(15, 23, 42, 0.35)', backgroundColor: 'rgba(15, 23, 42, 0.03)' },
               }}>
               导入
             </Button>
@@ -301,23 +296,17 @@ export const NotebookPage: React.FC = () => {
           {selectedNotebook && (
             <Button size="small" variant="outlined" onClick={handleExport} disabled={exporting}
               sx={{
-                minHeight: 30, minWidth: 0,
-                borderColor: 'rgba(15, 23, 42, 0.23)', color: 'text.primary',
+                minWidth: 0,
                 ...(isMobile ? { flexShrink: 0 } : {}),
-                px: 0.5, fontSize: 14, lineHeight: 1.35, textTransform: 'none',
-                '&:hover': { borderColor: 'rgba(15, 23, 42, 0.35)', backgroundColor: 'rgba(15, 23, 42, 0.03)' },
               }}>
               {exporting ? '导出中…' : '导出'}
             </Button>
           )}
           {selectedNotebook?.canManage && (
-            <Button size="small" variant="outlined" onClick={handleDelete} disabled={deleting}
+            <Button size="small" variant="outlined" color="error" onClick={handleDelete} disabled={deleting}
               sx={{
-                minHeight: 30, minWidth: 0,
-                borderColor: 'rgba(220, 38, 38, 0.35)', color: '#b91c1c',
+                minWidth: 0,
                 ...(isMobile ? { flexShrink: 0 } : {}),
-                px: 0.5, fontSize: 14, lineHeight: 1.35, textTransform: 'none',
-                '&:hover': { borderColor: 'rgba(185, 28, 28, 0.55)', backgroundColor: 'rgba(220, 38, 38, 0.04)' },
               }}>
               {deleting ? '删除中…' : '删除'}
             </Button>
@@ -325,11 +314,8 @@ export const NotebookPage: React.FC = () => {
           {selectedNotebook && (
             <Button size="small" variant="outlined" onClick={handleOpenSettings}
               sx={{
-                minHeight: 30, minWidth: 0,
-                borderColor: 'rgba(15, 23, 42, 0.23)', color: 'text.primary',
+                minWidth: 0,
                 ...(isMobile ? { flexShrink: 0 } : {}),
-                px: 0.5, fontSize: 14, lineHeight: 1.35, textTransform: 'none',
-                '&:hover': { borderColor: 'rgba(15, 23, 42, 0.35)', backgroundColor: 'rgba(15, 23, 42, 0.03)' },
               }}>
               设置
             </Button>
@@ -345,7 +331,7 @@ export const NotebookPage: React.FC = () => {
                 value={selectedId ?? ''}
                 onChange={e => setSelectedId(e.target.value || null)}
                 sx={{
-                  minHeight: 30,
+                  minHeight: 32,
                   '& .MuiSelect-select': {
                     fontSize: 14, lineHeight: 1.35,
                     py: 0.35, pl: 0.75, pr: 2.5,
@@ -358,9 +344,8 @@ export const NotebookPage: React.FC = () => {
                   disableScrollLock: true,
                   PaperProps: {
                     sx: {
-                      backgroundColor: '#f5f7fb', backgroundImage: 'none',
-                      border: '1px solid rgba(15, 23, 42, 0.08)',
-                      boxShadow: '0 12px 32px rgba(15, 23, 42, 0.12)',
+                      backgroundColor: 'background.paper', backgroundImage: 'none',
+                      border: '1px solid', borderColor: 'divider',
                       backdropFilter: 'none', opacity: 1,
                     },
                   },
@@ -379,14 +364,14 @@ export const NotebookPage: React.FC = () => {
 
       {/* Create dialog */}
       <Dialog open={createOpen} onClose={() => setCreateOpen(false)} maxWidth="xs" fullWidth
-        PaperProps={{ sx: { backgroundColor: '#fff', backgroundImage: 'none' } }}>
-        <DialogTitle sx={{ fontSize: 16, backgroundColor: '#fff' }}>新建笔记本</DialogTitle>
-        <DialogContent sx={{ backgroundColor: '#fff' }}>
+        PaperProps={{ sx: { backgroundColor: 'background.paper', backgroundImage: 'none' } }}>
+        <DialogTitle sx={{ fontSize: 16, backgroundColor: 'background.paper' }}>新建笔记本</DialogTitle>
+        <DialogContent sx={{ backgroundColor: 'background.paper' }}>
           {createError && <Alert severity="error" sx={{ mb: 1 }}>{createError}</Alert>}
           <TextField autoFocus label="名称" value={createName} onChange={e => setCreateName(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') handleCreate(); }} fullWidth size="small" sx={{ mt: 1 }} />
         </DialogContent>
-        <DialogActions sx={{ backgroundColor: '#fff' }}>
+        <DialogActions sx={{ backgroundColor: 'background.paper' }}>
           <Button onClick={() => setCreateOpen(false)} disabled={creating}>取消</Button>
           <Button onClick={handleCreate} variant="contained" disabled={creating || !createName.trim()}>
             {creating ? '创建中…' : '创建'}
@@ -401,10 +386,10 @@ export const NotebookPage: React.FC = () => {
           width: { xs: '100%', sm: 'min(560px, calc(100vw - 64px))' },
           maxWidth: { xs: '100%', sm: 'min(560px, calc(100vw - 64px))' },
           m: { xs: 0, sm: '32px' },
-          borderRadius: { xs: '12px 12px 0 0', sm: '8px' },
-          backgroundColor: '#ffffff', backgroundImage: 'none',
+          borderRadius: { xs: '8px 8px 0 0', sm: '8px' },
+          backgroundColor: 'background.paper', backgroundImage: 'none',
         } }}>
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, backgroundColor: '#ffffff' }}>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, backgroundColor: 'background.paper' }}>
           <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0, flex: 1 }}>
             <BoxAny component="span" sx={{ flexShrink: 0 }}>设置</BoxAny>
             {selectedNotebook && (
@@ -414,7 +399,7 @@ export const NotebookPage: React.FC = () => {
             )}
           </BoxAny>
         </DialogTitle>
-        <DialogContent sx={{ backgroundColor: '#ffffff', px: 2.25, pt: 2, pb: 1 }}>
+        <DialogContent sx={{ backgroundColor: 'background.paper', px: 2.25, pt: 2, pb: 1 }}>
           <BoxAny sx={{ display: 'grid', gap: 1.25, pt: 0.5 }}>
             {visError && <Alert severity="error">{visError}</Alert>}
             {loadingVis ? (
@@ -426,8 +411,9 @@ export const NotebookPage: React.FC = () => {
                   display: 'grid',
                   gridTemplateColumns: canManage ? 'minmax(0, 1fr) 64px 56px 28px' : 'minmax(0, 1fr) 64px 56px',
                   columnGap: 1, px: 1.25, py: 0.75, alignItems: 'center',
-                  backgroundColor: '#f3f4f6',
-                  borderBottom: visRules.length > 0 ? '1px solid #e5e7eb' : 'none',
+                  backgroundColor: 'action.hover',
+                  borderBottom: visRules.length > 0 ? '1px solid' : 'none',
+                  borderColor: 'divider',
                 }}>
                   <BoxAny sx={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: 11 }}>对象</Typography>
@@ -453,7 +439,8 @@ export const NotebookPage: React.FC = () => {
                         display: 'grid',
                         gridTemplateColumns: canManage ? 'minmax(0, 1fr) 64px 56px 28px' : 'minmax(0, 1fr) 64px 56px',
                         columnGap: 1, py: 0.65, alignItems: 'center',
-                        borderBottom: index === visRules.length - 1 ? 'none' : '1px solid #e5e7eb',
+                        borderBottom: index === visRules.length - 1 ? 'none' : '1px solid',
+                        borderColor: 'divider',
                       }}>
                         <BoxAny sx={{ minWidth: 0 }}>
                           {canManage && !rule.locked ? (
@@ -486,10 +473,10 @@ export const NotebookPage: React.FC = () => {
             )}
           </BoxAny>
         </DialogContent>
-        <DialogActions sx={{ backgroundColor: '#ffffff', px: 3, pt: 0.25, pb: 2 }}>
-          <Button onClick={() => setSettingsOpen(false)} disabled={savingVis} sx={{ borderRadius: '8px', '&:hover': { backgroundColor: '#f3f4f6' } }}>取消</Button>
+        <DialogActions sx={{ backgroundColor: 'background.paper', px: 3, pt: 0.25, pb: 2 }}>
+          <Button onClick={() => setSettingsOpen(false)} disabled={savingVis} sx={{ borderRadius: '4px', '&:hover': { backgroundColor: 'action.hover' } }}>取消</Button>
           {canManage && (
-            <Button onClick={handleSaveVis} variant="contained" disabled={loadingVis || savingVis} sx={{ borderRadius: '8px', boxShadow: 'none' }}>
+            <Button onClick={handleSaveVis} variant="contained" disabled={loadingVis || savingVis} sx={{ borderRadius: '4px', boxShadow: 'none' }}>
               保存
             </Button>
           )}
