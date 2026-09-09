@@ -22,7 +22,6 @@ export interface ChatRoom3DProps {
   onLoadOlderMessages: () => Promise<boolean>;
 }
 
-type Gesture = 'idle' | 'speaking' | 'agree' | 'question' | 'happy' | 'excited' | 'sad' | 'thinking';
 type Position = [number, number, number];
 
 interface RoomPerson {
@@ -31,8 +30,31 @@ interface RoomPerson {
 }
 
 const ROOM_MODEL_URL = '/models/room/newroom.glb';
-const GIRL_ON_COUCH_URL = '/models/avatars/girl_on_couch_but_no_couch.glb';
-const BEAUTY_GIRL_URL = '/models/avatars/sit_the_beauty_girl.glb';
+const MALE_AVATAR_URL = '/models/avatars/asian_male.glb';
+const FEMALE_AVATAR_URL = '/models/avatars/asian_female.glb';
+
+type ActorAnimationName = 'standing' | 'talking' | 'walking' | 'dancing' | 'sitting';
+
+interface ActorMotionUrls {
+  standing: string;
+  talking: string;
+  walking: string;
+  dancing: string;
+}
+
+const MALE_MOTIONS: ActorMotionUrls = {
+  standing: '/models/animations/rpm/male_idle.glb',
+  talking: '/models/animations/rpm/male_talk.glb',
+  walking: '/models/animations/rpm/male_walk.glb',
+  dancing: '/models/animations/rpm/male_dance.glb',
+};
+
+const FEMALE_MOTIONS: ActorMotionUrls = {
+  standing: '/models/animations/rpm/female_idle.glb',
+  talking: '/models/animations/rpm/female_talk.glb',
+  walking: '/models/animations/rpm/female_walk.glb',
+  dancing: '/models/animations/rpm/female_dance.glb',
+};
 
 const getMessagePreview = (message?: Message) => {
   if (!message) return '';
@@ -45,15 +67,13 @@ const getMessagePreview = (message?: Message) => {
   return '';
 };
 
-const getGesture = (message?: Message): Gesture => {
+const getActorAnimation = (message?: Message): ActorAnimationName => {
   const text = getMessagePreview(message).toLowerCase();
-  if (!text) return 'idle';
-  if (/[?？]|为什么|怎么|what|why|how/.test(text)) return 'question';
-  if (/哈哈|开心|高兴|太好了|\b(lol|haha)\b|[😄😁😂😊]/.test(text)) return 'happy';
-  if (/太棒|厉害|惊喜|wow|amazing|great|[!！]{2,}|[🤩🎉]/.test(text)) return 'excited';
-  if (/难过|伤心|遗憾|抱歉|sad|sorry|[😢😭]/.test(text)) return 'sad';
-  if (/好的|可以|同意|没问题|\b(ok|yes|agree|sure)\b|[👍👌]/.test(text)) return 'agree';
-  return 'speaking';
+  if (/坐下|坐着|坐好|\bsit\b/.test(text)) return 'sitting';
+  if (/站起|站起来|站着|\bstand\b/.test(text)) return 'standing';
+  if (/跳舞|舞动|dance|哈哈|开心|高兴|太好了|\b(lol|haha)\b|[😄😁😂😊🤩🎉]/.test(text)) return 'dancing';
+  if (/散步|走走|走路|walk/.test(text)) return 'walking';
+  return 'talking';
 };
 
 const fitToHeight = (model: THREE.Object3D, targetHeight: number) => {
@@ -97,19 +117,10 @@ const SpeechBubble: React.FC<{
 }> = ({ person, message, isTyping, accent, mentionableNames }) => {
   const preview = isTyping ? '...' : getMessagePreview(message);
   const textRef = useRef<HTMLDivElement | null>(null);
-  const [expanded, setExpanded] = useState(false);
-  const [canExpand, setCanExpand] = useState(false);
-
-  useEffect(() => {
-    setExpanded(false);
-  }, [isTyping, message?.id]);
 
   useLayoutEffect(() => {
-    if (expanded) return;
-    const textElement = textRef.current;
-    if (!textElement) return;
-    setCanExpand(textElement.scrollHeight > textElement.clientHeight + 1);
-  }, [expanded, preview]);
+    if (textRef.current) textRef.current.scrollTop = 0;
+  }, [isTyping, message?.id]);
 
   if (!preview) return null;
 
@@ -123,40 +134,28 @@ const SpeechBubble: React.FC<{
       <Typography sx={{ mb: 0.25, fontSize: 10, lineHeight: 1.25, fontWeight: 700 }} noWrap>
         {person.displayName}
       </Typography>
-      <BoxAny ref={textRef} sx={{
-        pr: canExpand ? 1.5 : 0,
-        display: expanded ? 'block' : '-webkit-box',
-        WebkitBoxOrient: expanded ? undefined : 'vertical',
-        WebkitLineClamp: expanded ? undefined : 4,
-        overflow: expanded ? 'visible' : 'hidden',
+      <BoxAny
+        ref={textRef}
+        role="region"
+        aria-label={`${person.displayName} message`}
+        tabIndex={0}
+        onPointerDown={(event: React.PointerEvent) => event.stopPropagation()}
+        onWheel={(event: React.WheelEvent) => event.stopPropagation()}
+        sx={{
+        height: '4.2rem',
+        overflowY: 'auto',
+        overflowX: 'hidden',
         wordBreak: 'break-word',
+        pointerEvents: 'auto',
+        touchAction: 'pan-y',
+        overscrollBehavior: 'contain',
+        scrollbarWidth: 'none',
+        msOverflowStyle: 'none',
+        '&::-webkit-scrollbar': { display: 'none' },
+        '&:focus-visible': { outline: `2px solid ${accent}`, outlineOffset: 1 },
       }}>
         <ChatMessageContent text={preview} mentionableNames={mentionableNames} compact />
       </BoxAny>
-      {canExpand && (
-        <BoxAny
-          component="button"
-          type="button"
-          aria-label={expanded ? 'Collapse message' : 'Expand message'}
-          title={expanded ? 'Collapse' : 'Show full message'}
-          onPointerDown={(event: React.PointerEvent) => event.stopPropagation()}
-          onClick={(event: React.MouseEvent) => {
-            event.stopPropagation();
-            setExpanded((value) => !value);
-          }}
-          sx={{
-            position: 'absolute', right: 2, bottom: 1,
-            width: 20, height: 20, p: 0, border: 0, borderRadius: '2px',
-            display: 'grid', placeItems: 'center',
-            bgcolor: 'rgba(255,255,255,0.9)', color: accent,
-            font: '700 16px/1 sans-serif', cursor: 'pointer', pointerEvents: 'auto',
-            '&:hover': { bgcolor: '#fff' },
-            '&:focus-visible': { outline: `2px solid ${accent}`, outlineOffset: 1 },
-          }}
-        >
-          {expanded ? '«' : '»'}
-        </BoxAny>
-      )}
     </BoxAny>
   );
 };
@@ -164,35 +163,195 @@ const SpeechBubble: React.FC<{
 const AvatarActor: React.FC<{
   person: RoomPerson;
   modelUrl: string;
+  motionUrls: ActorMotionUrls;
   position: Position;
+  standingPosition?: Position;
   rotationY: number;
   bubblePosition: Position;
   latestMessage?: Message;
   isTyping: boolean;
   accent: string;
-  phase: number;
   mentionableNames: string[];
-}> = ({ person, modelUrl, position, rotationY, bubblePosition, latestMessage, isTyping, accent, phase, mentionableNames }) => {
+}> = ({ person, modelUrl, motionUrls, position, standingPosition = position, rotationY, bubblePosition, latestMessage, isTyping, accent, mentionableNames }) => {
   const gltf = useGLTF(modelUrl);
+  const standingGltf = useGLTF(motionUrls.standing);
+  const talkingGltf = useGLTF(motionUrls.talking);
+  const walkingGltf = useGLTF(motionUrls.walking);
+  const dancingGltf = useGLTF(motionUrls.dancing);
   const { invalidate } = useThree();
   const actorRef = useRef<THREE.Group | null>(null);
+  const positionTargetRef = useRef(new THREE.Vector3(...position));
+  const mixerRef = useRef<THREE.AnimationMixer | null>(null);
+  const currentActionRef = useRef<THREE.AnimationAction | null>(null);
+  const actorStateRef = useRef<'seated' | 'transitioning' | 'standing'>('seated');
+  const sequenceTimersRef = useRef<number[]>([]);
   const activeUntilRef = useRef(0);
   const previousMessageIdRef = useRef(latestMessage?.id);
-  const model = useMemo(() => {
+  const animatedModel = useMemo(() => {
     const clone = SkeletonUtils.clone(gltf.scene);
+    let targetMesh: THREE.SkinnedMesh | undefined;
+
+    clone.traverse((object) => {
+      if (!targetMesh && object instanceof THREE.SkinnedMesh) targetMesh = object;
+    });
+
+    if (!targetMesh) {
+      throw new Error(`Avatar animation rig is missing for ${modelUrl}`);
+    }
+
+    const directClip = (animations: THREE.AnimationClip[], name: ActorAnimationName) => {
+      const clip = animations[0]?.clone();
+      if (!clip) throw new Error(`Animation clip ${name} is missing`);
+      clip.name = name;
+      return clip;
+    };
+
+    targetMesh.skeleton.pose();
+    const bones = new Map(targetMesh.skeleton.bones.map((bone) => [bone.name, bone]));
+    const hip = bones.get('Hips');
+    if (!hip) throw new Error(`Avatar hip bone is missing for ${modelUrl}`);
+
+    const seatedHipPosition = hip.position.clone();
+    seatedHipPosition.y *= 0.66;
+    const sittingTracks: THREE.KeyframeTrack[] = [
+      new THREE.VectorKeyframeTrack('Hips.position', [0, 1], [
+        ...seatedHipPosition.toArray(),
+        ...seatedHipPosition.toArray(),
+      ]),
+    ];
+    for (const [boneName, rotation] of [
+      ['LeftUpLeg', Math.PI / 2],
+      ['RightUpLeg', Math.PI / 2],
+      ['LeftLeg', -Math.PI / 2],
+      ['RightLeg', -Math.PI / 2],
+    ] as const) {
+      const bone = bones.get(boneName);
+      if (!bone) continue;
+      const seatedQuaternion = bone.quaternion.clone().multiply(
+        new THREE.Quaternion().setFromEuler(new THREE.Euler(rotation, 0, 0)),
+      );
+      sittingTracks.push(new THREE.QuaternionKeyframeTrack(`${boneName}.quaternion`, [0, 1], [
+        ...seatedQuaternion.toArray(),
+        ...seatedQuaternion.toArray(),
+      ]));
+    }
+    const sittingClip = new THREE.AnimationClip('sitting', 1, sittingTracks);
+
+    const clips: Record<ActorAnimationName, THREE.AnimationClip> = {
+      standing: directClip(standingGltf.animations, 'standing'),
+      talking: directClip(talkingGltf.animations, 'talking'),
+      walking: directClip(walkingGltf.animations, 'walking'),
+      dancing: directClip(dancingGltf.animations, 'dancing'),
+      sitting: sittingClip,
+    };
+
+    targetMesh.skeleton.pose();
     fitToHeight(clone, 1.6);
     placeOnFloor(clone);
-    return clone;
-  }, [gltf.scene]);
-  const gesture = useMemo(() => getGesture(latestMessage), [latestMessage]);
+    return { model: clone, targetMesh, clips };
+  }, [
+    dancingGltf.animations,
+    gltf.scene,
+    modelUrl,
+    standingGltf.animations,
+    talkingGltf.animations,
+    walkingGltf.animations,
+  ]);
+
+  const mixer = useMemo(() => new THREE.AnimationMixer(animatedModel.model), [animatedModel.model]);
+  const playAnimation = useMemo(() => (
+    name: ActorAnimationName,
+    loop: boolean,
+    fadeSeconds = 0.2,
+  ) => {
+    const clip = animatedModel.clips[name];
+    const nextAction = mixer.clipAction(clip);
+    const previousAction = currentActionRef.current;
+
+    nextAction.reset();
+    nextAction.enabled = true;
+    nextAction.clampWhenFinished = !loop;
+    nextAction.setLoop(loop ? THREE.LoopRepeat : THREE.LoopOnce, loop ? Infinity : 1);
+    nextAction.play();
+    if (previousAction && previousAction !== nextAction) {
+      nextAction.crossFadeFrom(previousAction, fadeSeconds, false);
+    }
+    currentActionRef.current = nextAction;
+    invalidate();
+    return clip.duration;
+  }, [animatedModel.clips, invalidate, mixer]);
+
+  useEffect(() => {
+    mixerRef.current = mixer;
+    playAnimation('sitting', true, 0);
+    return () => {
+      for (const timer of sequenceTimersRef.current) window.clearTimeout(timer);
+      sequenceTimersRef.current = [];
+      mixer.stopAllAction();
+      mixer.uncacheRoot(animatedModel.model);
+      mixerRef.current = null;
+    };
+  }, [animatedModel.model, mixer, playAnimation]);
+
+  useEffect(() => {
+    if (!latestMessage?.id || previousMessageIdRef.current === latestMessage.id) return;
+    previousMessageIdRef.current = latestMessage.id;
+
+    for (const timer of sequenceTimersRef.current) window.clearTimeout(timer);
+    sequenceTimersRef.current = [];
+
+    const activity = getActorAnimation(latestMessage);
+    if (activity === 'sitting') {
+      actorStateRef.current = 'seated';
+      positionTargetRef.current.set(...position);
+      activeUntilRef.current = performance.now() + 1000;
+      playAnimation('sitting', true);
+      return;
+    }
+
+    const sitDown = () => {
+      actorStateRef.current = 'transitioning';
+      positionTargetRef.current.set(...position);
+      playAnimation('sitting', true, 0.45);
+      sequenceTimersRef.current.push(window.setTimeout(() => {
+        actorStateRef.current = 'seated';
+      }, 450));
+    };
+    const beginActivity = () => {
+      actorStateRef.current = 'standing';
+      playAnimation(activity, true);
+      sequenceTimersRef.current.push(window.setTimeout(sitDown, activity === 'dancing' ? 4800 : 3800));
+    };
+
+    const standDuration = actorStateRef.current === 'seated' ? 0.45 : 0;
+    positionTargetRef.current.set(...standingPosition);
+    if (standDuration > 0) playAnimation('standing', true, standDuration);
+    actorStateRef.current = 'transitioning';
+    sequenceTimersRef.current.push(window.setTimeout(beginActivity, standDuration * 1000));
+    activeUntilRef.current = performance.now() + standDuration * 1000 + 6500;
+
+    return () => {
+      for (const timer of sequenceTimersRef.current) window.clearTimeout(timer);
+      sequenceTimersRef.current = [];
+    };
+  }, [
+    latestMessage?.id,
+    playAnimation,
+    position[0],
+    position[1],
+    position[2],
+    standingPosition[0],
+    standingPosition[1],
+    standingPosition[2],
+  ]);
+
+  useEffect(() => {
+    if (actorStateRef.current !== 'seated') return;
+    playAnimation('sitting', true);
+  }, [isTyping, playAnimation]);
 
   useEffect(() => {
     const now = performance.now();
-    if (latestMessage?.id && previousMessageIdRef.current !== latestMessage.id) {
-      previousMessageIdRef.current = latestMessage.id;
-      activeUntilRef.current = now + 4500;
-    }
-
     const renderUntil = isTyping ? Number.POSITIVE_INFINITY : Math.max(now + 700, activeUntilRef.current + 700);
     let frameId = 0;
     let lastRenderAt = 0;
@@ -207,48 +366,19 @@ const AvatarActor: React.FC<{
     return () => cancelAnimationFrame(frameId);
   }, [invalidate, isTyping, latestMessage?.id]);
 
-  useFrame(({ clock }, delta) => {
+  useFrame((_, delta) => {
+    mixerRef.current?.update(delta);
     const actor = actorRef.current;
-    if (!actor) return;
-
-    const time = clock.elapsedTime + phase;
-    const activeGesture = isTyping ? 'thinking' : performance.now() < activeUntilRef.current ? gesture : 'idle';
-    let lift = Math.sin(time * 1.5) * 0.006;
-    let lean = 0;
-    let tilt = 0;
-    let turn = 0;
-
-    if (activeGesture === 'speaking') {
-      lean = Math.sin(time * 6.5) * 0.018;
-      turn = Math.sin(time * 3.2) * 0.018;
-    } else if (activeGesture === 'agree') {
-      lean = Math.sin(time * 8) * 0.035;
-    } else if (activeGesture === 'question') {
-      tilt = 0.055;
-      turn = Math.sin(time * 2.5) * 0.012;
-    } else if (activeGesture === 'happy') {
-      tilt = Math.sin(time * 4) * 0.035;
-      lift += Math.abs(Math.sin(time * 4)) * 0.018;
-    } else if (activeGesture === 'excited') {
-      tilt = Math.sin(time * 6) * 0.045;
-      lift += Math.abs(Math.sin(time * 7)) * 0.045;
-    } else if (activeGesture === 'sad') {
-      lean = 0.045;
-      lift -= 0.015;
-    } else if (activeGesture === 'thinking') {
-      tilt = -0.04;
-      turn = Math.sin(time * 2) * 0.01;
+    if (actor) {
+      actor.position.x = THREE.MathUtils.damp(actor.position.x, positionTargetRef.current.x, 5, delta);
+      actor.position.y = THREE.MathUtils.damp(actor.position.y, positionTargetRef.current.y, 5, delta);
+      actor.position.z = THREE.MathUtils.damp(actor.position.z, positionTargetRef.current.z, 5, delta);
     }
-
-    actor.position.y = THREE.MathUtils.damp(actor.position.y, position[1] + lift, 7, delta);
-    actor.rotation.x = THREE.MathUtils.damp(actor.rotation.x, lean, 7, delta);
-    actor.rotation.y = THREE.MathUtils.damp(actor.rotation.y, rotationY + turn, 7, delta);
-    actor.rotation.z = THREE.MathUtils.damp(actor.rotation.z, tilt, 7, delta);
   });
 
   return <>
     <group ref={actorRef} position={position} rotation={[0, rotationY, 0]}>
-      <primitive object={model} />
+      <primitive object={animatedModel.model} />
     </group>
     <Html position={bubblePosition} center zIndexRange={[30, 0]} style={{ pointerEvents: 'none' }}>
       <SpeechBubble
@@ -275,30 +405,37 @@ const RoomModels: React.FC<{
     <>
       <primitive object={roomScene} />
       {people[0] && <AvatarActor
-        person={people[0]} modelUrl={GIRL_ON_COUCH_URL} position={[-1.2, 0, 0.8]}
+        person={people[0]} modelUrl={MALE_AVATAR_URL} motionUrls={MALE_MOTIONS} position={[-1.0, 0, 1.1]}
+        standingPosition={[-0.55, 0, 1.75]}
         rotationY={Math.PI / 2} bubblePosition={[-1.9, 2.2, 0.8]}
         latestMessage={latestBySender.get(people[0].userId)} isTyping={typingIds.has(people[0].userId)}
-        accent="#2f7d5a" phase={0} mentionableNames={mentionableNames}
+        accent="#2f7d5a" mentionableNames={mentionableNames}
       />}
       {people[1] && <AvatarActor
-        person={people[1]} modelUrl={BEAUTY_GIRL_URL} position={[1.6, 0, -1.2]}
+        person={people[1]} modelUrl={FEMALE_AVATAR_URL} motionUrls={FEMALE_MOTIONS} position={[1.6, 0, -1.2]}
+        standingPosition={[1.85, 0, -0.75]}
         rotationY={-Math.PI * 0.15} bubblePosition={[1.6, 1.85, -1.2]}
         latestMessage={latestBySender.get(people[1].userId)} isTyping={typingIds.has(people[1].userId)}
-        accent="#b66a4b" phase={Math.PI} mentionableNames={mentionableNames}
+        accent="#b66a4b" mentionableNames={mentionableNames}
       />}
     </>
   );
 };
 
 const RoomCamera: React.FC = () => {
-  const { camera } = useThree();
+  const { camera, size } = useThree();
   const controlsRef = useRef<OrbitControlsImpl | null>(null);
 
   useEffect(() => {
-    camera.position.set(3.612, 1.9, 2.814);
-    controlsRef.current?.target.set(3.271, 1.9, 2.516);
+    const target = new THREE.Vector3(3.271, 1.9, 2.516);
+    const desktopOffset = new THREE.Vector3(3.612, 1.9, 2.814).sub(target);
+    const aspect = size.width / Math.max(size.height, 1);
+    const distanceScale = aspect < 1 ? 1 + (1 - aspect) * 10 : 1;
+
+    camera.position.copy(target).add(desktopOffset.multiplyScalar(distanceScale));
+    controlsRef.current?.target.copy(target);
     controlsRef.current?.update();
-  }, [camera]);
+  }, [camera, size.height, size.width]);
 
   return (
     <OrbitControls
@@ -486,6 +623,7 @@ export const ChatRoom3D: React.FC<ChatRoom3DProps> = ({
   return (
     <BoxAny sx={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden' }}>
       <Canvas
+        style={{ width: '100%', height: '100%', display: 'block' }}
         frameloop="demand"
         dpr={1}
         camera={{ fov: 55, position: [0, 2.0, 4.5], near: 0.1, far: 1000 }}
@@ -537,5 +675,8 @@ export const ChatRoom3D: React.FC<ChatRoom3DProps> = ({
 };
 
 useGLTF.preload(ROOM_MODEL_URL);
-useGLTF.preload(GIRL_ON_COUCH_URL);
-useGLTF.preload(BEAUTY_GIRL_URL);
+useGLTF.preload(MALE_AVATAR_URL);
+useGLTF.preload(FEMALE_AVATAR_URL);
+for (const url of [...Object.values(MALE_MOTIONS), ...Object.values(FEMALE_MOTIONS)]) {
+  useGLTF.preload(url);
+}

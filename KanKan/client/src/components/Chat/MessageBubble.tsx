@@ -679,7 +679,8 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
         sx={{
           maxWidth: isHistoryLayout ? '100%' : { xs: '78%', sm: '72%' },
           minWidth: 0,
-          width: isHistoryLayout ? '100%' : 'fit-content',
+          width: 'fit-content',
+          alignSelf: isHistoryLayout ? (isOwn ? 'flex-end' : 'flex-start') : undefined,
           px: message.messageType === 'image' ? 0 : (isHistoryLayout ? 1.35 : 1.5),
           py: message.messageType === 'image' ? 0 : (isHistoryLayout ? 0.9 : 1),
           position: 'relative',
