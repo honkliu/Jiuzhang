@@ -23,15 +23,28 @@ export interface ChatRoom3DProps {
 }
 
 type Position = [number, number, number];
+type Gesture = 'idle' | 'speaking' | 'agree' | 'question' | 'happy' | 'excited' | 'sad' | 'thinking';
 
 interface RoomPerson {
   userId: string;
   displayName: string;
 }
 
+interface AvatarCalibration {
+  visualScale?: number;
+  seatOffset?: Position;
+}
+
 const ROOM_MODEL_URL = '/models/room/newroom.glb';
 const MALE_AVATAR_URL = '/models/avatars/asian_male.glb';
 const FEMALE_AVATAR_URL = '/models/avatars/asian_female.glb';
+const CLASSIC_COUCH_AVATAR_URL = '/models/avatars/girl_on_couch_but_no_couch.glb';
+const CLASSIC_SEATED_AVATAR_URL = '/models/avatars/sit_the_beauty_girl.glb';
+const AVATAR_SELECTION_STORAGE_KEY = 'kankan.room3d.avatarSelections';
+const AVATAR_BOUNDING_DIAMETER = 1.85;
+const ROOM_SCALE = 0.8;
+const ROOM_FLOOR_CENTER: Position = [3.182, 0, -0.062];
+const SOFA_DEPTH_SCALE = 0.8;
 
 type ActorAnimationName = 'standing' | 'talking' | 'walking' | 'dancing' | 'sitting';
 
@@ -56,6 +69,57 @@ const FEMALE_MOTIONS: ActorMotionUrls = {
   dancing: '/models/animations/rpm/female_dance.glb',
 };
 
+type AvatarId = 'asian-male' | 'asian-female' | 'classic-couch' | 'classic-seated';
+
+interface AnimatedAvatarOption extends AvatarCalibration {
+  id: AvatarId;
+  kind: 'animated';
+  labelKey: string;
+  modelUrl: string;
+  motionUrls: ActorMotionUrls;
+}
+
+interface StaticAvatarOption extends AvatarCalibration {
+  id: AvatarId;
+  kind: 'static';
+  labelKey: string;
+  modelUrl: string;
+}
+
+type AvatarOption = AnimatedAvatarOption | StaticAvatarOption;
+
+const ANIMATED_AVATAR_OPTIONS: AnimatedAvatarOption[] = [
+  {
+    id: 'asian-male', kind: 'animated', labelKey: 'chat.room.avatar.asianMale',
+    modelUrl: MALE_AVATAR_URL, motionUrls: MALE_MOTIONS,
+  },
+  {
+    id: 'asian-female', kind: 'animated', labelKey: 'chat.room.avatar.asianFemale',
+    modelUrl: FEMALE_AVATAR_URL, motionUrls: FEMALE_MOTIONS,
+  },
+];
+
+const AVATAR_OPTIONS: AvatarOption[] = [
+  ...ANIMATED_AVATAR_OPTIONS,
+  {
+    id: 'classic-seated', kind: 'static', labelKey: 'chat.room.avatar.classicSeated',
+    modelUrl: CLASSIC_SEATED_AVATAR_URL, visualScale: 0.8, seatOffset: [0.12, 0.04, 0.15],
+  },
+  {
+    id: 'classic-couch', kind: 'static', labelKey: 'chat.room.avatar.classicCouch',
+    modelUrl: CLASSIC_COUCH_AVATAR_URL, seatOffset: [0.1, 0.07, 0.15],
+  },
+];
+
+const loadAvatarSelections = (): Record<string, AvatarId> => {
+  try {
+    const stored = JSON.parse(localStorage.getItem(AVATAR_SELECTION_STORAGE_KEY) || '{}');
+    return stored && typeof stored === 'object' && !Array.isArray(stored) ? stored : {};
+  } catch {
+    return {};
+  }
+};
+
 const getMessagePreview = (message?: Message) => {
   if (!message) return '';
   const text = message.text?.trim();
@@ -67,6 +131,17 @@ const getMessagePreview = (message?: Message) => {
   return '';
 };
 
+const getGesture = (message?: Message): Gesture => {
+  const text = getMessagePreview(message).toLowerCase();
+  if (!text) return 'idle';
+  if (/[?？]|为什么|怎么|what|why|how/.test(text)) return 'question';
+  if (/哈哈|开心|高兴|太好了|\b(lol|haha)\b|[😄😁😂😊]/.test(text)) return 'happy';
+  if (/太棒|厉害|惊喜|wow|amazing|great|[!！]{2,}|[🤩🎉]/.test(text)) return 'excited';
+  if (/难过|伤心|遗憾|抱歉|sad|sorry|[😢😭]/.test(text)) return 'sad';
+  if (/好的|可以|同意|没问题|\b(ok|yes|agree|sure)\b|[👍👌]/.test(text)) return 'agree';
+  return 'speaking';
+};
+
 const getActorAnimation = (message?: Message): ActorAnimationName => {
   const text = getMessagePreview(message).toLowerCase();
   if (/坐下|坐着|坐好|\bsit\b/.test(text)) return 'sitting';
@@ -76,12 +151,13 @@ const getActorAnimation = (message?: Message): ActorAnimationName => {
   return 'talking';
 };
 
-const fitToHeight = (model: THREE.Object3D, targetHeight: number) => {
+const fitToAvatarSize = (model: THREE.Object3D, visualScale = 1) => {
   const box = new THREE.Box3().setFromObject(model);
   const size = new THREE.Vector3();
   box.getSize(size);
-  if (size.y <= 0) return;
-  const scale = targetHeight / size.y;
+  const diameter = size.length();
+  if (diameter <= 0) return;
+  const scale = AVATAR_BOUNDING_DIAMETER / diameter * visualScale;
   model.scale.setScalar(scale);
 };
 
@@ -89,6 +165,35 @@ const placeOnFloor = (model: THREE.Object3D) => {
   const box = new THREE.Box3().setFromObject(model);
   const minY = box.min.y;
   model.position.y -= minY;
+};
+
+const scaleWithRoom = ([x, y, z]: Position): Position => [
+  ROOM_FLOOR_CENTER[0] + (x - ROOM_FLOOR_CENTER[0]) * ROOM_SCALE,
+  y,
+  ROOM_FLOOR_CENTER[2] + (z - ROOM_FLOOR_CENTER[2]) * ROOM_SCALE,
+];
+
+const compressSofaDepth = (room: THREE.Object3D) => {
+  const sofa = room.getObjectByName('sofa');
+  const meshes = sofa?.children.filter((child): child is THREE.Mesh => child instanceof THREE.Mesh) ?? [];
+  const bounds = new THREE.Box3();
+
+  for (const mesh of meshes) {
+    mesh.geometry.computeBoundingBox();
+    if (mesh.geometry.boundingBox) bounds.union(mesh.geometry.boundingBox);
+  }
+  if (bounds.isEmpty()) return;
+
+  const centerY = (bounds.min.y + bounds.max.y) / 2;
+  for (const mesh of meshes) {
+    const geometry = mesh.geometry.clone();
+    geometry.translate(0, -centerY, 0);
+    geometry.scale(1, SOFA_DEPTH_SCALE, 1);
+    geometry.translate(0, centerY, 0);
+    geometry.computeBoundingBox();
+    geometry.computeBoundingSphere();
+    mesh.geometry = geometry;
+  }
 };
 
 const LoadingOverlay: React.FC = () => (
@@ -160,10 +265,8 @@ const SpeechBubble: React.FC<{
   );
 };
 
-const AvatarActor: React.FC<{
+interface AvatarActorProps {
   person: RoomPerson;
-  modelUrl: string;
-  motionUrls: ActorMotionUrls;
   position: Position;
   standingPosition?: Position;
   rotationY: number;
@@ -171,13 +274,59 @@ const AvatarActor: React.FC<{
   latestMessage?: Message;
   isTyping: boolean;
   accent: string;
+  phase: number;
   mentionableNames: string[];
-}> = ({ person, modelUrl, motionUrls, position, standingPosition = position, rotationY, bubblePosition, latestMessage, isTyping, accent, mentionableNames }) => {
-  const gltf = useGLTF(modelUrl);
-  const standingGltf = useGLTF(motionUrls.standing);
-  const talkingGltf = useGLTF(motionUrls.talking);
-  const walkingGltf = useGLTF(motionUrls.walking);
-  const dancingGltf = useGLTF(motionUrls.dancing);
+  onSelect: () => void;
+}
+
+const AvatarPicker: React.FC<{
+  person: RoomPerson;
+  options: AvatarOption[];
+  selectedId: AvatarId;
+  onSelect: (id: AvatarId) => void;
+  onClose: () => void;
+}> = ({ person, options, selectedId, onSelect, onClose }) => {
+  const { t } = useLanguage();
+
+  return (
+    <Paper variant="outlined" sx={{
+      position: 'absolute', zIndex: 50, top: 52, right: { xs: 8, sm: 12 },
+      width: 196, maxWidth: 'calc(100% - 16px)', p: 1,
+      bgcolor: 'background.paper', color: 'text.primary', borderColor: 'divider',
+    }}>
+      <BoxAny sx={{ mb: 1, pl: 0.5, display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Typography sx={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 700 }} noWrap>
+          {person.displayName} · {t('chat.room.chooseAvatar')}
+        </Typography>
+        <IconButton size="small" onClick={onClose} aria-label={t('chat.room.closeAvatarPicker')}>
+          <CloseIcon fontSize="small" />
+        </IconButton>
+      </BoxAny>
+      <BoxAny sx={{ display: 'grid', gap: 0.75 }}>
+        {options.map((option) => (
+          <Button
+            key={option.id}
+            variant={selectedId === option.id ? 'contained' : 'text'}
+            onClick={() => onSelect(option.id)}
+            sx={{ justifyContent: 'flex-start' }}
+          >
+            {t(option.labelKey)}
+          </Button>
+        ))}
+      </BoxAny>
+    </Paper>
+  );
+};
+
+const AnimatedAvatarActor: React.FC<AvatarActorProps & { avatar: AnimatedAvatarOption }> = ({
+  avatar, person, position, standingPosition = position, rotationY, bubblePosition,
+  latestMessage, isTyping, accent, mentionableNames, onSelect,
+}) => {
+  const gltf = useGLTF(avatar.modelUrl);
+  const standingGltf = useGLTF(avatar.motionUrls.standing);
+  const talkingGltf = useGLTF(avatar.motionUrls.talking);
+  const walkingGltf = useGLTF(avatar.motionUrls.walking);
+  const dancingGltf = useGLTF(avatar.motionUrls.dancing);
   const { invalidate } = useThree();
   const actorRef = useRef<THREE.Group | null>(null);
   const positionTargetRef = useRef(new THREE.Vector3(...position));
@@ -196,7 +345,7 @@ const AvatarActor: React.FC<{
     });
 
     if (!targetMesh) {
-      throw new Error(`Avatar animation rig is missing for ${modelUrl}`);
+      throw new Error(`Avatar animation rig is missing for ${avatar.modelUrl}`);
     }
 
     const directClip = (animations: THREE.AnimationClip[], name: ActorAnimationName) => {
@@ -209,7 +358,7 @@ const AvatarActor: React.FC<{
     targetMesh.skeleton.pose();
     const bones = new Map(targetMesh.skeleton.bones.map((bone) => [bone.name, bone]));
     const hip = bones.get('Hips');
-    if (!hip) throw new Error(`Avatar hip bone is missing for ${modelUrl}`);
+    if (!hip) throw new Error(`Avatar hip bone is missing for ${avatar.modelUrl}`);
 
     const seatedHipPosition = hip.position.clone();
     seatedHipPosition.y *= 0.66;
@@ -246,13 +395,13 @@ const AvatarActor: React.FC<{
     };
 
     targetMesh.skeleton.pose();
-    fitToHeight(clone, 1.6);
+    fitToAvatarSize(clone, avatar.visualScale);
     placeOnFloor(clone);
     return { model: clone, targetMesh, clips };
   }, [
     dancingGltf.animations,
     gltf.scene,
-    modelUrl,
+    avatar.modelUrl,
     standingGltf.animations,
     talkingGltf.animations,
     walkingGltf.animations,
@@ -377,7 +526,21 @@ const AvatarActor: React.FC<{
   });
 
   return <>
-    <group ref={actorRef} position={position} rotation={[0, rotationY, 0]}>
+    <group
+      ref={actorRef}
+      position={position}
+      rotation={[0, rotationY, 0]}
+      onClick={(event) => {
+        event.stopPropagation();
+        document.body.style.cursor = '';
+        onSelect();
+      }}
+      onPointerEnter={(event) => {
+        event.stopPropagation();
+        document.body.style.cursor = 'pointer';
+      }}
+      onPointerLeave={() => { document.body.style.cursor = ''; }}
+    >
       <primitive object={animatedModel.model} />
     </group>
     <Html position={bubblePosition} center zIndexRange={[30, 0]} style={{ pointerEvents: 'none' }}>
@@ -392,31 +555,166 @@ const AvatarActor: React.FC<{
   </>;
 };
 
+const StaticAvatarActor: React.FC<AvatarActorProps & { avatar: StaticAvatarOption }> = ({
+  avatar, person, position, rotationY, bubblePosition, latestMessage,
+  isTyping, accent, phase, mentionableNames, onSelect,
+}) => {
+  const gltf = useGLTF(avatar.modelUrl);
+  const { invalidate } = useThree();
+  const actorRef = useRef<THREE.Group | null>(null);
+  const activeUntilRef = useRef(0);
+  const previousMessageIdRef = useRef(latestMessage?.id);
+  const seatedPosition: Position = [
+    position[0] + (avatar.seatOffset?.[0] ?? 0),
+    position[1] + (avatar.seatOffset?.[1] ?? 0),
+    position[2] + (avatar.seatOffset?.[2] ?? 0),
+  ];
+  const model = useMemo(() => {
+    const clone = gltf.scene.clone(true);
+    fitToAvatarSize(clone, avatar.visualScale);
+    placeOnFloor(clone);
+    return clone;
+  }, [gltf.scene]);
+  const gesture = useMemo(() => getGesture(latestMessage), [latestMessage]);
+
+  useEffect(() => {
+    const now = performance.now();
+    if (latestMessage?.id && previousMessageIdRef.current !== latestMessage.id) {
+      previousMessageIdRef.current = latestMessage.id;
+      activeUntilRef.current = now + 4500;
+    }
+
+    const renderUntil = isTyping ? Number.POSITIVE_INFINITY : Math.max(now + 700, activeUntilRef.current + 700);
+    let frameId = 0;
+    let lastRenderAt = 0;
+    const tick = (timestamp: number) => {
+      if (timestamp - lastRenderAt >= 1000 / 30) {
+        lastRenderAt = timestamp;
+        invalidate();
+      }
+      if (isTyping || timestamp < renderUntil) frameId = requestAnimationFrame(tick);
+    };
+    frameId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frameId);
+  }, [invalidate, isTyping, latestMessage?.id]);
+
+  useFrame(({ clock }, delta) => {
+    const actor = actorRef.current;
+    if (!actor) return;
+
+    const time = clock.elapsedTime + phase;
+    const activeGesture = isTyping ? 'thinking' : performance.now() < activeUntilRef.current ? gesture : 'idle';
+    let lift = Math.sin(time * 1.5) * 0.006;
+    let lean = 0;
+    let tilt = 0;
+    let turn = 0;
+
+    if (activeGesture === 'speaking') {
+      lean = Math.sin(time * 6.5) * 0.018;
+      turn = Math.sin(time * 3.2) * 0.018;
+    } else if (activeGesture === 'agree') {
+      lean = Math.sin(time * 8) * 0.035;
+    } else if (activeGesture === 'question') {
+      tilt = 0.055;
+      turn = Math.sin(time * 2.5) * 0.012;
+    } else if (activeGesture === 'happy') {
+      tilt = Math.sin(time * 4) * 0.035;
+      lift += Math.abs(Math.sin(time * 4)) * 0.018;
+    } else if (activeGesture === 'excited') {
+      tilt = Math.sin(time * 6) * 0.045;
+      lift += Math.abs(Math.sin(time * 7)) * 0.045;
+    } else if (activeGesture === 'sad') {
+      lean = 0.045;
+      lift -= 0.015;
+    } else if (activeGesture === 'thinking') {
+      tilt = -0.04;
+      turn = Math.sin(time * 2) * 0.01;
+    }
+
+    actor.position.y = THREE.MathUtils.damp(actor.position.y, seatedPosition[1] + lift, 7, delta);
+    actor.rotation.x = THREE.MathUtils.damp(actor.rotation.x, lean, 7, delta);
+    actor.rotation.y = THREE.MathUtils.damp(actor.rotation.y, rotationY + turn, 7, delta);
+    actor.rotation.z = THREE.MathUtils.damp(actor.rotation.z, tilt, 7, delta);
+  });
+
+  return <>
+    <group
+      ref={actorRef}
+      position={seatedPosition}
+      rotation={[0, rotationY, 0]}
+      onClick={(event) => {
+        event.stopPropagation();
+        document.body.style.cursor = '';
+        onSelect();
+      }}
+      onPointerEnter={(event) => {
+        event.stopPropagation();
+        document.body.style.cursor = 'pointer';
+      }}
+      onPointerLeave={() => { document.body.style.cursor = ''; }}
+    >
+      <primitive object={model} />
+    </group>
+    <Html position={bubblePosition} center zIndexRange={[30, 0]} style={{ pointerEvents: 'none' }}>
+      <SpeechBubble
+        person={person}
+        message={latestMessage}
+        isTyping={isTyping}
+        accent={accent}
+        mentionableNames={mentionableNames}
+      />
+    </Html>
+  </>;
+};
+
+const RoomAvatar: React.FC<AvatarActorProps & { avatar: AvatarOption }> = (props) => (
+  props.avatar.kind === 'animated'
+    ? <AnimatedAvatarActor {...props} avatar={props.avatar} />
+    : <StaticAvatarActor {...props} avatar={props.avatar} />
+);
+
 const RoomModels: React.FC<{
   people: RoomPerson[];
   latestBySender: Map<string, Message>;
   typingIds: Set<string>;
-}> = ({ people, latestBySender, typingIds }) => {
+  avatarSelections: Record<string, AvatarId>;
+  onPickAvatar: (slot: 0 | 1) => void;
+}> = ({ people, latestBySender, typingIds, avatarSelections, onPickAvatar }) => {
   const roomGltf = useGLTF(ROOM_MODEL_URL);
-  const roomScene = useMemo(() => roomGltf.scene.clone(true), [roomGltf.scene]);
+  const roomScene = useMemo(() => {
+    const clone = roomGltf.scene.clone(true);
+    compressSofaDepth(clone);
+    return clone;
+  }, [roomGltf.scene]);
   const mentionableNames = people.map((person) => person.displayName);
+  const leftAvatar = AVATAR_OPTIONS.find((option) => option.id === avatarSelections[people[0]?.userId])
+    ?? AVATAR_OPTIONS[0];
+  const rightAvatar = AVATAR_OPTIONS.find((option) => option.id === avatarSelections[people[1]?.userId])
+    ?? AVATAR_OPTIONS[1];
 
   return (
     <>
-      <primitive object={roomScene} />
-      {people[0] && <AvatarActor
-        person={people[0]} modelUrl={MALE_AVATAR_URL} motionUrls={MALE_MOTIONS} position={[-1.0, 0, 1.1]}
-        standingPosition={[-0.55, 0, 1.75]}
-        rotationY={Math.PI / 2} bubblePosition={[-1.9, 2.2, 0.8]}
+      <group position={ROOM_FLOOR_CENTER} scale={ROOM_SCALE}>
+        <primitive
+          object={roomScene}
+          position={[-ROOM_FLOOR_CENTER[0], -ROOM_FLOOR_CENTER[1], -ROOM_FLOOR_CENTER[2]]}
+        />
+      </group>
+      {people[0] && <RoomAvatar
+        key={`${people[0].userId}:${leftAvatar.id}`} person={people[0]} avatar={leftAvatar}
+        position={scaleWithRoom([-1.0, 0, 1.1])}
+        standingPosition={scaleWithRoom([-0.55, 0, 1.75])}
+        rotationY={Math.PI / 2} bubblePosition={scaleWithRoom([-1.9, 2.2, 0.8])}
         latestMessage={latestBySender.get(people[0].userId)} isTyping={typingIds.has(people[0].userId)}
-        accent="#2f7d5a" mentionableNames={mentionableNames}
+        accent="#2f7d5a" phase={0} mentionableNames={mentionableNames} onSelect={() => onPickAvatar(0)}
       />}
-      {people[1] && <AvatarActor
-        person={people[1]} modelUrl={FEMALE_AVATAR_URL} motionUrls={FEMALE_MOTIONS} position={[1.6, 0, -1.2]}
-        standingPosition={[1.85, 0, -0.75]}
-        rotationY={-Math.PI * 0.15} bubblePosition={[1.6, 1.85, -1.2]}
+      {people[1] && <RoomAvatar
+        key={`${people[1].userId}:${rightAvatar.id}`} person={people[1]} avatar={rightAvatar}
+        position={scaleWithRoom([1.6, 0, -1.2])}
+        standingPosition={scaleWithRoom([1.85, 0, -0.75])}
+        rotationY={-Math.PI * 0.15} bubblePosition={scaleWithRoom([1.6, 1.85, -1.2])}
         latestMessage={latestBySender.get(people[1].userId)} isTyping={typingIds.has(people[1].userId)}
-        accent="#b66a4b" mentionableNames={mentionableNames}
+        accent="#b66a4b" phase={Math.PI} mentionableNames={mentionableNames} onSelect={() => onPickAvatar(1)}
       />}
     </>
   );
@@ -604,6 +902,8 @@ export const ChatRoom3D: React.FC<ChatRoom3DProps> = ({
 }) => {
   const { t } = useLanguage();
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [avatarSelections, setAvatarSelections] = useState<Record<string, AvatarId>>(loadAvatarSelections);
+  const [avatarPickerSlot, setAvatarPickerSlot] = useState<0 | 1 | null>(null);
   const people = useMemo(() => buildRoomPeople(chat, me), [chat, me]);
   const participantIds = useMemo(() => new Set(people.map((person) => person.userId)), [people]);
   const historyMessages = useMemo(() => messages
@@ -619,6 +919,10 @@ export const ChatRoom3D: React.FC<ChatRoom3DProps> = ({
   }, [recentMessages]);
   const typingIds = useMemo(() => new Set(typingUsers.map((user) => user.userId)), [typingUsers]);
   const mentionableNames = useMemo(() => people.map((person) => person.displayName), [people]);
+
+  useEffect(() => {
+    localStorage.setItem(AVATAR_SELECTION_STORAGE_KEY, JSON.stringify(avatarSelections));
+  }, [avatarSelections]);
 
   return (
     <BoxAny sx={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden' }}>
@@ -640,13 +944,43 @@ export const ChatRoom3D: React.FC<ChatRoom3DProps> = ({
         <directionalLight intensity={0.4} position={[-5, 4, -4]} />
         <RoomCamera />
         <Suspense fallback={<LoadingOverlay />}>
-          <RoomModels people={people} latestBySender={latestBySender} typingIds={typingIds} />
+          <RoomModels
+            people={people}
+            latestBySender={latestBySender}
+            typingIds={typingIds}
+            avatarSelections={avatarSelections}
+            onPickAvatar={(slot) => {
+              setHistoryOpen(false);
+              setAvatarPickerSlot(slot);
+            }}
+          />
         </Suspense>
       </Canvas>
+      {avatarPickerSlot !== null && people[avatarPickerSlot] && (() => {
+        const person = people[avatarPickerSlot];
+        const selectedId = AVATAR_OPTIONS.some((option) => option.id === avatarSelections[person.userId])
+          ? avatarSelections[person.userId]
+          : AVATAR_OPTIONS[avatarPickerSlot].id;
+        return (
+          <AvatarPicker
+            person={person}
+            options={AVATAR_OPTIONS}
+            selectedId={selectedId}
+            onSelect={(id) => {
+              setAvatarSelections((current) => ({ ...current, [person.userId]: id }));
+              setAvatarPickerSlot(null);
+            }}
+            onClose={() => setAvatarPickerSlot(null)}
+          />
+        );
+      })()}
       <Tooltip title={t('chat.room.history')}>
         <IconButton
           size="small"
-          onClick={() => setHistoryOpen((open) => !open)}
+          onClick={() => {
+            setAvatarPickerSlot(null);
+            setHistoryOpen((open) => !open);
+          }}
           aria-label={t('chat.room.history')}
           aria-expanded={historyOpen}
           sx={{
@@ -677,6 +1011,8 @@ export const ChatRoom3D: React.FC<ChatRoom3DProps> = ({
 useGLTF.preload(ROOM_MODEL_URL);
 useGLTF.preload(MALE_AVATAR_URL);
 useGLTF.preload(FEMALE_AVATAR_URL);
+useGLTF.preload(CLASSIC_COUCH_AVATAR_URL);
+useGLTF.preload(CLASSIC_SEATED_AVATAR_URL);
 for (const url of [...Object.values(MALE_MOTIONS), ...Object.values(FEMALE_MOTIONS)]) {
   useGLTF.preload(url);
 }
