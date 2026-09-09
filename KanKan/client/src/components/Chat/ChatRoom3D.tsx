@@ -195,6 +195,27 @@ const applySkinTone = (model: THREE.Object3D, skinTone?: AvatarCalibration['skin
   });
 };
 
+const configureAvatarTextures = (model: THREE.Object3D, anisotropy: number) => {
+  model.traverse((object) => {
+    if (!(object instanceof THREE.Mesh)) return;
+    const materials = Array.isArray(object.material) ? object.material : [object.material];
+    for (const material of materials) {
+      if (!(material instanceof THREE.MeshStandardMaterial)) continue;
+      for (const texture of [
+        material.map,
+        material.normalMap,
+        material.roughnessMap,
+        material.metalnessMap,
+        material.aoMap,
+      ]) {
+        if (!texture) continue;
+        texture.anisotropy = anisotropy;
+        texture.needsUpdate = true;
+      }
+    }
+  });
+};
+
 const placeOnFloor = (model: THREE.Object3D) => {
   const box = new THREE.Box3().setFromObject(model);
   const minY = box.min.y;
@@ -361,7 +382,8 @@ const AnimatedAvatarActor: React.FC<AvatarActorProps & { avatar: AnimatedAvatarO
   const talkingGltf = useGLTF(avatar.motionUrls.talking);
   const walkingGltf = useGLTF(avatar.motionUrls.walking);
   const dancingGltf = useGLTF(avatar.motionUrls.dancing);
-  const { invalidate } = useThree();
+  const { gl, invalidate } = useThree();
+  const maxAnisotropy = gl.capabilities.getMaxAnisotropy();
   const actorRef = useRef<THREE.Group | null>(null);
   const positionTargetRef = useRef(new THREE.Vector3(...position));
   const mixerRef = useRef<THREE.AnimationMixer | null>(null);
@@ -430,6 +452,7 @@ const AnimatedAvatarActor: React.FC<AvatarActorProps & { avatar: AnimatedAvatarO
 
     targetMesh.skeleton.pose();
     applySkinTone(clone, avatar.skinTone);
+    configureAvatarTextures(clone, maxAnisotropy);
     fitToAvatarSize(clone, avatar.visualScale);
     placeOnFloor(clone);
     return { model: clone, targetMesh, clips };
@@ -438,6 +461,7 @@ const AnimatedAvatarActor: React.FC<AvatarActorProps & { avatar: AnimatedAvatarO
     gltf.scene,
     avatar.modelUrl,
     avatar.skinTone,
+    maxAnisotropy,
     standingGltf.animations,
     talkingGltf.animations,
     walkingGltf.animations,
@@ -596,7 +620,8 @@ const StaticAvatarActor: React.FC<AvatarActorProps & { avatar: StaticAvatarOptio
   isTyping, accent, phase, mentionableNames, onSelect,
 }) => {
   const gltf = useGLTF(avatar.modelUrl);
-  const { invalidate } = useThree();
+  const { gl, invalidate } = useThree();
+  const maxAnisotropy = gl.capabilities.getMaxAnisotropy();
   const actorRef = useRef<THREE.Group | null>(null);
   const activeUntilRef = useRef(0);
   const previousMessageIdRef = useRef(latestMessage?.id);
@@ -607,10 +632,11 @@ const StaticAvatarActor: React.FC<AvatarActorProps & { avatar: StaticAvatarOptio
   ];
   const model = useMemo(() => {
     const clone = gltf.scene.clone(true);
+    configureAvatarTextures(clone, maxAnisotropy);
     fitToAvatarSize(clone, avatar.visualScale);
     placeOnFloor(clone);
     return clone;
-  }, [gltf.scene]);
+  }, [gltf.scene, maxAnisotropy]);
   const gesture = useMemo(() => getGesture(latestMessage), [latestMessage]);
 
   useEffect(() => {
@@ -965,7 +991,7 @@ export const ChatRoom3D: React.FC<ChatRoom3DProps> = ({
       <Canvas
         style={{ width: '100%', height: '100%', display: 'block' }}
         frameloop="demand"
-        dpr={1}
+        dpr={[1.5, 2]}
         camera={{ fov: 55, position: [0, 2.0, 4.5], near: 0.1, far: 1000 }}
         gl={{ antialias: true }}
         onCreated={({ gl }) => {
