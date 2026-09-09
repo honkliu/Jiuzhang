@@ -61,21 +61,23 @@ const FONTS = [
 ];
 
 const fontSelectSx = {
-  fontSize: 11, height: 24, bgcolor: '#fff', borderRadius: '4px',
+  fontSize: 11, height: 24, bgcolor: 'background.paper', color: 'text.primary', borderRadius: '4px',
   '& .MuiSelect-select': { py: '2px !important', pl: '3px !important', pr: '12px !important', minHeight: '0 !important' },
   '& .MuiSelect-icon': { right: -2, fontSize: 14, top: 'calc(50% - 7px)' },
   '& .MuiInputBase-input': { padding: '2px 3px !important' },
-  '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(15,23,42,0.2)' },
-  '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(15,23,42,0.4)' },
+  '& .MuiOutlinedInput-notchedOutline': { borderColor: 'divider' },
+  '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'primary.main' },
 };
 
 const fontMenuProps = {
   PaperProps: {
     sx: {
-      bgcolor: '#fff',
+      bgcolor: 'background.paper',
       backgroundImage: 'none',
-      boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
-      border: '1px solid rgba(15,23,42,0.08)',
+      boxShadow: 3,
+      border: '1px solid',
+      borderColor: 'divider',
+      borderRadius: '8px',
       maxHeight: 300,
       scrollbarWidth: 'none',
       '&::-webkit-scrollbar': { display: 'none' },
@@ -214,9 +216,9 @@ export const RichTextBlockWithRegistry: React.FC<RichTextBlockProps & { blockId:
       '& .tiptap ul, & .tiptap ol': { margin: '0 !important', paddingLeft: '1.6em' },
       '& .tiptap li': { margin: 0, '& > p': { margin: '0 !important', lineHeight: '1.5 !important' } },
       '& .tiptap li::marker': { fontSize: 'inherit' },
-      '& .tiptap blockquote': { margin: '0.25em 0', paddingLeft: '1em', borderLeft: '3px solid #d1d5db' },
-      '& .tiptap pre': { margin: '0.25em 0', padding: '0.5em', background: '#f1f5f9', borderRadius: '4px', fontSize: '0.9em' },
-      '& .tiptap hr': { margin: '0.5em 0', border: 'none', borderTop: '1px solid #e2e8f0' },
+      '& .tiptap blockquote': { margin: '0.25em 0', paddingLeft: '1em', borderLeft: '3px solid', borderColor: 'divider' },
+      '& .tiptap pre': { margin: '0.25em 0', padding: '0.5em', backgroundColor: 'action.hover', borderRadius: '4px', fontSize: '0.9em' },
+      '& .tiptap hr': { margin: '0.5em 0', border: 'none', borderTop: '1px solid', borderColor: 'divider' },
       '& .tiptap img': { maxWidth: '100%', height: 'auto' },
     }}>
       <EditorContent editor={editor} style={{ height: '100%' }} />

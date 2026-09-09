@@ -62,7 +62,7 @@ const roundedTextFieldSx = {
 };
 const inlineRowInputSx = {
   fontSize: 13,
-  color: '#0f172a',
+  color: 'text.primary',
   px: 0.6,
   py: 0.3,
   borderRadius: '4px',

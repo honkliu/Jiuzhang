@@ -15,6 +15,7 @@ import {
 } from '@mui/material';
 import { Refresh as RefreshIcon } from '@mui/icons-material';
 import { adminService } from '@/services/admin.service';
+import { authService } from '@/services/auth.service';
 import { AppHeader } from '@/components/Shared/AppHeader';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { useSelector } from 'react-redux';
@@ -23,21 +24,18 @@ import { appPageContainerSx } from '@/styles/appLayout';
 
 const BoxAny = Box as any;
 const statusTextColorMap = {
-  warning: '#ed6c02',
-  success: '#2e7d32',
-  default: '#64748b',
+  warning: 'warning.main',
+  success: 'success.main',
+  default: 'text.secondary',
 } as const;
 
 export const InviteCodesPage: React.FC = () => {
-  const user = useSelector((state: any) => state.auth?.user);
+  const reduxUser = useSelector((state: any) => state.auth?.user);
+  const user = reduxUser ?? authService.getCurrentUser();
   const { t } = useLanguage();
   const [codes, setCodes] = useState<{ email: string; code: string; purpose: string; createdAt: string; status: string }[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  if (!user?.isAdmin) {
-    return <Navigate to="/chats" replace />;
-  }
 
   const loadCodes = async () => {
     setLoading(true);
@@ -52,8 +50,14 @@ export const InviteCodesPage: React.FC = () => {
   };
 
   useEffect(() => {
-    loadCodes();
-  }, []);
+    if (user?.isAdmin) {
+      loadCodes();
+    }
+  }, [user?.isAdmin]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (!user?.isAdmin) {
+    return <Navigate to="/chats" replace />;
+  }
 
   const formatDate = (dateStr: string) => {
     try {

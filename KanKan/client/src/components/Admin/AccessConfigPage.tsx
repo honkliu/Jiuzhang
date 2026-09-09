@@ -32,6 +32,7 @@ import {
   FamilyTreeManagerAccessConfig,
   FeatureDomainAccessConfig,
 } from '@/services/admin.service';
+import { authService } from '@/services/auth.service';
 import { appPageContainerSx } from '@/styles/appLayout';
 
 const BoxAny = Box as any;
@@ -103,7 +104,7 @@ const readOnlyValueSx = {
   py: 0.35,
   fontSize: 13,
   lineHeight: 1.35,
-  color: '#0f172a',
+  color: 'text.primary',
   wordBreak: 'break-word',
 };
 
@@ -114,7 +115,8 @@ const adminConfigShellSx = {
 };
 
 export const AccessConfigPage: React.FC = () => {
-  const user = useSelector((state: any) => state.auth?.user);
+  const reduxUser = useSelector((state: any) => state.auth?.user);
+  const user = reduxUser ?? authService.getCurrentUser();
   const { t } = useLanguage();
   const [response, setResponse] = useState<AccessConfigResponse | null>(null);
   const [config, setConfig] = useState<AccessConfig>(emptyConfig);
@@ -130,10 +132,6 @@ export const AccessConfigPage: React.FC = () => {
     ...adminConfigShellSx,
     maxWidth: canManageGlobalAccess ? configGridSurfaceWidth : adminConfigShellSx.maxWidth,
   };
-
-  if (!user?.isAdmin) {
-    return <Navigate to="/chats" replace />;
-  }
 
   const loadConfig = async () => {
     setLoading(true);
@@ -154,8 +152,10 @@ export const AccessConfigPage: React.FC = () => {
   };
 
   useEffect(() => {
-    loadConfig();
-  }, []);
+    if (user?.isAdmin) {
+      loadConfig();
+    }
+  }, [user?.isAdmin]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const saveConfig = async () => {
     setSaving(true);
@@ -209,6 +209,11 @@ export const AccessConfigPage: React.FC = () => {
     }
     return result;
   }, [response]);
+
+  if (!user?.isAdmin) {
+    return <Navigate to="/chats" replace />;
+  }
+
   const actionButtons = (
     <BoxAny sx={{ display: 'flex', gap: 0.75, flexShrink: 0 }}>
       <Button size="small" startIcon={<RefreshIcon />} onClick={loadConfig} disabled={loading || saving}>
@@ -513,7 +518,7 @@ const VisibilityPreviewGrid: React.FC<{ rows: DomainVisibilityPreview[] }> = ({ 
         ))}
       </BoxAny>
 
-      <BoxAny sx={{ px: 1.25, py: 0.35 }}>
+      <BoxAny sx={rows.length === 0 ? { px: 1.25, py: 0.35 } : {}}>
         {rows.length === 0 ? (
           <Typography variant="body2" color="text.secondary" sx={{ fontSize: 12, fontStyle: 'italic', py: 0.75 }}>
             <EmptyText />
@@ -525,6 +530,7 @@ const VisibilityPreviewGrid: React.FC<{ rows: DomainVisibilityPreview[] }> = ({ 
               display: 'grid',
               gridTemplateColumns: columns.map(column => column.width).join(' '),
               columnGap: 1,
+              px: 1.25,
               py: 0.65,
               alignItems: 'center',
               borderBottom: row === rows[rows.length - 1] ? 'none' : '1px solid',
@@ -626,7 +632,7 @@ const ReadOnlyGrid = <T,>({
       ))}
     </BoxAny>
 
-    <BoxAny sx={{ px: 1.25, py: 0.35 }}>
+    <BoxAny sx={rows.length === 0 ? { px: 1.25, py: 0.35 } : {}}>
       {rows.length === 0 ? (
         <Typography variant="body2" color="text.secondary" sx={{ fontSize: 12, fontStyle: 'italic', py: 0.75 }}>
           <EmptyText />
@@ -638,6 +644,7 @@ const ReadOnlyGrid = <T,>({
             display: 'grid',
             gridTemplateColumns: columns.map(column => column.width).join(' '),
             columnGap: 1,
+            px: 1.25,
             py: 0.65,
             alignItems: 'center',
             borderBottom: index === rows.length - 1 ? 'none' : '1px solid',
@@ -702,7 +709,7 @@ const EditableList = <T,>({
       </BoxAny>
     </BoxAny>
 
-    <BoxAny sx={{ px: 1.25, py: 0.35 }}>
+    <BoxAny sx={rows.length === 0 ? { px: 1.25, py: 0.35 } : {}}>
       {rows.length === 0 ? (
         <Typography variant="body2" color="text.secondary" sx={{ fontSize: 12, fontStyle: 'italic', py: 0.75 }}>
           <EmptyText />
@@ -714,6 +721,7 @@ const EditableList = <T,>({
             display: 'grid',
             gridTemplateColumns: `${columns.map(column => column.width).join(' ')} ${columnWidths.action}`,
             columnGap: 1,
+            px: 1.25,
             py: 0.65,
             alignItems: 'center',
             borderBottom: index === rows.length - 1 ? 'none' : '1px solid',
@@ -825,11 +833,11 @@ const AgentToolsEditor: React.FC<{
         )}
 
         {/* Rows */}
-        <BoxAny sx={{ px: 1.25, py: 0.35 }}>
+        <BoxAny>
           {tools.map((tool, index) => {
             const isDraft = draftRows.has(index) || !(tool.name && tool.urlTemplate);
             return (
-              <BoxAny key={tool.id || `new-${index}`} sx={{ borderBottom: index === tools.length - 1 ? 'none' : '1px solid', borderColor: 'divider', backgroundColor: index % 2 === 0 ? 'background.paper' : 'action.hover', mx: -1.25, px: 1.25 }}>
+              <BoxAny key={tool.id || `new-${index}`} sx={{ borderBottom: index === tools.length - 1 ? 'none' : '1px solid', borderColor: 'divider', backgroundColor: index % 2 === 0 ? 'background.paper' : 'action.hover', px: 1.25 }}>
                 {/* Main row: Name | URL | Enabled | Delete */}
                 <BoxAny sx={{ display: 'grid', gridTemplateColumns: toolGridCols, columnGap: 1, py: 0.65, alignItems: 'center' }}>
                   {isDraft
@@ -899,7 +907,7 @@ const AgentToolsEditor: React.FC<{
                   <BoxAny sx={{ pl: 1.5, pb: 0.5 }}>
                     {tool.parameters.map((param, pi) => (
                       <BoxAny key={pi} sx={{ display: 'grid', gridTemplateColumns: `100px 1fr ${columnWidths.action}`, columnGap: 1, alignItems: 'center', py: 0.25 }}>
-                        <InputBase value={param.name} onChange={(e) => updateParam(index, pi, { name: e.target.value })} placeholder="{param}" sx={{ ...inlineInputSx, fontFamily: 'monospace', fontSize: 11, backgroundColor: '#f9fafb' }} />
+                        <InputBase value={param.name} onChange={(e) => updateParam(index, pi, { name: e.target.value })} placeholder="{param}" sx={{ ...inlineInputSx, fontFamily: 'monospace', fontSize: 11, backgroundColor: 'action.hover' }} />
                         <InputBase value={param.description} onChange={(e) => updateParam(index, pi, { description: e.target.value })} placeholder={t('admin.agentTools.placeholder.paramDesc')} sx={{ ...inlineInputSx, fontSize: 12 }} />
                         <BoxAny sx={{ display: 'flex', justifyContent: 'center' }}>
                           <IconButton size="small" onClick={() => removeParam(index, pi)} sx={{ width: 20, height: 20 }}>
@@ -931,7 +939,7 @@ const AgentToolsEditor: React.FC<{
                     </Typography>
                     {Object.entries(tool.headers).map(([k, v], hi) => (
                       <BoxAny key={hi} sx={{ display: 'grid', gridTemplateColumns: `140px 1fr ${columnWidths.action}`, columnGap: 1, alignItems: 'center', py: 0.25 }}>
-                        <InputBase value={k} onChange={(e) => updateHeader(index, hi, e.target.value, v)} placeholder={t('admin.agentTools.placeholder.headerKey')} sx={{ ...inlineInputSx, fontFamily: 'monospace', fontSize: 11, backgroundColor: '#f9fafb' }} />
+                        <InputBase value={k} onChange={(e) => updateHeader(index, hi, e.target.value, v)} placeholder={t('admin.agentTools.placeholder.headerKey')} sx={{ ...inlineInputSx, fontFamily: 'monospace', fontSize: 11, backgroundColor: 'action.hover' }} />
                         <InputBase value={v} onChange={(e) => updateHeader(index, hi, k, e.target.value)} placeholder={t('admin.agentTools.placeholder.headerValue')} sx={{ ...inlineInputSx, fontSize: 12 }} />
                         <BoxAny sx={{ display: 'flex', justifyContent: 'center' }}>
                           <IconButton size="small" onClick={() => removeHeader(index, hi)} sx={{ width: 20, height: 20 }}>

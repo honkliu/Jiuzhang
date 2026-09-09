@@ -360,8 +360,9 @@ export const Notebook: React.FC<NotebookProps> = ({ notebookId, canEdit }) => {
     <BoxAny sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* ── Toolbar ── */}
       <BoxAny sx={{
-        borderBottom: '1px solid rgba(15,23,42,0.10)',
-        background: '#f1f5f9',
+        borderBottom: '1px solid',
+        borderColor: 'divider',
+        backgroundColor: 'background.paper',
       }}>
         {/* Main row: sections | formatting (inline on wide) | pages + actions */}
         <BoxAny sx={{
@@ -416,7 +417,7 @@ export const Notebook: React.FC<NotebookProps> = ({ notebookId, canEdit }) => {
               onClick={handleAddSection}
               sx={{
                 px: 0.5, display: 'flex', alignItems: 'center', cursor: 'pointer',
-                color: '#64748b', '&:hover': { color: '#2563eb', background: 'rgba(37,99,235,0.08)' },
+                color: 'text.secondary', '&:hover': { color: 'primary.main', backgroundColor: 'action.hover' },
                 fontSize: 12.5, fontWeight: 400, userSelect: 'none', minHeight: 36,
               }}
             >
@@ -464,7 +465,7 @@ export const Notebook: React.FC<NotebookProps> = ({ notebookId, canEdit }) => {
                 )}
                 {canEdit && activeSectionId && (
                   <BoxAny onClick={handleAddPage}
-                    sx={{ ...navSx, color: '#64748b', '&:hover': { color: '#2563eb', background: 'rgba(37,99,235,0.08)' } }}>
+                    sx={{ ...navSx, color: 'text.secondary', '&:hover': { color: 'primary.main', backgroundColor: 'action.hover' } }}>
                     +
                   </BoxAny>
                 )}

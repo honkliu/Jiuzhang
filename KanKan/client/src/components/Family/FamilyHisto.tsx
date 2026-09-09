@@ -14,10 +14,10 @@ const BOX_Y_OFFSET = 0;
 const GEN_STRIP_W = 34;
 const NODE_STEP_MS = 10;
 const CLEAR_SUPPRESS_MS = 1500;
+const GENERATION_STRIP_COLORS = ['#e8f3ee', '#f5eddf', '#e9eef7', '#f5e9ec'];
 
 // ─── Colors (Right.md §13) ───
 const C = {
-  bg: '#eef2f6',
   link: '#8ea4b8',
   highlight: 'rgb(42,175,71)',
   nodeBackground: '#fff',
@@ -563,13 +563,18 @@ export const FamilyHisto = forwardRef<FamilyHistoHandle, Props>((props, ref) => 
       const screenH = (genZoneBottom - genZoneTop) * transform.k;
       const genNum = startDepth + i + rootGen;
 
-      // Background rect
       stripG.append('rect')
         .attr('x', 0).attr('y', screenTop)
         .attr('width', GEN_STRIP_W).attr('height', screenH)
-        .attr('fill', i % 2 === 0 ? '#fff' : '#f0f4f8')
-        .attr('stroke', '#c0c8d0')
-        .attr('stroke-width', 0.5);
+        .attr('fill', GENERATION_STRIP_COLORS[(genNum - 1) % GENERATION_STRIP_COLORS.length]);
+
+      if (i > 0) {
+        stripG.append('line')
+          .attr('x1', 0).attr('y1', screenTop)
+          .attr('x2', GEN_STRIP_W).attr('y2', screenTop)
+          .attr('stroke', '#c0c8d0')
+          .attr('stroke-width', 0.5);
+      }
 
       // Label
       const label = `第${genNum}世`;
@@ -1293,7 +1298,6 @@ export const FamilyHisto = forwardRef<FamilyHistoHandle, Props>((props, ref) => 
         .append('svg')
         .attr('width', '100%')
         .attr('height', '100%')
-        .style('background', C.bg)
         .node() as SVGSVGElement;
 
       d3.select(svg).append('g').attr('class', 'tree-group');

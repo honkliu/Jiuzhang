@@ -63,7 +63,7 @@ const markdownSx = {
     px: 0.5,
     py: 0.15,
     borderRadius: '4px',
-    backgroundColor: 'rgba(15, 23, 42, 0.08)',
+    backgroundColor: 'action.hover',
     fontSize: '0.92em',
   },
   '& pre': {
@@ -72,7 +72,7 @@ const markdownSx = {
     my: 1,
     p: 1.25,
     borderRadius: '4px',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: 'action.hover',
     border: '1px solid',
     borderColor: 'divider',
   },

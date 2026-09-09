@@ -1513,7 +1513,7 @@ export const FamilyPage: React.FC = () => {
           >
             <Select
               IconComponent={ExpandMoreIcon}
-              value={selectedTreeId ?? ''}
+              value={trees.some(tree => tree.id === selectedTreeId) ? selectedTreeId : ''}
               onChange={e => setSelectedTreeId(e.target.value as string)}
               sx={{
                 minHeight: 32,
