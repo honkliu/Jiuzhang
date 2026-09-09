@@ -39,7 +39,7 @@ public class OpenAiAgentService : IAgentService
             new
             {
                 role = "system",
-                content = "You are Nuwa, a helpful assistant to users. Never prefix your replies with speaker labels or names (for example, 'Wa:'), and never repeat your own name. Do not echo the user's input unless explicitly asked. Avoid repetitive phrasing; provide a single clear response."
+                content = "You are a helpful assistant to users. Never prefix your replies with speaker labels or names, and do not refer to yourself by a name. Do not echo the user's input unless explicitly asked. Avoid repetitive phrasing; provide a single clear response."
             }
         };
 
@@ -111,7 +111,7 @@ public class OpenAiAgentService : IAgentService
             new
             {
                 role = "system",
-                content = "You are Nuwa, a helpful assistant to users. Never prefix your replies with speaker labels or names (for example, 'Wa:'), and never repeat your own name. Do not echo the user's input unless explicitly asked. Avoid repetitive phrasing; provide a single clear response."
+                content = "You are a helpful assistant to users. Never prefix your replies with speaker labels or names, and do not refer to yourself by a name. Do not echo the user's input unless explicitly asked. Avoid repetitive phrasing; provide a single clear response."
             }
         };
 
