@@ -9,19 +9,21 @@ const NODE_GAP = 55;
 const STUB_LEN = 20;
 const NODE_HEIGHT_SCALE = 1.10;
 const TYPICAL_BOX_H = Math.round(78 * NODE_HEIGHT_SCALE);
-const LEVEL_HEIGHT = STUB_LEN + TYPICAL_BOX_H + STUB_LEN + 32;
+const NODE_BOX_W = 42;
+const LEVEL_HEIGHT = Math.round((STUB_LEN + TYPICAL_BOX_H + STUB_LEN + 32) * 1.1);
 const BOX_Y_OFFSET = 0;
 const GEN_STRIP_W = 34;
 const NODE_STEP_MS = 10;
 const CLEAR_SUPPRESS_MS = 1500;
+const NODE_BORDER_WIDTH = 1;
 const GENERATION_STRIP_COLORS = ['#e8f3ee', '#f5eddf', '#e9eef7', '#f5e9ec'];
 
 // ─── Colors (Right.md §13) ───
 const C = {
-  link: '#8ea4b8',
+  link: '#b8c4ce',
   highlight: 'rgb(42,175,71)',
   nodeBackground: '#fff',
-  nodeBorder: '#7a8fa0',
+  nodeBorder: '#526879',
   nameText: '#1e293b',
   spouseText: '#64748b',
   stub: '#94a3b8',
@@ -284,14 +286,8 @@ function getNameColumnXPositions(node: FamilyNode) {
 }
 
 /** Compute box dimensions for a person */
-function boxDims(node: FamilyNode): { w: number; h: number } {
-  const columnCount = 1 + node.spouses.length;
-  const nameLen = node.name.length;
-  const spouseLen = node.spouses.length > 0 ? Math.max(...node.spouses.map(s => s.name.length)) : 0;
-  const effectiveNameRows = Math.max(nameLen, spouseLen, 3);
-  const h = Math.round((effectiveNameRows * 18 + 24) * NODE_HEIGHT_SCALE);
-  const w = columnCount === 1 ? 26 : 22 + (columnCount - 1) * 20;
-  return { w, h };
+function boxDims(_node: FamilyNode): { w: number; h: number } {
+  return { w: NODE_BOX_W, h: TYPICAL_BOX_H };
 }
 
 /** Build link path: vertical from parent bottom → horizontal → vertical to child top (Right.md §12.2) */
@@ -514,7 +510,7 @@ export const FamilyHisto = forwardRef<FamilyHistoHandle, Props>((props, ref) => 
       g.interrupt().style('opacity', 1);
       g.select('.node-border').interrupt()
         .attr('stroke', highlighted ? C.highlight : C.nodeBorder)
-        .attr('stroke-width', highlighted ? 2.5 : 1.2);
+        .attr('stroke-width', highlighted ? 2 : NODE_BORDER_WIDTH);
       g.select('.name-text').interrupt()
         .attr('fill', highlighted ? C.highlight : C.nameText)
         .attr('font-weight', highlighted ? 700 : 500);
@@ -661,6 +657,7 @@ export const FamilyHisto = forwardRef<FamilyHistoHandle, Props>((props, ref) => 
       .attr('fill', 'none')
       .attr('stroke', C.link)
       .attr('stroke-width', 1.2)
+      .attr('shape-rendering', 'crispEdges')
       .attr('data-source', d => d.srcId)
       .attr('data-target', d => d.tgtId)
       .attr('d', d => d.d);
@@ -723,7 +720,7 @@ export const FamilyHisto = forwardRef<FamilyHistoHandle, Props>((props, ref) => 
         const g = d3.select(this);
         g.select('.node-border')
           .transition().duration(120)
-          .attr('stroke-width', 2.2);
+          .attr('stroke-width', 2);
       })
       .on('mouseleave', function () {
         const g = d3.select(this);
@@ -731,7 +728,7 @@ export const FamilyHisto = forwardRef<FamilyHistoHandle, Props>((props, ref) => 
         const isHighlighted = highlightSetRef.current.has(id) && highlightSetRef.current.size > 0;
         g.select('.node-border')
           .transition().duration(200)
-          .attr('stroke-width', isHighlighted ? 2.5 : 1.2);
+          .attr('stroke-width', isHighlighted ? 2 : NODE_BORDER_WIDTH);
       });
 
     // Store positions for next animation
@@ -817,10 +814,11 @@ export const FamilyHisto = forwardRef<FamilyHistoHandle, Props>((props, ref) => 
       .attr('class', 'node-border')
       .attr('x', -w / 2).attr('y', BOX_Y_OFFSET)
       .attr('width', w).attr('height', h)
-      .attr('rx', 6).attr('ry', 6)
+      .attr('rx', 0).attr('ry', 0)
       .attr('fill', C.nodeBackground)
       .attr('stroke', C.nodeBorder)
-      .attr('stroke-width', 1.2);
+      .attr('stroke-width', NODE_BORDER_WIDTH)
+      .attr('shape-rendering', 'crispEdges');
 
     // Gender dot
     g.append('circle')
@@ -1106,13 +1104,13 @@ export const FamilyHisto = forwardRef<FamilyHistoHandle, Props>((props, ref) => 
             .on('mouseenter', function () {
               d3.select(this).select('.node-border')
                 .transition().duration(120)
-                .attr('stroke-width', 2.2);
+                .attr('stroke-width', 2);
             })
             .on('mouseleave', function () {
               const isHighlighted = highlightSetRef.current.has(nodeId) && highlightSetRef.current.size > 0;
               d3.select(this).select('.node-border')
                 .transition().duration(200)
-                .attr('stroke-width', isHighlighted ? 2.5 : 1.2);
+                .attr('stroke-width', isHighlighted ? 2 : NODE_BORDER_WIDTH);
             });
         }
 
@@ -1277,6 +1275,7 @@ export const FamilyHisto = forwardRef<FamilyHistoHandle, Props>((props, ref) => 
       .attr('fill', 'none')
       .attr('stroke', C.link)
       .attr('stroke-width', 1.2)
+      .attr('shape-rendering', 'crispEdges')
       .attr('data-source', d => d.srcId)
       .attr('data-target', d => d.tgtId)
       .attr('d', d => d.d)
