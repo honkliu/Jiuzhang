@@ -33,6 +33,11 @@ interface RoomPerson {
 interface AvatarCalibration {
   visualScale?: number;
   seatOffset?: Position;
+  skinTone?: {
+    colorMultiplier: Position;
+    emissive: THREE.ColorRepresentation;
+    intensity: number;
+  };
 }
 
 const ROOM_MODEL_URL = '/models/room/newroom.glb';
@@ -45,6 +50,11 @@ const AVATAR_BOUNDING_DIAMETER = 1.85;
 const ROOM_SCALE = 0.8;
 const ROOM_FLOOR_CENTER: Position = [3.182, 0, -0.062];
 const SOFA_DEPTH_SCALE = 0.8;
+const ASIAN_SKIN_TONE: NonNullable<AvatarCalibration['skinTone']> = {
+  colorMultiplier: [1, 1.08, 1.08],
+  emissive: '#ffe0b5',
+  intensity: 0.24,
+};
 
 type ActorAnimationName = 'standing' | 'talking' | 'walking' | 'dancing' | 'sitting';
 
@@ -92,10 +102,12 @@ const ANIMATED_AVATAR_OPTIONS: AnimatedAvatarOption[] = [
   {
     id: 'asian-male', kind: 'animated', labelKey: 'chat.room.avatar.asianMale',
     modelUrl: MALE_AVATAR_URL, motionUrls: MALE_MOTIONS,
+    skinTone: ASIAN_SKIN_TONE,
   },
   {
     id: 'asian-female', kind: 'animated', labelKey: 'chat.room.avatar.asianFemale',
     modelUrl: FEMALE_AVATAR_URL, motionUrls: FEMALE_MOTIONS,
+    skinTone: ASIAN_SKIN_TONE,
   },
 ];
 
@@ -159,6 +171,28 @@ const fitToAvatarSize = (model: THREE.Object3D, visualScale = 1) => {
   if (diameter <= 0) return;
   const scale = AVATAR_BOUNDING_DIAMETER / diameter * visualScale;
   model.scale.setScalar(scale);
+};
+
+const applySkinTone = (model: THREE.Object3D, skinTone?: AvatarCalibration['skinTone']) => {
+  if (!skinTone) return;
+
+  model.traverse((object) => {
+    if (!(object instanceof THREE.Mesh)) return;
+    const sourceMaterials = Array.isArray(object.material) ? object.material : [object.material];
+    const materials = sourceMaterials.map((sourceMaterial) => {
+      if (!(sourceMaterial instanceof THREE.MeshStandardMaterial)
+        || !/^Wolf3D_(Skin|Body)$/.test(sourceMaterial.name)) return sourceMaterial;
+
+      const material = sourceMaterial.clone();
+      material.color.setRGB(...skinTone.colorMultiplier);
+      material.emissive.set(skinTone.emissive);
+      material.emissiveMap = null;
+      material.emissiveIntensity = skinTone.intensity;
+      material.needsUpdate = true;
+      return material;
+    });
+    object.material = Array.isArray(object.material) ? materials : materials[0];
+  });
 };
 
 const placeOnFloor = (model: THREE.Object3D) => {
@@ -395,6 +429,7 @@ const AnimatedAvatarActor: React.FC<AvatarActorProps & { avatar: AnimatedAvatarO
     };
 
     targetMesh.skeleton.pose();
+    applySkinTone(clone, avatar.skinTone);
     fitToAvatarSize(clone, avatar.visualScale);
     placeOnFloor(clone);
     return { model: clone, targetMesh, clips };
@@ -402,6 +437,7 @@ const AnimatedAvatarActor: React.FC<AvatarActorProps & { avatar: AnimatedAvatarO
     dancingGltf.animations,
     gltf.scene,
     avatar.modelUrl,
+    avatar.skinTone,
     standingGltf.animations,
     talkingGltf.animations,
     walkingGltf.animations,
