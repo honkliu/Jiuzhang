@@ -317,7 +317,14 @@ const ChatMessages: React.FC<ChatMessagesProps> = React.memo(({
   if (isRoom3D) {
     return (
       <BoxAny sx={{ flexGrow: 1, overflow: 'hidden', position: 'relative' }}>
-        <ChatRoom3D chat={activeChat} me={user} messages={mergedMessages as any} typingUsers={chatTypingUsers} />
+        <ChatRoom3D
+          chat={activeChat}
+          me={user}
+          messages={mergedMessages as any}
+          typingUsers={chatTypingUsers}
+          hasOlderMessages={hasOlderMessages}
+          onLoadOlderMessages={onLoadOlderMessages}
+        />
         {loading && mergedMessages.length === 0 ? (
           <BoxAny
             sx={{

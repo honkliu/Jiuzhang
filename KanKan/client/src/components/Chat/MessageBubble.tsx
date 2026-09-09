@@ -327,6 +327,34 @@ const markdownSx = {
   '& hr': { border: 'none', borderTop: '1px solid rgba(0,0,0,0.1)', margin: '0.5em 0' },
 };
 
+const compactContentSx = {
+  fontSize: '0.75rem',
+  lineHeight: 1.4,
+  '& p': { margin: '0.2em 0' },
+  '& h1, & h2, & h3, & h4, & h5, & h6': { margin: '0.35em 0 0.2em' },
+  '& ul, & ol': { paddingLeft: '1.25em', margin: '0.2em 0' },
+  '& li': { margin: '0.1em 0' },
+  '& blockquote': { margin: '0.25em 0', paddingLeft: '0.5em' },
+  '& table': { margin: '0.25em 0' },
+  '& th, & td': { padding: '2px 4px' },
+  '& code': { padding: '1px 3px' },
+  '& pre': { padding: '4px 6px', margin: '0.25em 0' },
+};
+
+const denseContentSx = {
+  fontSize: '0.84375rem',
+  lineHeight: 1.5,
+  '& p': { margin: '0.36em 0' },
+  '& h1, & h2, & h3, & h4, & h5, & h6': { margin: '0.54em 0 0.27em' },
+  '& ul, & ol': { paddingLeft: '1.35em', margin: '0.27em 0' },
+  '& li': { margin: '0.135em 0' },
+  '& blockquote': { margin: '0.36em 0', paddingLeft: '0.675em' },
+  '& table': { margin: '0.45em 0' },
+  '& th, & td': { padding: '3.6px 7.2px' },
+  '& code': { padding: '1.8px 3.6px' },
+  '& pre': { padding: '7.2px 10.8px', margin: '0.45em 0' },
+};
+
 /**
  * Match `@Name` against the list of chat participants. Names can contain
  * spaces, so we sort longer names first to prefer the longest match — this
@@ -424,11 +452,20 @@ const renderTextWithMentions = (text: string, names: string[] | undefined): Reac
   return nodes;
 };
 
-const MarkdownOrPlainText: React.FC<{ text: string; mentionableNames?: string[] }> = ({ text, mentionableNames }) => {
+export const ChatMessageContent: React.FC<{
+  text: string;
+  mentionableNames?: string[];
+  compact?: boolean;
+  dense?: boolean;
+}> = ({ text, mentionableNames, compact = false, dense = false }) => {
   const isMd = hasMarkdownSyntax(text);
   const hasMention = mentionableNames && mentionableNames.length > 0 && text.includes('@');
   return (
-    <BoxAny sx={isMd ? markdownSx : plainTextSx}>
+    <BoxAny sx={{
+      ...(isMd ? markdownSx : plainTextSx),
+      ...(dense ? denseContentSx : {}),
+      ...(compact ? compactContentSx : {}),
+    }}>
       {hasMention
         ? renderTextWithMentions(text, mentionableNames)
         : renderMarkdownWithRedTags(text)}
@@ -440,6 +477,7 @@ interface MessageBubbleProps {
   message: Message;
   isOwn: boolean;
   showAvatar: boolean;
+  layout?: 'chat' | 'history';
   timeSeparator?: string | null;
   imageGallery?: string[];
   imageIndex?: number;
@@ -453,6 +491,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
   message,
   isOwn,
   showAvatar,
+  layout = 'chat',
   timeSeparator,
   imageGallery,
   imageIndex,
@@ -465,6 +504,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
   const isHoverCapable = useMediaQuery('(hover: hover) and (pointer: fine)');
   const { t } = useLanguage();
   const { formatTime: formatTimeWithZone } = useSettings();
+  const isHistoryLayout = layout === 'history';
   const isAgent = message.senderId === 'user_ai_wa';
   const isDraft = message.id.startsWith('draft_');
   const [displayText, setDisplayText] = useState(message.text || '');
@@ -472,13 +512,13 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
   const animRef = useRef<number | null>(null);
   const lastTextRef = useRef(message.text || '');
 
-  const rawText = isOwn || isAgent || isDraft ? message.text || '' : displayText;
+  const rawText = isHistoryLayout || isOwn || isAgent || isDraft ? message.text || '' : displayText;
   const renderText = rawText;
 
   useEffect(() => {
     const fullText = message.text || '';
 
-    if (isOwn || isAgent || isDraft || message.messageType !== 'text') {
+    if (isHistoryLayout || isOwn || isAgent || isDraft || message.messageType !== 'text') {
       setDisplayText(fullText);
       lastTextRef.current = fullText;
       if (animRef.current) {
@@ -515,7 +555,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
         animRef.current = null;
       }
     };
-  }, [isOwn, isAgent, message.id, message.messageType, message.text]);
+  }, [isHistoryLayout, isOwn, isAgent, isDraft, message.id, message.messageType, message.text]);
   const formatTime = (timestamp: string) => formatTimeWithZone(timestamp, {
     hour: '2-digit',
     minute: '2-digit',
@@ -562,11 +602,11 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
             textAlign: 'center',
             color: '#ffffff',
             bgcolor: '#c7c7c7',
-            fontSize: '0.6875rem',
+            fontSize: isHistoryLayout ? '0.61875rem' : '0.6875rem',
             lineHeight: 1.5,
-            px: 0.75,
-            py: 0.125,
-            mb: 1.5,
+            px: isHistoryLayout ? 0.675 : 0.75,
+            py: isHistoryLayout ? 0.1125 : 0.125,
+            mb: isHistoryLayout ? 1.35 : 1.5,
             mx: 'auto',
             width: 'fit-content',
             borderRadius: 0.5,
@@ -578,44 +618,70 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
       <BoxAny
         sx={{
           display: 'flex',
-          flexDirection: isOwn ? 'row-reverse' : 'row',
-          justifyContent: isOwn ? 'flex-end' : 'flex-start',
+          flexDirection: isHistoryLayout ? 'column' : (isOwn ? 'row-reverse' : 'row'),
+          justifyContent: isHistoryLayout ? 'flex-start' : (isOwn ? 'flex-end' : 'flex-start'),
           alignItems: 'flex-start', // Adjusted alignment to top-align the avatar
-          gap: 0.25,
-          mb: 1.5,
+          gap: isHistoryLayout ? 0 : 0.25,
+          mb: isHistoryLayout ? 1.35 : 1.5,
           width: '100%',
           mx: 0,
         }}
       >
       {/* Avatar */}
-      <BoxAny sx={{ width: 48, flexShrink: 0, textAlign: 'center' }}>
-        {showAvatar && (
-          <UserAvatar
-            src={message.senderAvatar || (message.senderAvatarSourceId ? `/api/avatar/image/${message.senderAvatarSourceId}` : '')}
-            gender={message.senderGender}
-            fallbackText={message.senderName}
-            variant="rounded"
-            previewMode={isHoverCapable ? 'hover' : 'tap'}
-            closePreviewOnClick
-            sx={{ width: 40, height: 40, mx: 'auto', borderRadius: 1 }}
-          />
-        )}
-        {showAvatar && (
-          <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block', mt: 0.375, px: 0.25, fontSize: '0.625rem' }}>
-            {isAgent ? t('Wa') : message.senderName}
-          </Typography>
-        )}
-      </BoxAny>
+      {isHistoryLayout ? (
+        showAvatar && (
+          <BoxAny sx={{
+            width: '100%', minWidth: 0, mb: 0.45,
+            display: 'flex', alignItems: 'center', gap: 0.675,
+            justifyContent: isOwn ? 'flex-end' : 'flex-start',
+          }}>
+            <UserAvatar
+              src={message.senderAvatar || (message.senderAvatarSourceId ? `/api/avatar/image/${message.senderAvatarSourceId}` : '')}
+              gender={message.senderGender}
+              fallbackText={message.senderName}
+              variant="rounded"
+              previewMode={isHoverCapable ? 'hover' : 'tap'}
+              closePreviewOnClick
+              sx={{ width: 20, height: 20, borderRadius: 0.675, flexShrink: 0 }}
+            />
+            <Typography variant="caption" color="text.secondary" noWrap sx={{ minWidth: 0, fontSize: '0.61875rem', fontWeight: 600 }}>
+              {isAgent ? t('Wa') : message.senderName}
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.5625rem', opacity: 0.72, flexShrink: 0 }}>
+              {formatTime(message.timestamp)}
+            </Typography>
+          </BoxAny>
+        )
+      ) : (
+        <BoxAny sx={{ width: 48, flexShrink: 0, textAlign: 'center' }}>
+          {showAvatar && (
+            <UserAvatar
+              src={message.senderAvatar || (message.senderAvatarSourceId ? `/api/avatar/image/${message.senderAvatarSourceId}` : '')}
+              gender={message.senderGender}
+              fallbackText={message.senderName}
+              variant="rounded"
+              previewMode={isHoverCapable ? 'hover' : 'tap'}
+              closePreviewOnClick
+              sx={{ width: 40, height: 40, mx: 'auto', borderRadius: 1 }}
+            />
+          )}
+          {showAvatar && (
+            <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block', mt: 0.375, px: 0.25, fontSize: '0.625rem' }}>
+              {isAgent ? t('Wa') : message.senderName}
+            </Typography>
+          )}
+        </BoxAny>
+      )}
 
       {/* Message Bubble */}
       <Paper
         elevation={0}
         sx={{
-          maxWidth: { xs: '78%', sm: '72%' },
+          maxWidth: isHistoryLayout ? '100%' : { xs: '78%', sm: '72%' },
           minWidth: 0,
-          width: 'fit-content',
-          px: message.messageType === 'image' ? 0 : 1.5,
-          py: message.messageType === 'image' ? 0 : 1,
+          width: isHistoryLayout ? '100%' : 'fit-content',
+          px: message.messageType === 'image' ? 0 : (isHistoryLayout ? 1.35 : 1.5),
+          py: message.messageType === 'image' ? 0 : (isHistoryLayout ? 0.9 : 1),
           position: 'relative',
             overflow: message.messageType === 'image' ? 'hidden' : 'visible',
           bgcolor: message.messageType === 'image'
@@ -623,7 +689,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
             : (isOwn ? '#95ec69' : 'background.paper'),
           color: isOwn ? 'rgba(0, 0, 0, 0.87)' : 'text.primary',
           borderRadius: '4px',
-          ml: isOwn ? 'auto' : 0,
+          ml: isHistoryLayout ? 0 : (isOwn ? 'auto' : 0),
           border: message.messageType === 'image'
             ? 'none'
             : '1px solid',
@@ -631,7 +697,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
           boxShadow: message.messageType === 'image'
             ? 'none'
             : '0 1px 1px rgba(0, 0, 0, 0.04)',
-          ...(message.messageType !== 'image' ? {
+          ...(!isHistoryLayout && message.messageType !== 'image' ? {
             '&::before': {
               content: '""',
               position: 'absolute',
@@ -675,7 +741,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
             {t('chat.message.deleted')}
           </Typography>
         ) : message.messageType === 'text' ? (
-          <MarkdownOrPlainText text={renderText} mentionableNames={mentionableNames} />
+          <ChatMessageContent text={renderText} mentionableNames={mentionableNames} dense={isHistoryLayout} />
         ) : message.messageType === 'image' ? (
           <ImageHoverPreview
             src={displayedImageUrl}
@@ -698,7 +764,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
                 }}
                 sx={{
                   maxWidth: '100%',
-                  maxHeight: 300,
+                  maxHeight: isHistoryLayout ? 270 : 300,
                   borderRadius: '4px',
                   WebkitTouchCallout: 'none',
                   WebkitUserSelect: 'none',
@@ -712,7 +778,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
             component="video"
             src={message.mediaUrl}
             controls
-            sx={{ maxWidth: '100%', maxHeight: 300, borderRadius: 0 }}
+            sx={{ maxWidth: '100%', maxHeight: isHistoryLayout ? 270 : 300, borderRadius: 0 }}
           />
         ) : message.messageType === 'voice' ? (
           <VoiceMessageBubble
