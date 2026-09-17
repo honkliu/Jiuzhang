@@ -79,6 +79,35 @@ KanKan/
 └── README.md              # This file
 ```
 
+## Client UI conventions
+
+- Reuse [shared layout styles](client/src/styles/appLayout.ts) for header offsets,
+  page gutters, and page/section heading roles. Keep intentional content-width
+  differences between screens.
+- Use the [theme foundation](client/src/skins/foundation.ts) control sizes:
+  small 32px, medium 36px, large 40px. Icon glyphs may be smaller, but their
+  interactive targets should not shrink below 32px.
+- Use palette-aware `bgcolor`/`backgroundColor` for MUI palette tokens and the
+  selected skin's link color. Preserve colors belonging to authored documents.
+- Keep button state colors in the theme foundation. Its state callbacks replace
+  legacy skin rules rather than deep-merging mismatched text/background pairs.
+  Standard button labels target 4.5:1 contrast on their defined surfaces, with
+  stronger hover feedback, pressed feedback, and a keyboard-focus outline.
+  Custom image/game controls must pair their own foreground and background states.
+- Rich-text toolbar controls use Tiptap CSS variables, not MUI buttons. The theme
+  foundation also maps those variables for text, icons, interaction states, and
+  body-portaled menus/popovers. Keep this bridge scoped to editor UI classes;
+  never recolor authored document text, highlights, or color swatches.
+- Use [ConfirmDialog](client/src/components/Shared/ConfirmDialog.tsx) for destructive
+  confirmations. Async callbacks must reject on failure so the dialog can show
+  feedback and remain open for retry; dismissal and duplicate submission are
+  blocked while an action is pending.
+- Keep UI labels and feedback in the English/Chinese
+  [language dictionaries](client/src/i18n/LanguageContext.tsx). A failed load is
+  not an empty result: show an error and offer retry where appropriate.
+- Keep mobile action bars in page flow with safe-area padding so they do not
+  cover scrollable content.
+
 ## 🛠️ Setup Instructions
 
 ### Prerequisites

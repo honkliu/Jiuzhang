@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useLocation, useNavigate, Link } from 'react-router-dom';
 import {
   TextField,
   Button,
@@ -29,6 +29,12 @@ export const Login: React.FC = () => {
   const { t, language } = useLanguage();
   const { skin, skinId, setSkinId, available } = useSkin();
   const navigate = useNavigate();
+  const location = useLocation();
+  const navigationState: unknown = location.state;
+  const passwordReset = typeof navigationState === 'object'
+    && navigationState !== null
+    && 'passwordReset' in navigationState
+    && navigationState.passwordReset === true;
   const dispatch = useDispatch();
 
   const cycleSkin = () => {
@@ -93,6 +99,12 @@ export const Login: React.FC = () => {
           <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 3 }}>
             {t('auth.login.subtitle')}
           </Typography>
+
+          {passwordReset && (
+            <Alert severity="success" sx={{ mb: 2 }}>
+              {t('auth.forgot.success')}
+            </Alert>
+          )}
 
           {error && (
             <Alert severity="error" sx={{ mb: 2 }}>

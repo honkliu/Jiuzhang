@@ -15,6 +15,7 @@ import {
 } from '@mui/material';
 import { authService } from '@/services/auth.service';
 import { useLanguage } from '@/i18n/LanguageContext';
+import { useSkin } from '@/skins/SkinContext';
 import './Login.css';
 
 export const ForgotPassword: React.FC = () => {
@@ -27,6 +28,7 @@ export const ForgotPassword: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [info, setInfo] = useState('');
   const { t } = useLanguage();
+  const { skin } = useSkin();
   const navigate = useNavigate();
 
   const steps = [t('auth.forgot.steps.email'), t('auth.forgot.steps.reset')];
@@ -71,13 +73,12 @@ export const ForgotPassword: React.FC = () => {
     setLoading(true);
 
     try {
-      const response = await authService.resetPassword({
+      await authService.resetPassword({
         email,
         code,
         newPassword,
       });
-      setInfo(response.message);
-      navigate('/login');
+      navigate('/login', { state: { passwordReset: true }, replace: true });
     } catch (err: any) {
       setError(err.message || t('auth.forgot.resetFailed'));
     } finally {
@@ -144,7 +145,7 @@ export const ForgotPassword: React.FC = () => {
               <div style={{ textAlign: 'center', marginTop: 8 }}>
                 <Typography variant="body2" color="text.secondary">
                   {t('auth.forgot.remembered')}{' '}
-                  <Link to="/login" style={{ color: '#576b95', textDecoration: 'none' }}>
+                  <Link to="/login" style={{ color: skin.linkColor, textDecoration: 'none' }}>
                     {t('auth.login.signIn')}
                   </Link>
                 </Typography>

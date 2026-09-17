@@ -33,6 +33,7 @@ const BatchPhotoListItem: React.FC<{
   selected: boolean;
   onToggle: (photoId: string) => void;
 }> = ({ photo, selected, onToggle }) => {
+  const { t, language } = useLanguage();
   const imageUrl = photoService.getImageUrl(photo);
   const photoLabel = photoService.getDisplayLabel(photo);
 
@@ -81,9 +82,9 @@ const BatchPhotoListItem: React.FC<{
           secondary={
             <BoxAny sx={{ mt: 0.5, display: 'flex', gap: 0.75, flexWrap: 'wrap', alignItems: 'center' }}>
               <Chip size="small" label={`${Math.max(1, Math.round(photo.fileSize / 1024))} KB`} variant="outlined" />
-              <Chip size="small" label="待提取" color="warning" variant="outlined" />
+              <Chip size="small" label={t('receipts.pendingExtraction')} color="warning" variant="outlined" />
               <Typography variant="caption" color="text.secondary">
-                上传于 {new Date(photo.uploadedAt).toLocaleDateString('zh-CN')}
+                {t('receipts.uploadedOn').replace('{date}', new Date(photo.uploadedAt).toLocaleDateString(language === 'zh' ? 'zh-CN' : 'en-US'))}
               </Typography>
             </BoxAny>
           }
@@ -408,11 +409,12 @@ export const ReceiptsPage: React.FC = () => {
       setMedicalReceipts(medical);
       setAllReceipts([...shopping, ...medical]);
     } catch (e: any) {
-      setError(e?.message || 'Failed to load');
+      console.error('Failed to load receipts:', e);
+      setError(t('ui.loadFailed'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -428,7 +430,7 @@ export const ReceiptsPage: React.FC = () => {
         id: r.id,
         date: parsedDate,
         type: 'shopping',
-        label: r.merchantName || '购物',
+        label: r.merchantName || t('receipts.shoppingFallback'),
       });
     }
 
@@ -445,13 +447,13 @@ export const ReceiptsPage: React.FC = () => {
         id: r.id,
         date: parsedDate,
         type: 'medical',
-        label: r.hospitalName || '就诊',
+        label: r.hospitalName || t('receipts.visitFallback'),
       });
     }
 
     events.sort((a, b) => a.date.getTime() - b.date.getTime());
     return events;
-  }, [shoppingReceipts, medicalReceipts]);
+  }, [shoppingReceipts, medicalReceipts, t]);
 
   const handleTimelineDotClick = (event: TimelineEvent) => {
     if (event.type === 'shopping') {
@@ -524,7 +526,7 @@ export const ReceiptsPage: React.FC = () => {
         selectedData = medicalReceipts.filter(r => checkedIds.has(r.id));
       }
       if (selectedData.length === 0) {
-        setError('请先选择要分析的票据');
+        setError(t('receipts.selectForAnalysis'));
         setAskingWa(false);
         return;
       }
@@ -551,7 +553,8 @@ export const ReceiptsPage: React.FC = () => {
         text,
       });
     } catch (e: any) {
-      setError(e?.message || 'Failed to send to Wa');
+      console.error('Failed to send receipts:', e);
+      setError(t('common.actionFailed'));
     } finally {
       setAskingWa(false);
     }
@@ -608,7 +611,7 @@ export const ReceiptsPage: React.FC = () => {
             <Tab
               icon={<PhotoIcon fontSize="small" />}
               iconPosition="start"
-              label="图片集合"
+              label={t('receipts.photoCollection')}
               sx={{ minHeight: 36, py: 0, px: 1, textTransform: 'none', '& .MuiTab-iconWrapper': { mr: 0.5 } }}
             />
           </Tabs>
@@ -621,7 +624,7 @@ export const ReceiptsPage: React.FC = () => {
                     const ids = tab === 0
                       ? shoppingReceipts.map(r => r.id)
                       : medicalReceipts.map(r => r.id);
-                    return ids.length > 0 && ids.every(id => checkedIds.has(id)) ? '取消全选' : '全选';
+                    return t(ids.length > 0 && ids.every(id => checkedIds.has(id)) ? 'receipts.clearAll' : 'receipts.selectAll');
                   })()}
                 </Button>
                 <Button
@@ -632,7 +635,7 @@ export const ReceiptsPage: React.FC = () => {
                   disabled={askingWa || loading || checkedIds.size === 0}
                   onClick={handleAskWa}
                 >
-                  {askingWa ? '发送中...' : `Ask ${t('Wa')} (${checkedIds.size})`}
+                  {askingWa ? t('receipts.sending') : t('receipts.ask').replace('{name}', t('Wa')).replace('{count}', String(checkedIds.size))}
                 </Button>
               </BoxAny>
             </BoxAny>
@@ -722,7 +725,7 @@ export const ReceiptsPage: React.FC = () => {
             </BoxAny>
             {hasOpenedPhotoAlbum && (
               <BoxAny sx={{ display: tab === 2 ? 'block' : 'none' }}>
-                <PhotoAlbumPage embedded title="票夹图片集合" onOpenReceipt={setSelectedReceipt} onReceiptsChanged={loadData} />
+                <PhotoAlbumPage embedded title={t('receipts.albumTitle')} onOpenReceipt={setSelectedReceipt} onReceiptsChanged={loadData} />
               </BoxAny>
             )}
           </>
@@ -733,19 +736,19 @@ export const ReceiptsPage: React.FC = () => {
           <DialogTitle>
             <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <PhotoIcon />
-              选择照片进行 OCR 提取
+              {t('receipts.selectPhotos')}
               {batchSelectedPhotoIds.size > 0 && (
-                <Chip label={`${batchSelectedPhotoIds.size} 已选`} color="primary" size="small" />
+                <Chip label={t('receipts.selectedCount').replace('{count}', String(batchSelectedPhotoIds.size))} color="primary" size="small" />
               )}
             </BoxAny>
           </DialogTitle>
           <DialogContent>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              请选择要提取的原始照片。已提取过的照片也可以再次提取；一对一场景下会覆盖原票据。
+              {t('receipts.extractHint')}
             </Typography>
             {allPhotos.length === 0 ? (
               <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
-                没有可提取的照片
+                {t('receipts.noExtractablePhotos')}
               </Typography>
             ) : (
               <List sx={{ maxHeight: 400, overflow: 'auto' }}>
@@ -761,12 +764,12 @@ export const ReceiptsPage: React.FC = () => {
             )}
           </DialogContent>
           <DialogActions sx={{ p: 2 }}>
-            <Button onClick={() => setBatchPhotoSelectOpen(false)}>取消</Button>
+            <Button onClick={() => setBatchPhotoSelectOpen(false)}>{t('common.cancel')}</Button>
             <Button variant="contained"
               onClick={handleBatchPhotoStartExtract}
               disabled={batchSelectedPhotoIds.size === 0}
               startIcon={<AutoAwesome />}>
-              开始提取 ({batchSelectedPhotoIds.size})
+              {t('receipts.startExtraction').replace('{count}', String(batchSelectedPhotoIds.size))}
             </Button>
           </DialogActions>
         </Dialog>

@@ -1047,10 +1047,11 @@ export const ChatRoom3D: React.FC<ChatRoom3DProps> = ({
           aria-expanded={historyOpen}
           sx={{
             position: 'absolute', zIndex: 35, top: 12, right: 12,
-            width: 32, height: 32, color: historyOpen ? 'primary.contrastText' : 'text.primary',
-            bgcolor: historyOpen ? 'primary.main' : 'background.paper',
+            width: 32, height: 32, color: 'text.primary',
+            bgcolor: 'background.paper',
             border: '1px solid', borderColor: historyOpen ? 'primary.main' : 'divider',
-            '&:hover': { bgcolor: historyOpen ? 'primary.dark' : 'action.hover' },
+            boxShadow: historyOpen ? (theme) => `inset 0 0 0 1px ${theme.palette.primary.main}` : 'none',
+            '&:hover': { bgcolor: 'action.hover' },
           }}
         >
           <HistoryIcon fontSize="small" />

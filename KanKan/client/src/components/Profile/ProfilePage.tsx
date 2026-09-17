@@ -24,7 +24,7 @@ import { useLanguage } from '@/i18n/LanguageContext';
 import { AvatarUpload } from '@/components/Avatar/AvatarUpload';
 import { EmotionAvatarGallery } from '@/components/Avatar/EmotionAvatarGallery';
 import { authService } from '@/services/auth.service';
-import { appPageContainerSx } from '@/styles/appLayout';
+import { appPageContainerSx, appSectionTitleSx } from '@/styles/appLayout';
 
 // Work around TS2590 (“union type too complex”) from MUI Box typings in some TS versions.
 const BoxAny = Box as any;
@@ -71,7 +71,8 @@ export const ProfilePage: React.FC = () => {
         setGender((currentUser.gender as any) || 'male');
         dispatch(updateUser(currentUser));
       } catch (err: any) {
-        setError(err.message || t('profile.loadFailed'));
+        console.error('Failed to load profile:', err);
+        setError(t('profile.loadFailed'));
       } finally {
         setLoading(false);
       }
@@ -96,7 +97,8 @@ export const ProfilePage: React.FC = () => {
       dispatch(updateUser(updated));
       setMessage(t('profile.updateSuccess'));
     } catch (err: any) {
-      setError(err.message || t('profile.updateFailed'));
+      console.error('Failed to save profile:', err);
+      setError(t('profile.updateFailed'));
     } finally {
       setSaving(false);
     }
@@ -118,16 +120,17 @@ export const ProfilePage: React.FC = () => {
         return;
       }
 
-      const result = await authService.changePassword({
+      await authService.changePassword({
         currentPassword,
         newPassword,
       });
 
       setCurrentPassword('');
       setNewPassword('');
-      setMessage(result.message || t('profile.passwordChanged'));
+      setMessage(t('profile.passwordChanged'));
     } catch (err: any) {
-      setError(err.message || t('profile.passwordChangeFailed'));
+      console.error('Failed to change password:', err);
+      setError(t('profile.passwordChangeFailed'));
     } finally {
       setPasswordSaving(false);
     }
@@ -263,7 +266,7 @@ export const ProfilePage: React.FC = () => {
                   whiteSpace: 'nowrap',
                 }}
               >
-                {saving ? <CircularProgress size={24} /> : '保存'}
+                {saving ? <CircularProgress size={24} /> : t('common.save')}
               </Button>
             </BoxAny>
 
@@ -277,7 +280,7 @@ export const ProfilePage: React.FC = () => {
                   mb: 2,
                 }}
               >
-                <Typography variant="h6" sx={{ flex: '1 1 auto', minWidth: 0 }}>
+                <Typography component="h2" sx={{ ...appSectionTitleSx, flex: '1 1 auto', minWidth: 0 }}>
                   {t('profile.changePassword')}
                 </Typography>
 
@@ -287,7 +290,7 @@ export const ProfilePage: React.FC = () => {
                   disabled={passwordSaving}
                   sx={{ width: 112, minWidth: 112, height: 40, flexShrink: 0, ml: 'auto', whiteSpace: 'nowrap' }}
                 >
-                  {passwordSaving ? <CircularProgress size={24} /> : '修改'}
+                  {passwordSaving ? <CircularProgress size={24} /> : t('profile.change')}
                 </Button>
               </BoxAny>
 

@@ -68,7 +68,7 @@ const headerNavButtonSx = {
   cursor: 'pointer',
   '&:hover': {
     boxShadow: 'none',
-    background: 'rgba(0, 0, 0, 0.035)',
+    bgcolor: 'action.hover',
   },
 };
 
@@ -319,7 +319,7 @@ export const AppHeader: React.FC<AppHeaderProps> = () => {
                   px: isCompactNav ? headerNavButtonSx.px : 1.5,
                   py: 0,
                   fontSize: '0.875rem',
-                  color: location.pathname.startsWith(item.path) ? 'primary.main' : 'text.primary',
+                  color: 'text.primary',
                   fontWeight: location.pathname.startsWith(item.path) ? 600 : 400,
                   background: 'transparent',
                   position: 'relative',
@@ -334,7 +334,6 @@ export const AppHeader: React.FC<AppHeaderProps> = () => {
                   },
                   '&:hover': {
                     ...headerNavButtonSx['&:hover'],
-                    background: 'rgba(0, 0, 0, 0.035)',
                   },
                 }}
               >
@@ -432,7 +431,7 @@ export const AppHeader: React.FC<AppHeaderProps> = () => {
           anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
           PaperProps={{
             sx: {
-              background: 'background.paper',
+              bgcolor: 'background.paper',
               border: '1px solid',
               borderColor: 'divider',
             },
@@ -499,7 +498,7 @@ export const AppHeader: React.FC<AppHeaderProps> = () => {
           anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
           PaperProps={{
             sx: {
-              background: 'background.paper',
+              bgcolor: 'background.paper',
               border: '1px solid',
               borderColor: 'divider',
               width: 420,

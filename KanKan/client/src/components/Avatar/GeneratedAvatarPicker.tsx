@@ -1,6 +1,8 @@
 import React from 'react';
 import {
+  Alert,
   Box,
+  Button,
   Popover,
   Typography,
   CircularProgress,
@@ -62,67 +64,63 @@ const sortGenerated = (items: EmotionThumbnailResult[]) => {
 const useMoodPickerData = (open: boolean, avatarImageId?: string | null) => {
   const [loading, setLoading] = React.useState(false);
   const [items, setItems] = React.useState<EmotionThumbnailResult[]>([]);
+  const [error, setError] = React.useState(false);
+  const [retryCount, setRetryCount] = React.useState(0);
   const cacheRef = React.useRef<Map<string, EmotionThumbnailResult[]>>(new Map());
 
   React.useEffect(() => {
     let active = true;
+    let requestId = 0;
 
     const load = async () => {
       if (!open || !avatarImageId) {
-        if (active) setItems([]);
+        setItems([]);
+        setLoading(false);
+        setError(false);
         return;
       }
 
+      const currentRequest = ++requestId;
       const cached = cacheRef.current.get(avatarImageId);
-      if (cached) {
-        setItems(cached);
-      }
+      setItems(cached ?? []);
 
-      setLoading(!cached);
+      setLoading(true);
+      setError(false);
       try {
         const generated = await avatarService.getEmotionThumbnails(avatarImageId);
-        if (!active) return;
+        if (!active || currentRequest !== requestId) return;
         const sorted = sortGenerated(generated);
         cacheRef.current.set(avatarImageId, sorted);
         setItems(sorted);
       } catch {
-        if (active) setItems([]);
+        if (active && currentRequest === requestId) setError(true);
       } finally {
-        if (active) setLoading(false);
+        if (active && currentRequest === requestId) setLoading(false);
       }
     };
 
     load();
-    return () => {
-      active = false;
-    };
-  }, [open, avatarImageId]);
-
-  React.useEffect(() => {
-    if (!open || !avatarImageId) return;
 
     const handler = (event: Event) => {
       const detail = (event as CustomEvent<{ sourceAvatarId?: string }>).detail;
-      if (!detail?.sourceAvatarId || detail.sourceAvatarId !== avatarImageId) return;
-
-      avatarService.getEmotionThumbnails(avatarImageId)
-        .then((generated) => {
-          const sorted = sortGenerated(generated);
-          cacheRef.current.set(avatarImageId, sorted);
-          setItems(sorted);
-        })
-        .catch(() => {
-          // Ignore refresh failures; keep current tiles.
-        });
+      if (!open || !detail?.sourceAvatarId || detail.sourceAvatarId !== avatarImageId) return;
+      load();
     };
 
     window.addEventListener('emotion-thumbnails-updated', handler as EventListener);
     return () => {
+      active = false;
       window.removeEventListener('emotion-thumbnails-updated', handler as EventListener);
     };
-  }, [open, avatarImageId]);
+  }, [open, avatarImageId, retryCount]);
 
-  return { loading, items };
+  const retry = () => {
+    if (loading) return;
+    setLoading(true);
+    setRetryCount((count) => count + 1);
+  };
+
+  return { loading, items, error, retry };
 };
 
 export interface GeneratedAvatarPickerProps {
@@ -142,8 +140,8 @@ export const GeneratedAvatarPicker: React.FC<GeneratedAvatarPickerProps> = ({
   currentAvatarUrl,
   onSelect,
 }) => {
-  const { language } = useLanguage();
-  const { loading, items } = useMoodPickerData(open, avatarImageId);
+  const { language, t } = useLanguage();
+  const { loading, items, error, retry } = useMoodPickerData(open, avatarImageId);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isHoverCapable = useMediaQuery('(hover: hover) and (pointer: fine)');
@@ -187,6 +185,7 @@ export const GeneratedAvatarPicker: React.FC<GeneratedAvatarPickerProps> = ({
   while (tiles.length < 9) tiles.push(null);
 
   const handleSelect = (item: GeneratedAvatarItem) => {
+    if (loading) return;
     onSelect(item.id, item.fullUrl, avatarImageId || item.id);
     onClose();
   };
@@ -205,7 +204,7 @@ export const GeneratedAvatarPicker: React.FC<GeneratedAvatarPickerProps> = ({
     <Popover
       open={open}
       anchorEl={anchorEl}
-      onClose={onClose}
+      onClose={() => { if (!loading) onClose(); }}
       disableScrollLock
       anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       transformOrigin={{ vertical: 'top', horizontal: 'right' }}
@@ -245,10 +244,23 @@ export const GeneratedAvatarPicker: React.FC<GeneratedAvatarPickerProps> = ({
         {language === 'zh' ? '小心情' : 'A Little Moody'}
       </Typography>
 
+      {error && (
+        <Alert
+          severity="error"
+          sx={{ mb: 1, width: '100%', boxSizing: 'border-box', flexWrap: 'wrap' }}
+          action={<Button color="inherit" disabled={loading} onClick={retry}>{t('common.retry')}</Button>}
+        >
+          {t('avatar.moods.loadFailed')}
+        </Alert>
+      )}
       {loading ? (
         <BoxAny sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
           <CircularProgress size={20} />
         </BoxAny>
+      ) : error && items.length === 0 ? null : items.length === 0 ? (
+        <Typography variant="body2" color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>
+          {t('avatar.moods.empty')}
+        </Typography>
       ) : (
         <BoxAny
           sx={{

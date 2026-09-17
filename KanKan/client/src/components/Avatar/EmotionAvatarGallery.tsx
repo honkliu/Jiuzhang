@@ -523,7 +523,7 @@ export const EmotionAvatarGallery: React.FC<EmotionAvatarGalleryProps> = ({ user
                     sx={{
                       width: '100%',
                       aspectRatio: '1 / 1',
-                      background: 'action.hover',
+                      bgcolor: 'action.hover',
                       borderRadius: '4px',
                       border: '1px solid',
                       borderColor: 'divider',

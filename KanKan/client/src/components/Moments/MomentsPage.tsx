@@ -27,6 +27,7 @@ import { useSelector } from 'react-redux';
 import { RootState } from '@/store';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { appPageContainerSx } from '@/styles/appLayout';
+import { ConfirmDialog } from '@/components/Shared/ConfirmDialog';
 
 // Work around TS2590 ("union type too complex") from MUI Box typings in some TS versions.
 const BoxAny = Box as any;
@@ -71,12 +72,6 @@ const momentFeedbackButtonSx = {
   minHeight: 32,
   px: 0.5,
   py: 0.25,
-};
-
-const momentDeleteButtonSx = {
-  width: 24,
-  height: 24,
-  p: 0.25,
 };
 
 type MomentMediaGridProps = {
@@ -212,6 +207,7 @@ export const MomentsPage: React.FC = () => {
   const [error, setError] = useState('');
   const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [commentOpenFor, setCommentOpenFor] = useState<string | null>(null);
   const [profilePopover, setProfilePopover] = useState<{ anchorEl: HTMLElement; userId: string } | null>(null);
   const [lightbox, setLightbox] = useState<{
@@ -358,14 +354,10 @@ export const MomentsPage: React.FC = () => {
   };
 
   const handleDelete = async (momentId: string) => {
-    const label = t('moments.deleteConfirm');
-    if (!window.confirm(label)) return;
     setActionLoading(momentId);
     try {
       await momentService.deleteMoment(momentId);
       setMoments((prev) => prev.filter((m) => m.id !== momentId));
-    } catch (err: any) {
-      setError(err.message || t('moments.deleteFailed'));
     } finally {
       setActionLoading(null);
     }
@@ -525,10 +517,10 @@ export const MomentsPage: React.FC = () => {
                   moment.userId === user?.id ? (
                     <IconButton
                       aria-label={t('moments.delete')}
-                      onClick={() => handleDelete(moment.id)}
+                      onClick={() => setDeleteTargetId(moment.id)}
                       disabled={actionLoading === moment.id}
                       size="small"
-                      sx={momentDeleteButtonSx}
+                      title={t('moments.delete')}
                     >
                       <DeleteIcon sx={{ fontSize: 16 }} />
                     </IconButton>
@@ -656,6 +648,18 @@ export const MomentsPage: React.FC = () => {
           })
         )}
       </Container>
+
+      {deleteTargetId && (
+        <ConfirmDialog
+          open
+          title={t('moments.delete')}
+          description={t('moments.deleteConfirm')}
+          confirmLabel={t('moments.delete')}
+          failureMessage={t('moments.deleteFailed')}
+          onConfirm={() => handleDelete(deleteTargetId)}
+          onClose={() => setDeleteTargetId(null)}
+        />
+      )}
 
       {lightbox ? (
         <ImageLightbox

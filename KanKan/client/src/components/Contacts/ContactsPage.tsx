@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
+  Alert,
   Box,
   Container,
   Typography,
@@ -20,7 +21,8 @@ import { AppHeader } from '@/components/Shared/AppHeader';
 import { UserAvatar } from '@/components/Shared/UserAvatar';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { WA_USER_ID } from '@/utils/chatParticipants';
-import { appPageContainerSx } from '@/styles/appLayout';
+import { appPageContainerSx, appPageTitleSx } from '@/styles/appLayout';
+import { ConfirmDialog } from '@/components/Shared/ConfirmDialog';
 
 // Work around TS2590 (“union type too complex”) from MUI Box typings in some TS versions.
 const BoxAny = Box as any;
@@ -81,6 +83,12 @@ const SectionHeader: React.FC<{ title: string }> = ({ title }) => {
   );
 };
 
+type ContactConfirmation = {
+  kind: 'remove' | 'delete' | 'disable' | 'enable';
+  userId: string;
+  name: string;
+};
+
 export const ContactsPage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { t } = useLanguage();
@@ -94,98 +102,121 @@ export const ContactsPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [errorKey, setErrorKey] = useState<string | null>(null);
+  const [confirmation, setConfirmation] = useState<ContactConfirmation | null>(null);
+  const actionPendingRef = useRef(false);
+  const loadVersionRef = useRef(0);
+  const contactsVersionRef = useRef(0);
 
-  const loadUsers = async () => {
+  const loadUsers = async (query = searchQuery) => {
+    const version = ++loadVersionRef.current;
+    const contactsVersion = ++contactsVersionRef.current;
     setLoading(true);
+    setErrorKey(null);
     try {
       const [allUsers, contactsData, requestsData] = await Promise.all([
-        contactService.getAllUsers(),
+        query.length >= 2 ? contactService.searchUsers(query) : contactService.getAllUsers(),
         contactService.getContacts(),
         contactService.getFriendRequests(),
       ]);
-      setUsers(allUsers);
-      setContacts(contactsData);
-      setRequests(requestsData);
+      if (version === loadVersionRef.current) setUsers(allUsers);
+      if (contactsVersion === contactsVersionRef.current) {
+        setContacts(contactsData);
+        setRequests(requestsData);
+      }
+    } catch (error) {
+      console.error('Failed to load contacts:', error);
+      if (version === loadVersionRef.current || contactsVersion === contactsVersionRef.current) {
+        setErrorKey('contacts.loadFailed');
+      }
     } finally {
-      setLoading(false);
+      if (version === loadVersionRef.current) setLoading(false);
     }
   };
 
   useEffect(() => {
     loadUsers();
+    return () => {
+      loadVersionRef.current += 1;
+      contactsVersionRef.current += 1;
+    };
   }, []);
 
   const handleSearch = async (query: string) => {
     setSearchQuery(query);
     if (query.length >= 2) {
+      const version = ++loadVersionRef.current;
       setLoading(true);
+      setErrorKey((current) => current === 'contacts.loadFailed' ? current : null);
       try {
         const results = await contactService.searchUsers(query);
-        setUsers(results);
+        if (version === loadVersionRef.current) setUsers(results);
+      } catch (error) {
+        console.error('Failed to search contacts:', error);
+        if (version === loadVersionRef.current) {
+          setErrorKey((current) => current === 'contacts.loadFailed' ? current : 'contacts.searchFailed');
+        }
       } finally {
-        setLoading(false);
+        if (version === loadVersionRef.current) setLoading(false);
       }
-    } else if (query.length === 0) {
-      loadUsers();
+    } else {
+      await loadUsers(query);
     }
   };
 
-  const handleAddFriend = async (userId: string) => {
+  const runAction = async (userId: string, action: () => Promise<unknown>) => {
+    if (actionPendingRef.current) return;
+    actionPendingRef.current = true;
     setActionLoading(userId);
+    setErrorKey(null);
     try {
-      await contactService.sendFriendRequest(userId);
+      await action();
       await loadUsers();
+    } catch (error) {
+      console.error('Contact action failed:', error);
+      setErrorKey('contacts.actionFailed');
     } finally {
+      actionPendingRef.current = false;
       setActionLoading(null);
     }
   };
 
-  const handleRemoveFriend = async (userId: string) => {
-    const confirmed = window.confirm(t('contacts.removeConfirm'));
-    if (!confirmed) return;
+  const handleAddFriend = (userId: string) =>
+    runAction(userId, () => contactService.sendFriendRequest(userId));
 
-    setActionLoading(userId);
-    try {
-      await contactService.removeFriend(userId);
-      await loadUsers();
-    } finally {
-      setActionLoading(null);
-    }
+  const handleRemoveFriend = (userId: string) => {
+    setConfirmation({ kind: 'remove', userId, name: userId });
   };
 
-  const handleDeleteUser = async (userId: string, displayName?: string) => {
-    const label = displayName || userId;
-    const confirmed = window.confirm(
-      t('contacts.deleteUserConfirm')
-        .replace('{name}', label)
-    );
-    if (!confirmed) return;
-
-    setActionLoading(userId);
-    try {
-      await adminService.deleteUser(userId);
-      await loadUsers();
-    } finally {
-      setActionLoading(null);
-    }
+  const handleDeleteUser = (userId: string, displayName?: string) => {
+    setConfirmation({ kind: 'delete', userId, name: displayName || userId });
   };
 
-  const handleToggleDisabled = async (user: User) => {
-    const label = user.displayName || user.id;
-    const actionLabel = user.isDisabled ? t('contacts.enable') : t('contacts.disable');
-    const confirmed = window.confirm(
-      t('contacts.toggleDisableConfirm')
-        .replace('{action}', actionLabel)
-        .replace('{name}', label)
-    );
-    if (!confirmed) return;
+  const handleToggleDisabled = (user: User) => {
+    setConfirmation({
+      kind: user.isDisabled ? 'enable' : 'disable',
+      userId: user.id,
+      name: user.displayName || user.id,
+    });
+  };
 
-    setActionLoading(user.id);
+  const handleConfirmedAction = async (target: ContactConfirmation) => {
+    setActionLoading(target.userId);
+    setErrorKey(null);
     try {
-      if (user.isDisabled) {
-        await adminService.enableUser(user.id);
-      } else {
-        await adminService.disableUser(user.id);
+      switch (target.kind) {
+        case 'remove':
+          await contactService.removeFriend(target.userId);
+          break;
+        case 'delete':
+          await adminService.deleteUser(target.userId);
+          break;
+        case 'enable':
+          await adminService.enableUser(target.userId);
+          break;
+        case 'disable':
+          await adminService.disableUser(target.userId);
+          break;
       }
       await loadUsers();
     } finally {
@@ -193,25 +224,27 @@ export const ContactsPage: React.FC = () => {
     }
   };
 
-  const handleAccept = async (fromUserId: string) => {
-    setActionLoading(fromUserId);
-    try {
-      await contactService.acceptFriendRequest(fromUserId);
-      await loadUsers();
-    } finally {
-      setActionLoading(null);
-    }
-  };
+  const handleAccept = (fromUserId: string) =>
+    runAction(fromUserId, () => contactService.acceptFriendRequest(fromUserId));
 
-  const handleReject = async (fromUserId: string) => {
-    setActionLoading(fromUserId);
-    try {
-      await contactService.rejectFriendRequest(fromUserId);
-      await loadUsers();
-    } finally {
-      setActionLoading(null);
-    }
-  };
+  const handleReject = (fromUserId: string) =>
+    runAction(fromUserId, () => contactService.rejectFriendRequest(fromUserId));
+
+  const confirmationLabel = confirmation
+    ? t({
+        remove: 'contacts.removeFriend',
+        delete: 'contacts.deleteUser',
+        enable: 'contacts.enable',
+        disable: 'contacts.disable',
+      }[confirmation.kind])
+    : '';
+  const confirmationDescription = !confirmation ? ''
+    : confirmation.kind === 'remove' ? t('contacts.removeConfirm')
+    : confirmation.kind === 'delete'
+      ? t('contacts.deleteUserConfirm').replace('{name}', confirmation.name)
+      : t('contacts.toggleDisableConfirm')
+        .replace('{action}', confirmationLabel)
+        .replace('{name}', confirmation.name);
 
   const assistantSource =
     users.find((user) => user.id === WA_USER_ID) ??
@@ -249,7 +282,7 @@ export const ContactsPage: React.FC = () => {
       <AppHeader />
       <Container sx={{ ...appPageContainerSx, flexGrow: 1 }} maxWidth="md">
         <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1.25, mb: 1.5 }}>
-          <Typography variant="h6" fontWeight="bold" sx={{ flex: '0 0 auto', whiteSpace: 'nowrap' }}>
+          <Typography component="h1" variant="h6" sx={{ ...appPageTitleSx, flex: '0 0 auto', whiteSpace: 'nowrap' }}>
             {t('contacts.title')}
           </Typography>
 
@@ -258,16 +291,36 @@ export const ContactsPage: React.FC = () => {
             size="small"
             placeholder={t('common.searchUsers')}
             value={searchQuery}
+            disabled={Boolean(actionLoading)}
             onChange={(e) => handleSearch(e.target.value)}
             sx={{ flex: '1 1 auto', minWidth: 0 }}
           />
         </BoxAny>
 
+        {errorKey && (
+          <Alert
+            severity="error"
+            sx={{ mb: 2 }}
+            action={errorKey !== 'contacts.actionFailed' ? (
+              <Button
+                color="inherit"
+                size="small"
+                disabled={loading}
+                onClick={() => errorKey === 'contacts.searchFailed' ? handleSearch(searchQuery) : loadUsers()}
+              >
+                {t('common.retry')}
+              </Button>
+            ) : undefined}
+          >
+            {t(errorKey)}
+          </Alert>
+        )}
+
         {loading ? (
           <BoxAny sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
             <CircularProgress />
           </BoxAny>
-        ) : (
+        ) : errorKey === 'contacts.loadFailed' || errorKey === 'contacts.searchFailed' ? null : (
           <>
             {visibleRequests.length > 0 && (
               <>
@@ -284,7 +337,7 @@ export const ContactsPage: React.FC = () => {
                           size="small"
                           variant="contained"
                           onClick={() => handleAccept(req.fromUserId)}
-                          disabled={actionLoading === req.fromUserId}
+                          disabled={Boolean(actionLoading)}
                           sx={compactActionButtonSx}
                         >
                           {t('contacts.accept')}
@@ -293,7 +346,7 @@ export const ContactsPage: React.FC = () => {
                           size="small"
                           variant="outlined"
                           onClick={() => handleReject(req.fromUserId)}
-                          disabled={actionLoading === req.fromUserId}
+                          disabled={Boolean(actionLoading)}
                           sx={compactActionButtonSx}
                         >
                           {t('contacts.reject')}
@@ -304,7 +357,7 @@ export const ContactsPage: React.FC = () => {
                             variant="outlined"
                             color={req.fromUser.isDisabled ? 'success' : 'warning'}
                             onClick={() => handleToggleDisabled(req.fromUser)}
-                            disabled={actionLoading === req.fromUserId}
+                            disabled={Boolean(actionLoading)}
                             sx={compactActionButtonSx}
                           >
                             {req.fromUser.isDisabled ? t('contacts.enable') : t('contacts.disable')}
@@ -316,7 +369,7 @@ export const ContactsPage: React.FC = () => {
                             variant="outlined"
                             color="error"
                             onClick={() => handleDeleteUser(req.fromUserId, req.fromUser.displayName)}
-                            disabled={actionLoading === req.fromUserId}
+                            disabled={Boolean(actionLoading)}
                             sx={compactActionButtonSx}
                           >
                             {t('contacts.deleteUser')}
@@ -384,7 +437,7 @@ export const ContactsPage: React.FC = () => {
                         variant="outlined"
                         color="error"
                         onClick={() => handleRemoveFriend(user.id)}
-                        disabled={actionLoading === user.id}
+                        disabled={Boolean(actionLoading)}
                         sx={compactActionButtonSx}
                       >
                         {t('contacts.removeFriend')}
@@ -395,7 +448,7 @@ export const ContactsPage: React.FC = () => {
                           variant="outlined"
                           color={user.isDisabled ? 'success' : 'warning'}
                           onClick={() => handleToggleDisabled(user)}
-                          disabled={actionLoading === user.id}
+                          disabled={Boolean(actionLoading)}
                           sx={compactActionButtonSx}
                         >
                           {user.isDisabled ? t('contacts.enable') : t('contacts.disable')}
@@ -407,7 +460,7 @@ export const ContactsPage: React.FC = () => {
                           variant="outlined"
                           color="error"
                           onClick={() => handleDeleteUser(user.id, user.displayName)}
-                          disabled={actionLoading === user.id}
+                          disabled={Boolean(actionLoading)}
                           sx={compactActionButtonSx}
                         >
                           {t('contacts.deleteUser')}
@@ -454,7 +507,7 @@ export const ContactsPage: React.FC = () => {
                         size="small"
                         variant="outlined"
                         onClick={() => handleAddFriend(user.id)}
-                        disabled={actionLoading === user.id}
+                        disabled={Boolean(actionLoading)}
                         sx={compactActionButtonSx}
                       >
                         {t('contacts.addFriend')}
@@ -465,7 +518,7 @@ export const ContactsPage: React.FC = () => {
                           variant="outlined"
                           color={user.isDisabled ? 'success' : 'warning'}
                           onClick={() => handleToggleDisabled(user)}
-                          disabled={actionLoading === user.id}
+                          disabled={Boolean(actionLoading)}
                           sx={compactActionButtonSx}
                         >
                           {user.isDisabled ? t('contacts.enable') : t('contacts.disable')}
@@ -477,7 +530,7 @@ export const ContactsPage: React.FC = () => {
                           variant="outlined"
                           color="error"
                           onClick={() => handleDeleteUser(user.id, user.displayName)}
-                          disabled={actionLoading === user.id}
+                          disabled={Boolean(actionLoading)}
                           sx={compactActionButtonSx}
                         >
                           {t('contacts.deleteUser')}
@@ -513,6 +566,18 @@ export const ContactsPage: React.FC = () => {
           </>
         )}
       </Container>
+      {confirmation && (
+        <ConfirmDialog
+          open
+          title={confirmationLabel}
+          description={confirmationDescription}
+          confirmLabel={confirmationLabel}
+          failureMessage={t('contacts.actionFailed')}
+          color={confirmation.kind === 'enable' ? 'primary' : 'error'}
+          onConfirm={() => handleConfirmedAction(confirmation)}
+          onClose={() => setConfirmation(null)}
+        />
+      )}
     </BoxAny>
   );
 };

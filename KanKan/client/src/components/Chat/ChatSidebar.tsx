@@ -28,6 +28,7 @@ import { setActiveChat, fetchMessages, clearUnread, removeChat } from '@/store/c
 import { chatService, Chat } from '@/services/chat.service';
 import { GroupAvatar } from '@/components/Shared/GroupAvatar';
 import { UserAvatar } from '@/components/Shared/UserAvatar';
+import { ConfirmDialog } from '@/components/Shared/ConfirmDialog';
 import {
   getDirectDisplayParticipant,
   getOtherRealParticipants,
@@ -61,6 +62,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
   const { user } = useSelector((state: RootState) => state.auth);
   const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = React.useState('');
+  const [chatToClear, setChatToClear] = React.useState<Chat | null>(null);
   const lastTouchSelectRef = React.useRef(0);
 
   const filteredChats = chats.filter((chat) =>
@@ -84,16 +86,11 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
     handleChatSelect(chat);
   };
 
-  const handleClearChat = async (chat: Chat) => {
-    const label = t('chat.clearConfirm');
-    if (!window.confirm(label)) return;
-    try {
-      await chatService.clearChat(chat.id);
-      dispatch(removeChat(chat.id));
-    } catch (e) {
-      console.error('Failed to clear chat', e);
-      alert(t('chat.clearFailed'));
-    }
+  const handleClearChat = async () => {
+    if (!chatToClear) return;
+    const chatId = chatToClear.id;
+    await chatService.clearChat(chatId);
+    dispatch(removeChat(chatId));
   };
 
   const getLocalizedParticipantName = (userId?: string, displayName?: string) => {
@@ -378,10 +375,12 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
                         <IconButton
                           size="small"
                           title={t('chat.clear')}
+                          aria-label={t('chat.clear')}
+                          onPointerUp={(e) => e.stopPropagation()}
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
-                            void handleClearChat(chat);
+                            setChatToClear(chat);
                           }}
                         >
                           <CloseIcon fontSize="small" />
@@ -406,6 +405,15 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({ onNewChat, onCollapse,
           })
         )}
       </List>
+      <ConfirmDialog
+        open={!!chatToClear}
+        title={t('chat.clear')}
+        description={chatToClear ? `${chatToClear.name}\n\n${t('chat.clearConfirm')}` : ''}
+        confirmLabel={t('chat.clear')}
+        failureMessage={t('chat.clearFailed')}
+        onConfirm={handleClearChat}
+        onClose={() => setChatToClear(null)}
+      />
     </BoxAny>
   );
 };

@@ -84,7 +84,7 @@ const linkSelectSurfaceBorder = 'divider';
 const linkSelectMenuProps = {
   PaperProps: {
     sx: {
-      background: 'background.paper',
+      bgcolor: 'background.paper',
       backgroundImage: 'none',
       border: '1px solid',
       borderColor: 'divider',

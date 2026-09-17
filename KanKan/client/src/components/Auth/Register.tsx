@@ -16,6 +16,7 @@ import { authService } from '@/services/auth.service';
 import { useDispatch } from 'react-redux';
 import { setAuth } from '@/store/authSlice';
 import { useLanguage } from '@/i18n/LanguageContext';
+import { useSkin } from '@/skins/SkinContext';
 import './Login.css';
 
 export const Register: React.FC = () => {
@@ -28,6 +29,7 @@ export const Register: React.FC = () => {
   const [error, setErrorState] = useState('');
   const [loading, setLoading] = useState(false);
   const { t } = useLanguage();
+  const { skin } = useSkin();
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
@@ -145,7 +147,7 @@ export const Register: React.FC = () => {
               <div style={{ textAlign: 'center', marginTop: 16 }}>
                 <Typography variant="body2" color="text.secondary">
                   {t('auth.register.haveAccount')}{' '}
-                  <Link to="/login" style={{ color: '#576b95', textDecoration: 'none' }}>
+                  <Link to="/login" style={{ color: skin.linkColor, textDecoration: 'none' }}>
                     {t('auth.login.signIn')}
                   </Link>
                 </Typography>

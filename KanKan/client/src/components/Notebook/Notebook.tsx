@@ -19,6 +19,8 @@ import type { PageElementDto } from '@/services/family.service';
 import apiClient from '@/utils/api';
 import { FamilyPageCanvas, PAGE_STYLES, normalizeBlocks, type PendingImageUpload } from '@/components/Family/FamilyPageCanvas';
 import { RichTextToolbar, SharedRichTextToolbar, editorRegistry } from '@/components/Family/RichTextBlock';
+import { useLanguage } from '@/i18n/LanguageContext';
+import { ConfirmDialog } from '@/components/Shared/ConfirmDialog';
 
 const BoxAny = Box as any;
 
@@ -120,6 +122,7 @@ function clearNotebookDraftState(notebookId: string, pageId: string) {
 }
 
 export const Notebook: React.FC<NotebookProps> = ({ notebookId, canEdit }) => {
+  const { t } = useLanguage();
   const restoredEditorState = useMemo(() => readNotebookEditorState(notebookId), [notebookId]);
   // ── Sections ──
   const [sections, setSections] = useState<NotebookSectionDto[]>([]);
@@ -139,6 +142,7 @@ export const Notebook: React.FC<NotebookProps> = ({ notebookId, canEdit }) => {
   // ── UI ──
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ type: 'section' | 'page'; id: string } | null>(null);
   const [zoom, setZoom] = useState(() => restoredEditorState?.zoom ?? 1.0);
   const [pageStyle, setPageStyle] = useState(() => restoredEditorState?.pageStyle ?? 0);
   const [activeTextBlockId, setActiveTextBlockId] = useState<string | null>(null);
@@ -260,17 +264,14 @@ export const Notebook: React.FC<NotebookProps> = ({ notebookId, canEdit }) => {
   }, [notebookId, editingTabId, editingTabName]);
 
   const handleDeleteSection = useCallback(async (sectionId: string) => {
-    try {
-      await notebookService.deleteSection(notebookId, sectionId);
-      setSections(prev => {
-        const next = prev.filter(s => s.id !== sectionId);
-        if (activeSectionId === sectionId && next.length > 0) {
-          setActiveSectionId(next.sort((a, b) => a.sortOrder - b.sortOrder)[0].id);
-        } else if (next.length === 0) { setActiveSectionId(null); }
-        return next;
-      });
-    } catch {}
-    setSectionContextMenu(null);
+    await notebookService.deleteSection(notebookId, sectionId);
+    setSections(prev => {
+      const next = prev.filter(s => s.id !== sectionId);
+      if (activeSectionId === sectionId && next.length > 0) {
+        setActiveSectionId(next.sort((a, b) => a.sortOrder - b.sortOrder)[0].id);
+      } else if (next.length === 0) { setActiveSectionId(null); }
+      return next;
+    });
   }, [notebookId, activeSectionId]);
 
   // ── Page handlers ──
@@ -284,17 +285,14 @@ export const Notebook: React.FC<NotebookProps> = ({ notebookId, canEdit }) => {
   }, [notebookId, activeSectionId]);
 
   const handleDeletePage = useCallback(async (pageId: string) => {
-    try {
-      await notebookService.deletePage(notebookId, pageId);
-      setPageSummaries(prev => {
-        const next = prev.filter(p => p.id !== pageId);
-        if (activePageId === pageId && next.length > 0) {
-          setActivePageId(next.sort((a, b) => a.pageNumber - b.pageNumber)[0].id);
-        } else if (next.length === 0) { setActivePageId(null); setActivePage(null); }
-        return next;
-      });
-    } catch {}
-    setPageContextMenu(null);
+    await notebookService.deletePage(notebookId, pageId);
+    setPageSummaries(prev => {
+      const next = prev.filter(p => p.id !== pageId);
+      if (activePageId === pageId && next.length > 0) {
+        setActivePageId(next.sort((a, b) => a.pageNumber - b.pageNumber)[0].id);
+      } else if (next.length === 0) { setActivePageId(null); setActivePage(null); }
+      return next;
+    });
   }, [notebookId, activePageId]);
 
   // ── Save ──
@@ -417,7 +415,7 @@ export const Notebook: React.FC<NotebookProps> = ({ notebookId, canEdit }) => {
               onClick={handleAddSection}
               sx={{
                 px: 0.5, display: 'flex', alignItems: 'center', cursor: 'pointer',
-                color: 'text.secondary', '&:hover': { color: 'primary.main', backgroundColor: 'action.hover' },
+                color: 'text.secondary', '&:hover': { backgroundColor: 'action.hover' },
                 fontSize: 12.5, fontWeight: 400, userSelect: 'none', minHeight: 36,
               }}
             >
@@ -450,7 +448,7 @@ export const Notebook: React.FC<NotebookProps> = ({ notebookId, canEdit }) => {
                 {sortedPages.length > 0 && (
                   <>
                     <BoxAny onClick={() => { if (hasPrev) confirmIfUnsaved(() => setActivePageId(sortedPages[activeIdx - 1].id)); }}
-                      sx={{ ...navSx, color: hasPrev ? 'text.secondary' : 'action.disabled', cursor: hasPrev ? 'pointer' : 'default', '&:hover': hasPrev ? { color: 'primary.main' } : {} }}>
+                      sx={{ ...navSx, color: hasPrev ? 'text.secondary' : 'action.disabled', cursor: hasPrev ? 'pointer' : 'default', '&:hover': hasPrev ? { backgroundColor: 'action.hover' } : {} }}>
                       <PrevIcon sx={{ fontSize: 18 }} />
                     </BoxAny>
                     <BoxAny onContextMenu={(e: React.MouseEvent<HTMLElement>) => { if (canEdit && activePageId) { e.preventDefault(); setPageContextMenu({ pageId: activePageId, anchorEl: e.currentTarget }); } }}
@@ -458,20 +456,20 @@ export const Notebook: React.FC<NotebookProps> = ({ notebookId, canEdit }) => {
                       {currentNum}
                     </BoxAny>
                     <BoxAny onClick={() => { if (hasNext) confirmIfUnsaved(() => setActivePageId(sortedPages[activeIdx + 1].id)); }}
-                      sx={{ ...navSx, color: hasNext ? 'text.secondary' : 'action.disabled', cursor: hasNext ? 'pointer' : 'default', '&:hover': hasNext ? { color: 'primary.main' } : {} }}>
+                      sx={{ ...navSx, color: hasNext ? 'text.secondary' : 'action.disabled', cursor: hasNext ? 'pointer' : 'default', '&:hover': hasNext ? { backgroundColor: 'action.hover' } : {} }}>
                       <NextIcon sx={{ fontSize: 18 }} />
                     </BoxAny>
                   </>
                 )}
                 {canEdit && activeSectionId && (
                   <BoxAny onClick={handleAddPage}
-                    sx={{ ...navSx, color: 'text.secondary', '&:hover': { color: 'primary.main', backgroundColor: 'action.hover' } }}>
+                    sx={{ ...navSx, color: 'text.secondary', '&:hover': { backgroundColor: 'action.hover' } }}>
                     +
                   </BoxAny>
                 )}
-                <Tooltip title={PAGE_STYLES[pageStyle].name}><span>
+                <Tooltip title={t(['notebook.paper.grid', 'notebook.paper.white', 'notebook.paper.rice', 'notebook.paper.bamboo', 'notebook.paper.classic'][pageStyle])}><span>
                   <BoxAny onClick={() => setPageStyle(s => (s + 1) % PAGE_STYLES.length)}
-                    sx={{ px: 0.5, fontSize: 12, cursor: 'pointer', color: 'text.secondary', display: 'flex', alignItems: 'center', height: 36, userSelect: 'none', '&:hover': { color: 'primary.main' } }}>
+                    sx={{ px: 0.5, fontSize: 12, cursor: 'pointer', color: 'text.secondary', display: 'flex', alignItems: 'center', height: 36, userSelect: 'none', '&:hover': { backgroundColor: 'action.hover' } }}>
                     {PAGE_STYLES[pageStyle].icon}
                   </BoxAny>
                 </span></Tooltip>
@@ -488,24 +486,24 @@ export const Notebook: React.FC<NotebookProps> = ({ notebookId, canEdit }) => {
                 {hasChanges && (
                   <Button size="small" variant="contained" onClick={handleSave} disabled={saving}
                     sx={{ fontSize: 10, textTransform: 'none', minHeight: 22, minWidth: 0, px: 0.75, py: 0 }}>
-                    {saving ? '…' : '保存'}
+                    {saving ? '…' : t('common.save')}
                   </Button>
                 )}
               </>
             )}
-            <Tooltip title="缩小"><span>
-              <IconButton size="small" onClick={() => setZoom(z => clamp(+(z - 0.01).toFixed(2), 0.3, 2.0))} sx={{ p: 0.25 }}>
+            <Tooltip title={t('notebook.zoomOut')}><span>
+              <IconButton size="small" aria-label={t('notebook.zoomOut')} onClick={() => setZoom(z => clamp(+(z - 0.01).toFixed(2), 0.3, 2.0))} sx={{ p: 0.25 }}>
                 <ZoomOutIcon sx={{ fontSize: 14 }} />
               </IconButton>
             </span></Tooltip>
             <Typography variant="caption" sx={{ fontSize: 10, mx: -0.25 }}>{Math.round(zoom * 100)}</Typography>
-            <Tooltip title="放大"><span>
-              <IconButton size="small" onClick={() => setZoom(z => clamp(+(z + 0.01).toFixed(2), 0.3, 2.0))} sx={{ p: 0.25 }}>
+            <Tooltip title={t('notebook.zoomIn')}><span>
+              <IconButton size="small" aria-label={t('notebook.zoomIn')} onClick={() => setZoom(z => clamp(+(z + 0.01).toFixed(2), 0.3, 2.0))} sx={{ p: 0.25 }}>
                 <ZoomInIcon sx={{ fontSize: 14 }} />
               </IconButton>
             </span></Tooltip>
-            <Tooltip title="适应宽度"><span>
-              <IconButton size="small" onClick={handleFitToWidth} sx={{ p: 0.25 }}>
+            <Tooltip title={t('notebook.fitWidth')}><span>
+              <IconButton size="small" aria-label={t('notebook.fitWidth')} onClick={handleFitToWidth} sx={{ p: 0.25 }}>
                 <FitScreenIcon sx={{ fontSize: 14 }} />
               </IconButton>
             </span></Tooltip>
@@ -518,7 +516,7 @@ export const Notebook: React.FC<NotebookProps> = ({ notebookId, canEdit }) => {
         <BoxAny sx={{
           display: { xs: 'flex', md: 'none' }, alignItems: 'center', px: 0.5, minHeight: 28,
           borderBottom: '1px solid rgba(15,23,42,0.06)',
-          background: 'background.default',
+          bgcolor: 'background.default',
           overflowX: 'auto', scrollbarWidth: 'none', '&::-webkit-scrollbar': { display: 'none' },
         }}
           onClick={(e: React.MouseEvent) => e.stopPropagation()}
@@ -563,12 +561,12 @@ export const Notebook: React.FC<NotebookProps> = ({ notebookId, canEdit }) => {
       ) : sections.length === 0 ? (
         <BoxAny sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <Typography color="text.secondary">
-            {canEdit ? '点击 + 创建第一个章节' : '暂无笔记内容'}
+            {t(canEdit ? 'notebook.emptyEditable' : 'notebook.emptyContent')}
           </Typography>
         </BoxAny>
       ) : (
         <BoxAny sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Typography color="text.secondary">选择一个章节</Typography>
+          <Typography color="text.secondary">{t('notebook.selectSection')}</Typography>
         </BoxAny>
       )}
       </BoxAny>
@@ -577,24 +575,37 @@ export const Notebook: React.FC<NotebookProps> = ({ notebookId, canEdit }) => {
       {/* Unsaved changes confirmation dialog */}
       <Dialog open={Boolean(unsavedDialog)} onClose={() => setUnsavedDialog(null)}
         PaperProps={{ sx: { borderRadius: '8px', backgroundColor: 'background.paper', backgroundImage: 'none', minWidth: 320 } }}>
-        <DialogTitle sx={{ fontSize: 15, fontWeight: 600, pb: 0.5 }}>未保存的更改</DialogTitle>
+        <DialogTitle sx={{ fontSize: 15, fontWeight: 600, pb: 0.5 }}>{t('notebook.unsavedTitle')}</DialogTitle>
         <DialogContent sx={{ pb: 1 }}>
-          <Typography variant="body2" color="text.secondary">当前页面有未保存的更改，离开后将丢失。</Typography>
+          <Typography variant="body2" color="text.secondary">{t('notebook.unsavedDescription')}</Typography>
         </DialogContent>
         <DialogActions sx={{ px: 2.5, pb: 2 }}>
-          <Button onClick={() => setUnsavedDialog(null)} size="small" sx={{ textTransform: 'none' }}>继续编辑</Button>
-          <Button onClick={() => { const action = unsavedDialog?.action; setUnsavedDialog(null); action?.(); }} size="small" variant="contained" color="error" sx={{ textTransform: 'none' }}>放弃更改</Button>
+          <Button onClick={() => setUnsavedDialog(null)} size="small" sx={{ textTransform: 'none' }}>{t('notebook.keepEditing')}</Button>
+          <Button onClick={() => { const action = unsavedDialog?.action; setUnsavedDialog(null); action?.(); }} size="small" variant="contained" color="error" sx={{ textTransform: 'none' }}>{t('notebook.discard')}</Button>
         </DialogActions>
       </Dialog>
 
       {/* Context menus */}
       <Menu open={Boolean(sectionContextMenu)} onClose={() => setSectionContextMenu(null)} anchorEl={sectionContextMenu?.anchorEl}>
-        <MenuItem onClick={() => { if (sectionContextMenu) { setEditingTabId(sectionContextMenu.sectionId); setEditingTabName(sections.find(s => s.id === sectionContextMenu.sectionId)?.name ?? ''); } setSectionContextMenu(null); }} sx={{ fontSize: 12 }}>重命名</MenuItem>
-        <MenuItem onClick={() => sectionContextMenu && handleDeleteSection(sectionContextMenu.sectionId)} sx={{ fontSize: 12, color: '#b91c1c' }}>删除</MenuItem>
+        <MenuItem onClick={() => { if (sectionContextMenu) { setEditingTabId(sectionContextMenu.sectionId); setEditingTabName(sections.find(s => s.id === sectionContextMenu.sectionId)?.name ?? ''); } setSectionContextMenu(null); }} sx={{ fontSize: 12 }}>{t('notebook.rename')}</MenuItem>
+        <MenuItem onClick={() => { if (sectionContextMenu) setDeleteTarget({ type: 'section', id: sectionContextMenu.sectionId }); setSectionContextMenu(null); }} disabled={saving} sx={{ fontSize: 12, color: 'error.main' }}>{t('ui.delete')}</MenuItem>
       </Menu>
       <Menu open={Boolean(pageContextMenu)} onClose={() => setPageContextMenu(null)} anchorEl={pageContextMenu?.anchorEl}>
-        <MenuItem onClick={() => pageContextMenu && handleDeletePage(pageContextMenu.pageId)} sx={{ fontSize: 12, color: '#b91c1c' }} disabled={sortedPages.length <= 1}>删除此页</MenuItem>
+        <MenuItem onClick={() => { if (pageContextMenu) setDeleteTarget({ type: 'page', id: pageContextMenu.pageId }); setPageContextMenu(null); }} sx={{ fontSize: 12, color: 'error.main' }} disabled={saving || sortedPages.length <= 1}>{t('notebook.deletePage')}</MenuItem>
       </Menu>
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        title={t(deleteTarget?.type === 'section' ? 'notebook.deleteSection' : 'notebook.deletePage')}
+        description={t(deleteTarget?.type === 'section' ? 'notebook.deleteSectionDescription' : 'notebook.deletePageDescription')}
+        confirmLabel={t('ui.delete')}
+        failureMessage={t('ui.deleteFailed')}
+        onConfirm={async () => {
+          if (!deleteTarget) return;
+          if (deleteTarget.type === 'section') await handleDeleteSection(deleteTarget.id);
+          else await handleDeletePage(deleteTarget.id);
+        }}
+        onClose={() => setDeleteTarget(null)}
+      />
     </BoxAny>
   );
 };

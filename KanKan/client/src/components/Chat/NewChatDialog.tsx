@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
+  Alert,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -42,54 +43,53 @@ export const NewChatDialog: React.FC<NewChatDialogProps> = ({ open, onClose }) =
   const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [loadError, setLoadError] = useState('');
+  const [createError, setCreateError] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const creatingRef = useRef(false);
   const { t } = useLanguage();
 
   useEffect(() => {
-    if (open) {
-      loadUsers();
-    }
-    return () => {
+    if (!open) {
       setSearchQuery('');
       setSelectedUsers([]);
       setUsers([]);
-    };
+      setFriends([]);
+      setCreateError(false);
+    }
   }, [open]);
 
-  const loadUsers = async () => {
+  useEffect(() => {
+    if (!open) return;
+    let active = true;
+    const searching = searchQuery.length >= 2;
     setLoading(true);
-    try {
-      const [allUsers, contacts] = await Promise.all([
-        contactService.getAllUsers(),
-        contactService.getContacts(),
-      ]);
+    setLoadError('');
+    Promise.all([
+      searching ? contactService.searchUsers(searchQuery) : contactService.getAllUsers(),
+      contactService.getContacts(),
+    ]).then(([allUsers, contacts]) => {
+      if (!active) return;
       setUsers(allUsers);
       setFriends(contacts);
-    } catch (error) {
-      console.error('Failed to load users:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    }).catch(() => {
+      if (!active) return;
+      setUsers([]);
+      setLoadError(searching ? 'chat.new.searchFailed' : 'chat.new.loadFailed');
+    }).finally(() => {
+      if (active) setLoading(false);
+    });
+    return () => { active = false; };
+  }, [open, searchQuery, retryCount]);
 
-  const handleSearch = async (query: string) => {
+  const handleSearch = (query: string) => {
+    if (creatingRef.current) return;
+    setLoading(true);
     setSearchQuery(query);
-    if (query.length >= 2) {
-      setLoading(true);
-      try {
-        const results = await contactService.searchUsers(query);
-        setUsers(results);
-      } catch (error) {
-        console.error('Search failed:', error);
-      } finally {
-        setLoading(false);
-      }
-    } else if (query.length === 0) {
-      loadUsers();
-    }
   };
 
   const handleSelectUser = (user: User) => {
-    if (!isSelectable(user.id)) {
+    if (creatingRef.current || !isSelectable(user.id)) {
       return;
     }
     if (selectedUsers.some((u) => u.id === user.id)) {
@@ -100,9 +100,11 @@ export const NewChatDialog: React.FC<NewChatDialogProps> = ({ open, onClose }) =
   };
 
   const handleCreateChat = async () => {
-    if (selectedUsers.length === 0 || !canCreateChat) return;
+    if (creatingRef.current || loading || loadError || selectedUsers.length === 0 || !canCreateChat) return;
 
+    creatingRef.current = true;
     setCreating(true);
+    setCreateError(false);
     try {
       await dispatch(
         createChat({
@@ -114,9 +116,10 @@ export const NewChatDialog: React.FC<NewChatDialogProps> = ({ open, onClose }) =
         })
       ).unwrap();
       onClose();
-    } catch (error) {
-      console.error('Failed to create chat:', error);
+    } catch {
+      setCreateError(true);
     } finally {
+      creatingRef.current = false;
       setCreating(false);
     }
   };
@@ -166,9 +169,10 @@ export const NewChatDialog: React.FC<NewChatDialogProps> = ({ open, onClose }) =
   const canCreateChat = canCreateDirect || canCreateGroup;
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+    <Dialog open={open} onClose={() => { if (!loading && !creatingRef.current) onClose(); }} maxWidth="sm" fullWidth>
       <DialogTitle>{t('chat.new.title')}</DialogTitle>
       <DialogContent>
+        {createError && <Alert severity="error" sx={{ mb: 2 }}>{t('chat.new.createFailed')}</Alert>}
         {/* Selected Users */}
         {selectedUsers.length > 0 && (
           <BoxAny sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
@@ -179,6 +183,7 @@ export const NewChatDialog: React.FC<NewChatDialogProps> = ({ open, onClose }) =
                 label={user.displayName}
                 onDelete={() => handleSelectUser(user)}
                 deleteIcon={<CloseIcon />}
+                disabled={creating}
               />
             ))}
           </BoxAny>
@@ -189,6 +194,7 @@ export const NewChatDialog: React.FC<NewChatDialogProps> = ({ open, onClose }) =
           fullWidth
           placeholder={t('common.searchUsers')}
           value={searchQuery}
+          disabled={creating}
           onChange={(e) => handleSearch(e.target.value)}
           InputProps={{
             startAdornment: (
@@ -205,6 +211,13 @@ export const NewChatDialog: React.FC<NewChatDialogProps> = ({ open, onClose }) =
           <BoxAny sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
             <CircularProgress />
           </BoxAny>
+        ) : loadError ? (
+          <Alert
+            severity="error"
+            action={<Button color="inherit" disabled={creating} onClick={() => { setLoading(true); setRetryCount((count) => count + 1); }}>{t('common.retry')}</Button>}
+          >
+            {t(loadError)}
+          </Alert>
         ) : listWithWa.length === 0 ? (
           <Typography color="text.secondary" align="center" sx={{ py: 4 }}>
             {t('common.noUsersFound')}
@@ -216,7 +229,7 @@ export const NewChatDialog: React.FC<NewChatDialogProps> = ({ open, onClose }) =
                 key={user.id}
                 onClick={() => handleSelectUser(user)}
                 selected={selectedUsers.some((u) => u.id === user.id)}
-                disabled={!isSelectable(user.id)}
+                disabled={creating || !isSelectable(user.id)}
                 sx={{ py: 0.6, minHeight: 52 }}
               >
                 <ListItemAvatar sx={{ minWidth: 44 }}>
@@ -243,11 +256,11 @@ export const NewChatDialog: React.FC<NewChatDialogProps> = ({ open, onClose }) =
         )}
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>{t('common.cancel')}</Button>
+        <Button onClick={onClose} disabled={loading || creating}>{t('common.cancel')}</Button>
         <Button
           variant="contained"
           onClick={handleCreateChat}
-          disabled={!canCreateChat || creating}
+          disabled={!canCreateChat || creating || loading || !!loadError}
         >
           {creating ? <CircularProgress size={24} /> : t('chat.new.start')}
         </Button>

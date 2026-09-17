@@ -577,7 +577,7 @@ const PhotoAlbumPage: React.FC<PhotoAlbumPageProps> = ({
 
   const embeddedActiveControlButtonSx = {
     ...embeddedControlButtonSx,
-    color: 'primary.main',
+    color: 'text.primary',
     borderColor: 'primary.main',
     bgcolor: 'action.selected',
     '&:hover': {
@@ -766,7 +766,7 @@ const PhotoAlbumPage: React.FC<PhotoAlbumPageProps> = ({
                             borderRadius: '4px',
                             border: '1px solid',
                             borderColor: 'divider',
-                            background: 'background.paper',
+                            bgcolor: 'background.paper',
                             display: 'flex',
                             alignItems: 'baseline',
                             gap: 0.5,

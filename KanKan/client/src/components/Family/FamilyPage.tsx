@@ -11,6 +11,7 @@ import {
   DeleteOutline as DeleteOutlineIcon,
 } from '@mui/icons-material';
 import { AppHeader } from '@/components/Shared/AppHeader';
+import { ConfirmDialog } from '@/components/Shared/ConfirmDialog';
 import { FamilyHisto, type FamilyHistoHandle } from './FamilyHisto';
 import { FamilyPersonPanel } from './FamilyPersonPanel';
 import { FamilyNodeContextMenu } from './FamilyNodeContextMenu';
@@ -26,6 +27,7 @@ import { updateUser } from '@/store/authSlice';
 import type { AppDispatch, RootState } from '@/store';
 import { FamilyNotebook } from './FamilyNotebook';
 import { APP_HEADER_OFFSET } from '@/styles/appLayout';
+import { useLanguage } from '@/i18n/LanguageContext';
 
 const BoxAny = Box as any;
 
@@ -72,33 +74,33 @@ function mapDisplaySelectionOffset(input: string, offset: number | null): number
   return normalizeIndentedInputForDisplay(input.slice(0, offset)).length;
 }
 
-function normalizeImportGender(value?: string): 'male' | 'female' | 'unknown' | undefined {
+function normalizeImportGender(value: string | undefined, t: (key: string) => string): 'male' | 'female' | 'unknown' | undefined {
   const normalized = (value ?? '').trim().toLowerCase();
   if (!normalized) return undefined;
   if (normalized === '男' || normalized === 'male' || normalized === 'm') return 'male';
   if (normalized === '女' || normalized === 'female' || normalized === 'f') return 'female';
   if (normalized === '未知' || normalized === 'unknown') return 'unknown';
-  throw new Error(`无法识别性别：${value}`);
+  throw new Error(t('family.invalidGender').replace('{value}', value ?? ''));
 }
 
-function parseOptionalYear(value: string | undefined, lineNumber: number, label: string): number | undefined {
+function parseOptionalYear(value: string | undefined, lineNumber: number, label: string, t: (key: string) => string): number | undefined {
   const normalized = (value ?? '').trim();
   if (!normalized) return undefined;
   const year = Number.parseInt(normalized, 10);
   if (Number.isNaN(year)) {
-    throw new Error(`第${lineNumber}行的${label}不是有效年份：${normalized}`);
+    throw new Error(t('family.invalidYear').replace('{line}', String(lineNumber)).replace('{label}', label).replace('{value}', normalized));
   }
   return year;
 }
 
-function parseIndentedFamilyText(input: string): NestedFamilyPersonImport {
+function parseIndentedFamilyText(input: string, t: (key: string) => string): NestedFamilyPersonImport {
   const lines = normalizeIndentedInputForParsing(input)
     .split(/\r?\n/)
     .map((raw, index) => ({ raw: raw.replace(/\t/g, '  '), lineNumber: index + 1 }))
     .filter(line => line.raw.trim().length > 0);
 
   if (lines.length === 0) {
-    throw new Error('请输入家谱文本。');
+    throw new Error(t('family.textRequired'));
   }
 
   const roots: NestedFamilyPersonImport[] = [];
@@ -107,7 +109,7 @@ function parseIndentedFamilyText(input: string): NestedFamilyPersonImport {
   for (const line of lines) {
     const indent = line.raw.match(/^ */)?.[0].length ?? 0;
     if (indent % 2 !== 0) {
-      throw new Error(`第${line.lineNumber}行缩进不是两个空格的倍数。`);
+      throw new Error(t('family.invalidIndent').replace('{line}', String(line.lineNumber)));
     }
 
     const level = indent / 2;
@@ -115,16 +117,16 @@ function parseIndentedFamilyText(input: string): NestedFamilyPersonImport {
     const [name, genderText, spouse, spouseGenderText, birthYearText, deathYearText] = fields;
 
     if (!name) {
-      throw new Error(`第${line.lineNumber}行缺少姓名。`);
+      throw new Error(t('family.nameMissing').replace('{line}', String(line.lineNumber)));
     }
 
     const person: NestedFamilyPersonImport = {
       name,
-      gender: normalizeImportGender(genderText),
+      gender: normalizeImportGender(genderText, t),
       spouse: spouse || undefined,
-      spouseGender: spouse ? normalizeImportGender(spouseGenderText) : undefined,
-      birthYear: parseOptionalYear(birthYearText, line.lineNumber, '出生年'),
-      deathYear: parseOptionalYear(deathYearText, line.lineNumber, '去世年'),
+      spouseGender: spouse ? normalizeImportGender(spouseGenderText, t) : undefined,
+      birthYear: parseOptionalYear(birthYearText, line.lineNumber, t('family.birthYear'), t),
+      deathYear: parseOptionalYear(deathYearText, line.lineNumber, t('family.deathYear'), t),
       children: [],
     };
 
@@ -133,7 +135,7 @@ function parseIndentedFamilyText(input: string): NestedFamilyPersonImport {
     }
 
     if (level > stack.length) {
-      throw new Error(`第${line.lineNumber}行缩进层级跳得太深。`);
+      throw new Error(t('family.indentTooDeep').replace('{line}', String(line.lineNumber)));
     }
 
     if (level === 0) {
@@ -141,7 +143,7 @@ function parseIndentedFamilyText(input: string): NestedFamilyPersonImport {
     } else {
       const parent = stack[level - 1];
       if (!parent) {
-        throw new Error(`第${line.lineNumber}行找不到父节点。`);
+        throw new Error(t('family.parentMissing').replace('{line}', String(line.lineNumber)));
       }
       parent.children = parent.children ?? [];
       parent.children.push(person);
@@ -151,7 +153,7 @@ function parseIndentedFamilyText(input: string): NestedFamilyPersonImport {
   }
 
   if (roots.length !== 1) {
-    throw new Error('当前导入只支持一个根人物，请只保留一棵树的顶层人物。');
+    throw new Error(t('family.singleRoot'));
   }
 
   return roots[0];
@@ -190,12 +192,12 @@ function createVisibilityRule(subject = '', permission: 'view' | 'edit' = 'view'
   };
 }
 
-function inferVisibilitySubjectType(subject: string): '用户' | '域' {
-  return subject.includes('@') ? '用户' : '域';
+function inferVisibilitySubjectType(subject: string) {
+  return subject.includes('@') ? 'ui.user' : 'ui.domain';
 }
 
 function formatVisibilityPermission(permission: 'view' | 'edit') {
-  return permission === 'edit' ? '编辑' : '浏览';
+  return permission === 'edit' ? 'ui.edit' : 'ui.view';
 }
 
 function toggleVisibilityPermission(permission: 'view' | 'edit'): 'view' | 'edit' {
@@ -313,6 +315,7 @@ function getPersonTreeDepth(personId: string, allNodes: FamilyNode[]): number {
 }
 
 export const FamilyPage: React.FC = () => {
+  const { t } = useLanguage();
   const dispatch = useDispatch<AppDispatch>();
   const currentUser = useSelector((state: RootState) => state.auth.user);
   const theme = useTheme();
@@ -324,6 +327,8 @@ export const FamilyPage: React.FC = () => {
   const persistedStateRef = useRef<FamilyPagePersistedState | null>(readFamilyPageState());
   const [trees, setTrees] = useState<FamilyTreeDto[]>([]);
   const [selectedTreeId, setSelectedTreeId] = useState<string | null>(persistedStateRef.current?.selectedTreeId ?? null);
+  const selectedTreeIdRef = useRef(selectedTreeId);
+  selectedTreeIdRef.current = selectedTreeId;
   const [persons, setPersons] = useState<FamilyPersonDto[]>([]);
   const [, setRels] = useState<FamilyRelationshipDto[]>([]);
   const [rootNode, setRootNode] = useState<FamilyNode | null>(null);
@@ -349,6 +354,8 @@ export const FamilyPage: React.FC = () => {
   const [createTreeError, setCreateTreeError] = useState<string | null>(null);
   const [creatingTree, setCreatingTree] = useState(false);
   const [deletingTree, setDeletingTree] = useState(false);
+  const [deleteTreeTarget, setDeleteTreeTarget] = useState<{ id: string; name: string } | null>(null);
+  const deletingTreeRef = useRef(false);
   const [exportingTreeArchive, setExportingTreeArchive] = useState(false);
   const [visibilityDialogOpen, setVisibilityDialogOpen] = useState(false);
   const [loadingVisibility, setLoadingVisibility] = useState(false);
@@ -550,11 +557,12 @@ export const FamilyPage: React.FC = () => {
 
   // Load tree list on mount
   useEffect(() => {
-    loadTrees().catch(() => {
+    loadTrees().catch((error) => {
+      console.error('Failed to load family trees:', error);
       setTreeListReady(true);
-      setError('Failed to load trees');
+      setError(t('ui.loadFailed'));
     });
-  }, [loadTrees]);
+  }, [loadTrees, t]);
 
   useEffect(() => {
     setCreateTreeDomain(current => {
@@ -632,12 +640,13 @@ export const FamilyPage: React.FC = () => {
     try {
       const { persons: p, relationships: r } = await familyService.getTree(selectedTreeId);
       applyTreeData(p, r, preferredPersonId);
-    } catch {
-      setError('Failed to load tree data');
+    } catch (error) {
+      console.error('Failed to load family tree:', error);
+      setError(t('ui.loadFailed'));
     } finally {
       setLoading(false);
     }
-  }, [applyTreeData, selectedTreeId]);
+  }, [applyTreeData, selectedTreeId, t]);
 
   // Load full tree when selection changes
   useEffect(() => {
@@ -831,7 +840,7 @@ export const FamilyPage: React.FC = () => {
   }, []);
 
   const handleExportSelectedTreeArchive = useCallback(async () => {
-    if (!selectedTreeId || !selectedTree || exportingTreeArchive) {
+    if (!selectedTreeId || !selectedTree || exportingTreeArchive || deletingTreeRef.current) {
       return;
     }
 
@@ -849,36 +858,40 @@ export const FamilyPage: React.FC = () => {
       link.remove();
       window.URL.revokeObjectURL(objectUrl);
     } catch (exportError: any) {
-      setVisibilityError(exportError?.message || '导出家谱归档失败。');
+      console.error('Failed to export family tree:', exportError);
+      setVisibilityError(t('ui.exportFailed'));
     } finally {
       setExportingTreeArchive(false);
     }
-  }, [exportingTreeArchive, selectedTree, selectedTreeId]);
+  }, [exportingTreeArchive, selectedTree, selectedTreeId, t]);
 
   const handleDeleteSelectedTree = useCallback(async () => {
-    if (!selectedTreeId || !selectedTree || deletingTree || !canManageSelectedTreePermissions) {
-      return;
+    if (!deleteTreeTarget || deletingTreeRef.current || savingVisibility || exportingTreeArchive) {
+      throw new Error('Family tree deletion unavailable');
     }
 
-    const confirmed = window.confirm(`确定删除家谱“${selectedTree.name}”吗？`);
-    if (!confirmed) {
-      return;
-    }
-
+    const targetId = deleteTreeTarget.id;
+    deletingTreeRef.current = true;
     setDeletingTree(true);
     setError(null);
 
     try {
-      await familyService.deleteTree(selectedTreeId);
-      selectPerson(null);
+      await familyService.deleteTree(targetId);
+      setTrees(current => current.filter(tree => tree.id !== targetId));
+      if (selectedTreeIdRef.current === targetId) selectPerson(null);
+      setSelectedTreeId(current => current === targetId ? null : current);
       setVisibilityDialogOpen(false);
-      await loadTrees();
-    } catch (deleteError: any) {
-      setError(deleteError?.message || '删除家谱失败。');
+      try {
+        await loadTrees();
+      } catch (loadError) {
+        console.error('Failed to refresh family trees after deletion:', loadError);
+        setError(t('ui.loadFailed'));
+      }
     } finally {
+      deletingTreeRef.current = false;
       setDeletingTree(false);
     }
-  }, [canManageSelectedTreePermissions, deletingTree, loadTrees, selectPerson, selectedTree, selectedTreeId]);
+  }, [deleteTreeTarget, exportingTreeArchive, loadTrees, savingVisibility, selectPerson, t]);
 
   const handleOpenVisibilityDialog = useCallback(async () => {
     if (!selectedTreeId) return;
@@ -901,20 +914,21 @@ export const FamilyPage: React.FC = () => {
       };
       setVisibilityForm(emptyVisibility);
       setVisibilityRules(buildVisibilityRules(emptyVisibility, selectedTree?.domain));
-      setVisibilityError(loadError?.message || '加载可见范围失败。');
+      console.error('Failed to load family tree permissions:', loadError);
+      setVisibilityError(t('ui.accessLoadFailed'));
     } finally {
       setLoadingVisibility(false);
     }
-  }, [selectedTree?.domain, selectedTreeId]);
+  }, [selectedTree?.domain, selectedTreeId, t]);
 
   const handleCloseVisibilityDialog = useCallback(() => {
-    if (savingVisibility) return;
+    if (savingVisibility || deletingTreeRef.current) return;
     setVisibilityDialogOpen(false);
     setVisibilityError(null);
   }, [savingVisibility]);
 
   const handleSaveVisibility = useCallback(async () => {
-    if (!selectedTreeId || !canManageSelectedTreePermissions) return;
+    if (!selectedTreeId || !canManageSelectedTreePermissions || deletingTreeRef.current) return;
 
     setSavingVisibility(true);
     setVisibilityError(null);
@@ -928,11 +942,12 @@ export const FamilyPage: React.FC = () => {
       setVisibilityDialogOpen(false);
       await loadTrees(selectedTreeId);
     } catch (saveError: any) {
-      setVisibilityError(saveError?.message || '保存可见范围失败。');
+      console.error('Failed to save family tree permissions:', saveError);
+      setVisibilityError(t('ui.saveFailed'));
     } finally {
       setSavingVisibility(false);
     }
-  }, [canManageSelectedTreePermissions, loadTrees, selectedTree?.domain, selectedTreeId, visibilityRules]);
+  }, [canManageSelectedTreePermissions, loadTrees, selectedTree?.domain, selectedTreeId, visibilityRules, t]);
 
   const handleCreateTree = useCallback(async () => {
     setCreatingTree(true);
@@ -943,7 +958,7 @@ export const FamilyPage: React.FC = () => {
 
       if (isArchiveImportMode) {
         if (!createArchiveFile) {
-          setCreateTreeError('请选择要导入的家谱。');
+          setCreateTreeError(t('family.archiveRequired'));
           return;
         }
 
@@ -955,22 +970,22 @@ export const FamilyPage: React.FC = () => {
       } else {
         const treeName = createTreeName.trim();
         if (!treeName) {
-          setCreateTreeError('请输入家谱名称。');
+          setCreateTreeError(t('family.nameRequired'));
           return;
         }
 
         const rootGeneration = Number.parseInt(createTreeRootGeneration, 10);
         if (Number.isNaN(rootGeneration)) {
-          setCreateTreeError('始祖世代必须是数字。');
+          setCreateTreeError(t('family.generationInvalid'));
           return;
         }
 
         let parsedRoot: NestedFamilyPersonImport | null = null;
         if (createTreeText.trim()) {
           try {
-            parsedRoot = parseIndentedFamilyText(createTreeText);
+            parsedRoot = parseIndentedFamilyText(createTreeText, t);
           } catch (parseError) {
-            setCreateTreeError(parseError instanceof Error ? parseError.message : '家谱文本格式不正确。');
+            setCreateTreeError(parseError instanceof Error ? parseError.message : t('family.invalidText'));
             return;
           }
         }
@@ -1002,11 +1017,12 @@ export const FamilyPage: React.FC = () => {
         createArchiveInputRef.current.value = '';
       }
     } catch (createError: any) {
-      setCreateTreeError(createError?.message || '创建家谱失败。');
+      console.error('Failed to create family tree:', createError);
+      setCreateTreeError(t('ui.createFailed'));
     } finally {
       setCreatingTree(false);
     }
-  }, [createArchiveFile, createTreeDomain, createTreeMode, createTreeName, createTreePoem, createTreeRootGeneration, createTreeSurname, createTreeText, isArchiveImportMode, loadTrees]);
+  }, [createArchiveFile, createTreeDomain, createTreeMode, createTreeName, createTreePoem, createTreeRootGeneration, createTreeSurname, createTreeText, isArchiveImportMode, loadTrees, t]);
 
   const filteredPersons = listSearch
     ? allNodes.filter(person => person.name.includes(listSearch) || (person.aliases ?? []).some(alias => alias.includes(listSearch)))
@@ -1062,7 +1078,7 @@ export const FamilyPage: React.FC = () => {
       <BoxAny sx={{ display: 'flex', flexDirection: 'column', height: '100dvh', pt: APP_HEADER_OFFSET }}>
         <AppHeader />
         <BoxAny sx={{ flex: 1, p: 3 }}>
-          <Alert severity="warning">当前账号未开通家谱访问权限。</Alert>
+          <Alert severity="warning">{t('family.noAccess')}</Alert>
         </BoxAny>
       </BoxAny>
     );
@@ -1086,7 +1102,7 @@ export const FamilyPage: React.FC = () => {
         )}
         {!loading && !error && trees.length === 0 && (
           <BoxAny sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Typography color="text.secondary">暂无家谱数据。请先在后台添加或导入家谱。</Typography>
+            <Typography color="text.secondary">{t('family.empty')}</Typography>
           </BoxAny>
         )}
 
@@ -1100,7 +1116,7 @@ export const FamilyPage: React.FC = () => {
                 borderRight: '1px solid rgba(15,23,42,0.08)',
                 ...(viewMode === 'tree' ? {
                   position: 'absolute', left: 0, top: 0, bottom: 0, zIndex: 10,
-                  background: 'background.paper',
+                  bgcolor: 'background.paper',
                   boxShadow: '2px 0 12px rgba(0,0,0,0.08)',
                 } : {}),
               }}>
@@ -1132,7 +1148,7 @@ export const FamilyPage: React.FC = () => {
                     borderTopLeftRadius: 8,
                     borderTopRightRadius: 8,
                     maxHeight: '80vh',
-                    background: 'background.paper',
+                    bgcolor: 'background.paper',
                     backgroundImage: 'none',
                   },
                 }}
@@ -1188,7 +1204,7 @@ export const FamilyPage: React.FC = () => {
                   />
                 ) : (
                   <BoxAny sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-                    <Typography color="text.secondary">该家谱暂无人员数据</Typography>
+                    <Typography color="text.secondary">{t('family.noPeople')}</Typography>
                   </BoxAny>
                 )}
               </BoxAny>
@@ -1198,7 +1214,7 @@ export const FamilyPage: React.FC = () => {
               <BoxAny ref={listViewRef} sx={{ flex: 1, overflow: 'auto', p: 2, pb: isMobile ? 10 : 2 }}>
                 <TextField
                   size="small"
-                  placeholder="搜索姓名或别名…"
+                  placeholder={t('family.search')}
                   value={listSearch}
                   onChange={e => setListSearch(e.target.value)}
                   sx={{ mb: 1.5, width: 260 }}
@@ -1207,11 +1223,11 @@ export const FamilyPage: React.FC = () => {
                   <Table size="small">
                     <TableHead>
                       <TableRow>
-                        <TableCell sx={{ fontWeight: 'bold' }}>世代</TableCell>
-                        <TableCell sx={{ fontWeight: 'bold' }}>姓名</TableCell>
-                        <TableCell sx={{ fontWeight: 'bold' }}>性别</TableCell>
-                        <TableCell sx={{ fontWeight: 'bold' }}>出生年</TableCell>
-                        <TableCell sx={{ fontWeight: 'bold' }}>配偶</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold' }}>{t('family.generation')}</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold' }}>{t('family.personName')}</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold' }}>{t('family.gender')}</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold' }}>{t('family.birthYear')}</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold' }}>{t('family.spouse')}</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -1236,7 +1252,7 @@ export const FamilyPage: React.FC = () => {
                               }}
                               onClick={() => openPersonDetails(p.id)}
                             >
-                              <TableCell>第{p.generation}世</TableCell>
+                              <TableCell>{t('family.generationNumber').replace('{generation}', String(p.generation))}</TableCell>
                               <TableCell>
                                 <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                   <BoxAny sx={{
@@ -1247,7 +1263,7 @@ export const FamilyPage: React.FC = () => {
                                   {p.name}
                                 </BoxAny>
                               </TableCell>
-                              <TableCell>{p.gender === 'female' ? '女' : '男'}</TableCell>
+                              <TableCell>{t(p.gender === 'female' ? 'profile.female' : 'profile.male')}</TableCell>
                               <TableCell>{p.birthDate?.year ?? '—'}</TableCell>
                               <TableCell>{node?.spouses.map(s => s.name).join('、') || '—'}</TableCell>
                             </TableRow>
@@ -1265,9 +1281,9 @@ export const FamilyPage: React.FC = () => {
                   <BoxAny key={gen} sx={{ mb: 2 }}>
                     <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.75 }}>
                       <Typography variant="subtitle2" fontWeight="bold" color="primary">
-                        第{gen}世
+                        {t('family.generationNumber').replace('{generation}', String(gen))}
                       </Typography>
-                      <Chip label={`${byGeneration[gen].length}人`} size="small" sx={{ height: 18, fontSize: 10, bgcolor: 'rgba(42,175,71,0.1)' }} />
+                      <Chip label={t('family.peopleCount').replace('{count}', String(byGeneration[gen].length))} size="small" sx={{ height: 18, fontSize: 10, bgcolor: 'rgba(42,175,71,0.1)' }} />
                     </BoxAny>
                     <BoxAny sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
                       {byGeneration[gen].map(node => (
@@ -1311,17 +1327,17 @@ export const FamilyPage: React.FC = () => {
 
       {/* Notebook view (谱志) — same layout as 札记 */}
       {notebookDialogOpen && selectedTreeId && (
-        <BoxAny sx={{ position: 'fixed', top: APP_HEADER_OFFSET, left: 0, right: 0, bottom: 0, zIndex: 5, display: 'flex', flexDirection: 'column', background: 'background.paper' }}>
+        <BoxAny sx={{ position: 'fixed', top: APP_HEADER_OFFSET, left: 0, right: 0, bottom: 0, zIndex: 5, display: 'flex', flexDirection: 'column', bgcolor: 'background.paper' }}>
           <BoxAny sx={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
             <FamilyNotebook treeId={selectedTreeId} />
           </BoxAny>
           <BoxAny sx={{
-            borderTop: '1px solid', borderColor: 'divider', background: 'background.paper',
+            borderTop: '1px solid', borderColor: 'divider', bgcolor: 'background.paper',
             px: 2, py: 1, display: 'flex', justifyContent: 'flex-end',
           }}>
             <Button onClick={() => setNotebookDialogOpen(false)} size="small" variant="outlined"
               sx={{ height: 32, minHeight: 32, px: 1.25, fontSize: 14, lineHeight: 1.35, textTransform: 'none', color: 'text.primary' }}>
-              返回族谱
+              {t('family.returnToTree')}
             </Button>
           </BoxAny>
         </BoxAny>
@@ -1331,7 +1347,7 @@ export const FamilyPage: React.FC = () => {
       <BoxAny sx={{
         borderTop: '1px solid',
         borderColor: 'divider',
-        background: 'background.paper',
+        bgcolor: 'background.paper',
         px: 2, py: 1,
         display: 'flex', justifyContent: 'flex-end',
         ...(isMobile ? {
@@ -1361,7 +1377,7 @@ export const FamilyPage: React.FC = () => {
                 ...(isMobile ? { flexShrink: 0 } : {}),
               }}
             >
-              新建
+              {t('ui.new')}
             </Button>
           )}
           {selectedTree && (
@@ -1374,7 +1390,7 @@ export const FamilyPage: React.FC = () => {
                 ...(isMobile ? { flexShrink: 0 } : {}),
               }}
             >
-              设置
+              {t('ui.settings')}
             </Button>
           )}
           {selectedTree && (
@@ -1387,14 +1403,14 @@ export const FamilyPage: React.FC = () => {
                 ...(isMobile ? { flexShrink: 0 } : {}),
               }}
             >
-              谱志
+              {t('family.notebook')}
             </Button>
           )}
           {allNodes.length > 0 && (
             <Autocomplete
               size="small"
               options={allNodes}
-              getOptionLabel={(n: FamilyNode) => `${n.name} ${n.generation}世`}
+              getOptionLabel={(n: FamilyNode) => `${n.name} ${t('family.generationNumber').replace('{generation}', String(n.generation))}`}
               filterOptions={(opts, { inputValue }) =>
                 inputValue.length > 0
                   ? opts.filter(o =>
@@ -1446,7 +1462,7 @@ export const FamilyPage: React.FC = () => {
                     alignItems: 'center',
                   }}
                 >
-                  {`${option.name} ${option.generation}世`}
+                  {`${option.name} ${t('family.generationNumber').replace('{generation}', String(option.generation))}`}
                 </BoxAny>
               )}
               renderInput={(params) => (
@@ -1509,7 +1525,7 @@ export const FamilyPage: React.FC = () => {
           <FormControl
             size="small"
             sx={isMobile ? { minWidth: 88, flexShrink: 0 } : { minWidth: 140 }}
-            disabled={trees.length === 0}
+            disabled={trees.length === 0 || deletingTree || Boolean(deleteTreeTarget)}
           >
             <Select
               IconComponent={ExpandMoreIcon}
@@ -1595,15 +1611,15 @@ export const FamilyPage: React.FC = () => {
                 },
               }}
             >
-              <MenuItem value="tree" sx={{ fontSize: 14, lineHeight: 1.35, minHeight: 36 }}>树形</MenuItem>
-              <MenuItem value="list" sx={{ fontSize: 14, lineHeight: 1.35, minHeight: 36 }}>列表</MenuItem>
-              <MenuItem value="generation" sx={{ fontSize: 14, lineHeight: 1.35, minHeight: 36 }}>世代</MenuItem>
+              <MenuItem value="tree" sx={{ fontSize: 14, lineHeight: 1.35, minHeight: 36 }}>{t('family.treeView')}</MenuItem>
+              <MenuItem value="list" sx={{ fontSize: 14, lineHeight: 1.35, minHeight: 36 }}>{t('family.listView')}</MenuItem>
+              <MenuItem value="generation" sx={{ fontSize: 14, lineHeight: 1.35, minHeight: 36 }}>{t('family.generation')}</MenuItem>
             </Select>
           </FormControl>
 
           {selectedTree && (
             <Typography variant="caption" color="text.secondary" sx={{ ml: 0.5, whiteSpace: 'nowrap', flexShrink: 0, fontSize: 10 }}>
-              {selectedTree.surname ? `${selectedTree.surname}氏` : ''} · 共{persons.length}人 · {generations.length}代
+              {selectedTree.surname ? `${t('family.surnameLabel').replace('{surname}', selectedTree.surname)} · ` : ''}{t('family.summary').replace('{people}', String(persons.length)).replace('{generations}', String(generations.length))}
             </Typography>
           )}
         </BoxAny>
@@ -1672,8 +1688,8 @@ export const FamilyPage: React.FC = () => {
                   },
                 }}
               >
-                <Tab value="text" label="手动输入" disabled={creatingTree} />
-                <Tab value="archive" label="家谱导入" disabled={creatingTree} />
+                <Tab value="text" label={t('family.manualInput')} disabled={creatingTree} />
+                <Tab value="archive" label={t('family.archiveImport')} disabled={creatingTree} />
               </Tabs>
             </Paper>
 
@@ -1686,7 +1702,7 @@ export const FamilyPage: React.FC = () => {
                 }}
               >
                 <TextField
-                  label={isArchiveImportMode ? '家谱名称（可选覆盖）' : '家谱名称'}
+                  label={t(isArchiveImportMode ? 'family.nameOverride' : 'family.treeName')}
                   value={createTreeName}
                   onChange={e => setCreateTreeName(e.target.value)}
                   size="small"
@@ -1694,7 +1710,7 @@ export const FamilyPage: React.FC = () => {
                   sx={createDialogTextFieldSx}
                 />
                 <TextField
-                  label="姓氏"
+                  label={t('family.surname')}
                   value={createTreeSurname}
                   onChange={e => setCreateTreeSurname(e.target.value)}
                   size="small"
@@ -1703,7 +1719,7 @@ export const FamilyPage: React.FC = () => {
                   sx={createDialogTextFieldSx}
                 />
                 <TextField
-                  label="目标域名"
+                  label={t('family.targetDomain')}
                   select
                   value={createTreeDomain}
                   onChange={e => setCreateTreeDomain(e.target.value)}
@@ -1722,7 +1738,7 @@ export const FamilyPage: React.FC = () => {
                   ))}
                 </TextField>
                 <TextField
-                  label="始祖世代"
+                  label={t('family.rootGeneration')}
                   value={createTreeRootGeneration}
                   onChange={e => setCreateTreeRootGeneration(e.target.value)}
                   size="small"
@@ -1736,7 +1752,7 @@ export const FamilyPage: React.FC = () => {
             {createTreeMode === 'text' ? (
               <Paper variant="outlined" sx={{ overflow: 'visible', borderRadius: '4px', backgroundColor: 'background.paper', backgroundImage: 'none' }}>
                 <TextField
-                  label="输入人物，一行一人；子女前加两个空格"
+                  label={t('family.inputPeople')}
                   value={createTreeText}
                   onChange={e => handleCreateTreeTextChange(e.target.value, e.target.selectionStart, e.target.selectionEnd)}
                   multiline
@@ -1747,7 +1763,7 @@ export const FamilyPage: React.FC = () => {
                 />
                 <Paper variant="outlined" sx={{ mt: '-1px', p: 1, bgcolor: 'action.hover', backgroundImage: 'none', borderRadius: 0 }}>
                   <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
-                    示例：姓名，性别，配偶，配偶性别，出生年，去世年
+                    {t('family.inputExample')}
                   </Typography>
                   <Typography component="pre" sx={{ m: 0, fontFamily: 'monospace', fontSize: 12, whiteSpace: 'pre-wrap' }}>
                     {normalizeIndentedInputForDisplay(TEXT_IMPORT_EXAMPLE)}
@@ -1758,11 +1774,11 @@ export const FamilyPage: React.FC = () => {
               <Paper variant="outlined" sx={{ p: 1, borderRadius: '4px', backgroundColor: 'action.hover', backgroundImage: 'none' }}>
                 <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                   <Button size="small" variant="outlined" onClick={() => createArchiveInputRef.current?.click()}>
-                    {createArchiveFile ? '更换家谱' : '选择家谱'}
+                    {t(createArchiveFile ? 'family.replaceArchive' : 'family.chooseArchive')}
                   </Button>
                   {createArchiveFile ? (
                     <Button size="small" onClick={handleClearCreateArchive}>
-                      清除
+                      {t('family.clear')}
                     </Button>
                   ) : null}
                   <input
@@ -1775,17 +1791,17 @@ export const FamilyPage: React.FC = () => {
                 </BoxAny>
                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.75 }}>
                   {createArchiveFile
-                    ? `已选择：${createArchiveFile.name}。将从归档恢复人物、关系和照片；基本设置中的目标域名仍然生效，家谱名称可选覆盖。`
-                    : '请选择一个家谱归档文件用于导入。'}
+                    ? t('family.archiveSelected').replace('{name}', createArchiveFile.name)
+                    : t('family.archiveRequired')}
                 </Typography>
               </Paper>
             )}
           </BoxAny>
         </DialogContent>
         <DialogActions sx={{ backgroundColor: 'background.paper' }}>
-          <Button onClick={handleCloseCreateDialog} disabled={creatingTree}>取消</Button>
+          <Button onClick={handleCloseCreateDialog} disabled={creatingTree}>{t('common.cancel')}</Button>
           <Button onClick={handleCreateTree} variant="contained" disabled={creatingTree}>
-            {creatingTree ? (isArchiveImportMode ? '导入中…' : '创建中…') : (isArchiveImportMode ? '导入家谱' : '创建')}
+            {t(creatingTree ? (isArchiveImportMode ? 'ui.importing' : 'ui.creating') : (isArchiveImportMode ? 'family.archiveImport' : 'ui.create'))}
           </Button>
         </DialogActions>
       </Dialog>
@@ -1827,7 +1843,7 @@ export const FamilyPage: React.FC = () => {
       >
         <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, backgroundColor: 'background.paper' }}>
           <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0, flex: 1 }}>
-            <BoxAny component="span" sx={{ flexShrink: 0 }}>家谱权限</BoxAny>
+            <BoxAny component="span" sx={{ flexShrink: 0 }}>{t('family.permissions')}</BoxAny>
             {selectedTree && (
               <BoxAny component="span" sx={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {selectedTree.name}
@@ -1839,13 +1855,13 @@ export const FamilyPage: React.FC = () => {
               size="small"
               variant="outlined"
               onClick={handleExportSelectedTreeArchive}
-              disabled={exportingTreeArchive}
+              disabled={exportingTreeArchive || deletingTree}
               sx={{
                 minWidth: 0,
                 flexShrink: 0,
               }}
             >
-              {exportingTreeArchive ? '导出中…' : '导出'}
+              {t(exportingTreeArchive ? 'ui.exporting' : 'ui.export')}
             </Button>
           ) : null}
           {canManageSelectedTreePermissions && !loadingVisibility ? (
@@ -1853,14 +1869,18 @@ export const FamilyPage: React.FC = () => {
               size="small"
               variant="outlined"
               color="error"
-              onClick={handleDeleteSelectedTree}
-              disabled={deletingTree}
+              onClick={() => {
+                if (selectedTree && !deletingTreeRef.current) {
+                  setDeleteTreeTarget({ id: selectedTree.id, name: selectedTree.name });
+                }
+              }}
+              disabled={deletingTree || savingVisibility || exportingTreeArchive}
               sx={{
                 minWidth: 0,
                 flexShrink: 0,
               }}
             >
-              {deletingTree ? '删除中…' : '删除'}
+              {t(deletingTree ? 'ui.deleting' : 'ui.delete')}
             </Button>
           ) : null}
         </DialogTitle>
@@ -1890,7 +1910,7 @@ export const FamilyPage: React.FC = () => {
                 >
                   <BoxAny sx={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: 11 }}>
-                      对象
+                      {t('ui.subject')}
                     </Typography>
                     {canManageSelectedTreePermissions && (
                       <Button
@@ -1903,10 +1923,10 @@ export const FamilyPage: React.FC = () => {
                     )}
                   </BoxAny>
                   <Typography variant="caption" color="text.secondary" sx={{ fontSize: 11, textAlign: 'center' }}>
-                    类型
+                    {t('ui.type')}
                   </Typography>
                   <Typography variant="caption" color="text.secondary" sx={{ fontSize: 11, textAlign: 'center' }}>
-                    权限
+                    {t('ui.permission')}
                   </Typography>
                   {canManageSelectedTreePermissions ? <BoxAny /> : null}
                 </BoxAny>
@@ -1914,10 +1934,10 @@ export const FamilyPage: React.FC = () => {
                 <BoxAny sx={{ px: 1.25, py: 0.35 }}>
                   {visibilityRules.length === 0 ? (
                     <Typography variant="body2" color="text.secondary" sx={{ fontSize: 12, fontStyle: 'italic', py: 0.75 }}>
-                      暂无记录
+                      {t('ui.noRecords')}
                     </Typography>
                   ) : visibilityRules.map((rule, index) => {
-                    const subjectType = inferVisibilitySubjectType(rule.subject.trim());
+                    const subjectType = t(inferVisibilitySubjectType(rule.subject.trim()));
                     const showDelete = canManageSelectedTreePermissions && !rule.locked;
 
                     return (
@@ -1964,7 +1984,7 @@ export const FamilyPage: React.FC = () => {
                           onClick={() => handleToggleVisibilityRulePermission(rule.key)}
                           sx={compactVisibilityToggleSx}
                         >
-                          {formatVisibilityPermission(rule.permission)}
+                          {t(formatVisibilityPermission(rule.permission))}
                         </Button>
 
                         {canManageSelectedTreePermissions ? (
@@ -1983,14 +2003,23 @@ export const FamilyPage: React.FC = () => {
           </BoxAny>
         </DialogContent>
         <DialogActions sx={{ backgroundColor: 'background.paper', borderTop: 'none', px: 3, pt: 0.25, pb: 2 }}>
-          <Button onClick={handleCloseVisibilityDialog} disabled={savingVisibility} sx={{ borderRadius: '4px', '&:hover': { backgroundColor: 'action.hover' } }}>取消</Button>
+          <Button onClick={handleCloseVisibilityDialog} disabled={savingVisibility || deletingTree} sx={{ borderRadius: '4px', '&:hover': { backgroundColor: 'action.hover' } }}>{t('common.cancel')}</Button>
           {canManageSelectedTreePermissions && (
-            <Button onClick={handleSaveVisibility} variant="contained" disabled={loadingVisibility || savingVisibility} sx={{ borderRadius: '4px', boxShadow: 'none' }}>
-              保存
+            <Button onClick={handleSaveVisibility} variant="contained" disabled={loadingVisibility || savingVisibility || deletingTree} sx={{ borderRadius: '4px', boxShadow: 'none' }}>
+              {t('common.save')}
             </Button>
           )}
         </DialogActions>
       </Dialog>
+      <ConfirmDialog
+        open={Boolean(deleteTreeTarget)}
+        title={t('ui.delete')}
+        description={t('family.deleteConfirm').replace('{name}', deleteTreeTarget?.name ?? '')}
+        confirmLabel={t('ui.delete')}
+        failureMessage={t('ui.deleteFailed')}
+        onConfirm={handleDeleteSelectedTree}
+        onClose={() => setDeleteTreeTarget(null)}
+      />
     </BoxAny>
   );
 };

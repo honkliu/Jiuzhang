@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
+  Alert,
+  Button,
   Box,
   CircularProgress,
   IconButton,
@@ -35,11 +37,22 @@ export const UserProfilePopover: React.FC<UserProfilePopoverProps> = ({
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
+  const [requestError, setRequestError] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const selectionVersion = useRef(0);
+  const sendingRef = useRef(false);
 
   useEffect(() => {
+    selectionVersion.current += 1;
+    sendingRef.current = false;
+    setProfile(null);
+    setSent(false);
+    setSending(false);
+    setRequestError(false);
+    setLoadError(false);
     if (!open || !userId) {
-      setProfile(null);
-      setSent(false);
+      setLoading(false);
       return;
     }
 
@@ -48,32 +61,41 @@ export const UserProfilePopover: React.FC<UserProfilePopoverProps> = ({
     contactService.getUser(userId).then((data) => {
       if (active) setProfile(data);
     }).catch(() => {
-      if (active) setProfile(null);
+      if (active) setLoadError(true);
     }).finally(() => {
       if (active) setLoading(false);
     });
 
-    return () => { active = false; };
-  }, [open, userId]);
+    return () => {
+      active = false;
+      selectionVersion.current += 1;
+    };
+  }, [open, userId, retryCount]);
 
   const isSelf = !!currentUserId && userId === currentUserId;
   const isFriend = !!userId && !!friendIds && friendIds.has(userId);
-  const showAddFriend = !isSelf && !isFriend && !!profile;
+  const showAddFriend = !isSelf && !isFriend && !!profile && profile.id === userId;
 
   const activeDays = profile?.createdAt
     ? Math.max(1, Math.ceil((Date.now() - new Date(profile.createdAt).getTime()) / (1000 * 60 * 60 * 24)))
     : null;
 
   const handleSendRequest = async () => {
-    if (!userId || sending) return;
+    if (!userId || sendingRef.current || sent || !showAddFriend) return;
+    const version = selectionVersion.current;
+    sendingRef.current = true;
     setSending(true);
+    setRequestError(false);
     try {
       await contactService.sendFriendRequest(userId);
-      setSent(true);
+      if (version === selectionVersion.current) setSent(true);
     } catch {
-      // ignore
+      if (version === selectionVersion.current) setRequestError(true);
     } finally {
-      setSending(false);
+      if (version === selectionVersion.current) {
+        sendingRef.current = false;
+        setSending(false);
+      }
     }
   };
 
@@ -81,7 +103,7 @@ export const UserProfilePopover: React.FC<UserProfilePopoverProps> = ({
     <Popover
       open={open && !!anchorEl}
       anchorEl={anchorEl}
-      onClose={onClose}
+      onClose={() => { if (!loading && !sendingRef.current) onClose(); }}
       anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
       transformOrigin={{ vertical: 'top', horizontal: 'left' }}
       slotProps={{
@@ -105,7 +127,14 @@ export const UserProfilePopover: React.FC<UserProfilePopoverProps> = ({
         <BoxAny sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
           <CircularProgress size={28} />
         </BoxAny>
-      ) : profile ? (
+      ) : loadError ? (
+        <Alert
+          severity="error"
+          action={<Button color="inherit" onClick={() => setRetryCount((count) => count + 1)}>{t('common.retry')}</Button>}
+        >
+          {t('profile.loadFailed')}
+        </Alert>
+      ) : profile && profile.id === userId ? (
         <BoxAny sx={{ p: 1.5 }}>
           <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
             <UserAvatar
@@ -159,14 +188,17 @@ export const UserProfilePopover: React.FC<UserProfilePopoverProps> = ({
               <IconButton
                 size="small"
                 onClick={handleSendRequest}
-                disabled={sending}
+                disabled={sending || sent}
                 title={sent ? t('profile.requestSent') : t('profile.addFriend')}
+                aria-label={sent ? t('profile.requestSent') : t('profile.addFriend')}
                 sx={{ color: sent ? 'success.main' : 'primary.main', flexShrink: 0 }}
               >
                 {sending ? <CircularProgress size={16} /> : <PersonAddIcon fontSize="small" />}
               </IconButton>
             )}
           </BoxAny>
+          {requestError && <Alert severity="error" sx={{ mb: 1 }}>{t('profile.requestFailed')}</Alert>}
+          {sent && <Typography role="status" variant="caption" color="success.main">{t('profile.requestSent')}</Typography>}
           {profile.bio && (
             <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
               {profile.bio}

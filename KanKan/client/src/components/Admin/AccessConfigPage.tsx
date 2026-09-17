@@ -33,7 +33,7 @@ import {
   FeatureDomainAccessConfig,
 } from '@/services/admin.service';
 import { authService } from '@/services/auth.service';
-import { appPageContainerSx } from '@/styles/appLayout';
+import { appPageContainerSx, appSectionTitleSx } from '@/styles/appLayout';
 
 const BoxAny = Box as any;
 
@@ -86,8 +86,6 @@ const sectionSx = {
 const sectionTitleSx = {
   width: '100%',
   maxWidth: configGridSurfaceWidth,
-  fontSize: '0.95rem',
-  fontWeight: 700,
   mb: 0.75,
 };
 
@@ -295,7 +293,7 @@ export const AccessConfigPage: React.FC = () => {
 const Section: React.FC<{ title: string; children: React.ReactNode; actions?: React.ReactNode; titleMaxWidth?: number }> = ({ title, children, actions, titleMaxWidth = configGridSurfaceWidth }) => (
   <BoxAny sx={sectionSx}>
     <BoxAny sx={{ ...sectionTitleSx, maxWidth: titleMaxWidth, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
-      <Typography variant="h6" sx={{ fontSize: '0.95rem', fontWeight: 700 }}>{title}</Typography>
+      <Typography component="h2" variant="subtitle1" sx={appSectionTitleSx}>{title}</Typography>
       {actions}
     </BoxAny>
     {children}
@@ -680,8 +678,9 @@ const EditableList = <T,>({
   renderCells: (row: T, index: number) => React.ReactNode[];
   allowAdd?: boolean;
   allowRemove?: boolean;
-}) => (
-  <Paper variant="outlined" sx={configSurfaceSx}>
+}) => {
+  const { t } = useLanguage();
+  return <Paper variant="outlined" sx={configSurfaceSx}>
     <BoxAny
       sx={{
         display: 'grid',
@@ -702,7 +701,7 @@ const EditableList = <T,>({
       ))}
       <BoxAny sx={{ display: 'flex', justifyContent: 'center' }}>
         {allowAdd && (
-          <IconButton size="small" onClick={addRow} aria-label="add" sx={{ width: 24, height: 24 }}>
+          <IconButton size="small" onClick={addRow} aria-label={t('common.add')} title={t('common.add')}>
             <AddIcon fontSize="small" />
           </IconButton>
         )}
@@ -735,15 +734,15 @@ const EditableList = <T,>({
             </BoxAny>
           ))}
           {allowRemove ? (
-            <IconButton size="small" onClick={() => removeRow(index)} aria-label="delete" sx={{ width: 24, height: 24, justifySelf: 'center' }}>
+            <IconButton size="small" onClick={() => removeRow(index)} aria-label={t('common.remove')} title={t('common.remove')} sx={{ justifySelf: 'center' }}>
               <DeleteIcon fontSize="small" />
             </IconButton>
-          ) : <BoxAny sx={{ width: 24, height: 24 }} />}
+          ) : <BoxAny sx={{ width: 32, height: 32 }} />}
         </BoxAny>
       ))}
     </BoxAny>
-  </Paper>
-);
+  </Paper>;
+};
 
 const EmptyText: React.FC = () => {
   const { t } = useLanguage();
@@ -817,7 +816,7 @@ const AgentToolsEditor: React.FC<{
             </BoxAny>
           ))}
           <BoxAny sx={{ display: 'flex', justifyContent: 'center' }}>
-            <IconButton size="small" onClick={addTool} aria-label="add" sx={{ width: 24, height: 24 }}>
+            <IconButton size="small" onClick={addTool} aria-label={t('admin.agentTools.addTool')} title={t('admin.agentTools.addTool')}>
               <AddIcon fontSize="small" />
             </IconButton>
           </BoxAny>
@@ -863,7 +862,7 @@ const AgentToolsEditor: React.FC<{
                     <Switch size="small" checked={tool.enabled} onChange={(e) => update(index, { enabled: e.target.checked })} />
                   </BoxAny>
                   <BoxAny sx={{ display: 'flex', justifyContent: 'center' }}>
-                    <IconButton size="small" onClick={() => removeRow(index)} sx={{ width: 24, height: 24 }}>
+                    <IconButton size="small" onClick={() => removeRow(index)} aria-label={t('common.remove')} title={t('common.remove')}>
                       <DeleteIcon fontSize="small" />
                     </IconButton>
                   </BoxAny>
@@ -910,13 +909,13 @@ const AgentToolsEditor: React.FC<{
                         <InputBase value={param.name} onChange={(e) => updateParam(index, pi, { name: e.target.value })} placeholder="{param}" sx={{ ...inlineInputSx, fontFamily: 'monospace', fontSize: 11, backgroundColor: 'action.hover' }} />
                         <InputBase value={param.description} onChange={(e) => updateParam(index, pi, { description: e.target.value })} placeholder={t('admin.agentTools.placeholder.paramDesc')} sx={{ ...inlineInputSx, fontSize: 12 }} />
                         <BoxAny sx={{ display: 'flex', justifyContent: 'center' }}>
-                          <IconButton size="small" onClick={() => removeParam(index, pi)} sx={{ width: 20, height: 20 }}>
+                          <IconButton size="small" onClick={() => removeParam(index, pi)} aria-label={t('admin.removeParameter')} title={t('admin.removeParameter')}>
                             <DeleteIcon sx={{ fontSize: 12 }} />
                           </IconButton>
                         </BoxAny>
                       </BoxAny>
                     ))}
-                    <IconButton size="small" onClick={() => addParam(index)} sx={{ width: 18, height: 18, mt: 0.25 }}>
+                    <IconButton size="small" onClick={() => addParam(index)} aria-label={t('admin.addParameter')} title={t('admin.addParameter')} sx={{ mt: 0.25 }}>
                       <AddIcon sx={{ fontSize: 12 }} />
                     </IconButton>
                   </BoxAny>
@@ -942,13 +941,13 @@ const AgentToolsEditor: React.FC<{
                         <InputBase value={k} onChange={(e) => updateHeader(index, hi, e.target.value, v)} placeholder={t('admin.agentTools.placeholder.headerKey')} sx={{ ...inlineInputSx, fontFamily: 'monospace', fontSize: 11, backgroundColor: 'action.hover' }} />
                         <InputBase value={v} onChange={(e) => updateHeader(index, hi, k, e.target.value)} placeholder={t('admin.agentTools.placeholder.headerValue')} sx={{ ...inlineInputSx, fontSize: 12 }} />
                         <BoxAny sx={{ display: 'flex', justifyContent: 'center' }}>
-                          <IconButton size="small" onClick={() => removeHeader(index, hi)} sx={{ width: 20, height: 20 }}>
+                          <IconButton size="small" onClick={() => removeHeader(index, hi)} aria-label={t('admin.removeHeader')} title={t('admin.removeHeader')}>
                             <DeleteIcon sx={{ fontSize: 12 }} />
                           </IconButton>
                         </BoxAny>
                       </BoxAny>
                     ))}
-                    <IconButton size="small" onClick={() => addHeader(index)} sx={{ width: 18, height: 18, mt: 0.25 }}>
+                    <IconButton size="small" onClick={() => addHeader(index)} aria-label={t('admin.addHeader')} title={t('admin.addHeader')} sx={{ mt: 0.25 }}>
                       <AddIcon sx={{ fontSize: 12 }} />
                     </IconButton>
                   </BoxAny>

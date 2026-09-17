@@ -38,7 +38,7 @@ import { signalRService } from '@/services/signalr.service';
 import { WA_USER_ID, isWaDirectChat } from '@/utils/chatParticipants';
 import { AppHeader } from '@/components/Shared/AppHeader';
 import { useLanguage } from '@/i18n/LanguageContext';
-import { APP_HEADER_OFFSET, appPageContentSx } from '@/styles/appLayout';
+import { APP_HEADER_OFFSET, appPageContentSx, appPageTitleSx } from '@/styles/appLayout';
 import {
   HARDWARE_STOCKS,
   CATEGORY_GROUP_ORDER,
@@ -456,7 +456,7 @@ export const StocksPage: React.FC = () => {
       <BoxAny sx={{ maxWidth: 1440, mx: 'auto', ...appPageContentSx }}>
         {/* Title + meta */}
         <BoxAny sx={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', gap: 1.5, mb: 1 }}>
-          <Typography variant="h5" fontWeight={700}>
+          <Typography component="h1" variant="h6" sx={appPageTitleSx}>
             {isZh ? '硬件股票' : 'Hardware Stocks'}
           </Typography>
           <Typography variant="body2" color="text.secondary">

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Box, Button, ButtonBase, CircularProgress, Dialog, DialogContent, IconButton, Modal, TextField, Typography, useMediaQuery, useTheme } from '@mui/material';
+import { Alert, Box, Button, ButtonBase, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, Modal, TextField, Typography, useMediaQuery, useTheme } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
@@ -81,6 +81,8 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
   const [selectedReferenceImageUrl, setSelectedReferenceImageUrl] = useState<string | null>(null);
   const [selectedPrompts, setSelectedPrompts] = useState<SelectedPrompt[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [generationError, setGenerationError] = useState(false);
+  const generatingRef = useRef(false);
   const [generatedByGroup, setGeneratedByGroup] = useState<Record<string, string[]>>({});
   const [standingImageUrls, setStandingImageUrls] = useState<string[]>([]);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -259,6 +261,8 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
     setRenderedImage('');
     setShowSourceInEdits(true);
     setImagePickerOpen(false);
+    setComposerOpen(false);
+    setGenerationError(false);
     setSelectedReferenceImageUrl(null);
 
     if (hasGroups && groups?.length) {
@@ -797,15 +801,6 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
   const toggleChrome = () => setIsUiHidden((prev) => !prev);
 
   useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [open, prev, next, onClose]);
-
-  useEffect(() => {
     const handleFullscreenChange = () => {
       setIsFullscreen(Boolean(document.fullscreenElement));
     };
@@ -971,6 +966,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
   };
 
   const handleClose = () => {
+    if (imagePickerOpen || composerOpen || generatingRef.current) return;
     if (document.fullscreenElement) {
       document.exitFullscreen().catch(() => undefined);
     }
@@ -1023,10 +1019,12 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
   };
 
   const handlePicEdit = async () => {
-    if (!activeGroup || !activeGroup.canEdit || !displayedImage) return;
+    if (generatingRef.current || !activeGroup || !activeGroup.canEdit || !displayedImage) return;
     const trimmed = buildPromptText();
     if (!trimmed) return;
 
+    generatingRef.current = true;
+    setGenerationError(false);
     try {
       setIsGenerating(true);
       const response = await imageGenerationService.generate({
@@ -1051,7 +1049,10 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
       }
 
       setSelectedReferenceImageUrl(null);
+    } catch {
+      setGenerationError(true);
     } finally {
+      generatingRef.current = false;
       setIsGenerating(false);
     }
   };
@@ -1083,6 +1084,10 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
           maxWidth: 'none',
           height: '100dvh',
           bgcolor: 'rgba(10, 10, 10, 0.97)',
+          '& .MuiButtonBase-root.Mui-focusVisible': {
+            outline: '2px solid rgba(255,255,255,0.9)',
+            outlineOffset: '2px',
+          },
           borderRadius: 0,
           overflow: 'hidden',
           outline: 'none',
@@ -1116,7 +1121,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
             <IconButton
               size="small"
               onClick={() => handleZoomStep(-0.01)}
-              sx={{ color: 'rgba(255,255,255,0.88)', bgcolor: 'rgba(255,255,255,0.08)', width: 28, height: 28 }}
+              sx={{ color: 'rgba(255,255,255,0.88)', bgcolor: 'rgba(255,255,255,0.08)', width: 28, height: 28, '&:hover, &:active, &.Mui-focusVisible': { color: 'white', bgcolor: 'rgba(255,255,255,0.18)' } }}
             >
               <RemoveIcon sx={{ fontSize: 17 }} />
             </IconButton>
@@ -1133,6 +1138,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
                 minHeight: 28,
                 color: 'rgba(255,255,255,0.92)',
                 bgcolor: Math.abs(zoom - fitZoom) > 0.01 ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.06)',
+                '&:hover, &:active, &.Mui-focusVisible': { color: 'white', bgcolor: 'rgba(255,255,255,0.22)' },
                 borderRadius: 999,
                 fontSize: '0.72rem',
                 lineHeight: 1,
@@ -1146,14 +1152,14 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
             <IconButton
               size="small"
               onClick={() => handleZoomStep(0.01)}
-              sx={{ color: 'rgba(255,255,255,0.88)', bgcolor: 'rgba(255,255,255,0.08)', width: 28, height: 28 }}
+              sx={{ color: 'rgba(255,255,255,0.88)', bgcolor: 'rgba(255,255,255,0.08)', width: 28, height: 28, '&:hover, &:active, &.Mui-focusVisible': { color: 'white', bgcolor: 'rgba(255,255,255,0.18)' } }}
             >
               <AddIcon sx={{ fontSize: 17 }} />
             </IconButton>
             <IconButton
               size="small"
               onClick={handleToggleFullscreen}
-              sx={{ color: 'rgba(255,255,255,0.88)', bgcolor: 'rgba(255,255,255,0.08)', width: 28, height: 28 }}
+              sx={{ color: 'rgba(255,255,255,0.88)', bgcolor: 'rgba(255,255,255,0.08)', width: 28, height: 28, '&:hover, &:active, &.Mui-focusVisible': { color: 'white', bgcolor: 'rgba(255,255,255,0.18)' } }}
             >
               {(isFullscreen || isPseudoFullscreen) ? <FullscreenExitIcon sx={{ fontSize: 17 }} /> : <FullscreenIcon sx={{ fontSize: 17 }} />}
             </IconButton>
@@ -1188,7 +1194,8 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
                 bgcolor: 'rgba(211, 47, 47, 0.95)',
                 border: '1px solid rgba(255,255,255,0.18)',
                 opacity: !canToggleToEdits && thumbnailMode !== 'edits' ? 0.55 : 1,
-                '&:hover': {
+                '&:hover, &:active, &.Mui-focusVisible': {
+                  color: 'white',
                   bgcolor: 'rgba(198, 40, 40, 1)',
                 },
               }}
@@ -1205,12 +1212,15 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
 
           <IconButton
             onClick={handleClose}
+            disabled={isGenerating}
+            aria-label={t('common.close')}
             size="small"
             sx={{
               width: 32,
               height: 32,
               color: 'rgba(255,255,255,0.9)',
               bgcolor: 'rgba(0,0,0,0.3)',
+              '&:hover, &:active, &.Mui-focusVisible': { color: 'white', bgcolor: 'rgba(0,0,0,0.65)' },
             }}
           >
             <CloseIcon sx={{ fontSize: 18 }} />
@@ -1305,7 +1315,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
                 zIndex: 3,
                 color: 'white',
                 bgcolor: 'rgba(0,0,0,0.4)',
-                '&:hover': { bgcolor: 'rgba(0,0,0,0.65)' },
+                '&:hover, &:active, &.Mui-focusVisible': { color: 'white', bgcolor: 'rgba(0,0,0,0.65)' },
               }}
             >
               <ArrowBackIosNewIcon />
@@ -1324,7 +1334,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
                 zIndex: 3,
                 color: 'white',
                 bgcolor: 'rgba(0,0,0,0.4)',
-                '&:hover': { bgcolor: 'rgba(0,0,0,0.65)' },
+                '&:hover, &:active, &.Mui-focusVisible': { color: 'white', bgcolor: 'rgba(0,0,0,0.65)' },
               }}
             >
               <ArrowForwardIosIcon />
@@ -1360,6 +1370,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
             >
               {hasGroups && activeGroup?.canEdit && (
                 <>
+                  {generationError && <Alert severity="error">{t('common.actionFailed')}</Alert>}
                   <BoxAny sx={{ display: 'flex', alignItems: 'flex-end', gap: 0.5 }}>
                     <TextField
                       value={prompt}
@@ -1405,6 +1416,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
                           {(previewProps) => (
                             <Button
                               {...previewProps}
+                              disabled={isGenerating}
                               onClick={(event) => {
                                 previewProps.onClick?.(event);
                                 if (event.defaultPrevented) {
@@ -1427,6 +1439,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
                                 overflow: 'hidden',
                                 border: '1px solid rgba(255,255,255,0.2)',
                                 bgcolor: 'rgba(255,255,255,0.06)',
+                                '&:hover, &:active, &.Mui-focusVisible': { color: 'white', bgcolor: 'rgba(255,255,255,0.18)', borderColor: 'rgba(255,255,255,0.65)' },
                                 flexShrink: 0,
                               }}
                             >
@@ -1449,7 +1462,8 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
                         size="small"
                         title={t('promptComposer.browsePrompts')}
                         onClick={() => setComposerOpen(true)}
-                        sx={{ color: 'rgba(255,255,255,0.85)', width: actionControlHeight, height: actionControlHeight }}
+                        disabled={isGenerating}
+                        sx={{ color: 'rgba(255,255,255,0.85)', width: actionControlHeight, height: actionControlHeight, '&:hover, &:active, &.Mui-focusVisible': { color: 'white', bgcolor: 'rgba(255,255,255,0.18)' } }}
                       >
                         <LibraryBooksIcon fontSize="small" />
                       </IconButton>
@@ -1457,7 +1471,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
                         size="small"
                         title={t('promptComposer.browsePrompts')}
                         onClick={() => setShowPromptTools((prev) => !prev)}
-                        sx={{ color: showPromptTools ? 'white' : 'rgba(255,255,255,0.85)', width: actionControlHeight, height: actionControlHeight }}
+                        sx={{ color: showPromptTools ? 'white' : 'rgba(255,255,255,0.85)', width: actionControlHeight, height: actionControlHeight, '&:hover, &:active, &.Mui-focusVisible': { color: 'white', bgcolor: 'rgba(255,255,255,0.18)' } }}
                       >
                         <TuneIcon fontSize="small" />
                       </IconButton>
@@ -1472,6 +1486,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
                           flexShrink: 0,
                           color: 'rgba(255,255,255,0.92)',
                           borderColor: 'rgba(255,255,255,0.3)',
+                          '&:hover, &:active, &.Mui-focusVisible': { color: 'white', bgcolor: 'rgba(255,255,255,0.18)', borderColor: 'rgba(255,255,255,0.65)' },
                           lineHeight: 1,
                         }}
                       >
@@ -1503,6 +1518,11 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
                         '& .MuiChip-root.MuiChip-filled': {
                           backgroundColor: 'rgba(255,255,255,0.18)',
                         },
+                        '& .MuiChip-root:hover, & .MuiChip-root:active, & .MuiChip-root.Mui-focusVisible': {
+                          color: 'white',
+                          borderColor: 'rgba(255,255,255,0.65)',
+                          backgroundColor: 'rgba(255,255,255,0.28)',
+                        },
                       }}
                     >
                       <AvatarQuickPicker
@@ -1524,6 +1544,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
                           sx={{
                             color: 'rgba(255,255,255,0.8)',
                             borderColor: 'rgba(255,255,255,0.25)',
+                            '&:hover, &:active, &.Mui-focusVisible': { color: 'white', bgcolor: 'rgba(255,255,255,0.18)', borderColor: 'rgba(255,255,255,0.65)' },
                             fontSize: '0.7rem',
                             textTransform: 'none',
                           }}
@@ -1566,7 +1587,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
                         bgcolor: 'rgba(211, 47, 47, 0.95)',
                         border: '1px solid rgba(255,255,255,0.18)',
                         opacity: !canToggleToEdits && thumbnailMode !== 'edits' ? 0.55 : 1,
-                        '&:hover': { bgcolor: 'rgba(198, 40, 40, 1)' },
+                        '&:hover, &:active, &.Mui-focusVisible': { color: 'white', bgcolor: 'rgba(198, 40, 40, 1)' },
                       }}
                     >
                       <KeyboardArrowDownIcon
@@ -1588,7 +1609,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
                         bgcolor: 'rgba(255,255,255,0.1)',
                         border: '1px solid rgba(255,255,255,0.14)',
                         opacity: canScrollThumbnailsLeft ? 1 : 0.35,
-                        '&:hover': { bgcolor: 'rgba(255,255,255,0.18)' },
+                        '&:hover, &:active, &.Mui-focusVisible': { color: 'white', bgcolor: 'rgba(255,255,255,0.18)' },
                       }}
                     >
                       <ArrowBackIosNewIcon sx={{ fontSize: thumbnailStripControlIconSize }} />
@@ -1748,7 +1769,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
                       bgcolor: 'rgba(255,255,255,0.1)',
                       border: '1px solid rgba(255,255,255,0.14)',
                       opacity: canScrollThumbnailsRight ? 1 : 0.35,
-                      '&:hover': { bgcolor: 'rgba(255,255,255,0.18)' },
+                      '&:hover, &:active, &.Mui-focusVisible': { color: 'white', bgcolor: 'rgba(255,255,255,0.18)' },
                     }}
                   >
                     <ArrowForwardIosIcon sx={{ fontSize: thumbnailStripControlIconSize }} />
@@ -1779,6 +1800,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
           <Dialog
             open={imagePickerOpen}
             onClose={() => setImagePickerOpen(false)}
+            aria-labelledby="lightbox-reference-picker-title"
             fullWidth
             maxWidth="md"
             PaperProps={{
@@ -1790,6 +1812,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
               },
             }}
           >
+            <DialogTitle id="lightbox-reference-picker-title">{t('image.pickReferenceTitle')}</DialogTitle>
             <DialogContent
               sx={{
                 p: 1,
@@ -1860,6 +1883,9 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
                 })}
               </BoxAny>
             </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setImagePickerOpen(false)}>{t('common.close')}</Button>
+            </DialogActions>
           </Dialog>
         )}
 
@@ -1897,7 +1923,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
                 bgcolor: 'rgba(255,255,255,0.1)',
                 border: '1px solid rgba(255,255,255,0.14)',
                 opacity: canScrollThumbnailsLeft ? 1 : 0.35,
-                '&:hover': { bgcolor: 'rgba(255,255,255,0.18)' },
+                '&:hover, &:active, &.Mui-focusVisible': { color: 'white', bgcolor: 'rgba(255,255,255,0.18)' },
               }}
             >
               <ArrowBackIosNewIcon sx={{ fontSize: thumbnailStripControlIconSize }} />
@@ -1964,7 +1990,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
                 bgcolor: 'rgba(255,255,255,0.1)',
                 border: '1px solid rgba(255,255,255,0.14)',
                 opacity: canScrollThumbnailsRight ? 1 : 0.35,
-                '&:hover': { bgcolor: 'rgba(255,255,255,0.18)' },
+                '&:hover, &:active, &.Mui-focusVisible': { color: 'white', bgcolor: 'rgba(255,255,255,0.18)' },
               }}
             >
               <ArrowForwardIosIcon sx={{ fontSize: thumbnailStripControlIconSize }} />
