@@ -203,6 +203,7 @@ public class MomentsController : ControllerBase
                 var author = await _userRepository.GetByIdAsync(moment.UserId);
                 momentDomain = author != null ? ResolveDomain(author) : string.Empty;
             }
+
             var isGlobalAdmin = user.IsAdmin && DomainRules.IsSuperDomain(currentDomain);
             if (!isGlobalAdmin && !DomainRules.IsVisibleDomain(currentDomain, momentDomain))
                 return Forbid();
@@ -249,6 +250,62 @@ public class MomentsController : ControllerBase
             _logger.LogError(ex, "Failed to add moment comment");
             return StatusCode(500, new { message = "Failed to add comment" });
         }
+    }
+
+    [HttpPost("{id}/generated-images")]
+    public async Task<ActionResult<MomentDto>> AddGeneratedImage(
+        string id,
+        [FromBody] AddGeneratedMomentImageRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.MediaUrl)
+            || !request.MediaUrl.StartsWith("/uploads/", StringComparison.OrdinalIgnoreCase))
+        {
+            return BadRequest(new { message = "A generated upload URL is required" });
+        }
+
+        var userId = GetUserId();
+        var userName = GetUserName();
+        var user = await _userRepository.GetByIdAsync(userId);
+        if (user == null)
+            return BadRequest(new { message = "User not found" });
+
+        var moment = await _momentRepository.GetByIdAsync(id);
+        if (moment == null)
+            return NotFound(new { message = "Moment not found" });
+
+        var currentDomain = ResolveDomain(user);
+        var momentDomain = moment.Domain;
+        if (string.IsNullOrWhiteSpace(momentDomain))
+        {
+            var author = await _userRepository.GetByIdAsync(moment.UserId);
+            momentDomain = author != null ? ResolveDomain(author) : string.Empty;
+        }
+
+        var isGlobalAdmin = user.IsAdmin && DomainRules.IsSuperDomain(currentDomain);
+        if (!isGlobalAdmin && !DomainRules.IsVisibleDomain(currentDomain, momentDomain))
+            return Forbid();
+
+        if (!request.AttachAsComment && string.Equals(moment.UserId, userId, StringComparison.Ordinal))
+        {
+            moment.Content.MediaUrls ??= new List<string>();
+            moment.Content.MediaUrls.Add(request.MediaUrl);
+        }
+        else
+        {
+            moment.Comments.Add(new MomentComment
+            {
+                Id = $"comment_{Guid.NewGuid():N}",
+                UserId = userId,
+                UserName = userName,
+                UserAvatar = user.AvatarUrl ?? string.Empty,
+                Text = request.Prompt?.Trim() ?? string.Empty,
+                MediaUrls = new List<string> { request.MediaUrl },
+                Timestamp = DateTime.UtcNow
+            });
+        }
+
+        var updated = await _momentRepository.UpdateAsync(moment);
+        return Ok(MapToMomentDto(updated));
     }
 
     [HttpPost("{id}/likes")]

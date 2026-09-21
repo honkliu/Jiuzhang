@@ -27,3 +27,10 @@ public class AddMomentCommentRequest
 {
     public string Text { get; set; } = string.Empty;
 }
+
+public class AddGeneratedMomentImageRequest
+{
+    public string MediaUrl { get; set; } = string.Empty;
+    public string? Prompt { get; set; }
+    public bool AttachAsComment { get; set; }
+}

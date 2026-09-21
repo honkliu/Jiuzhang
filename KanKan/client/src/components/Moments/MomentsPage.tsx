@@ -28,6 +28,8 @@ import { RootState } from '@/store';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { appPageContainerSx } from '@/styles/appLayout';
 import { ConfirmDialog } from '@/components/Shared/ConfirmDialog';
+import { SelectedTextMenu } from '@/components/Shared/SelectedTextMenu';
+import { imageGenerationService } from '@/services/imageGeneration.service';
 
 // Work around TS2590 ("union type too complex") from MUI Box typings in some TS versions.
 const BoxAny = Box as any;
@@ -275,6 +277,30 @@ export const MomentsPage: React.FC = () => {
       setError(err.message || t('moments.postFailed'));
     } finally {
       setPosting(false);
+    }
+  };
+
+  const handleGenerateFromText = async (
+    moment: Moment,
+    selectedText: string,
+    sourceIsComment: boolean,
+  ) => {
+    setActionLoading(moment.id);
+    setError('');
+    try {
+      const generated = await imageGenerationService.generateFromText(selectedText);
+      const updated = await momentService.addGeneratedImage(
+        moment.id,
+        generated.url,
+        selectedText,
+        sourceIsComment || moment.userId !== user?.id,
+      );
+      setMoments(current => current.map(item => item.id === updated.id ? updated : item));
+    } catch (err: any) {
+      setError(err?.response?.data?.message || err.message || t('selection.generateFailed'));
+      throw err;
+    } finally {
+      setActionLoading(null);
     }
   };
 
@@ -533,9 +559,13 @@ export const MomentsPage: React.FC = () => {
                   }}
                 >
                   {moment.content?.text ? (
-                    <Typography sx={{ mb: 1, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                      {moment.content.text}
-                    </Typography>
+                    <SelectedTextMenu
+                      onGenerate={(selectedText) => handleGenerateFromText(moment, selectedText, false)}
+                    >
+                      <Typography sx={{ mb: 1, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                        {moment.content.text}
+                      </Typography>
+                    </SelectedTextMenu>
                   ) : null}
                   <MomentMediaGrid
                     momentId={moment.id}
@@ -568,20 +598,45 @@ export const MomentsPage: React.FC = () => {
                 {moment.comments.length > 0 && (
                   <BoxAny sx={{ mt: 0.5, bgcolor: 'rgba(0,0,0,0.02)', borderRadius: 0, px: 1, py: 0.5 }}>
                     {moment.comments.map((c) => (
-                      <Typography key={c.id} variant="body2" sx={{ py: 0.25 }}>
-                        <Typography
-                          component="span"
-                          variant="body2"
-                          fontWeight={600}
-                          color="primary.main"
-                          sx={{ cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
-                          onClick={(e: React.MouseEvent<HTMLElement>) => setProfilePopover({ anchorEl: e.currentTarget, userId: c.userId })}
+                      <BoxAny key={c.id} sx={{ py: 0.25 }}>
+                        <SelectedTextMenu
+                          onGenerate={(selectedText) => handleGenerateFromText(moment, selectedText, true)}
                         >
-                          {c.userName}
-                        </Typography>
-                        {': '}
-                        {c.text}
-                      </Typography>
+                          <Typography variant="body2">
+                            <Typography
+                              component="span"
+                              variant="body2"
+                              fontWeight={600}
+                              color="primary.main"
+                              sx={{ cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
+                              onClick={(e: React.MouseEvent<HTMLElement>) => setProfilePopover({ anchorEl: e.currentTarget, userId: c.userId })}
+                            >
+                              {c.userName}
+                            </Typography>
+                            {c.text ? `: ${c.text}` : ''}
+                          </Typography>
+                        </SelectedTextMenu>
+                        <MomentMediaGrid
+                          momentId={c.id}
+                          mediaUrls={c.mediaUrls || []}
+                          imageAlt={t('moments.image')}
+                          isHoverCapable={isHoverCapable}
+                          onOpenImage={(idx) => {
+                            const urls = c.mediaUrls || [];
+                            const canEdit = c.userId === user?.id || friendIdSet.has(c.userId);
+                            setLightbox({
+                              images: urls,
+                              index: idx,
+                              groups: urls.map((url, imageIndex) => ({
+                                sourceUrl: url,
+                                messageId: `moment-comment:${moment.id}:${c.id}:${imageIndex}`,
+                                canEdit,
+                              })),
+                              groupIndex: idx,
+                            });
+                          }}
+                        />
+                      </BoxAny>
                     ))}
                   </BoxAny>
                 )}

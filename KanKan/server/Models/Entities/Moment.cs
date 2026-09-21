@@ -36,5 +36,6 @@ public class MomentComment
     public string UserName { get; set; } = string.Empty;
     public string UserAvatar { get; set; } = string.Empty;
     public string Text { get; set; } = string.Empty;
+    public List<string>? MediaUrls { get; set; }
     public DateTime Timestamp { get; set; }
 }

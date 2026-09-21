@@ -589,7 +589,9 @@ public class ImageGenerationService : IImageGenerationService
                 {
                     _logger.LogInformation("Generating {Label} avatar for job {JobId}", label, jobId);
 
-                    var fullPrompt = $"portrait the input people or animal with a mild {prompt} expression, high quality. Preserve the original proportions.";
+                    var fullPrompt = request.GenerationType == "emotions"
+                        ? $"Edit the input image so the main subject has a mild {prompt} expression."
+                        : $"Edit the input image according to this instruction: {prompt}. Keep the original subject recognizable.";
                     var extraPrompt = request.ExtraPrompt?.Trim();
                     if (!string.IsNullOrWhiteSpace(extraPrompt))
                     {

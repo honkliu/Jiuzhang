@@ -8,6 +8,7 @@ import { UserAvatar } from '@/components/Shared/UserAvatar';
 import { ImageLightbox } from '@/components/Shared/ImageLightbox';
 import { ImageHoverPreview } from '@/components/Shared/ImageHoverPreview';
 import { VoiceMessageBubble } from '@/components/Chat/VoiceMessageBubble';
+import { SelectedTextMenu } from '@/components/Shared/SelectedTextMenu';
 
 // Work around TS2590 ("union type too complex") from MUI Box typings in some TS versions.
 const BoxAny = Box as any;
@@ -193,6 +194,7 @@ interface ChatRoom2DProps {
   rightSegments?: Chat2DSegment[];
   imageGroups?: Array<{ sourceUrl: string; messageId: string; canEdit: boolean }>;
   imageGroupIndexByUrl?: Record<string, number>;
+  onGenerateFromText?: (selectedText: string) => Promise<void>;
 }
 
 export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
@@ -202,6 +204,7 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
   rightSegments,
   imageGroups,
   imageGroupIndexByUrl,
+  onGenerateFromText,
 }) => {
   const [lightbox, setLightbox] = useState<{ images: string[]; index: number; groupIndex?: number } | null>(null);
   const layoutRef = useRef<HTMLDivElement | null>(null);
@@ -388,7 +391,7 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
           >
           {orderedSegments.map((segment, index) => {
             if (segment.type === 'text') {
-              return (
+              const content = (
                 <BoxAny
                   key={`text-${index}`}
                   sx={{
@@ -419,6 +422,11 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
                   {renderMarkdownWithRedTags(segment.text || '')}
                 </BoxAny>
               );
+              return onGenerateFromText ? (
+                <SelectedTextMenu key={`text-${index}`} onGenerate={onGenerateFromText}>
+                  {content}
+                </SelectedTextMenu>
+              ) : content;
             }
 
             if (segment.type === 'image' && segment.url) {

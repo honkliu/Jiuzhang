@@ -63,6 +63,43 @@ public class ComfyUIService : IComfyUIService
         }
     }
 
+    public async Task<string> GenerateTextToImageAsync(string prompt, CancellationToken cancellationToken = default)
+    {
+        using var gate = await AcquireGenerationSlotAsync(cancellationToken);
+        try
+        {
+            var workflowPath = _configuration["ComfyUI:TextToImageWorkflowPath"];
+            var workflow = await LoadWorkflowAsync(workflowPath, cancellationToken);
+            var promptGraph = workflow["prompt"]!.AsObject();
+            ApplyPromptOverrides(promptGraph, Array.Empty<string>(), Array.Empty<string>(), prompt);
+
+            var response = await _httpClient.PostAsync(
+                "/prompt",
+                new StringContent(workflow.ToJsonString(), Encoding.UTF8, "application/json"),
+                cancellationToken);
+            var result = await response.Content.ReadAsStringAsync(cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError("ComfyUI text-to-image /prompt failed with status {StatusCode}: {Body}", response.StatusCode, result);
+                throw new HttpRequestException($"ComfyUI /prompt failed: {response.StatusCode}");
+            }
+
+            using var jsonResult = JsonDocument.Parse(result);
+            var promptId = jsonResult.RootElement.GetProperty("prompt_id").GetString();
+            if (string.IsNullOrWhiteSpace(promptId))
+            {
+                throw new InvalidOperationException("ComfyUI did not return a prompt_id.");
+            }
+
+            return await FetchResultAsync(promptId, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to generate text-to-image via ComfyUI");
+            throw;
+        }
+    }
+
     public async Task<IDisposable> AcquireGenerationSlotAsync(CancellationToken cancellationToken = default)
     {
         await _generationGate!.WaitAsync(cancellationToken);
@@ -164,6 +201,28 @@ public class ComfyUIService : IComfyUIService
     private async Task<object> BuildWorkflowAsync(string imageBase64, string prompt, string? secondaryImageBase64, CancellationToken cancellationToken)
     {
         var workflowPath = ResolveWorkflowPath(!string.IsNullOrWhiteSpace(secondaryImageBase64));
+        var workflow = await LoadWorkflowAsync(workflowPath, cancellationToken);
+        var promptGraph = workflow["prompt"]!.AsObject();
+
+        var sourceImages = new List<string> { imageBase64 };
+        if (!string.IsNullOrWhiteSpace(secondaryImageBase64))
+        {
+            sourceImages.Add(secondaryImageBase64);
+        }
+
+        var needsUpload = NeedsImageUpload(promptGraph);
+        var uploadedFileNames = new List<string>();
+        if (needsUpload)
+        {
+            uploadedFileNames = await UploadImagesAsync(sourceImages, cancellationToken);
+        }
+
+        ApplyPromptOverrides(promptGraph, sourceImages, uploadedFileNames, prompt);
+        return workflow;
+    }
+
+    private static async Task<JsonObject> LoadWorkflowAsync(string? workflowPath, CancellationToken cancellationToken)
+    {
         if (string.IsNullOrWhiteSpace(workflowPath) || !File.Exists(workflowPath))
         {
             throw new InvalidOperationException("ComfyUI workflow file is missing. Configure the ComfyUI workflow path with an API workflow JSON.");
@@ -191,20 +250,6 @@ public class ComfyUIService : IComfyUIService
             };
         }
 
-        var sourceImages = new List<string> { imageBase64 };
-        if (!string.IsNullOrWhiteSpace(secondaryImageBase64))
-        {
-            sourceImages.Add(secondaryImageBase64);
-        }
-
-        var needsUpload = NeedsImageUpload(promptGraph);
-        var uploadedFileNames = new List<string>();
-        if (needsUpload)
-        {
-            uploadedFileNames = await UploadImagesAsync(sourceImages, cancellationToken);
-        }
-
-        ApplyPromptOverrides(promptGraph, sourceImages, uploadedFileNames, prompt);
         return workflow;
     }
 

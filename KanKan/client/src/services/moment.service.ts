@@ -15,7 +15,7 @@ export interface Moment {
   visibility: 'public' | 'friends' | 'private';
   createdAt: string;
   likes: Array<{ userId: string; userName: string; timestamp: string }>;
-  comments: Array<{ id: string; userId: string; userName: string; userAvatar: string; text: string; timestamp: string }>;
+  comments: Array<{ id: string; userId: string; userName: string; userAvatar: string; text: string; mediaUrls?: string[]; timestamp: string }>;
 }
 
 export interface CreateMomentRequest {
@@ -51,6 +51,20 @@ class MomentService {
 
   async addComment(momentId: string, text: string): Promise<Moment> {
     const response = await apiClient.post<Moment>(`/pa/${momentId}/comments`, { text });
+    return response.data;
+  }
+
+  async addGeneratedImage(
+    momentId: string,
+    mediaUrl: string,
+    prompt: string,
+    attachAsComment: boolean,
+  ): Promise<Moment> {
+    const response = await apiClient.post<Moment>(`/pa/${momentId}/generated-images`, {
+      mediaUrl,
+      prompt,
+      attachAsComment,
+    });
     return response.data;
   }
 }

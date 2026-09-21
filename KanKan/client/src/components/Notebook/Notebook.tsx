@@ -17,10 +17,12 @@ import {
 } from '@/services/notebook.service';
 import type { PageElementDto } from '@/services/family.service';
 import apiClient from '@/utils/api';
-import { FamilyPageCanvas, PAGE_STYLES, normalizeBlocks, type PendingImageUpload } from '@/components/Family/FamilyPageCanvas';
+import { FamilyPageCanvas, PAGE_STYLES, PAGE_WIDTH, PAGE_HEIGHT, normalizeBlocks, type PendingImageUpload } from '@/components/Family/FamilyPageCanvas';
 import { RichTextToolbar, SharedRichTextToolbar, editorRegistry } from '@/components/Family/RichTextBlock';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { ConfirmDialog } from '@/components/Shared/ConfirmDialog';
+import { SelectedTextMenu } from '@/components/Shared/SelectedTextMenu';
+import { imageGenerationService } from '@/services/imageGeneration.service';
 
 const BoxAny = Box as any;
 
@@ -152,6 +154,39 @@ export const Notebook: React.FC<NotebookProps> = ({ notebookId, canEdit }) => {
   const sortedPages = useMemo(() => [...pageSummaries].sort((a, b) => a.pageNumber - b.pageNumber), [pageSummaries]);
 
   const hasChanges = dirty;
+
+  const generateImageFromSelectedText = useCallback(async (selectedText: string) => {
+    if (!canEdit || !activeTextBlockId) return;
+
+    const generated = await imageGenerationService.generateFromText(selectedText);
+    setDraftBlocks(current => {
+      const source = current.find(block => block.id === activeTextBlockId);
+      if (!source) return current;
+
+      const width = 300;
+      const height = 300;
+      const preferredX = source.x + source.width + 16;
+      const x = preferredX + width <= PAGE_WIDTH
+        ? preferredX
+        : Math.max(0, source.x - width - 16);
+      const y = Math.min(source.y, PAGE_HEIGHT - height);
+      const zIndex = current.reduce((highest, block) => Math.max(highest, block.zIndex), 0) + 1;
+
+      return [...current, {
+        id: `generated_${crypto.randomUUID()}`,
+        type: 'image',
+        x,
+        y,
+        width,
+        height,
+        fontSize: 16,
+        textAlign: 'left',
+        imageUrl: generated.url,
+        zIndex,
+      }];
+    });
+    setDirty(true);
+  }, [activeTextBlockId, canEdit]);
 
   // Confirm before switching away from unsaved changes
   const hasChangesRef = useRef(false);
@@ -529,6 +564,10 @@ export const Notebook: React.FC<NotebookProps> = ({ notebookId, canEdit }) => {
       {/* ── Canvas ── */}
       <BoxAny ref={canvasWrapperRef} sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
       {activePage ? (
+        <SelectedTextMenu
+          onGenerate={generateImageFromSelectedText}
+          disabled={!canEdit || !activeTextBlockId}
+        >
         <FamilyPageCanvas
           pageId={activePage.id}
           pageNumber={activePage.pageNumber}
@@ -558,6 +597,7 @@ export const Notebook: React.FC<NotebookProps> = ({ notebookId, canEdit }) => {
           onPendingImagesChange={setPendingImages}
           onActiveTextBlockChange={setActiveTextBlockId}
         />
+        </SelectedTextMenu>
       ) : sections.length === 0 ? (
         <BoxAny sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <Typography color="text.secondary">

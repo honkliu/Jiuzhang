@@ -20,6 +20,7 @@ export interface ChatRoom3DProps {
   typingUsers: { userId: string; userName: string }[];
   hasOlderMessages: boolean;
   onLoadOlderMessages: () => Promise<boolean>;
+  onGenerateFromText?: (selectedText: string) => Promise<void>;
 }
 
 type Position = [number, number, number];
@@ -842,8 +843,9 @@ const MessageHistory: React.FC<{
   mentionableNames: string[];
   hasOlderMessages: boolean;
   onLoadOlderMessages: () => Promise<boolean>;
+  onGenerateFromText?: (selectedText: string) => Promise<void>;
   onClose: () => void;
-}> = ({ messages, meId, mentionableNames, hasOlderMessages, onLoadOlderMessages, onClose }) => {
+}> = ({ messages, meId, mentionableNames, hasOlderMessages, onLoadOlderMessages, onGenerateFromText, onClose }) => {
   const { language, t } = useLanguage();
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const restoreScrollRef = useRef<{ height: number; top: number } | null>(null);
@@ -946,6 +948,7 @@ const MessageHistory: React.FC<{
               layout="history"
               timeSeparator={timeSeparator}
               mentionableNames={mentionableNames}
+              onGenerateFromText={onGenerateFromText}
             />
           );
         })}
@@ -961,6 +964,7 @@ export const ChatRoom3D: React.FC<ChatRoom3DProps> = ({
   typingUsers,
   hasOlderMessages,
   onLoadOlderMessages,
+  onGenerateFromText,
 }) => {
   const { t } = useLanguage();
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -1064,6 +1068,7 @@ export const ChatRoom3D: React.FC<ChatRoom3DProps> = ({
           mentionableNames={mentionableNames}
           hasOlderMessages={hasOlderMessages}
           onLoadOlderMessages={onLoadOlderMessages}
+          onGenerateFromText={onGenerateFromText}
           onClose={() => setHistoryOpen(false)}
         />
       )}

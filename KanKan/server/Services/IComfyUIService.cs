@@ -10,6 +10,8 @@ public interface IComfyUIService
 
     Task<string> FetchResultAsync(string promptId, CancellationToken cancellationToken = default);
 
+    Task<string> GenerateTextToImageAsync(string prompt, CancellationToken cancellationToken = default);
+
     /// <summary>
     /// Sends a workflow to ComfyUI and returns the generated image
     /// </summary>

@@ -188,6 +188,7 @@ interface ChatMessagesProps {
   noMessagesText: string;
   hasOlderMessages: boolean;
   onLoadOlderMessages: () => Promise<boolean>;
+  onGenerateFromText: (selectedText: string) => Promise<void>;
 }
 
 const ChatMessages: React.FC<ChatMessagesProps> = React.memo(({
@@ -212,6 +213,7 @@ const ChatMessages: React.FC<ChatMessagesProps> = React.memo(({
   noMessagesText,
   hasOlderMessages,
   onLoadOlderMessages,
+  onGenerateFromText,
 }) => {
   const { language } = useLanguage();
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
@@ -324,6 +326,7 @@ const ChatMessages: React.FC<ChatMessagesProps> = React.memo(({
           typingUsers={chatTypingUsers}
           hasOlderMessages={hasOlderMessages}
           onLoadOlderMessages={onLoadOlderMessages}
+          onGenerateFromText={onGenerateFromText}
         />
         {loading && mergedMessages.length === 0 ? (
           <BoxAny
@@ -352,6 +355,7 @@ const ChatMessages: React.FC<ChatMessagesProps> = React.memo(({
         rightSegments={right2D.segments}
         imageGroups={imageGroups}
         imageGroupIndexByUrl={imageGroupIndexByUrl}
+        onGenerateFromText={onGenerateFromText}
       />
     );
   }
@@ -436,6 +440,7 @@ const ChatMessages: React.FC<ChatMessagesProps> = React.memo(({
               imageGroups={imageGroups}
               imageGroupIndex={imageGroupIndexByMessageId[message.id]}
               mentionableNames={participantNames}
+              onGenerateFromText={onGenerateFromText}
             />
           );
         })}
@@ -1896,6 +1901,24 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
     }
   };
 
+  const generateImageFromSelectedText = useCallback(async (selectedText: string) => {
+    if (!activeChat) return;
+
+    try {
+      const generated = await imageGenerationService.generateFromText(selectedText);
+      const message = await chatService.sendMessage(activeChat.id, {
+        messageType: 'image',
+        mediaUrl: generated.url,
+        thumbnailUrl: generated.url,
+        fileName: generated.fileName,
+      });
+      dispatch(addMessage(message));
+    } catch (error) {
+      console.error('Failed to generate image from selected chat text:', error);
+      addLocalInfoMessage(t('selection.generateFailed'));
+    }
+  }, [activeChat, addLocalInfoMessage, dispatch, t]);
+
   const guessMessageType = (file: File): 'image' | 'video' | 'voice' | 'file' => {
     const type = file.type || '';
     if (type.startsWith('image/')) return 'image';
@@ -2699,6 +2722,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
         noMessagesText={t('chat.noMessages')}
         hasOlderMessages={hasOlderMessages}
         onLoadOlderMessages={loadOlderMessages}
+        onGenerateFromText={generateImageFromSelectedText}
       />
 
       {/* Input */}

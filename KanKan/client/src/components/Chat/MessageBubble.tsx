@@ -12,6 +12,7 @@ import { ImageHoverPreview } from '@/components/Shared/ImageHoverPreview';
 import { ImageLightbox } from '@/components/Shared/ImageLightbox';
 import { useSettings } from '@/settings/SettingsContext';
 import { VoiceMessageBubble } from '@/components/Chat/VoiceMessageBubble';
+import { SelectedTextMenu } from '@/components/Shared/SelectedTextMenu';
 
 // Work around TS2590 ("union type too complex") from MUI Box typings in some TS versions.
 const BoxAny = Box as any;
@@ -485,6 +486,7 @@ interface MessageBubbleProps {
   imageGroupIndex?: number;
   /** Display names of chat participants — used to highlight `@Name` mentions in text. */
   mentionableNames?: string[];
+  onGenerateFromText?: (selectedText: string) => Promise<void>;
 }
 
 export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
@@ -498,6 +500,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
   imageGroups,
   imageGroupIndex,
   mentionableNames,
+  onGenerateFromText,
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -742,7 +745,13 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
             {t('chat.message.deleted')}
           </Typography>
         ) : message.messageType === 'text' ? (
-          <ChatMessageContent text={renderText} mentionableNames={mentionableNames} dense={isHistoryLayout} />
+          onGenerateFromText ? (
+            <SelectedTextMenu onGenerate={onGenerateFromText}>
+              <ChatMessageContent text={renderText} mentionableNames={mentionableNames} dense={isHistoryLayout} />
+            </SelectedTextMenu>
+          ) : (
+            <ChatMessageContent text={renderText} mentionableNames={mentionableNames} dense={isHistoryLayout} />
+          )
         ) : message.messageType === 'image' ? (
           <ImageHoverPreview
             src={displayedImageUrl}

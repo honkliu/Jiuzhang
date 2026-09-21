@@ -633,12 +633,13 @@ public class ChatHub : Hub
         if (message.SenderId == ChatDomain.AgentUserId)
             return false;
 
+        if (message.MessageType != "text" || string.IsNullOrWhiteSpace(message.Content.Text))
+            return false;
+
         if (IsDirectChatWithAgent(chat))
             return true;
 
-        return message.MessageType == "text" &&
-            !string.IsNullOrWhiteSpace(message.Content.Text) &&
-            message.Content.Text.Contains("@@", StringComparison.OrdinalIgnoreCase);
+        return message.Content.Text.Contains("@@", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsDirectChatWithAgent(Models.Entities.Chat chat)

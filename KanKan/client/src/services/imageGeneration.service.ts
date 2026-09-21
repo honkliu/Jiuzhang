@@ -37,6 +37,11 @@ export interface ImageResult {
 }
 
 class UnifiedImageGenerationService {
+  async generateFromText(prompt: string): Promise<{ url: string; fileName: string; prompt: string }> {
+    const response = await apiClient.post('/imagegeneration/text-to-image', { prompt });
+    return response.data;
+  }
+
   /**
    * Unified generation endpoint for all image types
    */

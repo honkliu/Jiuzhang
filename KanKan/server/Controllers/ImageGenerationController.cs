@@ -11,14 +11,61 @@ namespace KanKan.API.Controllers;
 public class ImageGenerationController : ControllerBase
 {
     private readonly IImageGenerationService _imageGenerationService;
+    private readonly IComfyUIService _comfyUIService;
+    private readonly IWebHostEnvironment _environment;
     private readonly ILogger<ImageGenerationController> _logger;
 
     public ImageGenerationController(
         IImageGenerationService imageGenerationService,
+        IComfyUIService comfyUIService,
+        IWebHostEnvironment environment,
         ILogger<ImageGenerationController> logger)
     {
         _imageGenerationService = imageGenerationService;
+        _comfyUIService = comfyUIService;
+        _environment = environment;
         _logger = logger;
+    }
+
+    [HttpPost("text-to-image")]
+    public async Task<IActionResult> GenerateTextToImage(
+        [FromBody] TextToImageRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.Prompt))
+            return BadRequest(new { message = "Prompt is required" });
+
+        var prompt = request.Prompt.Trim();
+        if (prompt.Length > 4000)
+            return BadRequest(new { message = "Prompt must be 4000 characters or fewer" });
+
+        try
+        {
+            var imageBase64 = await _comfyUIService.GenerateTextToImageAsync(prompt, cancellationToken);
+            var imageBytes = Convert.FromBase64String(imageBase64);
+            var uploadsPath = Path.Combine(
+                _environment.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"),
+                "uploads");
+            Directory.CreateDirectory(uploadsPath);
+
+            var fileName = $"{Guid.NewGuid():N}_text-to-image.png";
+            await System.IO.File.WriteAllBytesAsync(
+                Path.Combine(uploadsPath, fileName),
+                imageBytes,
+                cancellationToken);
+
+            return Ok(new
+            {
+                url = $"/uploads/{fileName}",
+                fileName,
+                prompt
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to generate image from selected text");
+            return StatusCode(500, new { message = "Failed to generate image from text" });
+        }
     }
 
     /// <summary>
@@ -174,3 +221,7 @@ public class UnifiedGenerationRequest
     public string? ExtraPrompt { get; set; }
 }
 
+public class TextToImageRequest
+{
+    public string Prompt { get; set; } = string.Empty;
+}
