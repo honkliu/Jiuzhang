@@ -1161,6 +1161,11 @@ public class ImageGenerationService : IImageGenerationService
             return ResolveWebRootSubPath(webRootPath, trimmedPath, "/standing/");
         }
 
+        if (trimmedPath.StartsWith("/zodiac/", StringComparison.OrdinalIgnoreCase))
+        {
+            return ResolveWebRootSubPath(webRootPath, trimmedPath, "/zodiac/");
+        }
+
         if (trimmedPath.StartsWith("/photos/", StringComparison.OrdinalIgnoreCase))
         {
             var fileName = GetFileNameFromUrl(trimmedPath);

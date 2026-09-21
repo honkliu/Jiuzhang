@@ -80,8 +80,8 @@ type MomentMediaGridProps = {
   momentId: string;
   mediaUrls: string[];
   imageAlt: string;
-  isHoverCapable: boolean;
-  onOpenImage: (index: number) => void;
+  canEdit?: boolean;
+  onEditImage?: (index: number) => void;
   onRemoveImage?: (index: number) => void;
 };
 
@@ -89,10 +89,11 @@ const MomentMediaGrid: React.FC<MomentMediaGridProps> = ({
   momentId,
   mediaUrls,
   imageAlt,
-  isHoverCapable,
-  onOpenImage,
+  canEdit = false,
+  onEditImage,
   onRemoveImage,
 }) => {
+  const { t } = useLanguage();
   if (!mediaUrls.length) return null;
 
   return (
@@ -110,7 +111,11 @@ const MomentMediaGrid: React.FC<MomentMediaGridProps> = ({
             src={url}
             alt={imageAlt}
             openOnHover
-            openOnLongPress
+            openOnClick
+            openOnTap
+            openOnLongPress={false}
+            onPreviewAction={canEdit && onEditImage ? () => onEditImage(idx) : undefined}
+            previewActionLabel={t('image.editAction')}
           >
             {(previewProps) => (
               <BoxAny
@@ -122,7 +127,6 @@ const MomentMediaGrid: React.FC<MomentMediaGridProps> = ({
                 onContextMenu={(event: React.MouseEvent<HTMLElement>) => {
                   event.preventDefault();
                 }}
-                onClick={() => onOpenImage(idx)}
                 sx={momentImageSx}
               />
             )}
@@ -476,8 +480,6 @@ export const MomentsPage: React.FC = () => {
               momentId="draft"
               mediaUrls={draftMediaUrls}
               imageAlt={t('moments.imagePreview')}
-              isHoverCapable={isHoverCapable}
-              onOpenImage={(index) => setLightbox({ images: draftMediaUrls, index })}
               onRemoveImage={handleRemovePendingImage}
             />
 
@@ -571,8 +573,8 @@ export const MomentsPage: React.FC = () => {
                     momentId={moment.id}
                     mediaUrls={moment.content?.mediaUrls || []}
                     imageAlt={t('moments.image')}
-                    isHoverCapable={isHoverCapable}
-                    onOpenImage={(idx) => {
+                    canEdit={moment.userId === user?.id || friendIdSet.has(moment.userId)}
+                    onEditImage={(idx) => {
                       const urls = moment.content?.mediaUrls || [];
                       setLightbox({
                         images: urls,
@@ -620,8 +622,8 @@ export const MomentsPage: React.FC = () => {
                           momentId={c.id}
                           mediaUrls={c.mediaUrls || []}
                           imageAlt={t('moments.image')}
-                          isHoverCapable={isHoverCapable}
-                          onOpenImage={(idx) => {
+                          canEdit={c.userId === user?.id || friendIdSet.has(c.userId)}
+                          onEditImage={(idx) => {
                             const urls = c.mediaUrls || [];
                             const canEdit = c.userId === user?.id || friendIdSet.has(c.userId);
                             setLightbox({

@@ -7,7 +7,13 @@ import {
   Stack,
   TextField,
 } from '@mui/material';
+import { AutoAwesome as MagicIcon } from '@mui/icons-material';
 import { useLanguage } from '@/i18n/LanguageContext';
+import {
+  generationActionButtonSx,
+  promptEditorSurfaceSx,
+  promptEditorTextFieldSx,
+} from './promptEditorStyles';
 
 const BoxAny = Box as any;
 
@@ -82,13 +88,20 @@ export const SelectedTextMenu: React.FC<SelectedTextMenuProps> = ({
         anchorPosition={menu ? { top: menu.mouseY, left: menu.mouseX } : undefined}
         anchorOrigin={{ vertical: 'top', horizontal: 'left' }}
         transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+        PaperProps={{
+          sx: {
+            ...promptEditorSurfaceSx,
+            borderRadius: '8px',
+          },
+        }}
       >
-        <Stack spacing={1.5} sx={{ width: { xs: 280, sm: 360 }, p: 2 }}>
+        <Stack spacing={1} sx={{ width: { xs: 280, sm: 360 }, p: 1 }}>
           <TextField
             autoFocus
+            size="small"
             multiline
             minRows={3}
-            maxRows={8}
+            maxRows={6}
             fullWidth
             label={t('selection.prompt')}
             value={menu?.text ?? ''}
@@ -97,19 +110,27 @@ export const SelectedTextMenu: React.FC<SelectedTextMenuProps> = ({
               const text = event.target.value;
               setMenu((current) => current ? { ...current, text } : current);
             }}
+            sx={promptEditorTextFieldSx}
           />
           <Stack direction="row" spacing={1} justifyContent="flex-end">
             <Button
+              size="small"
+              variant="outlined"
               onClick={() => void handleCopy()}
               disabled={generating || !menu?.text.trim()}
+              sx={{ height: 32 }}
             >
               {t('selection.copy')}
             </Button>
             <Button
-              variant="contained"
+              size="small"
+              variant="outlined"
               onClick={() => void handleGenerate()}
               disabled={generating || !menu?.text.trim()}
-              startIcon={generating ? <CircularProgress size={16} color="inherit" /> : undefined}
+              startIcon={generating
+                ? <CircularProgress size={16} color="inherit" />
+                : <MagicIcon />}
+              sx={generationActionButtonSx}
             >
               {t('selection.generateImage')}
             </Button>

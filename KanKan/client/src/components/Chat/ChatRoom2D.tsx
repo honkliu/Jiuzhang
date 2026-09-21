@@ -9,6 +9,7 @@ import { ImageLightbox } from '@/components/Shared/ImageLightbox';
 import { ImageHoverPreview } from '@/components/Shared/ImageHoverPreview';
 import { VoiceMessageBubble } from '@/components/Chat/VoiceMessageBubble';
 import { SelectedTextMenu } from '@/components/Shared/SelectedTextMenu';
+import { useLanguage } from '@/i18n/LanguageContext';
 
 // Work around TS2590 ("union type too complex") from MUI Box typings in some TS versions.
 const BoxAny = Box as any;
@@ -206,6 +207,7 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
   imageGroupIndexByUrl,
   onGenerateFromText,
 }) => {
+  const { t } = useLanguage();
   const [lightbox, setLightbox] = useState<{ images: string[]; index: number; groupIndex?: number } | null>(null);
   const layoutRef = useRef<HTMLDivElement | null>(null);
   const leftAvatarRef = useRef<HTMLDivElement | null>(null);
@@ -431,6 +433,8 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
 
             if (segment.type === 'image' && segment.url) {
               const imageIndex = orderedImages.findIndex((url) => url === segment.url);
+              const groupIndex = imageGroupIndexByUrl?.[segment.url];
+              const canEdit = typeof groupIndex === 'number' && imageGroups?.[groupIndex]?.canEdit === true;
 
               return (
                 <ImageHoverPreview
@@ -438,7 +442,17 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
                   src={segment.url}
                   alt="Chat media"
                   openOnHover
-                  openOnLongPress
+                  openOnClick
+                  openOnTap
+                  openOnLongPress={false}
+                  onPreviewAction={canEdit ? () => {
+                    setLightbox({
+                      images: orderedImages,
+                      index: imageIndex >= 0 ? imageIndex : 0,
+                      groupIndex,
+                    });
+                  } : undefined}
+                  previewActionLabel={t('image.editAction')}
                 >
                   {(previewProps) => (
                     <BoxAny
@@ -448,13 +462,6 @@ export const ChatRoom2D: React.FC<ChatRoom2DProps> = ({
                       alt="Chat media"
                       onContextMenu={(event: React.MouseEvent<HTMLElement>) => {
                         event.preventDefault();
-                      }}
-                      onClick={() => {
-                        setLightbox({
-                          images: orderedImages,
-                          index: imageIndex >= 0 ? imageIndex : 0,
-                          groupIndex: imageGroupIndexByUrl?.[segment.url || ''],
-                        });
                       }}
                       sx={{
                         maxWidth: imgStripW,

@@ -14,6 +14,7 @@ import { AutoAwesome as MagicIcon, LibraryBooks as LibraryBooksIcon, Tune as Tun
 import { avatarService, type EmotionFullResult, type EmotionThumbnailResult } from '@/services/avatar.service';
 import { imageGenerationService } from '@/services/imageGeneration.service';
 import { ImageHoverPreview } from '@/components/Shared/ImageHoverPreview';
+import { generationActionButtonSx } from '@/components/Shared/promptEditorStyles';
 import { AvatarQuickPicker } from '@/components/Avatar/AvatarQuickPicker';
 import { PromptComposer, type SelectedPrompt } from '@/components/Avatar/PromptComposer';
 import { useLanguage } from '@/i18n/LanguageContext';
@@ -340,7 +341,7 @@ export const EmotionAvatarGallery: React.FC<EmotionAvatarGalleryProps> = ({ user
               void handlePromptSubmit();
             }}
             disabled={generating !== null || generatingAll || !avatarId}
-            sx={{ height: 32 }}
+            sx={generationActionButtonSx}
           >
             {generatingAll ? t('avatar.generatingAll') : t('avatar.generateAll')}
           </Button>

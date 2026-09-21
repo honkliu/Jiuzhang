@@ -1,6 +1,7 @@
 import type { Chat, Participant } from '@/services/chat.service';
 
 export const WA_USER_ID = 'user_ai_wa';
+export const WA_AVATAR_URL = '/zodiac/assistant.png';
 
 export const isWaUserId = (userId?: string | null): boolean => {
   return !!userId && userId === WA_USER_ID;

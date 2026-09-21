@@ -1,5 +1,6 @@
 import React from 'react';
-import { Box, Popover, useMediaQuery, useTheme } from '@mui/material';
+import { Box, Button, Popover, useMediaQuery, useTheme } from '@mui/material';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 
 export interface ImageHoverPreviewProps {
   src?: string | null;
@@ -18,6 +19,8 @@ export interface ImageHoverPreviewProps {
   closeOnTriggerClickWhenOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
   onPreviewClick?: () => void;
+  onPreviewAction?: () => void;
+  previewActionLabel?: string;
   children: (props: {
     onMouseEnter: (event: React.MouseEvent<HTMLElement>) => void;
     onMouseLeave: () => void;
@@ -69,6 +72,8 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
   closeOnTriggerClickWhenOpen = false,
   onOpenChange,
   onPreviewClick,
+  onPreviewAction,
+  previewActionLabel,
   children,
 }) => {
   const theme = useTheme();
@@ -326,14 +331,14 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
     if (!open) return;
 
     const handleDocumentPointerDown = (event: MouseEvent | TouchEvent) => {
-      if (useTouchPreviewLayout) {
-        closePreview(true);
-        return;
-      }
       const target = event.target as Node | null;
       if (!target) return;
       if (anchorEl && anchorEl.contains(target)) return;
       if (popoverPaperRef.current && popoverPaperRef.current.contains(target)) return;
+      if (useTouchPreviewLayout) {
+        closePreview(true);
+        return;
+      }
       closePreview(true);
     };
 
@@ -454,26 +459,52 @@ export const ImageHoverPreview: React.FC<ImageHoverPreviewProps> = ({
             maxHeight,
           }}
         >
-          <Box
-            component="img"
-            src={src || undefined}
-            alt={alt || 'Image preview'}
-            onContextMenu={(event: React.MouseEvent<HTMLImageElement>) => {
-              event.preventDefault();
-            }}
-            sx={{
-              display: 'block',
-              maxWidth: imageMaxWidth,
-              maxHeight: imageMaxHeight,
-              width: 'auto',
-              height: 'auto',
-              objectFit: 'contain',
-              WebkitTouchCallout: 'none',
-              WebkitUserSelect: 'none',
-              userSelect: 'none',
-              WebkitUserDrag: 'none',
-            }}
-          />
+          <Box sx={{ position: 'relative', display: 'inline-flex', maxWidth: imageMaxWidth, maxHeight: imageMaxHeight }}>
+            <Box
+              component="img"
+              src={src || undefined}
+              alt={alt || 'Image preview'}
+              onContextMenu={(event: React.MouseEvent<HTMLImageElement>) => {
+                event.preventDefault();
+              }}
+              sx={{
+                display: 'block',
+                maxWidth: imageMaxWidth,
+                maxHeight: imageMaxHeight,
+                width: 'auto',
+                height: 'auto',
+                objectFit: 'contain',
+                WebkitTouchCallout: 'none',
+                WebkitUserSelect: 'none',
+                userSelect: 'none',
+                WebkitUserDrag: 'none',
+              }}
+            />
+            {onPreviewAction && (
+              <Button
+                size="small"
+                variant="contained"
+                startIcon={<EditOutlinedIcon />}
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  closePreview(true);
+                  onPreviewAction();
+                }}
+                onTouchStart={(event) => event.stopPropagation()}
+                onTouchEnd={(event) => event.stopPropagation()}
+                sx={{
+                  position: 'absolute',
+                  right: 8,
+                  bottom: 8,
+                  minHeight: 36,
+                  boxShadow: 4,
+                }}
+              >
+                {previewActionLabel || 'Edit'}
+              </Button>
+            )}
+          </Box>
         </Box>
       </Popover>
     </>

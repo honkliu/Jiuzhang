@@ -16,6 +16,7 @@ import { useLanguage } from '@/i18n/LanguageContext';
 import { AvatarQuickPicker } from '@/components/Avatar/AvatarQuickPicker';
 import { PromptComposer, type SelectedPrompt } from '@/components/Avatar/PromptComposer';
 import { ImageHoverPreview } from '@/components/Shared/ImageHoverPreview';
+import { promptEditorSurfaceSx, promptEditorTextFieldSx } from '@/components/Shared/promptEditorStyles';
 
 const BoxAny = Box as any;
 
@@ -1349,6 +1350,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
               onTouchMove={stopOverlayTouchPropagation}
               onTouchEnd={stopOverlayTouchPropagation}
               sx={{
+                ...promptEditorSurfaceSx,
                 position: 'absolute',
                 left: 'env(safe-area-inset-left)',
                 right: 'env(safe-area-inset-right)',
@@ -1357,8 +1359,6 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
                 mx: 'auto',
                 p: isMobile ? 0.75 : 1,
                 borderRadius: 0,
-                bgcolor: 'rgba(0,0,0,0.72)',
-                backdropFilter: 'blur(10px)',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: 0.75,
@@ -1382,19 +1382,10 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
                       maxRows={6}
                       disabled={isGenerating}
                       sx={{
-                        '& .MuiInputBase-input': { color: 'rgba(255,255,255,0.95)' },
-                        '& .MuiInputBase-input::placeholder': {
-                          color: 'rgba(255,255,255,0.55)',
-                          opacity: 1,
-                        },
+                        ...promptEditorTextFieldSx,
                         '& .MuiOutlinedInput-root': {
-                          backgroundColor: 'rgba(255,255,255,0.08)',
+                          ...promptEditorTextFieldSx['& .MuiOutlinedInput-root'],
                           minHeight: isMobile ? 40 : 42,
-                          borderRadius: '8px',
-                        },
-                        '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.25)' },
-                        '& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline': {
-                          borderColor: 'rgba(255,255,255,0.45)',
                         },
                       }}
                     />
@@ -1588,6 +1579,12 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
                         border: '1px solid rgba(255,255,255,0.18)',
                         opacity: !canToggleToEdits && thumbnailMode !== 'edits' ? 0.55 : 1,
                         '&:hover, &:active, &.Mui-focusVisible': { color: 'white', bgcolor: 'rgba(198, 40, 40, 1)' },
+                        '&.Mui-disabled': {
+                          color: 'rgba(255,255,255,0.7)',
+                          bgcolor: 'rgba(211,47,47,0.45)',
+                          borderColor: 'rgba(255,255,255,0.18)',
+                          opacity: 1,
+                        },
                       }}
                     >
                       <KeyboardArrowDownIcon
@@ -1610,6 +1607,12 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
                         border: '1px solid rgba(255,255,255,0.14)',
                         opacity: canScrollThumbnailsLeft ? 1 : 0.35,
                         '&:hover, &:active, &.Mui-focusVisible': { color: 'white', bgcolor: 'rgba(255,255,255,0.18)' },
+                        '&.Mui-disabled': {
+                          color: 'rgba(255,255,255,0.55)',
+                          bgcolor: 'rgba(255,255,255,0.08)',
+                          borderColor: 'rgba(255,255,255,0.16)',
+                          opacity: 1,
+                        },
                       }}
                     >
                       <ArrowBackIosNewIcon sx={{ fontSize: thumbnailStripControlIconSize }} />
@@ -1770,6 +1773,12 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
                       border: '1px solid rgba(255,255,255,0.14)',
                       opacity: canScrollThumbnailsRight ? 1 : 0.35,
                       '&:hover, &:active, &.Mui-focusVisible': { color: 'white', bgcolor: 'rgba(255,255,255,0.18)' },
+                      '&.Mui-disabled': {
+                        color: 'rgba(255,255,255,0.55)',
+                        bgcolor: 'rgba(255,255,255,0.08)',
+                        borderColor: 'rgba(255,255,255,0.16)',
+                        opacity: 1,
+                      },
                     }}
                   >
                     <ArrowForwardIosIcon sx={{ fontSize: thumbnailStripControlIconSize }} />
@@ -1924,6 +1933,12 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
                 border: '1px solid rgba(255,255,255,0.14)',
                 opacity: canScrollThumbnailsLeft ? 1 : 0.35,
                 '&:hover, &:active, &.Mui-focusVisible': { color: 'white', bgcolor: 'rgba(255,255,255,0.18)' },
+                '&.Mui-disabled': {
+                  color: 'rgba(255,255,255,0.55)',
+                  bgcolor: 'rgba(255,255,255,0.08)',
+                  borderColor: 'rgba(255,255,255,0.16)',
+                  opacity: 1,
+                },
               }}
             >
               <ArrowBackIosNewIcon sx={{ fontSize: thumbnailStripControlIconSize }} />
@@ -1991,6 +2006,12 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
                 border: '1px solid rgba(255,255,255,0.14)',
                 opacity: canScrollThumbnailsRight ? 1 : 0.35,
                 '&:hover, &:active, &.Mui-focusVisible': { color: 'white', bgcolor: 'rgba(255,255,255,0.18)' },
+                '&.Mui-disabled': {
+                  color: 'rgba(255,255,255,0.55)',
+                  bgcolor: 'rgba(255,255,255,0.08)',
+                  borderColor: 'rgba(255,255,255,0.16)',
+                  opacity: 1,
+                },
               }}
             >
               <ArrowForwardIosIcon sx={{ fontSize: thumbnailStripControlIconSize }} />

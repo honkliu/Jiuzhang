@@ -8,6 +8,8 @@ import * as THREE from 'three';
 
 import { useLanguage } from '@/i18n/LanguageContext';
 import type { Chat, Message, Participant } from '@/services/chat.service';
+import { ImageHoverPreview } from '@/components/Shared/ImageHoverPreview';
+import { ImageLightbox } from '@/components/Shared/ImageLightbox';
 import type { User } from '@/types';
 import { ChatMessageContent, MessageBubble } from './MessageBubble';
 
@@ -21,6 +23,8 @@ export interface ChatRoom3DProps {
   hasOlderMessages: boolean;
   onLoadOlderMessages: () => Promise<boolean>;
   onGenerateFromText?: (selectedText: string) => Promise<void>;
+  imageGroups?: Array<{ sourceUrl: string; messageId: string; canEdit: boolean }>;
+  imageGroupIndexByUrl?: Record<string, number>;
 }
 
 type Position = [number, number, number];
@@ -142,6 +146,14 @@ const getMessagePreview = (message?: Message) => {
   if (message.messageType === 'video') return '[Video]';
   if (message.messageType === 'file') return message.fileName ? `[File] ${message.fileName}` : '[File]';
   return '';
+};
+
+const getMessageImageUrl = (message?: Message) => {
+  if (!message || message.messageType !== 'image') return '';
+  const content = (message as Message & {
+    content?: { mediaUrl?: string; thumbnailUrl?: string };
+  }).content;
+  return message.mediaUrl || message.thumbnailUrl || content?.mediaUrl || content?.thumbnailUrl || '';
 };
 
 const getGesture = (message?: Message): Gesture => {
@@ -275,8 +287,19 @@ const SpeechBubble: React.FC<{
   isTyping: boolean;
   accent: string;
   mentionableNames: string[];
-}> = ({ person, message, isTyping, accent, mentionableNames }) => {
+  onOpenImage?: (message: Message, imageUrl: string) => void;
+  editActionLabel: string;
+}> = ({
+  person,
+  message,
+  isTyping,
+  accent,
+  mentionableNames,
+  onOpenImage,
+  editActionLabel,
+}) => {
   const preview = isTyping ? '...' : getMessagePreview(message);
+  const imageUrl = isTyping ? '' : getMessageImageUrl(message);
   const textRef = useRef<HTMLDivElement | null>(null);
 
   useLayoutEffect(() => {
@@ -303,19 +326,59 @@ const SpeechBubble: React.FC<{
         onPointerDown={(event: React.PointerEvent) => event.stopPropagation()}
         onWheel={(event: React.WheelEvent) => event.stopPropagation()}
         sx={{
-        height: '4.2rem',
-        overflowY: 'auto',
-        overflowX: 'hidden',
-        wordBreak: 'break-word',
-        pointerEvents: 'auto',
-        touchAction: 'pan-y',
-        overscrollBehavior: 'contain',
-        scrollbarWidth: 'none',
-        msOverflowStyle: 'none',
-        '&::-webkit-scrollbar': { display: 'none' },
-        '&:focus-visible': { outline: `2px solid ${accent}`, outlineOffset: 1 },
-      }}>
-        <ChatMessageContent text={preview} mentionableNames={mentionableNames} compact />
+          height: imageUrl ? 'auto' : '4.2rem',
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          wordBreak: 'break-word',
+          pointerEvents: 'auto',
+          touchAction: 'pan-y',
+          overscrollBehavior: 'contain',
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
+          '&::-webkit-scrollbar': { display: 'none' },
+          '&:focus-visible': { outline: `2px solid ${accent}`, outlineOffset: 1 },
+        }}>
+        {imageUrl ? (
+          <ImageHoverPreview
+            src={imageUrl}
+            alt={`${person.displayName} photo`}
+            openOnHover
+            openOnClick
+            openOnTap
+            openOnLongPress={false}
+            onPreviewAction={message && onOpenImage
+              ? () => onOpenImage(message, imageUrl)
+              : undefined}
+            previewActionLabel={editActionLabel}
+          >
+            {(previewProps) => (
+              <BoxAny
+                {...previewProps}
+                component="img"
+                src={imageUrl}
+                alt={`${person.displayName} photo`}
+                sx={{
+                  display: 'block',
+                  width: 'auto',
+                  maxWidth: { xs: 56, sm: 110 },
+                  height: 'auto',
+                  maxHeight: { xs: 88, sm: 140 },
+                  mx: 'auto',
+                  objectFit: 'contain',
+                  borderRadius: '3px',
+                  cursor: onOpenImage ? 'pointer' : 'default',
+                  transition: 'opacity 0.15s',
+                  '&:hover': { opacity: 0.85 },
+                  WebkitTouchCallout: 'none',
+                  WebkitUserSelect: 'none',
+                  userSelect: 'none',
+                }}
+              />
+            )}
+          </ImageHoverPreview>
+        ) : (
+          <ChatMessageContent text={preview} mentionableNames={mentionableNames} compact />
+        )}
       </BoxAny>
     </BoxAny>
   );
@@ -333,6 +396,9 @@ interface AvatarActorProps {
   phase: number;
   mentionableNames: string[];
   onSelect: () => void;
+  onOpenImage: (message: Message, imageUrl: string) => void;
+  canEditImage: (imageUrl: string) => boolean;
+  editActionLabel: string;
 }
 
 const AvatarPicker: React.FC<{
@@ -376,7 +442,8 @@ const AvatarPicker: React.FC<{
 
 const AnimatedAvatarActor: React.FC<AvatarActorProps & { avatar: AnimatedAvatarOption }> = ({
   avatar, person, position, standingPosition = position, rotationY, bubblePosition,
-  latestMessage, isTyping, accent, mentionableNames, onSelect,
+  latestMessage, isTyping, accent, mentionableNames, onSelect, onOpenImage, canEditImage,
+  editActionLabel,
 }) => {
   const gltf = useGLTF(avatar.modelUrl);
   const standingGltf = useGLTF(avatar.motionUrls.standing);
@@ -611,6 +678,10 @@ const AnimatedAvatarActor: React.FC<AvatarActorProps & { avatar: AnimatedAvatarO
         isTyping={isTyping}
         accent={accent}
         mentionableNames={mentionableNames}
+        onOpenImage={getMessageImageUrl(latestMessage) && canEditImage(getMessageImageUrl(latestMessage))
+          ? onOpenImage
+          : undefined}
+        editActionLabel={editActionLabel}
       />
     </Html>
   </>;
@@ -618,7 +689,8 @@ const AnimatedAvatarActor: React.FC<AvatarActorProps & { avatar: AnimatedAvatarO
 
 const StaticAvatarActor: React.FC<AvatarActorProps & { avatar: StaticAvatarOption }> = ({
   avatar, person, position, rotationY, bubblePosition, latestMessage,
-  isTyping, accent, phase, mentionableNames, onSelect,
+  isTyping, accent, phase, mentionableNames, onSelect, onOpenImage, canEditImage,
+  editActionLabel,
 }) => {
   const gltf = useGLTF(avatar.modelUrl);
   const { gl, invalidate } = useThree();
@@ -725,6 +797,10 @@ const StaticAvatarActor: React.FC<AvatarActorProps & { avatar: StaticAvatarOptio
         isTyping={isTyping}
         accent={accent}
         mentionableNames={mentionableNames}
+        onOpenImage={getMessageImageUrl(latestMessage) && canEditImage(getMessageImageUrl(latestMessage))
+          ? onOpenImage
+          : undefined}
+        editActionLabel={editActionLabel}
       />
     </Html>
   </>;
@@ -742,7 +818,19 @@ const RoomModels: React.FC<{
   typingIds: Set<string>;
   avatarSelections: Record<string, AvatarId>;
   onPickAvatar: (slot: 0 | 1) => void;
-}> = ({ people, latestBySender, typingIds, avatarSelections, onPickAvatar }) => {
+  onOpenImage: (message: Message, imageUrl: string) => void;
+  canEditImage: (imageUrl: string) => boolean;
+  editActionLabel: string;
+}> = ({
+  people,
+  latestBySender,
+  typingIds,
+  avatarSelections,
+  onPickAvatar,
+  onOpenImage,
+  canEditImage,
+  editActionLabel,
+}) => {
   const roomGltf = useGLTF(ROOM_MODEL_URL);
   const roomScene = useMemo(() => {
     const clone = roomGltf.scene.clone(true);
@@ -770,6 +858,9 @@ const RoomModels: React.FC<{
         rotationY={Math.PI / 2} bubblePosition={scaleWithRoom([-1.9, 2.2, 0.8])}
         latestMessage={latestBySender.get(people[0].userId)} isTyping={typingIds.has(people[0].userId)}
         accent="#2f7d5a" phase={0} mentionableNames={mentionableNames} onSelect={() => onPickAvatar(0)}
+        onOpenImage={onOpenImage}
+        canEditImage={canEditImage}
+        editActionLabel={editActionLabel}
       />}
       {people[1] && <RoomAvatar
         key={`${people[1].userId}:${rightAvatar.id}`} person={people[1]} avatar={rightAvatar}
@@ -778,6 +869,9 @@ const RoomModels: React.FC<{
         rotationY={-Math.PI * 0.15} bubblePosition={scaleWithRoom([1.6, 1.85, -1.2])}
         latestMessage={latestBySender.get(people[1].userId)} isTyping={typingIds.has(people[1].userId)}
         accent="#b66a4b" phase={Math.PI} mentionableNames={mentionableNames} onSelect={() => onPickAvatar(1)}
+        onOpenImage={onOpenImage}
+        canEditImage={canEditImage}
+        editActionLabel={editActionLabel}
       />}
     </>
   );
@@ -844,8 +938,20 @@ const MessageHistory: React.FC<{
   hasOlderMessages: boolean;
   onLoadOlderMessages: () => Promise<boolean>;
   onGenerateFromText?: (selectedText: string) => Promise<void>;
+  imageGroups?: Array<{ sourceUrl: string; messageId: string; canEdit: boolean }>;
+  imageGroupIndexByUrl?: Record<string, number>;
   onClose: () => void;
-}> = ({ messages, meId, mentionableNames, hasOlderMessages, onLoadOlderMessages, onGenerateFromText, onClose }) => {
+}> = ({
+  messages,
+  meId,
+  mentionableNames,
+  hasOlderMessages,
+  onLoadOlderMessages,
+  onGenerateFromText,
+  imageGroups,
+  imageGroupIndexByUrl,
+  onClose,
+}) => {
   const { language, t } = useLanguage();
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const restoreScrollRef = useRef<{ height: number; top: number } | null>(null);
@@ -919,6 +1025,7 @@ const MessageHistory: React.FC<{
           </Typography>
         ) : messages.map((message, index) => {
           const previousMessage = index > 0 ? messages[index - 1] : null;
+          const imageUrl = getMessageImageUrl(message);
           const messageDate = new Date(message.timestamp);
           const previousTime = previousMessage ? new Date(previousMessage.timestamp).getTime() : 0;
           let timeSeparator: string | null = null;
@@ -949,6 +1056,10 @@ const MessageHistory: React.FC<{
               timeSeparator={timeSeparator}
               mentionableNames={mentionableNames}
               onGenerateFromText={onGenerateFromText}
+              imageGallery={imageGroups?.map((group) => group.sourceUrl)}
+              imageIndex={imageUrl ? imageGroupIndexByUrl?.[imageUrl] : undefined}
+              imageGroups={imageGroups}
+              imageGroupIndex={imageUrl ? imageGroupIndexByUrl?.[imageUrl] : undefined}
             />
           );
         })}
@@ -965,11 +1076,14 @@ export const ChatRoom3D: React.FC<ChatRoom3DProps> = ({
   hasOlderMessages,
   onLoadOlderMessages,
   onGenerateFromText,
+  imageGroups,
+  imageGroupIndexByUrl,
 }) => {
   const { t } = useLanguage();
   const [historyOpen, setHistoryOpen] = useState(false);
   const [avatarSelections, setAvatarSelections] = useState<Record<string, AvatarId>>(loadAvatarSelections);
   const [avatarPickerSlot, setAvatarPickerSlot] = useState<0 | 1 | null>(null);
+  const [lightbox, setLightbox] = useState<{ images: string[]; index: number; groupIndex?: number } | null>(null);
   const people = useMemo(() => buildRoomPeople(chat, me), [chat, me]);
   const participantIds = useMemo(() => new Set(people.map((person) => person.userId)), [people]);
   const historyMessages = useMemo(() => messages
@@ -985,6 +1099,23 @@ export const ChatRoom3D: React.FC<ChatRoom3DProps> = ({
   }, [recentMessages]);
   const typingIds = useMemo(() => new Set(typingUsers.map((user) => user.userId)), [typingUsers]);
   const mentionableNames = useMemo(() => people.map((person) => person.displayName), [people]);
+  const galleryImages = useMemo(
+    () => imageGroups?.map((group) => group.sourceUrl) ?? [],
+    [imageGroups],
+  );
+
+  const openImage = (message: Message, imageUrl: string) => {
+    const groupIndex = imageGroupIndexByUrl?.[imageUrl];
+    setLightbox({
+      images: galleryImages.length > 0 ? galleryImages : [imageUrl],
+      index: typeof groupIndex === 'number' ? groupIndex : 0,
+      groupIndex,
+    });
+  };
+  const canEditImage = (imageUrl: string) => {
+    const groupIndex = imageGroupIndexByUrl?.[imageUrl];
+    return typeof groupIndex === 'number' && imageGroups?.[groupIndex]?.canEdit === true;
+  };
 
   useEffect(() => {
     localStorage.setItem(AVATAR_SELECTION_STORAGE_KEY, JSON.stringify(avatarSelections));
@@ -1019,6 +1150,9 @@ export const ChatRoom3D: React.FC<ChatRoom3DProps> = ({
               setHistoryOpen(false);
               setAvatarPickerSlot(slot);
             }}
+            onOpenImage={openImage}
+            canEditImage={canEditImage}
+            editActionLabel={t('image.editAction')}
           />
         </Suspense>
       </Canvas>
@@ -1069,7 +1203,19 @@ export const ChatRoom3D: React.FC<ChatRoom3DProps> = ({
           hasOlderMessages={hasOlderMessages}
           onLoadOlderMessages={onLoadOlderMessages}
           onGenerateFromText={onGenerateFromText}
+          imageGroups={imageGroups}
+          imageGroupIndexByUrl={imageGroupIndexByUrl}
           onClose={() => setHistoryOpen(false)}
+        />
+      )}
+      {lightbox && (
+        <ImageLightbox
+          images={lightbox.images}
+          initialIndex={lightbox.index}
+          groups={imageGroups}
+          initialGroupIndex={lightbox.groupIndex}
+          open
+          onClose={() => setLightbox(null)}
         />
       )}
     </BoxAny>

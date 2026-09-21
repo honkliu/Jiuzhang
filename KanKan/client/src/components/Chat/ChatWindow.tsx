@@ -52,6 +52,7 @@ import {
   getOtherRealParticipants,
   getRealParticipants,
   isRealGroupChat,
+  WA_AVATAR_URL,
   WA_USER_ID,
 } from '@/utils/chatParticipants';
 import { ChatRoom3D } from './ChatRoom3D';
@@ -327,6 +328,8 @@ const ChatMessages: React.FC<ChatMessagesProps> = React.memo(({
           hasOlderMessages={hasOlderMessages}
           onLoadOlderMessages={onLoadOlderMessages}
           onGenerateFromText={onGenerateFromText}
+          imageGroups={imageGroups}
+          imageGroupIndexByUrl={imageGroupIndexByUrl}
         />
         {loading && mergedMessages.length === 0 ? (
           <BoxAny
@@ -1580,9 +1583,11 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
       }
 
       case '/p': {
-        const realOthers = getOtherRealParticipants(activeChat, user?.id);
+        const pairableOthers = activeChat.participants.filter((participant) =>
+          Boolean(participant.userId) && participant.userId !== user?.id
+        );
         const mentionResults: Array<{
-          participant: typeof realOthers[number];
+          participant: typeof pairableOthers[number];
           start: number;
           end: number;
         }> = [];
@@ -1594,7 +1599,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
 
           const mentionStart = scanIndex + mentionMatch.index! + mentionMatch[1].length;
           const afterMention = rest.slice(mentionStart + 1);
-          const exactMentionMatches = realOthers
+          const exactMentionMatches = pairableOthers
             .filter((p) => {
               const name = p.displayName.trim();
               return name.length > 0 && (afterMention === name || afterMention.startsWith(`${name} `));
@@ -1604,7 +1609,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
 
           const longestExactLength = exactMentionMatches[0]?.displayName.length ?? 0;
           const longestExact = exactMentionMatches.filter((p) => p.displayName.length === longestExactLength);
-          let participant: typeof realOthers[number] | undefined;
+          let participant: typeof pairableOthers[number] | undefined;
           let mentionEnd = -1;
 
           if (longestExact.length === 1) {
@@ -1614,7 +1619,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
             addLocalInfoMessage(t('chat.command.photoMentionAmbiguous').replace('{name}', longestExact[0].displayName));
             return;
           } else if (typedMentionToken) {
-            const prefix = realOthers.filter((p) =>
+            const prefix = pairableOthers.filter((p) =>
               p.displayName.toLowerCase().startsWith(typedMentionToken.toLowerCase())
             );
             if (prefix.length === 1) {
@@ -1650,14 +1655,22 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
           return;
         }
 
-        const targetParticipant = mentionResults[0]?.participant ?? realOthers[0];
+        const targetParticipant = mentionResults[0]?.participant ?? pairableOthers[0];
         const primaryParticipant = mentionResults.length >= 2 ? mentionResults[0].participant : undefined;
         const secondaryParticipant = mentionResults.length >= 2 ? mentionResults[1].participant : targetParticipant;
 
         const targetChatId = activeChat.id;
         const pairChatId = isRealGroupChat(activeChat, user?.id) ? targetChatId : undefined;
-        const primaryAvatar = (primaryParticipant?.avatarUrl || rightAvatar)?.trim();
-        const secondaryAvatar = (secondaryParticipant?.avatarUrl || leftAvatar)?.trim();
+        const primaryAvatar = (
+          primaryParticipant?.avatarUrl
+          || (primaryParticipant?.userId === WA_USER_ID ? WA_AVATAR_URL : '')
+          || rightAvatar
+        )?.trim();
+        const secondaryAvatar = (
+          secondaryParticipant?.avatarUrl
+          || (secondaryParticipant?.userId === WA_USER_ID ? WA_AVATAR_URL : '')
+          || leftAvatar
+        )?.trim();
         if (!primaryAvatar || !secondaryAvatar) {
           addLocalInfoMessage(t('chat.command.photoAvatarMissing'));
           return;
@@ -2460,7 +2473,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
     };
   }, [otherAvatarImageId, latestReceivedAvatarUrl, otherParticipant?.avatarUrl]);
 
-  const leftAvatar = getAvatarForMood(leftMood, leftMoodMap, otherParticipant?.avatarUrl);
+  const otherBaseAvatarUrl = otherParticipant?.userId === WA_USER_ID
+    ? WA_AVATAR_URL
+    : otherParticipant?.avatarUrl;
+  const leftAvatar = getAvatarForMood(leftMood, leftMoodMap, otherBaseAvatarUrl);
   const rightAvatar = getAvatarForMood(rightMood, rightMoodMap, user?.avatarUrl);
 
   const groupMembersCount = activeChat

@@ -24,7 +24,7 @@ import { createChat } from '@/store/chatSlice';
 import { contactService, User } from '@/services/contact.service';
 import { UserAvatar } from '@/components/Shared/UserAvatar';
 import { useLanguage } from '@/i18n/LanguageContext';
-import { WA_USER_ID } from '@/utils/chatParticipants';
+import { WA_AVATAR_URL, WA_USER_ID } from '@/utils/chatParticipants';
 
 // Work around TS2590 (“union type too complex”) from MUI Box typings in some TS versions.
 const BoxAny = Box as any;
@@ -139,8 +139,8 @@ export const NewChatDialog: React.FC<NewChatDialogProps> = ({ open, onClose }) =
     id: WA_USER_ID,
     handle: 'assistant_1003',
     displayName: t('Wa'),
-    avatarUrl: '',
-    gender: 'female',
+    avatarUrl: WA_AVATAR_URL,
+    gender: 'male',
     bio: 'AI assistant',
     isOnline: true,
     lastSeen: new Date().toISOString(),

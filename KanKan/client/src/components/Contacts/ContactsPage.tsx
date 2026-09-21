@@ -20,7 +20,7 @@ import { adminService } from '@/services/admin.service';
 import { AppHeader } from '@/components/Shared/AppHeader';
 import { UserAvatar } from '@/components/Shared/UserAvatar';
 import { useLanguage } from '@/i18n/LanguageContext';
-import { WA_USER_ID } from '@/utils/chatParticipants';
+import { WA_AVATAR_URL, WA_USER_ID } from '@/utils/chatParticipants';
 import { appPageContainerSx, appPageTitleSx } from '@/styles/appLayout';
 import { ConfirmDialog } from '@/components/Shared/ConfirmDialog';
 
@@ -257,7 +257,7 @@ export const ContactsPage: React.FC = () => {
         id: WA_USER_ID,
         handle: 'assistant_1003',
         displayName: t('Wa'),
-        avatarUrl: '/zodiac/zodiac_01_r1c1.png',
+        avatarUrl: WA_AVATAR_URL,
         gender: 'male',
         bio: 'AI assistant',
         isOnline: true,

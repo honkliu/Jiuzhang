@@ -571,6 +571,8 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
     (message as any)?.content?.thumbnailUrl ||
     '';
   const displayedImageUrl = withChatImageCacheBust(imageUrl);
+  const canEditImage = typeof imageGroupIndex === 'number'
+    && imageGroups?.[imageGroupIndex]?.canEdit === true;
 
   if (message.messageType === 'system' || message.senderId === '__system__') {
     const isMultiline = (message.text || '').includes('\n');
@@ -757,7 +759,11 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
             src={displayedImageUrl}
             alt={t('chat.message.image')}
             openOnHover
-            openOnLongPress
+            openOnClick
+            openOnTap
+            openOnLongPress={false}
+            onPreviewAction={canEditImage ? () => setIsLightboxOpen(true) : undefined}
+            previewActionLabel={t('image.editAction')}
           >
             {(previewProps) => (
               <BoxAny
@@ -768,9 +774,6 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
                 tabIndex={0}
                 onContextMenu={(event: React.MouseEvent<HTMLElement>) => {
                   event.preventDefault();
-                }}
-                onClick={() => {
-                  setIsLightboxOpen(true);
                 }}
                 sx={{
                   maxWidth: '100%',
