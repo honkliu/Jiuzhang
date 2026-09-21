@@ -287,7 +287,6 @@ export const MomentsPage: React.FC = () => {
   const handleGenerateFromText = async (
     moment: Moment,
     selectedText: string,
-    sourceIsComment: boolean,
   ) => {
     setActionLoading(moment.id);
     setError('');
@@ -297,7 +296,7 @@ export const MomentsPage: React.FC = () => {
         moment.id,
         generated.url,
         selectedText,
-        sourceIsComment || moment.userId !== user?.id,
+        true,
       );
       setMoments(current => current.map(item => item.id === updated.id ? updated : item));
     } catch (err: any) {
@@ -562,7 +561,7 @@ export const MomentsPage: React.FC = () => {
                 >
                   {moment.content?.text ? (
                     <SelectedTextMenu
-                      onGenerate={(selectedText) => handleGenerateFromText(moment, selectedText, false)}
+                      onGenerate={(selectedText) => handleGenerateFromText(moment, selectedText)}
                     >
                       <Typography sx={{ mb: 1, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                         {moment.content.text}
@@ -602,7 +601,7 @@ export const MomentsPage: React.FC = () => {
                     {moment.comments.map((c) => (
                       <BoxAny key={c.id} sx={{ py: 0.25 }}>
                         <SelectedTextMenu
-                          onGenerate={(selectedText) => handleGenerateFromText(moment, selectedText, true)}
+                          onGenerate={(selectedText) => handleGenerateFromText(moment, selectedText)}
                         >
                           <Typography variant="body2">
                             <Typography

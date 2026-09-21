@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   Box,
   Button,
-  CircularProgress,
   Popover,
   Stack,
   TextField,
@@ -30,10 +29,9 @@ export const SelectedTextMenu: React.FC<SelectedTextMenuProps> = ({
 }) => {
   const { t } = useLanguage();
   const [menu, setMenu] = useState<{ mouseX: number; mouseY: number; text: string } | null>(null);
-  const [generating, setGenerating] = useState(false);
 
   const handleContextMenu = (event: React.MouseEvent<HTMLElement>) => {
-    if (disabled || generating) return;
+    if (disabled) return;
 
     const selection = window.getSelection();
     const selectedText = selection?.toString().trim() ?? '';
@@ -58,18 +56,15 @@ export const SelectedTextMenu: React.FC<SelectedTextMenuProps> = ({
   };
 
   const handleGenerate = async () => {
-    if (!menu || generating) return;
+    if (!menu) return;
     const selectedText = menu.text.trim();
     if (!selectedText) return;
 
-    setGenerating(true);
     setMenu(null);
     try {
       await onGenerate(selectedText);
     } catch (error) {
       console.error('Failed to generate image from selected text:', error);
-    } finally {
-      setGenerating(false);
     }
   };
 
@@ -80,9 +75,8 @@ export const SelectedTextMenu: React.FC<SelectedTextMenuProps> = ({
       </BoxAny>
       <Popover
         open={Boolean(menu)}
-        onClose={() => {
-          if (!generating) setMenu(null);
-        }}
+        onClose={() => setMenu(null)}
+        disableScrollLock
         anchorReference="anchorPosition"
         anchorPosition={menu ? { top: menu.mouseY, left: menu.mouseX } : undefined}
         anchorOrigin={{ vertical: 'top', horizontal: 'left' }}
@@ -104,7 +98,6 @@ export const SelectedTextMenu: React.FC<SelectedTextMenuProps> = ({
             fullWidth
             label={t('selection.prompt')}
             value={menu?.text ?? ''}
-            disabled={generating}
             onChange={(event) => {
               const text = event.target.value;
               setMenu((current) => current ? { ...current, text } : current);
@@ -116,7 +109,7 @@ export const SelectedTextMenu: React.FC<SelectedTextMenuProps> = ({
               size="small"
               variant="outlined"
               onClick={() => void handleCopy()}
-              disabled={generating || !menu?.text.trim()}
+              disabled={!menu?.text.trim()}
               sx={{ height: 32 }}
             >
               {t('selection.copy')}
@@ -125,10 +118,8 @@ export const SelectedTextMenu: React.FC<SelectedTextMenuProps> = ({
               size="small"
               variant="outlined"
               onClick={() => void handleGenerate()}
-              disabled={generating || !menu?.text.trim()}
-              startIcon={generating
-                ? <CircularProgress size={16} color="inherit" />
-                : <MagicIcon />}
+              disabled={!menu?.text.trim()}
+              startIcon={<MagicIcon />}
               sx={generationActionButtonSx}
             >
               {t('selection.generateImage')}
