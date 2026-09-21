@@ -988,10 +988,11 @@ const MessageHistory: React.FC<{
   return (
     <Paper variant="outlined" sx={{
       position: 'absolute', zIndex: 40,
-      top: { xs: 'auto', sm: 12 }, right: { xs: 8, sm: 12 },
-      bottom: { xs: 8, sm: 12 }, left: { xs: 8, sm: 'auto' },
-      width: { sm: 360 }, height: { xs: 'min(52%, 380px)', sm: 'auto' },
+      top: { xs: 0, sm: 12 }, right: { xs: 0, sm: 12 },
+      bottom: { xs: 0, sm: 12 }, left: { xs: 0, sm: 'auto' },
+      width: { sm: 360 }, height: { xs: '100%', sm: 'auto' },
       display: 'flex', flexDirection: 'column', overflow: 'hidden',
+      borderRadius: { xs: 0, sm: 1 },
       bgcolor: 'background.paper', color: 'text.primary', borderColor: 'divider',
     }}>
       <BoxAny sx={{
