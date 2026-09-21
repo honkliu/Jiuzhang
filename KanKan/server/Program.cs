@@ -226,7 +226,6 @@ builder.Services.AddScoped<PhotoService>();
 builder.Services.AddScoped<IAutoAssociateService, AutoAssociateService>();
 builder.Services.AddScoped<IVisitStatsService, VisitStatsService>();
 
-builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<OpenAiAgentService>();
 builder.Services.AddScoped<SemanticKernelAgentService>();

@@ -20,7 +20,6 @@ namespace KanKan.API.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;
-    private readonly IEmailService _emailService;
     private readonly IAvatarService _avatarService;
     private readonly INotificationRepository _notificationRepository;
     private readonly IUserRepository _userRepository;
@@ -33,7 +32,6 @@ public class AuthController : ControllerBase
 
     public AuthController(
         IAuthService authService,
-        IEmailService emailService,
         IAvatarService avatarService,
         INotificationRepository notificationRepository,
         IUserRepository userRepository,
@@ -45,7 +43,6 @@ public class AuthController : ControllerBase
         ILogger<AuthController> logger)
     {
         _authService = authService;
-        _emailService = emailService;
         _avatarService = avatarService;
         _notificationRepository = notificationRepository;
         _userRepository = userRepository;
@@ -125,9 +122,6 @@ public class AuthController : ControllerBase
 
             // Set refresh token in HTTP-only cookie
             SetRefreshTokenCookie(refreshToken);
-
-            // Send welcome email
-            await _emailService.SendWelcomeEmailAsync(user.Email, user.DisplayName);
 
             return Ok(new AuthResponse
             {
