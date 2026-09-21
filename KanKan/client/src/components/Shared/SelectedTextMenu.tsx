@@ -65,11 +65,10 @@ export const SelectedTextMenu: React.FC<SelectedTextMenuProps> = ({
     setGenerating(true);
     try {
       await onGenerate(selectedText);
-      setMenu(null);
     } catch (error) {
       console.error('Failed to generate image from selected text:', error);
-      window.alert(t('selection.generateFailed'));
     } finally {
+      setMenu(null);
       setGenerating(false);
     }
   };
