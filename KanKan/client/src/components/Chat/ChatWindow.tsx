@@ -184,6 +184,7 @@ interface ChatMessagesProps {
   imageGroupIndexByUrl: Record<string, number>;
   imageGallery: { urls: string[]; indexById: Record<string, number> };
   imageGroupIndexByMessageId: Record<string, number>;
+  mediaReferenceNumberByMessageId: Record<string, number>;
   /** Display names of all participants (real users), for @mention highlighting in bubbles. */
   participantNames: string[];
   noMessagesText: string;
@@ -210,6 +211,7 @@ const ChatMessages: React.FC<ChatMessagesProps> = React.memo(({
   imageGroupIndexByUrl,
   imageGallery,
   imageGroupIndexByMessageId,
+  mediaReferenceNumberByMessageId,
   participantNames,
   noMessagesText,
   hasOlderMessages,
@@ -442,6 +444,7 @@ const ChatMessages: React.FC<ChatMessagesProps> = React.memo(({
               imageIndex={imageGallery.indexById[message.id]}
               imageGroups={imageGroups}
               imageGroupIndex={imageGroupIndexByMessageId[message.id]}
+              mediaReferenceNumber={mediaReferenceNumberByMessageId[message.id]}
               mentionableNames={participantNames}
               onGenerateFromText={onGenerateFromText}
             />
@@ -759,12 +762,8 @@ const ChatInputPanel: React.FC<ChatInputPanelProps> = React.memo(({
   };
 
   const getCommandDraftText = useCallback((commandId: ChatCommandId) => {
-    if (commandId === '/p') {
-      return `${commandId} ${t('chat.command.template.p')}`;
-    }
-
     return `${commandId} `;
-  }, [t]);
+  }, []);
 
   const applyCommandDraftText = useCallback((commandId: ChatCommandId) => {
     const nextValue = getCommandDraftText(commandId);
@@ -1316,6 +1315,38 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
     () => [...chatMessages, ...draftMessages],
     [chatMessages, draftMessages]
   );
+  const [mediaReferenceNumberByMessageId, setMediaReferenceNumberByMessageId] = useState<Record<string, number>>({});
+  const numberedChatIdRef = useRef<string | null>(null);
+  const initialImageCutoffRef = useRef(0);
+
+  useEffect(() => {
+    if (!activeChat || chatMessages.length === 0) return;
+
+    if (numberedChatIdRef.current !== activeChat.id) {
+      const initialMessages = chatMessages.slice(-MESSAGE_PAGE_SIZE);
+      const mapping: Record<string, number> = {};
+      initialMessages
+        .filter(message => message.messageType === 'image')
+        .forEach((message, index) => { mapping[message.id] = index + 1; });
+      numberedChatIdRef.current = activeChat.id;
+      initialImageCutoffRef.current = Math.min(...initialMessages.map(message => new Date(message.timestamp).getTime()));
+      setMediaReferenceNumberByMessageId(mapping);
+      return;
+    }
+
+    setMediaReferenceNumberByMessageId(current => {
+      const next = { ...current };
+      let nextNumber = Math.max(0, ...Object.values(next)) + 1;
+      let changed = false;
+      chatMessages.forEach(message => {
+        if (message.messageType !== 'image' || next[message.id]) return;
+        if (new Date(message.timestamp).getTime() < initialImageCutoffRef.current) return;
+        next[message.id] = nextNumber++;
+        changed = true;
+      });
+      return changed ? next : current;
+    });
+  }, [activeChat?.id, chatMessages]);
 
   const hasOlderMessages = activeChat
     ? hasOlderMessagesByChatId[activeChat.id] ?? chatMessages.length >= MESSAGE_PAGE_SIZE
@@ -1447,7 +1478,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
       { id: '/b' as const, description: t('chat.command.desc.b'), example: `/b ${exampleText}` },
       { id: '/i' as const, description: t('chat.command.desc.i'), example: `/i ${exampleText}` },
       { id: '/r' as const, description: t('chat.command.desc.r'), example: `/r ${exampleText}` },
-      { id: '/p' as const, description: t('chat.command.desc.p'), example: `/p @name @name ${exampleText}` },
+      { id: '/p' as const, description: t('chat.command.desc.p'), example: '/p' },
       { id: '/a' as const, description: t('chat.command.desc.a'), example: '/a @name' },
       { id: '/e' as const, description: t('chat.command.desc.e'), example: '/e agent  |  /e chat' },
     ];
@@ -1583,9 +1614,19 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
       }
 
       case '/p': {
-        const pairableOthers = activeChat.participants.filter((participant) =>
-          Boolean(participant.userId) && participant.userId !== user?.id
-        );
+        const requestedNumbers = Array.from(rest.matchAll(/#([1-9]\d*)\b/g), match => Number(match[1]));
+        const referencedMessages = requestedNumbers.map(number => {
+          const messageId = Object.entries(mediaReferenceNumberByMessageId)
+            .find(([, assigned]) => assigned === number)?.[0];
+          return messageId ? chatMessages.find(message => message.id === messageId) : undefined;
+        });
+        const missingReferenceIndex = referencedMessages.findIndex(message => !message);
+        if (missingReferenceIndex >= 0) {
+          addLocalInfoMessage(`Image #${requestedNumbers[missingReferenceIndex]} is not available in the current chat context.`);
+          return;
+        }
+
+        const pairableOthers = getRealParticipants(activeChat.participants);
         const mentionResults: Array<{
           participant: typeof pairableOthers[number];
           start: number;
@@ -1594,15 +1635,18 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
         let scanIndex = 0;
 
         while (scanIndex < rest.length) {
-          const mentionMatch = rest.slice(scanIndex).match(/(^|\s)@/);
+          const mentionMatch = rest.slice(scanIndex).match(/@/);
           if (!mentionMatch) break;
 
-          const mentionStart = scanIndex + mentionMatch.index! + mentionMatch[1].length;
+          const mentionStart = scanIndex + mentionMatch.index!;
           const afterMention = rest.slice(mentionStart + 1);
           const exactMentionMatches = pairableOthers
             .filter((p) => {
               const name = p.displayName.trim();
-              return name.length > 0 && (afterMention === name || afterMention.startsWith(`${name} `));
+              const boundary = afterMention[name.length];
+              return name.length > 0
+                && afterMention.startsWith(name)
+                && (boundary === undefined || /[\s,，;；:：]/.test(boundary));
             })
             .sort((a, b) => b.displayName.length - a.displayName.length);
           const typedMentionToken = afterMention.match(/^(\S+)/)?.[1] ?? '';
@@ -1647,10 +1691,41 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
           return acc;
         }, { parts: [], lastIndex: 0 });
         const promptText = `${promptBody.parts.join('')}${rest.slice(promptBody.lastIndex)}`
+          .replace(/#([1-9]\d*)\b/g, ' ')
           .replace(/\s+/g, ' ')
-          .trim() || t('chat.command.defaultPhotoPrompt');
+          .replace(/^[,，;；:：\s]+/, '')
+          .trim();
 
-        if (mentionResults.length === 0 && isGroup) {
+        if (!promptText) {
+          addLocalInfoMessage(t('chat.command.usage.p'));
+          return;
+        }
+
+        const promptMessage = await chatService.sendMessage(activeChat.id, {
+          messageType: 'text',
+          text: rawInput.trim(),
+        });
+        dispatch(addMessage(promptMessage));
+
+        if (requestedNumbers.length === 0 && mentionResults.length === 0) {
+          addLocalInfoMessage(t('chat.command.generatingPhoto'));
+          try {
+            const generated = await imageGenerationService.generateFromText(promptText);
+            const message = await chatService.sendMessage(activeChat.id, {
+              messageType: 'image',
+              mediaUrl: generated.url,
+              thumbnailUrl: generated.url,
+              fileName: generated.fileName,
+            });
+            dispatch(addMessage(message));
+          } catch (error) {
+            console.error('Failed to generate image:', error);
+            addLocalInfoMessage(t('chat.command.photoFailed'));
+          }
+          return;
+        }
+
+        if (mentionResults.length === 0 && requestedNumbers.length === 0 && isGroup) {
           addLocalInfoMessage(t('chat.command.photoMentionRequired'));
           return;
         }
@@ -1671,13 +1746,28 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
           || (secondaryParticipant?.userId === WA_USER_ID ? WA_AVATAR_URL : '')
           || leftAvatar
         )?.trim();
-        if (!primaryAvatar || !secondaryAvatar) {
+        const referencedUrls = referencedMessages
+          .filter((message): message is Message => Boolean(message))
+          .map(getMessageImageUrl)
+          .filter(Boolean);
+        const avatarInputs = mentionResults.map(result => result.participant.avatarUrl).filter(Boolean);
+        if (requestedNumbers.length === 0
+          && mentionResults.length === 1
+          && mentionResults[0].participant.userId !== user?.id
+          && user?.avatarUrl) {
+          avatarInputs.unshift(user.avatarUrl);
+        } else if (mentionResults.length === 0 && requestedNumbers.length === 0) {
+          avatarInputs.push(primaryAvatar, secondaryAvatar);
+        }
+        const mediaInputs = [...referencedUrls, ...avatarInputs].filter(Boolean);
+
+        if (mediaInputs.length === 0 || (requestedNumbers.length === 0 && (!primaryAvatar || !secondaryAvatar))) {
           addLocalInfoMessage(t('chat.command.photoAvatarMissing'));
           return;
         }
         const primaryUserId = primaryParticipant?.userId || user?.id;
         const secondaryUserId = secondaryParticipant?.userId;
-        if (!primaryUserId || !secondaryUserId) {
+        if (requestedNumbers.length === 0 && (!primaryUserId || !secondaryUserId)) {
           addLocalInfoMessage(t('chat.command.photoAvatarMissing'));
           return;
         }
@@ -1690,10 +1780,12 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
               sourceType: 'chat_image',
               generationType: 'custom',
               chatId: pairChatId,
-              mediaUrl: primaryAvatar,
-              secondaryMediaUrl: secondaryAvatar,
-              primaryUserId,
-              secondaryUserId,
+              messageId: referencedMessages[0]?.id,
+              mediaUrl: mediaInputs[0],
+              secondaryMediaUrl: mediaInputs[1],
+              mediaUrls: mediaInputs,
+              primaryUserId: requestedNumbers.length === 0 ? primaryUserId : undefined,
+              secondaryUserId: requestedNumbers.length === 0 ? secondaryUserId : undefined,
               customPrompts: [promptText],
               variationCount: 1,
             });
@@ -2155,12 +2247,12 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
   // Stable reference so React.memo on ChatInputPanel doesn't re-render on every keystroke.
   const mentionCandidates = useMemo(() => {
     if (!activeChat) return [] as Array<{ userId: string; displayName: string; avatarUrl: string }>;
-    return getOtherRealParticipants(activeChat, user?.id).map((p) => ({
+    return getRealParticipants(activeChat.participants).map((p) => ({
       userId: p.userId,
       displayName: p.displayName,
       avatarUrl: p.avatarUrl,
     }));
-  }, [activeChat, user?.id]);
+  }, [activeChat]);
 
   // Names used to highlight `@Name` in rendered message bubbles. Includes
   // self so a message from someone else mentioning the current user is also
@@ -2734,6 +2826,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ onBack, onToggleSidebar,
         imageGroupIndexByUrl={imageGroupIndexByUrl}
         imageGallery={imageGallery}
         imageGroupIndexByMessageId={imageGroupIndexByMessageId}
+        mediaReferenceNumberByMessageId={mediaReferenceNumberByMessageId}
         participantNames={participantNames}
         noMessagesText={t('chat.noMessages')}
         hasOlderMessages={hasOlderMessages}

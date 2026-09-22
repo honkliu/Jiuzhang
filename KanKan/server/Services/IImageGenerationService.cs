@@ -34,6 +34,7 @@ public class GenerationRequest
     public string? ChatId { get; set; }
     public string? MediaUrl { get; set; }
     public string? SecondaryMediaUrl { get; set; }
+    public List<string>? MediaUrls { get; set; }
     public string? PrimaryUserId { get; set; }
     public string? SecondaryUserId { get; set; }
     public string GenerationType { get; set; } = string.Empty; // "emotions" | "styles" | "variations" | "custom"

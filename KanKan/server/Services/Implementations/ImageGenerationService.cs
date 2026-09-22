@@ -866,10 +866,29 @@ public class ImageGenerationService : IImageGenerationService
             string? secondaryImageBase64 = null;
             ResolvedImageSource? secondarySource = null;
 
-            if (!string.IsNullOrWhiteSpace(request.SecondaryMediaUrl))
+            var additionalMediaUrls = (request.MediaUrls ?? new List<string>())
+                .Where(url => !string.IsNullOrWhiteSpace(url))
+                .Where(url => !string.Equals(url, inputUrl, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+            if (!string.IsNullOrWhiteSpace(request.SecondaryMediaUrl)
+                && !additionalMediaUrls.Contains(request.SecondaryMediaUrl, StringComparer.OrdinalIgnoreCase))
             {
-                secondarySource = await ResolveImageSourceAsync(request.SecondaryMediaUrl);
+                additionalMediaUrls.Insert(0, request.SecondaryMediaUrl);
+            }
+
+            if (additionalMediaUrls.Count > 0)
+            {
+                secondarySource = await ResolveImageSourceAsync(additionalMediaUrls[0]);
                 var secondaryImageBytes = secondarySource.Bytes;
+                if (additionalMediaUrls.Count > 1)
+                {
+                    var remainingBytes = new List<byte[]> { secondaryImageBytes };
+                    foreach (var url in additionalMediaUrls.Skip(1))
+                    {
+                        remainingBytes.Add((await ResolveImageSourceAsync(url)).Bytes);
+                    }
+                    secondaryImageBytes = ImageResizer.CreateContactSheet(remainingBytes);
+                }
                 var normalizedSecondaryBytes = ImageResizer.NormalizeToPng(secondaryImageBytes);
                 secondaryImageBase64 = Convert.ToBase64String(normalizedSecondaryBytes);
             }
@@ -940,6 +959,10 @@ public class ImageGenerationService : IImageGenerationService
 
                     // Generate via ComfyUI
                     var fullPrompt = $"Edit the input image with the following instruction: {prompt}. Preserve the original proportions. High quality, detailed.";
+                    if (additionalMediaUrls.Count > 0)
+                    {
+                        fullPrompt = $"{fullPrompt} Use every supplied reference image. Preserve every distinct person from all source images, including all people already present in group photos; do not omit, merge, or replace any person.";
+                    }
                     var extraPrompt = request.ExtraPrompt?.Trim();
                     if (!string.IsNullOrWhiteSpace(extraPrompt))
                     {

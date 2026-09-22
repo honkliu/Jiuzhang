@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import {
   Box,
+  CircularProgress,
   Paper,
 } from '@mui/material';
 import {
@@ -15,6 +16,9 @@ import type { PageElementDto } from '@/services/family.service';
 import { editorRegistry, RichTextBlockWithRegistry } from './RichTextBlock';
 import { ImageLightbox } from '@/components/Shared/ImageLightbox';
 import { imageGenerationService } from '@/services/imageGeneration.service';
+import { MediaReferenceBadge } from '@/components/Shared/MediaReferenceBadge';
+import { parsePictureCommands } from '@/utils/mediaCommands';
+import { mediaService } from '@/services/media.service';
 
 const BoxAny = Box as any;
 
@@ -250,7 +254,10 @@ export const FamilyPageCanvas: React.FC<FamilyPageCanvasProps> = ({
     index: number;
     groups?: Array<{ sourceUrl: string; messageId: string; canEdit: boolean }>;
     groupIndex?: number;
+    initialGeneratedUrl?: string;
   } | null>(null);
+  const [generatingBlockId, setGeneratingBlockId] = useState<string | null>(null);
+  const [generationError, setGenerationError] = useState('');
   const lastPointerPointRef = useRef<InsertPoint | null>(null);
 
   const pageLightboxEntries = useMemo<PageLightboxEntry[]>(() => {
@@ -312,6 +319,14 @@ export const FamilyPageCanvas: React.FC<FamilyPageCanvasProps> = ({
     });
     return map;
   }, [pageLightboxEntries]);
+
+  const mediaReferenceNumberByBlockId = useMemo(() => {
+    const map: Record<string, number> = {};
+    blocks.filter(block => block.type === 'image' && block.imageUrl).forEach((block, index) => {
+      map[block.id] = index + 1;
+    });
+    return map;
+  }, [blocks]);
 
   const lightboxIndexByEmbeddedImageKey = useMemo(() => {
     const map: Record<string, number> = {};
@@ -622,6 +637,146 @@ export const FamilyPageCanvas: React.FC<FamilyPageCanvasProps> = ({
     setSelectedBlockId(null);
   }, [selectedBlockId, onBlocksChange, onPendingImagesChange]);
 
+  const generateFromTextBlock = useCallback(async (textBlock: PageElementDto) => {
+    if (textBlock.type !== 'text' || generatingBlockId) return;
+
+    const container = window.document.createElement('div');
+    container.innerHTML = textBlock.text ?? '';
+    const commands = parsePictureCommands(container.textContent ?? '');
+    if (commands.length === 0) {
+      setGenerationError('This text block does not contain a /p command.');
+      return;
+    }
+
+    setGeneratingBlockId(textBlock.id);
+    setGenerationError('');
+    try {
+      let workingBlocks = blocksRef.current;
+      const imageBlocks = workingBlocks.filter(block => block.type === 'image' && block.imageUrl);
+      const uploadedByBlockId: Record<string, string> = {};
+
+      for (const command of commands) {
+        const referencedBlocks = command.imageNumbers.map(number => imageBlocks[number - 1]);
+        const missingIndex = referencedBlocks.findIndex(block => !block);
+        if (missingIndex >= 0) {
+          throw new Error(`Image #${command.imageNumbers[missingIndex]} is not available on this page.`);
+        }
+        if (!command.prompt) {
+          throw new Error('The /p command requires a prompt.');
+        }
+
+        const referencedUrls: string[] = [];
+        for (const block of referencedBlocks) {
+          const pending = pendingImages[block.id];
+          if (!pending) {
+            referencedUrls.push(block.imageUrl!);
+            continue;
+          }
+
+          let uploadedUrl = uploadedByBlockId[block.id];
+          if (!uploadedUrl) {
+            uploadedUrl = (await mediaService.upload(pending.file)).url;
+            uploadedByBlockId[block.id] = uploadedUrl;
+          }
+          referencedUrls.push(uploadedUrl);
+        }
+
+        if (Object.keys(uploadedByBlockId).length > 0) {
+          workingBlocks = workingBlocks.map(block => uploadedByBlockId[block.id]
+            ? { ...block, imageUrl: uploadedByBlockId[block.id] }
+            : block);
+          onBlocksChange(workingBlocks);
+          onPendingImagesChange(current => {
+            const next = { ...current };
+            Object.keys(uploadedByBlockId).forEach(blockId => {
+              const pending = next[blockId];
+              if (pending) URL.revokeObjectURL(pending.objectUrl);
+              delete next[blockId];
+            });
+            return next;
+          });
+        }
+
+        if (referencedUrls.length === 1) {
+          const sourceBlock = referencedBlocks[0];
+          const sourceUrl = referencedUrls[0];
+          const messageId = `page_image:${pageId}:${sourceBlock.id}`;
+          const response = await imageGenerationService.generate({
+            sourceType: 'chat_image',
+            generationType: 'custom',
+            messageId,
+            mediaUrl: sourceUrl,
+            mediaUrls: [sourceUrl],
+            customPrompts: [command.prompt],
+            variationCount: 1,
+          });
+          const job = await imageGenerationService.pollJobUntilComplete(response.jobId);
+          const generatedUrl = job.results?.generatedUrls?.[0];
+          if (job.status !== 'completed' || !generatedUrl) {
+            throw new Error(job.errorMessage || 'Image generation failed.');
+          }
+          setLightbox({
+            images: [sourceUrl],
+            index: 0,
+            groups: [{ sourceUrl, messageId, canEdit }],
+            groupIndex: 0,
+            initialGeneratedUrl: generatedUrl,
+          });
+          continue;
+        }
+
+        let generatedUrl: string;
+        if (referencedUrls.length === 0) {
+          generatedUrl = (await imageGenerationService.generateFromText(command.prompt)).url;
+        } else {
+          const response = await imageGenerationService.generate({
+            sourceType: 'chat_image',
+            generationType: 'custom',
+            mediaUrl: referencedUrls[0],
+            secondaryMediaUrl: referencedUrls[1],
+            mediaUrls: referencedUrls,
+            customPrompts: [command.prompt],
+            variationCount: 1,
+          });
+          const job = await imageGenerationService.pollJobUntilComplete(response.jobId);
+          generatedUrl = job.results?.generatedUrls?.[0] ?? '';
+          if (job.status !== 'completed' || !generatedUrl) {
+            throw new Error(job.errorMessage || 'Image generation failed.');
+          }
+        }
+
+        const width = 300;
+        const height = 300;
+        const generatedBlock: PageElementDto = {
+          id: `generated_${crypto.randomUUID()}`,
+          type: 'image',
+          x: Math.min(Math.max(0, textBlock.x + textBlock.width + 16), PAGE_WIDTH - width),
+          y: Math.min(textBlock.y, PAGE_HEIGHT - height),
+          width,
+          height,
+          fontSize: 16,
+          textAlign: 'left',
+          imageUrl: generatedUrl,
+          zIndex: getNextZIndex(workingBlocks),
+        };
+        workingBlocks = [...workingBlocks, generatedBlock];
+        onBlocksChange(workingBlocks);
+        setSelectedBlockId(generatedBlock.id);
+      }
+    } catch (error) {
+      setGenerationError(error instanceof Error ? error.message : 'Image generation failed.');
+    } finally {
+      setGeneratingBlockId(null);
+    }
+  }, [
+    canEdit,
+    generatingBlockId,
+    onBlocksChange,
+    onPendingImagesChange,
+    pageId,
+    pendingImages,
+  ]);
+
   const openImageLightbox = useCallback(async (blockId: string) => {
     const index = lightboxIndexByBlockId[blockId];
     if (index === undefined || !lightboxImages[index]) {
@@ -717,6 +872,19 @@ export const FamilyPageCanvas: React.FC<FamilyPageCanvasProps> = ({
             <MagicIcon sx={{ fontSize: 18 }} />
           </IconButton>
         )}
+        {block.type === 'text' && (
+          <IconButton
+            size="small"
+            title={generationError || 'Generate image from /p command'}
+            disabled={Boolean(generatingBlockId)}
+            onClick={(e) => { e.stopPropagation(); void generateFromTextBlock(block); }}
+            sx={{ color: generationError ? 'error.main' : '#7c3aed' }}
+          >
+            {generatingBlockId === block.id
+              ? <CircularProgress size={16} />
+              : <MagicIcon sx={{ fontSize: 18 }} />}
+          </IconButton>
+        )}
         {block.type === 'image' && lightboxIndexByBlockId[block.id] !== undefined && (
           <IconButton size="small" onClick={(e) => { e.stopPropagation(); void cycleStandaloneImage(block.id); }} sx={{ color: '#2563eb' }}>
             <CycleImageIcon sx={{ fontSize: 18 }} />
@@ -802,6 +970,7 @@ export const FamilyPageCanvas: React.FC<FamilyPageCanvasProps> = ({
                       onDragStart={(e: React.DragEvent) => e.preventDefault()}
                       sx={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block', pointerEvents: 'none' }}
                     />
+                    <MediaReferenceBadge number={mediaReferenceNumberByBlockId[block.id]} />
                     <ResizeHandles block={block} />
                     {renderBlockToolbar(block)}
                   </BoxAny>
@@ -869,6 +1038,7 @@ export const FamilyPageCanvas: React.FC<FamilyPageCanvasProps> = ({
           initialIndex={lightbox.index}
           groups={lightbox.groups}
           initialGroupIndex={lightbox.groupIndex}
+          initialGeneratedUrl={lightbox.initialGeneratedUrl}
           open
           onClose={() => setLightbox(null)}
         />

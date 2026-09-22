@@ -30,6 +30,8 @@ import { appPageContainerSx } from '@/styles/appLayout';
 import { ConfirmDialog } from '@/components/Shared/ConfirmDialog';
 import { SelectedTextMenu } from '@/components/Shared/SelectedTextMenu';
 import { imageGenerationService } from '@/services/imageGeneration.service';
+import { MediaReferenceBadge } from '@/components/Shared/MediaReferenceBadge';
+import { parsePictureCommands } from '@/utils/mediaCommands';
 
 // Work around TS2590 ("union type too complex") from MUI Box typings in some TS versions.
 const BoxAny = Box as any;
@@ -83,6 +85,7 @@ type MomentMediaGridProps = {
   canEdit?: boolean;
   onEditImage?: (index: number) => void;
   onRemoveImage?: (index: number) => void;
+  referenceNumbers?: number[];
 };
 
 const MomentMediaGrid: React.FC<MomentMediaGridProps> = ({
@@ -92,6 +95,7 @@ const MomentMediaGrid: React.FC<MomentMediaGridProps> = ({
   canEdit = false,
   onEditImage,
   onRemoveImage,
+  referenceNumbers,
 }) => {
   const { t } = useLanguage();
   if (!mediaUrls.length) return null;
@@ -107,6 +111,7 @@ const MomentMediaGrid: React.FC<MomentMediaGridProps> = ({
     >
       {mediaUrls.map((url, idx) => (
         <BoxAny key={`${momentId}-${url}-${idx}`} sx={{ position: 'relative' }}>
+          <MediaReferenceBadge number={referenceNumbers?.[idx]} />
           <ImageHoverPreview
             src={url}
             alt={imageAlt}
@@ -266,10 +271,38 @@ export const MomentsPage: React.FC = () => {
         const uploads = await Promise.all(pendingImages.map((item) => mediaService.upload(item.file)));
         uploadedUrls = uploads.map((item) => item.url).filter(Boolean);
       }
+      const commands = parsePictureCommands(text);
+      const generatedUrls: string[] = [];
+      for (const command of commands) {
+        const referencedUrls = command.imageNumbers.map(number => uploadedUrls[number - 1]);
+        const missingIndex = referencedUrls.findIndex(url => !url);
+        if (missingIndex >= 0) {
+          throw new Error(`Image #${command.imageNumbers[missingIndex]} is not available in this moment draft.`);
+        }
+        if (referencedUrls.length === 0) {
+          generatedUrls.push((await imageGenerationService.generateFromText(command.prompt)).url);
+        } else {
+          const response = await imageGenerationService.generate({
+            sourceType: 'chat_image',
+            generationType: 'custom',
+            mediaUrl: referencedUrls[0],
+            secondaryMediaUrl: referencedUrls[1],
+            mediaUrls: referencedUrls,
+            customPrompts: [command.prompt],
+            variationCount: 1,
+          });
+          const job = await imageGenerationService.pollJobUntilComplete(response.jobId);
+          const generatedUrl = job.results?.generatedUrls?.[0];
+          if (job.status !== 'completed' || !generatedUrl) {
+            throw new Error(job.errorMessage || t('selection.generateFailed'));
+          }
+          generatedUrls.push(generatedUrl);
+        }
+      }
 
       await momentService.createMoment({
         text: text.trim() || undefined,
-        mediaUrls: uploadedUrls.length > 0 ? uploadedUrls : undefined,
+        mediaUrls: [...uploadedUrls, ...generatedUrls].length > 0 ? [...uploadedUrls, ...generatedUrls] : undefined,
         visibility: 'public',
       });
 
@@ -371,7 +404,40 @@ export const MomentsPage: React.FC = () => {
     if (!draft) return;
     setActionLoading(momentId);
     try {
-      const updated = await momentService.addComment(momentId, draft);
+      const moment = moments.find(item => item.id === momentId);
+      if (!moment) return;
+      const contextUrls = [
+        ...(moment.content?.mediaUrls || []),
+        ...moment.comments.flatMap(comment => comment.mediaUrls || []),
+      ];
+      const generatedUrls: string[] = [];
+      for (const command of parsePictureCommands(draft)) {
+        const referencedUrls = command.imageNumbers.map(number => contextUrls[number - 1]);
+        const missingIndex = referencedUrls.findIndex(url => !url);
+        if (missingIndex >= 0) {
+          throw new Error(`Image #${command.imageNumbers[missingIndex]} is not available in this moment.`);
+        }
+        if (referencedUrls.length === 0) {
+          generatedUrls.push((await imageGenerationService.generateFromText(command.prompt)).url);
+        } else {
+          const response = await imageGenerationService.generate({
+            sourceType: 'chat_image',
+            generationType: 'custom',
+            mediaUrl: referencedUrls[0],
+            secondaryMediaUrl: referencedUrls[1],
+            mediaUrls: referencedUrls,
+            customPrompts: [command.prompt],
+            variationCount: 1,
+          });
+          const job = await imageGenerationService.pollJobUntilComplete(response.jobId);
+          const generatedUrl = job.results?.generatedUrls?.[0];
+          if (job.status !== 'completed' || !generatedUrl) {
+            throw new Error(job.errorMessage || t('selection.generateFailed'));
+          }
+          generatedUrls.push(generatedUrl);
+        }
+      }
+      const updated = await momentService.addComment(momentId, draft, generatedUrls);
       updateMomentInState(updated);
       setCommentDrafts((prev) => ({ ...prev, [momentId]: '' }));
       setCommentOpenFor(null);
@@ -480,6 +546,7 @@ export const MomentsPage: React.FC = () => {
               mediaUrls={draftMediaUrls}
               imageAlt={t('moments.imagePreview')}
               onRemoveImage={handleRemovePendingImage}
+              referenceNumbers={draftMediaUrls.map((_, index) => index + 1)}
             />
 
             <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 1, flexWrap: 'wrap' }}>
@@ -513,6 +580,8 @@ export const MomentsPage: React.FC = () => {
         ) : (
           moments.map((moment) => {
             const isLiked = moment.likes?.some((l) => l.userId === user?.id);
+            const momentImageCount = moment.content?.mediaUrls?.length || 0;
+            let nextCommentImageNumber = momentImageCount + 1;
             return (
             <Card key={moment.id} sx={{ mb: 2, ...momentCardSx }}>
               <CardContent sx={{ pt: 1.5, pb: 1, '&:last-child': { pb: 1 } }}>
@@ -573,6 +642,7 @@ export const MomentsPage: React.FC = () => {
                     mediaUrls={moment.content?.mediaUrls || []}
                     imageAlt={t('moments.image')}
                     canEdit={moment.userId === user?.id || friendIdSet.has(moment.userId)}
+                    referenceNumbers={(moment.content?.mediaUrls || []).map((_, index) => index + 1)}
                     onEditImage={(idx) => {
                       const urls = moment.content?.mediaUrls || [];
                       setLightbox({
@@ -622,6 +692,7 @@ export const MomentsPage: React.FC = () => {
                           mediaUrls={c.mediaUrls || []}
                           imageAlt={t('moments.image')}
                           canEdit={c.userId === user?.id || friendIdSet.has(c.userId)}
+                          referenceNumbers={(c.mediaUrls || []).map(() => nextCommentImageNumber++)}
                           onEditImage={(idx) => {
                             const urls = c.mediaUrls || [];
                             const canEdit = c.userId === user?.id || friendIdSet.has(c.userId);

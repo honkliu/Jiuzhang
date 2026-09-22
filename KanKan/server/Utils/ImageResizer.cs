@@ -79,6 +79,37 @@ public static class ImageResizer
         return ms.ToArray();
     }
 
+    public static byte[] CreateContactSheet(IReadOnlyList<byte[]> images, int cellSize = 768)
+    {
+        if (images.Count == 0)
+            throw new ArgumentException("At least one image is required.", nameof(images));
+
+        var columns = images.Count == 1 ? 1 : 2;
+        var rows = (int)Math.Ceiling(images.Count / (double)columns);
+        using var sheet = new Image<SixLabors.ImageSharp.PixelFormats.Rgba32>(
+            columns * cellSize,
+            rows * cellSize,
+            SixLabors.ImageSharp.Color.White);
+
+        for (var index = 0; index < images.Count; index++)
+        {
+            using var image = Image.Load<SixLabors.ImageSharp.PixelFormats.Rgba32>(images[index]);
+            image.Mutate(context => context.Resize(new ResizeOptions
+            {
+                Size = new Size(cellSize, cellSize),
+                Mode = ResizeMode.Pad,
+                PadColor = SixLabors.ImageSharp.Color.White,
+            }));
+            var x = index % columns * cellSize;
+            var y = index / columns * cellSize;
+            sheet.Mutate(context => context.DrawImage(image, new Point(x, y), 1f));
+        }
+
+        using var stream = new MemoryStream();
+        sheet.SaveAsPng(stream, new PngEncoder());
+        return stream.ToArray();
+    }
+
     private static void StripMetadata(ImageMetadata metadata)
     {
         metadata.ExifProfile = null;

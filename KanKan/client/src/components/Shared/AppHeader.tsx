@@ -18,6 +18,7 @@ import {
   Logout as LogoutIcon,
   Notifications as NotificationsIcon,
   ExpandMore as ExpandMoreIcon,
+  Tag as TagIcon,
 } from '@mui/icons-material';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
@@ -34,6 +35,10 @@ import { GeneratedAvatarPicker } from '@/components/Avatar/GeneratedAvatarPicker
 import { useSettings } from '@/settings/SettingsContext';
 import { useSkin } from '@/skins/SkinContext';
 import kankanLogo from '@/assets/brand/kankan-96-q95.jpg';
+import {
+  readMediaReferenceVisibility,
+  setMediaReferenceVisibility,
+} from '@/components/Shared/MediaReferenceBadge';
 
 // Work around TS2590 (“union type too complex”) from MUI Box typings in some TS versions.
 const BoxAny = Box as any;
@@ -80,9 +85,9 @@ const headerNavMenuItemSx = {
 };
 
 const headerUtilityButtonSx = {
-  width: 32,
-  height: 32,
-  minWidth: 32,
+  width: 30,
+  height: 30,
+  minWidth: 30,
 };
 
 interface AppHeaderProps {
@@ -119,6 +124,7 @@ export const AppHeader: React.FC<AppHeaderProps> = () => {
     return !item.adminOnly || user?.isAdmin;
   });
   const [compactVisibleCount, setCompactVisibleCount] = React.useState(0);
+  const [showMediaReferences, setShowMediaReferences] = React.useState(readMediaReferenceVisibility);
 
   React.useLayoutEffect(() => {
     const measure = () => {
@@ -348,7 +354,7 @@ export const AppHeader: React.FC<AppHeaderProps> = () => {
           )}
         </BoxAny>
 
-        <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+        <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 0 }}>
           <BoxAny sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mr: 0.25 }}>
             <BoxAny sx={{ display: 'inline-flex' }}>
               <UserAvatar
@@ -404,6 +410,18 @@ export const AppHeader: React.FC<AppHeaderProps> = () => {
           <Button onClick={toggleLanguage} variant="outlined" size="small" sx={{ ...headerUtilityButtonSx, px: 0.75 }}>
             {language === 'en' ? '中' : 'EN'}
           </Button>
+          <IconButton
+            title={showMediaReferences ? 'Hide image numbers' : 'Show image numbers'}
+            color={showMediaReferences ? 'primary' : 'default'}
+            onClick={() => {
+              const next = !showMediaReferences;
+              setShowMediaReferences(next);
+              setMediaReferenceVisibility(next);
+            }}
+            sx={{ ...headerUtilityButtonSx, p: 0 }}
+          >
+            <TagIcon sx={{ fontSize: '1.05rem' }} />
+          </IconButton>
           <IconButton
             title={t('nav.notifications')}
             onClick={handleOpenNotifications}

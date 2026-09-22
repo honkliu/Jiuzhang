@@ -364,7 +364,9 @@ export const Notebook: React.FC<NotebookProps> = ({ notebookId, canEdit }) => {
         Object.keys(uploadedUrls).forEach(id => { const e = current[id]; if (e) URL.revokeObjectURL(e.objectUrl); });
         const next = { ...current }; Object.keys(uploadedUrls).forEach(id => delete next[id]); return next;
       });
-    } catch {}
+    } catch (error) {
+      console.error('Failed to save notebook page:', error);
+    }
     setSaving(false);
   }, [notebookId, activePageId, hasChanges, draftBlocks, pendingImages]);
 

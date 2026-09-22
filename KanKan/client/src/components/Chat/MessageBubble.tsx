@@ -13,6 +13,7 @@ import { ImageLightbox } from '@/components/Shared/ImageLightbox';
 import { useSettings } from '@/settings/SettingsContext';
 import { VoiceMessageBubble } from '@/components/Chat/VoiceMessageBubble';
 import { SelectedTextMenu } from '@/components/Shared/SelectedTextMenu';
+import { MediaReferenceBadge } from '@/components/Shared/MediaReferenceBadge';
 
 // Work around TS2590 ("union type too complex") from MUI Box typings in some TS versions.
 const BoxAny = Box as any;
@@ -484,6 +485,7 @@ interface MessageBubbleProps {
   imageIndex?: number;
   imageGroups?: Array<{ sourceUrl: string; messageId: string; canEdit: boolean }>;
   imageGroupIndex?: number;
+  mediaReferenceNumber?: number;
   /** Display names of chat participants — used to highlight `@Name` mentions in text. */
   mentionableNames?: string[];
   onGenerateFromText?: (selectedText: string) => Promise<void>;
@@ -499,6 +501,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
   imageIndex,
   imageGroups,
   imageGroupIndex,
+  mediaReferenceNumber,
   mentionableNames,
   onGenerateFromText,
 }) => {
@@ -755,6 +758,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
             <ChatMessageContent text={renderText} mentionableNames={mentionableNames} dense={isHistoryLayout} />
           )
         ) : message.messageType === 'image' ? (
+          <BoxAny sx={{ position: 'relative', display: 'inline-flex' }}>
           <ImageHoverPreview
             src={displayedImageUrl}
             alt={t('chat.message.image')}
@@ -786,6 +790,8 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
               />
             )}
           </ImageHoverPreview>
+          <MediaReferenceBadge number={mediaReferenceNumber} />
+          </BoxAny>
         ) : message.messageType === 'video' ? (
           <BoxAny
             component="video"

@@ -25,7 +25,8 @@ public class CreateMomentRequest
 
 public class AddMomentCommentRequest
 {
-    public string Text { get; set; } = string.Empty;
+    public string? Text { get; set; }
+    public List<string>? MediaUrls { get; set; }
 }
 
 public class AddGeneratedMomentImageRequest

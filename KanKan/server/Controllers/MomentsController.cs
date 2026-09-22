@@ -183,8 +183,8 @@ public class MomentsController : ControllerBase
     {
         try
         {
-            if (string.IsNullOrWhiteSpace(request.Text))
-                return BadRequest(new { message = "Comment text is required" });
+            if (string.IsNullOrWhiteSpace(request.Text) && (request.MediaUrls == null || request.MediaUrls.Count == 0))
+                return BadRequest(new { message = "Comment text or image is required" });
 
             var userId = GetUserId();
             var userName = GetUserName();
@@ -214,7 +214,8 @@ public class MomentsController : ControllerBase
                 UserId = userId,
                 UserName = userName,
                 UserAvatar = user.AvatarUrl ?? string.Empty,
-                Text = request.Text.Trim(),
+                Text = request.Text?.Trim() ?? string.Empty,
+                MediaUrls = request.MediaUrls,
                 Timestamp = DateTime.UtcNow
             });
 
@@ -230,7 +231,9 @@ public class MomentsController : ControllerBase
                     Category = "pa_comment",
                     EntityId = moment.Id,
                     Title = userName,
-                    Body = request.Text.Trim().Length > 50 ? request.Text.Trim()[..50] + "..." : request.Text.Trim(),
+                    Body = string.IsNullOrWhiteSpace(request.Text)
+                        ? "[Image]"
+                        : request.Text.Trim().Length > 50 ? request.Text.Trim()[..50] + "..." : request.Text.Trim(),
                     IsRead = false,
                     CreatedAt = DateTime.UtcNow,
                     Ttl = 60 * 60 * 24 * 30

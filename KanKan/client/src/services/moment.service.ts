@@ -49,8 +49,8 @@ class MomentService {
     return response.data;
   }
 
-  async addComment(momentId: string, text: string): Promise<Moment> {
-    const response = await apiClient.post<Moment>(`/pa/${momentId}/comments`, { text });
+  async addComment(momentId: string, text: string, mediaUrls?: string[]): Promise<Moment> {
+    const response = await apiClient.post<Moment>(`/pa/${momentId}/comments`, { text, mediaUrls });
     return response.data;
   }
 

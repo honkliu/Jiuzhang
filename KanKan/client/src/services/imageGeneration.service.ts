@@ -53,6 +53,7 @@ class UnifiedImageGenerationService {
     chatId?: string;
     mediaUrl?: string;
     secondaryMediaUrl?: string;
+    mediaUrls?: string[];
     primaryUserId?: string;
     secondaryUserId?: string;
     emotion?: string;
@@ -69,6 +70,7 @@ class UnifiedImageGenerationService {
       chatId: request.chatId,
       mediaUrl: request.mediaUrl,
       secondaryMediaUrl: request.secondaryMediaUrl,
+      mediaUrls: request.mediaUrls,
       primaryUserId: request.primaryUserId,
       secondaryUserId: request.secondaryUserId,
       emotion: request.emotion,
