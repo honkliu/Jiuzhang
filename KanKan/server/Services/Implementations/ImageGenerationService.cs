@@ -601,7 +601,7 @@ public class ImageGenerationService : IImageGenerationService
                     if (totalCount == 1 && !string.IsNullOrWhiteSpace(request.Emotion))
                     {
                         using var gate = await _comfyUIService.AcquireGenerationSlotAsync();
-                        var promptId = await _comfyUIService.SubmitPromptAsync(imageBase64, fullPrompt);
+                        var promptId = await _comfyUIService.SubmitPromptAsync(new[] { imageBase64 }, fullPrompt);
                         var updatePrompt = Builders<ImageGenerationJob>.Update
                             .Set(j => j.ComfyPromptId, promptId)
                             .Set(j => j.Prompt, fullPrompt)
@@ -630,7 +630,7 @@ public class ImageGenerationService : IImageGenerationService
                     }
                     else
                     {
-                        var generatedBase64 = await _comfyUIService.GenerateImageAsync(imageBase64, fullPrompt);
+                        var generatedBase64 = await _comfyUIService.GenerateImageAsync(new[] { imageBase64 }, fullPrompt);
                         var resizedBase64 = ResizeGeneratedBase64(generatedBase64, targetWidth, targetHeight, originalAvatar.ContentType);
                         var avatarId = await StoreGeneratedAvatarAsync(request, originalAvatar, label, resizedBase64, fullPrompt);
                         generatedAvatarIds.Add(avatarId);
@@ -863,8 +863,7 @@ public class ImageGenerationService : IImageGenerationService
             var (targetWidth, targetHeight) = ImageResizer.GetScaledDimensions(imageBytes, 1024);
             var normalizedPrimaryBytes = ImageResizer.NormalizeToPng(imageBytes);
             var imageBase64 = Convert.ToBase64String(normalizedPrimaryBytes);
-            string? secondaryImageBase64 = null;
-            ResolvedImageSource? secondarySource = null;
+            var imageBase64Values = new List<string> { imageBase64 };
 
             var additionalMediaUrls = (request.MediaUrls ?? new List<string>())
                 .Where(url => !string.IsNullOrWhiteSpace(url))
@@ -878,20 +877,15 @@ public class ImageGenerationService : IImageGenerationService
 
             if (additionalMediaUrls.Count > 0)
             {
-                secondarySource = await ResolveImageSourceAsync(additionalMediaUrls[0]);
-                var secondaryImageBytes = secondarySource.Bytes;
-                if (additionalMediaUrls.Count > 1)
+                foreach (var additionalMediaUrl in additionalMediaUrls)
                 {
-                    var remainingBytes = new List<byte[]> { secondaryImageBytes };
-                    foreach (var url in additionalMediaUrls.Skip(1))
-                    {
-                        remainingBytes.Add((await ResolveImageSourceAsync(url)).Bytes);
-                    }
-                    secondaryImageBytes = ImageResizer.CreateContactSheet(remainingBytes);
+                    var additionalSource = await ResolveImageSourceAsync(additionalMediaUrl);
+                    var normalizedBytes = ImageResizer.NormalizeToPng(additionalSource.Bytes);
+                    imageBase64Values.Add(Convert.ToBase64String(normalizedBytes));
                 }
-                var normalizedSecondaryBytes = ImageResizer.NormalizeToPng(secondaryImageBytes);
-                secondaryImageBase64 = Convert.ToBase64String(normalizedSecondaryBytes);
             }
+            if (imageBase64Values.Count > 16)
+                throw new InvalidOperationException("Qwen Image 2.1 supports at most 16 image inputs.");
 
             // Determine prompts
             var prompts = GetPrompts(request.GenerationType, request.CustomPrompts, null, BaseEmotionTypes);
@@ -919,7 +913,7 @@ public class ImageGenerationService : IImageGenerationService
             //   server prefixes the original filename with a GUID.
             //   The secondary reference image does not affect filenames here.
             var isPairCase = string.IsNullOrWhiteSpace(request.MessageId)
-                && secondarySource != null
+                && imageBase64Values.Count > 1
                 && !string.IsNullOrWhiteSpace(request.PrimaryUserId)
                 && !string.IsNullOrWhiteSpace(request.SecondaryUserId);
 
@@ -968,7 +962,7 @@ public class ImageGenerationService : IImageGenerationService
                     {
                         fullPrompt = $"{fullPrompt} {extraPrompt}";
                     }
-                    var generatedBase64 = await _comfyUIService.GenerateImageAsync(imageBase64, fullPrompt, secondaryImageBase64);
+                    var generatedBase64 = await _comfyUIService.GenerateImageAsync(imageBase64Values, fullPrompt);
 
                     // Save to file system
                     string generatedFileName;
