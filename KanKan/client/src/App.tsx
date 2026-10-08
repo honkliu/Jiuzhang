@@ -25,6 +25,7 @@ import { setAuth } from './store/authSlice';
 const GamesPage = React.lazy(() => import('./components/Games/GamesPage'));
 const HelpPage = React.lazy(() => import('./components/Help/HelpPage'));
 const StocksPage = React.lazy(() => import('./components/Stocks/StocksPage'));
+const MusicPage = React.lazy(() => import('./components/Music/MusicPage'));
 
 // Protected Route component
 const ProtectedRoute: React.FC<{ children: React.ReactElement }> = ({ children }) => {
@@ -173,6 +174,16 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <GalleryPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/music"
+                element={
+                  <ProtectedRoute>
+                    <React.Suspense fallback={null}>
+                      <MusicPage />
+                    </React.Suspense>
                   </ProtectedRoute>
                 }
               />
