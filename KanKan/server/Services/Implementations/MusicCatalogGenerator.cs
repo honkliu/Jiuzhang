@@ -8,7 +8,8 @@ using KanKan.API.Services.Interfaces;
 
 namespace KanKan.API.Services.Implementations;
 
-public sealed class MusicCatalogGenerator : IMusicCatalogGenerator
+public sealed class MusicCatalogGenerator(
+    ILogger<MusicCatalogGenerator> logger) : IMusicCatalogGenerator
 {
     private static readonly HashSet<string> AudioExtensions = new(
         [".flac", ".mp3", ".m4a", ".aac", ".ogg", ".opus", ".wav", ".wma"],
@@ -34,6 +35,10 @@ public sealed class MusicCatalogGenerator : IMusicCatalogGenerator
         "^\\s*INDEX\\s+01\\s+(\\d+:\\d+:\\d+)\\s*$",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+    private static readonly Regex LeadingFileTrackNumberPattern = new(
+        "^(?:track\\s*)?0*(\\d{1,3})(?:\\D|$)",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
     private static readonly EnumerationOptions EnumerationOptions = new()
     {
         RecurseSubdirectories = true,
@@ -53,7 +58,7 @@ public sealed class MusicCatalogGenerator : IMusicCatalogGenerator
             || extension.Equals(".cue", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static MusicCatalogGenerationResult Generate(
+    private MusicCatalogGenerationResult Generate(
         string configuredRootPath,
         CancellationToken cancellationToken)
     {
@@ -85,11 +90,35 @@ public sealed class MusicCatalogGenerator : IMusicCatalogGenerator
         {
             cancellationToken.ThrowIfCancellationRequested();
             var cue = ParseCue(cuePath);
+            if (cue.Tracks.Count == 0)
+            {
+                logger.LogWarning("CUE file contains no readable audio tracks: {CuePath}", cuePath);
+                continue;
+            }
+
             ResolveCueFiles(cue);
+            RepairSplitTrackAssignments(cue);
             var signature = BuildCueSignature(cue, rootPath);
-            if (cue.Tracks.Count == 0 || !cueSignatures.Add(signature))
+            if (!cueSignatures.Add(signature))
             {
                 continue;
+            }
+
+            var unresolvedTrackCount = cue.Tracks.Count(track => track.ResolvedPath is null);
+            if (unresolvedTrackCount > 0)
+            {
+                var unresolvedReferences = string.Join(
+                    ", ",
+                    cue.Tracks
+                        .Where(track => track.ResolvedPath is null)
+                        .Select(track => track.FileReference)
+                        .Distinct(StringComparer.OrdinalIgnoreCase));
+                logger.LogWarning(
+                    "CUE file has {UnresolvedTrackCount} tracks with unresolved audio "
+                    + "reference(s) {AudioReferences}: {CuePath}",
+                    unresolvedTrackCount,
+                    unresolvedReferences,
+                    cuePath);
             }
 
             for (var index = 0; index < cue.Tracks.Count; index++)
@@ -121,7 +150,9 @@ public sealed class MusicCatalogGenerator : IMusicCatalogGenerator
                     }
                 }
 
-                var title = FirstNonEmpty(track.Title, metadata.Title, AudioTitle(track.ResolvedPath));
+                var title = cue.RepairedSplitAssignments
+                    ? FirstNonEmpty(metadata.Title, track.Title, AudioTitle(track.ResolvedPath))
+                    : FirstNonEmpty(track.Title, metadata.Title, AudioTitle(track.ResolvedPath));
                 var performer = FirstNonEmpty(
                     track.Performer,
                     cue.AlbumPerformer,
@@ -337,7 +368,7 @@ public sealed class MusicCatalogGenerator : IMusicCatalogGenerator
             var fileMatch = FilePattern.Match(line);
             if (fileMatch.Success)
             {
-                currentFile = Clean(fileMatch.Groups[1].Success
+                currentFile = CleanFileReference(fileMatch.Groups[1].Success
                     ? fileMatch.Groups[1].Value
                     : fileMatch.Groups[2].Value);
                 continue;
@@ -438,6 +469,49 @@ public sealed class MusicCatalogGenerator : IMusicCatalogGenerator
         AudioExtensions.Contains(Path.GetExtension(path))
         || Path.GetExtension(path).Equals(".bin", StringComparison.OrdinalIgnoreCase);
 
+    private static void RepairSplitTrackAssignments(CueSheet cue)
+    {
+        var cueDirectory = Path.GetDirectoryName(cue.Path)!;
+        var numberedAudio = new Dictionary<int, string>();
+        foreach (var path in Directory.EnumerateFiles(cueDirectory)
+                     .Where(path => AudioExtensions.Contains(Path.GetExtension(path))))
+        {
+            var match = LeadingFileTrackNumberPattern.Match(
+                Path.GetFileNameWithoutExtension(path));
+            if (!match.Success
+                || !int.TryParse(
+                    match.Groups[1].Value,
+                    NumberStyles.None,
+                    CultureInfo.InvariantCulture,
+                    out var number)
+                || !numberedAudio.TryAdd(number, path))
+            {
+                return;
+            }
+        }
+
+        if (numberedAudio.Count != cue.Tracks.Count
+            || cue.Tracks.Any(track => !numberedAudio.ContainsKey(track.Number)))
+        {
+            return;
+        }
+
+        var currentAssignments = cue.Tracks
+            .Select(track => track.ResolvedPath)
+            .Where(path => path is not null)
+            .ToHashSet(PathComparer);
+        if (currentAssignments.Count == cue.Tracks.Count)
+        {
+            return;
+        }
+
+        foreach (var track in cue.Tracks)
+        {
+            track.ResolvedPath = numberedAudio[track.Number];
+        }
+        cue.RepairedSplitAssignments = true;
+    }
+
     private static string BuildCueSignature(CueSheet cue, string rootPath) =>
         string.Join(
             "|",
@@ -450,24 +524,44 @@ public sealed class MusicCatalogGenerator : IMusicCatalogGenerator
     private static string ReadCueText(string path)
     {
         var bytes = File.ReadAllBytes(path);
-        foreach (var encoding in new[]
+        try
         {
-            new UTF8Encoding(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true),
-            new UnicodeEncoding(bigEndian: false, byteOrderMark: true, throwOnInvalidBytes: true),
-            Encoding.GetEncoding("GB18030", EncoderFallback.ExceptionFallback, DecoderFallback.ExceptionFallback)
-        })
+            return new UTF8Encoding(
+                encoderShouldEmitUTF8Identifier: false,
+                throwOnInvalidBytes: true)
+                .GetString(bytes)
+                .TrimStart('\uFEFF');
+        }
+        catch (DecoderFallbackException)
         {
-            try
-            {
-                return encoding.GetString(bytes).TrimStart('\uFEFF');
-            }
-            catch (DecoderFallbackException)
-            {
-                // Try the next common CUE encoding.
-            }
+            // Try legacy encodings below.
         }
 
-        return Encoding.UTF8.GetString(bytes).TrimStart('\uFEFF');
+        if (bytes.Length >= 2 && bytes[0] == 0xFF && bytes[1] == 0xFE)
+        {
+            return new UnicodeEncoding(
+                bigEndian: false,
+                byteOrderMark: true,
+                throwOnInvalidBytes: true)
+                .GetString(bytes)
+                .TrimStart('\uFEFF');
+        }
+
+        if (bytes.Length >= 2 && bytes[0] == 0xFE && bytes[1] == 0xFF)
+        {
+            return new UnicodeEncoding(
+                bigEndian: true,
+                byteOrderMark: true,
+                throwOnInvalidBytes: true)
+                .GetString(bytes)
+                .TrimStart('\uFEFF');
+        }
+
+        return Encoding.GetEncoding(
+            "GB18030",
+            EncoderFallback.ExceptionFallback,
+            DecoderFallback.ReplacementFallback)
+            .GetString(bytes);
     }
 
     private static AudioMetadata GetAudioMetadata(
@@ -705,6 +799,9 @@ public sealed class MusicCatalogGenerator : IMusicCatalogGenerator
             (char[]?)null,
             StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
 
+    private static string CleanFileReference(string value) =>
+        value.Replace("\0", string.Empty).Trim();
+
     private static StringComparer PathComparer =>
         OperatingSystem.IsWindows()
             ? StringComparer.OrdinalIgnoreCase
@@ -719,6 +816,8 @@ public sealed class MusicCatalogGenerator : IMusicCatalogGenerator
         public string AlbumPerformer { get; set; } = string.Empty;
 
         public List<CueTrack> Tracks { get; } = [];
+
+        public bool RepairedSplitAssignments { get; set; }
     }
 
     private sealed class CueTrack(int number, string fileReference)
