@@ -215,6 +215,7 @@ public sealed class MusicCatalogService(
             ".ogg" => "audio/ogg",
             ".opus" => "audio/ogg",
             ".wav" => "audio/wav",
+            ".wma" => "audio/x-ms-wma",
             _ => "application/octet-stream"
         };
 

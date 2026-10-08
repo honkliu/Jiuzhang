@@ -11,7 +11,7 @@ namespace KanKan.API.Services.Implementations;
 public sealed class MusicCatalogGenerator : IMusicCatalogGenerator
 {
     private static readonly HashSet<string> AudioExtensions = new(
-        [".flac", ".mp3", ".m4a", ".aac", ".ogg", ".opus", ".wav"],
+        [".flac", ".mp3", ".m4a", ".aac", ".ogg", ".opus", ".wav", ".wma"],
         StringComparer.OrdinalIgnoreCase);
 
     private static readonly Regex FilePattern = new(
@@ -411,7 +411,7 @@ public sealed class MusicCatalogGenerator : IMusicCatalogGenerator
                 .Replace('/', Path.DirectorySeparatorChar)
                 .Replace('\\', Path.DirectorySeparatorChar);
             var candidate = Path.GetFullPath(Path.Combine(cueDirectory, normalizedReference));
-            if (File.Exists(candidate) && AudioExtensions.Contains(Path.GetExtension(candidate)))
+            if (File.Exists(candidate) && IsCueAudioSource(candidate))
             {
                 track.ResolvedPath = candidate;
                 continue;
@@ -419,7 +419,7 @@ public sealed class MusicCatalogGenerator : IMusicCatalogGenerator
 
             var fileName = Path.GetFileName(normalizedReference);
             if (directoryFiles.TryGetValue(fileName, out var caseInsensitiveMatch)
-                && AudioExtensions.Contains(Path.GetExtension(caseInsensitiveMatch)))
+                && IsCueAudioSource(caseInsensitiveMatch))
             {
                 track.ResolvedPath = caseInsensitiveMatch;
                 continue;
@@ -427,12 +427,16 @@ public sealed class MusicCatalogGenerator : IMusicCatalogGenerator
 
             var stem = Path.GetFileNameWithoutExtension(fileName);
             track.ResolvedPath = directoryFiles.Values.FirstOrDefault(path =>
-                AudioExtensions.Contains(Path.GetExtension(path))
+                IsCueAudioSource(path)
                 && Path.GetFileNameWithoutExtension(path).Equals(
                     stem,
                     StringComparison.OrdinalIgnoreCase));
         }
     }
+
+    private static bool IsCueAudioSource(string path) =>
+        AudioExtensions.Contains(Path.GetExtension(path))
+        || Path.GetExtension(path).Equals(".bin", StringComparison.OrdinalIgnoreCase);
 
     private static string BuildCueSignature(CueSheet cue, string rootPath) =>
         string.Join(
