@@ -20,11 +20,13 @@
     <PackageReference Include="Microsoft.OpenApi" Version="3.10.2" />
     <PackageReference Include="StackExchange.Redis" Version="2.10.14" />
     <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
+    <PackageReference Include="TagLibSharp" Version="2.3.0" />
   </ItemGroup>
 
   <ItemGroup>
     <Compile Remove="obj\**\*.cs;bin\**\*.cs;obj_*\**\*.cs;bin_*\**\*.cs" />
     <EmbeddedResource Remove="obj\**\*;bin\**\*;obj_*\**\*;bin_*\**\*" />
+    <EmbeddedResource Include="Data\MusicTitleOverrides.json" />
     <None Remove="obj\**\*;bin\**\*;obj_*\**\*;bin_*\**\*" />
   </ItemGroup>
 

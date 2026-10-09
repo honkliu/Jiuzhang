@@ -82,10 +82,9 @@ public sealed class MusicCatalogGenerator(
             .ToArray();
         var audioMetadata = new Dictionary<string, AudioMetadata>(PathComparer);
         var referencedAudio = new HashSet<string>(PathComparer);
-        var cueSignatures = new HashSet<string>(StringComparer.Ordinal);
         var records = new List<CatalogRecord>();
         var cueTrackCount = 0;
-
+        var parsedCues = new List<CueSheet>();
         foreach (var cuePath in cueFiles)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -98,12 +97,6 @@ public sealed class MusicCatalogGenerator(
 
             ResolveCueFiles(cue);
             RepairSplitTrackAssignments(cue);
-            var signature = BuildCueSignature(cue, rootPath);
-            if (!cueSignatures.Add(signature))
-            {
-                continue;
-            }
-
             var unresolvedTrackCount = cue.Tracks.Count(track => track.ResolvedPath is null);
             if (unresolvedTrackCount > 0)
             {
@@ -120,20 +113,47 @@ public sealed class MusicCatalogGenerator(
                     unresolvedReferences,
                     cuePath);
             }
+            parsedCues.Add(cue);
+        }
 
+        var selectedCues = SelectCues(parsedCues, rootPath);
+        var selectedCueCountsByDirectory = selectedCues
+            .GroupBy(cue => Path.GetDirectoryName(cue.Path)!, PathComparer)
+            .ToDictionary(group => group.Key, group => group.Count(), PathComparer);
+        foreach (var cue in selectedCues)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (cue.Tracks.Any(track => track.ResolvedPath is null))
+            {
+                continue;
+            }
+
+            var directoryPath = Path.GetDirectoryName(cue.Path)!;
+            var directory = Path.GetFileName(directoryPath);
+            var selectedCueCount = selectedCueCountsByDirectory[directoryPath];
+            var distinctTrackFiles = cue.Tracks
+                .Select(track => track.ResolvedPath)
+                .Where(path => path is not null)
+                .ToHashSet(PathComparer);
+            var perTrackFiles = distinctTrackFiles.Count == cue.Tracks.Count;
+            var textTrackList = MusicCatalogMetadata.FindTrackList(
+                directoryPath,
+                cue.Tracks.Count,
+                Path.GetFileName(cue.Path),
+                selectedCueCount);
+            var overrideTitles = MusicCatalogMetadata.OverrideTitles(
+                directory,
+                Path.GetFileName(cue.Path),
+                standalone: false,
+                selectedCueCount,
+                cue.Tracks.Count);
             for (var index = 0; index < cue.Tracks.Count; index++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 var track = cue.Tracks[index];
-                if (track.ResolvedPath is null)
-                {
-                    continue;
-                }
-
-                referencedAudio.Add(track.ResolvedPath);
-                var metadata = GetAudioMetadata(track.ResolvedPath, audioMetadata);
-                var directoryPath = Path.GetDirectoryName(cuePath)!;
-                var directory = RelativePath(rootPath, directoryPath);
+                var audioPath = track.ResolvedPath!;
+                referencedAudio.Add(audioPath);
+                var metadata = GetAudioMetadata(audioPath, audioMetadata);
                 var startSeconds = ParseCueTime(track.Index);
                 double? endSeconds = null;
                 if (index + 1 < cue.Tracks.Count)
@@ -150,29 +170,54 @@ public sealed class MusicCatalogGenerator(
                     }
                 }
 
-                var title = cue.RepairedSplitAssignments
-                    ? FirstNonEmpty(metadata.Title, track.Title, AudioTitle(track.ResolvedPath))
-                    : FirstNonEmpty(track.Title, metadata.Title, AudioTitle(track.ResolvedPath));
-                var performer = FirstNonEmpty(
-                    track.Performer,
-                    cue.AlbumPerformer,
-                    metadata.Artist);
-                var album = FirstNonEmpty(
-                    cue.AlbumTitle,
-                    metadata.Album,
-                    Path.GetFileName(directoryPath));
-                var relativeAudioPath = RelativePath(rootPath, track.ResolvedPath);
+                var title = FirstNonEmpty(track.Title, $"Track {track.Number:D2}");
+                var performer = FirstNonEmpty(track.Performer, cue.AlbumPerformer);
+                if (cue.RepairedSplitAssignments)
+                {
+                    title = FirstNonEmpty(metadata.Title, title);
+                }
+                else if (MusicCatalogMetadata.IsGenericTitle(title)
+                    && perTrackFiles
+                    && !MusicCatalogMetadata.IsGenericTitle(metadata.Title))
+                {
+                    title = metadata.Title;
+                }
+                if (performer.Length == 0 && perTrackFiles)
+                {
+                    performer = metadata.Artist;
+                }
+                if (MusicCatalogMetadata.IsGenericTitle(title)
+                    && textTrackList.TryGetValue(index + 1, out var textTitle))
+                {
+                    title = textTitle;
+                }
+                if (MusicCatalogMetadata.IsGenericTitle(title)
+                    && overrideTitles.Count == cue.Tracks.Count
+                    && !MusicCatalogMetadata.IsGenericTitle(overrideTitles[index]))
+                {
+                    title = overrideTitles[index];
+                }
+                if (MusicCatalogMetadata.IsGenericTitle(title))
+                {
+                    title = $"{directory} {track.Number:D2}";
+                }
+
+                var relativeAudioPath = RelativePath(rootPath, audioPath);
                 var identity = FormattableString.Invariant(
-                    $"cue:{RelativePath(rootPath, cuePath)}:{track.Number}:{index + 1}");
+                    $"cue:{RelativePath(rootPath, cue.Path)}:{track.Number}:{index + 1}");
                 records.Add(new CatalogRecord(
                     StableId(identity),
                     title,
                     track.Number.ToString("D2", CultureInfo.InvariantCulture),
-                    album,
+                    directory,
                     performer,
-                    BuildTags(metadata, directory),
-                    $"{Path.GetExtension(track.ResolvedPath)[1..].ToUpperInvariant()} + CUE",
-                    Path.GetFileName(track.ResolvedPath),
+                    MusicCatalogMetadata.BuildTags(
+                        directory,
+                        Path.GetFileName(audioPath),
+                        title,
+                        performer),
+                    $"{Path.GetExtension(audioPath)[1..].ToUpperInvariant()} + CUE",
+                    Path.GetFileName(audioPath),
                     directory,
                     relativeAudioPath,
                     startSeconds,
@@ -182,32 +227,86 @@ public sealed class MusicCatalogGenerator(
         }
 
         var standaloneTrackCount = 0;
-        foreach (var audioPath in audioFiles)
+        var standaloneGroups = audioFiles
+            .Where(audioPath => !referencedAudio.Contains(audioPath))
+            .GroupBy(audioPath => Path.GetDirectoryName(audioPath)!, PathComparer)
+            .OrderBy(group => group.Key, PathComparer);
+        foreach (var group in standaloneGroups)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            if (referencedAudio.Contains(audioPath))
-            {
-                continue;
-            }
-
-            var metadata = GetAudioMetadata(audioPath, audioMetadata);
-            var directoryPath = Path.GetDirectoryName(audioPath)!;
-            var directory = RelativePath(rootPath, directoryPath);
-            var relativeAudioPath = RelativePath(rootPath, audioPath);
-            records.Add(new CatalogRecord(
-                StableId($"file:{relativeAudioPath}"),
-                FirstNonEmpty(metadata.Title, AudioTitle(audioPath)),
-                metadata.TrackNumber,
-                FirstNonEmpty(metadata.Album, Path.GetFileName(directoryPath)),
-                metadata.Artist,
-                BuildTags(metadata, directory),
-                Path.GetExtension(audioPath)[1..].ToUpperInvariant(),
-                Path.GetFileName(audioPath),
+            var directoryPath = group.Key;
+            var directory = Path.GetFileName(directoryPath);
+            var standaloneFiles = group.OrderBy(path => path, PathComparer).ToArray();
+            var textTrackList = MusicCatalogMetadata.FindTrackList(
+                directoryPath,
+                standaloneFiles.Length,
                 directory,
-                relativeAudioPath,
-                null,
-                null));
-            standaloneTrackCount++;
+                groupsInDirectory: 1);
+            var overrideTitles = MusicCatalogMetadata.OverrideTitles(
+                directory,
+                cueName: null,
+                standalone: true,
+                selectedCueCount: 0,
+                standaloneFiles.Length);
+            for (var index = 0; index < standaloneFiles.Length; index++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var audioPath = standaloneFiles[index];
+                var metadata = GetAudioMetadata(audioPath, audioMetadata);
+                var (title, performer) = MusicCatalogMetadata.StandaloneMetadata(audioPath);
+                if (MusicCatalogMetadata.IsGenericTitle(title)
+                    && !MusicCatalogMetadata.IsGenericTitle(metadata.Title))
+                {
+                    title = metadata.Title;
+                }
+                if (performer.Length == 0)
+                {
+                    performer = metadata.Artist;
+                }
+                var trackNumber = MusicCatalogMetadata.ExtractTrackNumber(audioPath)
+                    ?? index + 1;
+                if (MusicCatalogMetadata.IsGenericTitle(title)
+                    && textTrackList.TryGetValue(trackNumber, out var textTitle))
+                {
+                    title = textTitle;
+                }
+                if (MusicCatalogMetadata.IsGenericTitle(title)
+                    && overrideTitles.Count == standaloneFiles.Length
+                    && !MusicCatalogMetadata.IsGenericTitle(overrideTitles[index]))
+                {
+                    title = overrideTitles[index];
+                }
+                if (MusicCatalogMetadata.IsGenericTitle(title)
+                    && Path.GetFileNameWithoutExtension(audioPath).Equals(
+                        "CDImage",
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    title = directory;
+                }
+                if (MusicCatalogMetadata.IsGenericTitle(title))
+                {
+                    title = $"{directory} {trackNumber:D2}";
+                }
+
+                var relativeAudioPath = RelativePath(rootPath, audioPath);
+                records.Add(new CatalogRecord(
+                    StableId($"file:{relativeAudioPath}"),
+                    title,
+                    string.Empty,
+                    directory,
+                    performer,
+                    MusicCatalogMetadata.BuildTags(
+                        directory,
+                        Path.GetFileName(audioPath),
+                        title,
+                        performer),
+                    Path.GetExtension(audioPath)[1..].ToUpperInvariant(),
+                    Path.GetFileName(audioPath),
+                    directory,
+                    relativeAudioPath,
+                    null,
+                    null));
+                standaloneTrackCount++;
+            }
         }
 
         records.Sort(static (left, right) =>
@@ -371,6 +470,7 @@ public sealed class MusicCatalogGenerator(
                 currentFile = CleanFileReference(fileMatch.Groups[1].Success
                     ? fileMatch.Groups[1].Value
                     : fileMatch.Groups[2].Value);
+                cue.DeclaredFiles.Add(currentFile);
                 continue;
             }
 
@@ -420,6 +520,16 @@ public sealed class MusicCatalogGenerator(
             }
         }
 
+        if (cue.DeclaredFiles.Count == cue.Tracks.Count
+            && cue.DeclaredFiles.Distinct(StringComparer.OrdinalIgnoreCase).Count()
+                == cue.Tracks.Count)
+        {
+            for (var index = 0; index < cue.Tracks.Count; index++)
+            {
+                cue.Tracks[index].FileReference = cue.DeclaredFiles[index];
+            }
+        }
+
         return cue;
     }
 
@@ -445,6 +555,7 @@ public sealed class MusicCatalogGenerator(
             if (File.Exists(candidate) && IsCueAudioSource(candidate))
             {
                 track.ResolvedPath = candidate;
+                cue.ExactResolvedCount++;
                 continue;
             }
 
@@ -453,6 +564,7 @@ public sealed class MusicCatalogGenerator(
                 && IsCueAudioSource(caseInsensitiveMatch))
             {
                 track.ResolvedPath = caseInsensitiveMatch;
+                cue.ExactResolvedCount++;
                 continue;
             }
 
@@ -521,6 +633,42 @@ public sealed class MusicCatalogGenerator(
                     ? track.FileReference
                     : RelativePath(rootPath, track.ResolvedPath))));
 
+    private static CueSheet[] SelectCues(
+        IEnumerable<CueSheet> cues,
+        string rootPath) =>
+        cues.GroupBy(
+                cue => BuildCueSignature(cue, rootPath),
+                StringComparer.Ordinal)
+            .Select(group => group.MaxBy(CueScore)!)
+            .OrderBy(cue => cue.Path, PathComparer)
+            .ToArray();
+
+    private static (int Resolved, int Exact, int CorrectedName, int TextQuality,
+        int NonGenericName, int TrackCount) CueScore(CueSheet cue)
+    {
+        var unresolved = cue.Tracks.Count(track => track.ResolvedPath is null);
+        var correctedName = Regex.IsMatch(
+            Path.GetFileNameWithoutExtension(cue.Path),
+            "(?:^|[-_.])gb(?:[-_.]|$)",
+            RegexOptions.IgnoreCase);
+        var stem = Path.GetFileNameWithoutExtension(cue.Path);
+        var genericName = stem.Equals("play", StringComparison.OrdinalIgnoreCase)
+            || stem.Equals("cdimage", StringComparison.OrdinalIgnoreCase)
+            || stem.Equals("unknown title", StringComparison.OrdinalIgnoreCase);
+        var textValues = cue.Tracks
+            .SelectMany(track => new[] { track.Title, track.Performer })
+            .Prepend(cue.AlbumPerformer)
+            .Prepend(cue.AlbumTitle)
+            .ToArray();
+        return (
+            unresolved == 0 ? 1 : 0,
+            cue.ExactResolvedCount,
+            correctedName ? 1 : 0,
+            MusicCatalogMetadata.TextQuality(textValues),
+            genericName ? 0 : 1,
+            cue.Tracks.Count);
+    }
+
     private static string ReadCueText(string path)
     {
         var bytes = File.ReadAllBytes(path);
@@ -575,9 +723,40 @@ public sealed class MusicCatalogGenerator(
 
         metadata = Path.GetExtension(path).Equals(".flac", StringComparison.OrdinalIgnoreCase)
             ? ReadFlacMetadata(path)
-            : AudioMetadata.Empty;
+            : ReadTaggedMetadata(path);
         cache[path] = metadata;
         return metadata;
+    }
+
+    private static AudioMetadata ReadTaggedMetadata(string path)
+    {
+        try
+        {
+            using var file = TagLib.File.Create(path);
+            var tag = file.Tag;
+            return new AudioMetadata(
+                Clean(tag.Title ?? string.Empty),
+                Clean(tag.Performers.FirstOrDefault()
+                    ?? tag.AlbumArtists.FirstOrDefault()
+                    ?? string.Empty),
+                Clean(tag.Album ?? string.Empty),
+                tag.Track > 0
+                    ? tag.Track.ToString("D2", CultureInfo.InvariantCulture)
+                    : string.Empty,
+                tag.Genres
+                    .Select(Clean)
+                    .Where(value => value.Length > 0)
+                    .Distinct(StringComparer.CurrentCultureIgnoreCase)
+                    .ToArray());
+        }
+        catch (Exception exception) when (
+            exception is IOException
+                or UnauthorizedAccessException
+                or TagLib.CorruptFileException
+                or TagLib.UnsupportedFormatException)
+        {
+            return AudioMetadata.Empty;
+        }
     }
 
     private static AudioMetadata ReadFlacMetadata(string path)
@@ -817,6 +996,10 @@ public sealed class MusicCatalogGenerator(
 
         public List<CueTrack> Tracks { get; } = [];
 
+        public List<string> DeclaredFiles { get; } = [];
+
+        public int ExactResolvedCount { get; set; }
+
         public bool RepairedSplitAssignments { get; set; }
     }
 
@@ -824,7 +1007,7 @@ public sealed class MusicCatalogGenerator(
     {
         public int Number { get; } = number;
 
-        public string FileReference { get; } = fileReference;
+        public string FileReference { get; set; } = fileReference;
 
         public string Title { get; set; } = string.Empty;
 
