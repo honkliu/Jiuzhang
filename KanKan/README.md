@@ -108,6 +108,70 @@ KanKan/
 - Keep mobile action bars in page flow with safe-area padding so they do not
   cover scrollable content.
 
+## Music library
+
+- Tracks are grouped by album and directory. A full-width directory heading and
+  album-play button appear once above each group's individual track rows.
+  Track columns are Track, Categories, Performer; there are no album or directory
+  columns. Hover truncated names to see the full text.
+- Directory headings use a folder icon, a stronger title band, and a separate
+  album-play control. Lighter track labels are indented beneath them with tree
+  connectors, making parent/child ownership explicit. Directory and song rows
+  share the same compact 40px height; long directory titles use single-line
+  ellipsis with the full name available on hover.
+- The single-row toolbar contains search, category selection, and an expand/collapse
+  all button. Directories start collapsed; clicking a directory heading (or using
+  Enter/Space) toggles only that directory. Its playback button never toggles it.
+  Global toggling applies to all pages and returns to page one. A nonempty search
+  or category selection (from the dropdown or a song's category chip) temporarily
+  expands matching directories to reveal their songs. Clearing both search and
+  category restores the prior expansion state; clearing just one keeps the other
+  filter's matches expanded. Manual toggles during filtering affect only those
+  results, and changing either filter expands its matches again. Individual
+  states persist across pagination. Collapsing intentionally removes track
+  space and recalculates pagination, without changing filters or playback queues.
+- Pagination allows at most 20 **visible rows** per page: each directory heading
+  counts once, and only expanded tracks count. If a directory and its matching
+  tracks do not fit in the remaining space, they start on a new page; expanding
+  that directory automatically opens its starting page. Only directories with
+  more than 19 matching songs span pages, with their heading repeated at the top
+  of each continuation page (also counted toward the 20-row limit).
+  Songs are not repeated. The footer includes continuation headings in its
+  visible row ranges/counts, but excludes unused page space and hidden songs.
+  Pages are clamped when collapsing removes later pages.
+  Compact pagination buttons stay on one line, including on narrow screens;
+  distant page numbers use ellipses while first/previous/next/last remain available.
+  Search/category changes return to the first page. The compact table matches
+  the Stocks page, with category content limited to roughly ten Chinese characters
+  in width instead of a vertically scrolling virtual list.
+- Search reserves its clear-button space; categories are reset with All. Opening a filter
+  menu does not lock the page scrollbar or change column widths. While the music
+  page is mounted, the body reserves its vertical scrollbar gutter so expanding
+  or collapsing directories cannot shift the page horizontally. The table keeps
+  its header and a stable page footprint while searching/filtering in the same
+  expansion state;
+  pagination remains in place, and its range is the only visible record count.
+  Playback space is reserved before playback starts, including the taller mobile
+  player and bottom safe area. Errors appear in a dismissible notification without
+  pushing the table down.
+- The button next to a track plays only that track (including its CUE segment).
+  The button next to the directory plays the entire album in track order, even
+  when pagination, a search, or a filter hides some of its tracks.
+- Format and track-number fields are not displayed; track numbers still determine
+  album playback order. Albums with the same name in different directories stay
+  separate.
+- Tracks without category tags appear as **Uncategorized / 未分类** and can be
+  found using the category filter or category chip. No categories are inferred
+  from album names.
+
+Run focused catalog regression tests from `client` with
+`node --test tests/musicCatalog.test.cjs`.
+With Vite running, the browser layout regression can be run using an existing
+Playwright `page`: `await require('./tests/musicLayout.browser.cjs')(page)`.
+It uses isolated request fixtures with the real application CSS and skin, checks
+desktop/tablet/mobile layout changes to a 1px tolerance, and removes its routes
+afterward. No login or backend writes are required.
+
 ## 🛠️ Setup Instructions
 
 ### Prerequisites

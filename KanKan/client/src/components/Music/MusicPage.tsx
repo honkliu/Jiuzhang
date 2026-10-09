@@ -2,17 +2,21 @@ import React from 'react';
 import {
   Alert,
   Box,
+  ButtonBase,
   Chip,
   Container,
   FormControl,
+  GlobalStyles,
   IconButton,
   InputAdornment,
   InputLabel,
   LinearProgress,
   MenuItem,
+  Pagination,
   Paper,
   Select,
   Slider,
+  Snackbar,
   Stack,
   Table,
   TableBody,
@@ -27,15 +31,18 @@ import {
 import {
   Album as AlbumIcon,
   Clear as ClearIcon,
+  UnfoldLess as UnfoldLessIcon,
+  UnfoldMore as UnfoldMoreIcon,
+  ExpandMore as ExpandMoreIcon,
+  ChevronRight as ChevronRightIcon,
+  FolderOutlined as FolderOutlinedIcon,
   Pause as PauseIcon,
   PlayArrow as PlayArrowIcon,
-  QueueMusic as QueueMusicIcon,
   Search as SearchIcon,
   SkipNext as SkipNextIcon,
   SkipPrevious as SkipPreviousIcon,
   VolumeUp as VolumeUpIcon,
 } from '@mui/icons-material';
-import { TableVirtuoso, type TableComponents } from 'react-virtuoso';
 import { AppHeader } from '@/components/Shared/AppHeader';
 import { useLanguage } from '@/i18n/LanguageContext';
 import {
@@ -47,34 +54,21 @@ import {
 import {
   appPageContentSx,
   appPageShellSx,
-  appPageTitleSx,
   appSurfaceSx,
 } from '@/styles/appLayout';
+import {
+  fieldValues,
+  filterMusicRecords,
+  groupMusicRecords,
+  MUSIC_PAGE_SIZE,
+  paginateMusicGroups,
+  scalarText,
+  trackFields,
+  type MusicAlbumGroup,
+} from './musicCatalog';
 
 const BoxAny = Box as any;
-
-const tableComponents: TableComponents<MusicCatalogRecord> = {
-  Scroller: React.forwardRef<HTMLDivElement>((props, ref) => (
-    <TableContainer {...props} ref={ref} />
-  )),
-  Table: (props) => (
-    <Table {...props} size="small" sx={{ borderCollapse: 'separate', tableLayout: 'fixed' }} />
-  ),
-  TableHead: React.forwardRef<HTMLTableSectionElement>((props, ref) => (
-    <TableHead {...props} ref={ref} />
-  )),
-  TableRow,
-  TableBody: React.forwardRef<HTMLTableSectionElement>((props, ref) => (
-    <TableBody {...props} ref={ref} />
-  )),
-};
-
-function scalarText(value: unknown): string {
-  if (value == null) return '';
-  if (Array.isArray(value)) return value.map(scalarText).filter(Boolean).join(' · ');
-  if (typeof value === 'object') return JSON.stringify(value);
-  return String(value);
-}
+const MUSIC_ROW_HEIGHT = 40;
 
 function fieldLabel(field: MusicCatalogField, language: string): string {
   return field.labels?.[language]
@@ -95,18 +89,6 @@ function formatTime(seconds: number): string {
   return `${minutes}:${String(remainder).padStart(2, '0')}`;
 }
 
-function compareRecords(
-  left: MusicCatalogRecord,
-  right: MusicCatalogRecord,
-  field?: MusicCatalogField,
-): number {
-  if (!field) return 0;
-  const a = left.data[field.key];
-  const b = right.data[field.key];
-  if (typeof a === 'number' && typeof b === 'number') return a - b;
-  return scalarText(a).localeCompare(scalarText(b), undefined, { numeric: true });
-}
-
 export const MusicPage: React.FC = () => {
   const { t, language } = useLanguage();
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
@@ -116,10 +98,14 @@ export const MusicPage: React.FC = () => {
   const [error, setError] = React.useState('');
   const [search, setSearch] = React.useState('');
   const [filters, setFilters] = React.useState<Record<string, string>>({});
+  const [page, setPage] = React.useState(1);
+  const [browseExpandedGroups, setBrowseExpandedGroups] = React.useState<Set<string>>(() => new Set());
+  const [filteredExpandedGroups, setFilteredExpandedGroups] = React.useState<Set<string> | null>(null);
   const [current, setCurrent] = React.useState<MusicCatalogRecord | null>(null);
   const [queue, setQueue] = React.useState<MusicCatalogRecord[]>([]);
   const [queueIndex, setQueueIndex] = React.useState(-1);
   const [playbackUrl, setPlaybackUrl] = React.useState('');
+  const [playbackVersion, setPlaybackVersion] = React.useState(0);
   const [isPlaying, setIsPlaying] = React.useState(false);
   const [position, setPosition] = React.useState(0);
   const [duration, setDuration] = React.useState(0);
@@ -147,7 +133,7 @@ export const MusicPage: React.FC = () => {
     [catalog],
   );
   const visibleFields = React.useMemo(
-    () => fields.filter((field) => field.visible !== false),
+    () => trackFields(fields),
     [fields],
   );
   const searchableFields = React.useMemo(() => {
@@ -155,7 +141,8 @@ export const MusicPage: React.FC = () => {
     return configured.length > 0 ? configured : visibleFields;
   }, [fields, visibleFields]);
   const filterableFields = React.useMemo(
-    () => fields.filter((field) => field.filterable),
+    () => fields.filter((field) => field.filterable
+      && (field.type === 'tags' || field.key === 'tags')).slice(0, 1),
     [fields],
   );
   const primaryField = React.useMemo(
@@ -163,25 +150,46 @@ export const MusicPage: React.FC = () => {
     [fields, visibleFields],
   );
   const secondaryField = React.useMemo(
-    () => fieldByRole(fields, 'album') || visibleFields.find((field) => field !== primaryField),
+    () => fields.find((field) => field.role === 'directory' || field.key === 'directory')
+      || visibleFields.find((field) => field !== primaryField),
     [fields, primaryField, visibleFields],
   );
-  const albumField = React.useMemo(() => fieldByRole(fields, 'album'), [fields]);
-  const trackNumberField = React.useMemo(
-    () => fieldByRole(fields, 'trackNumber'),
-    [fields],
+  const albumGroups = React.useMemo(
+    () => groupMusicRecords(catalog?.records ?? [], fields),
+    [catalog, fields],
   );
+  const hasActiveFilters = Boolean(search.trim())
+    || filterableFields.some((field) => Boolean(filters[field.key]));
+  const expandedGroups = React.useMemo(
+    () => hasActiveFilters
+      ? filteredExpandedGroups ?? new Set(albumGroups.map((group) => group.id))
+      : browseExpandedGroups,
+    [albumGroups, browseExpandedGroups, hasActiveFilters, filteredExpandedGroups],
+  );
+  const updateSearch = (value: string) => {
+    setSearch(value);
+    setFilteredExpandedGroups(null);
+  };
+  const updateFilter = (key: string, value: string) => {
+    setFilters((currentFilters) => ({ ...currentFilters, [key]: value }));
+    setFilteredExpandedGroups(null);
+  };
+  const updateExpandedGroups = (next: Set<string>) => {
+    if (hasActiveFilters) setFilteredExpandedGroups(next);
+    else setBrowseExpandedGroups(next);
+  };
+  const rowSlots = Math.min(MUSIC_PAGE_SIZE, albumGroups.reduce(
+    (count, group) => count + 1 + (expandedGroups.has(group.id) ? group.records.length : 0), 0,
+  ));
+  const tableHeight = (rowSlots + 1) * MUSIC_ROW_HEIGHT;
 
   const filterOptions = React.useMemo(() => {
     const options: Record<string, string[]> = {};
     for (const field of filterableFields) {
       const values = new Set<string>();
       for (const record of catalog?.records ?? []) {
-        const value = record.data[field.key];
-        const items = Array.isArray(value) ? value : [value];
-        for (const item of items) {
-          const text = scalarText(item);
-          if (text) values.add(text);
+        for (const text of fieldValues(record, field)) {
+          values.add(text);
         }
       }
       options[field.key] = [...values].sort((a, b) => a.localeCompare(b, language));
@@ -189,26 +197,31 @@ export const MusicPage: React.FC = () => {
     return options;
   }, [catalog, filterableFields, language]);
 
-  const filteredRecords = React.useMemo(() => {
-    const normalizedSearch = search.trim().toLocaleLowerCase();
-    return (catalog?.records ?? []).filter((record) => {
-      if (
-        normalizedSearch
-        && !searchableFields.some((field) =>
-          scalarText(record.data[field.key]).toLocaleLowerCase().includes(normalizedSearch))
-      ) {
-        return false;
-      }
-
-      return filterableFields.every((field) => {
-        const selected = filters[field.key];
-        if (!selected) return true;
-        const value = record.data[field.key];
-        return (Array.isArray(value) ? value : [value])
-          .some((item) => scalarText(item) === selected);
-      });
-    });
-  }, [catalog, filterableFields, filters, search, searchableFields]);
+  const filteredRecords = React.useMemo(
+    () => filterMusicRecords(
+      catalog?.records ?? [], searchableFields, filterableFields, search, filters),
+    [catalog, filterableFields, filters, search, searchableFields],
+  );
+  const { rows, totalRows, pageCount, currentPage, firstRow, lastRow } = React.useMemo(
+    () => paginateMusicGroups(albumGroups, filteredRecords, page, expandedGroups),
+    [albumGroups, filteredRecords, page, expandedGroups],
+  );
+  React.useEffect(() => setPage(currentPage), [currentPage]);
+  const allCollapsed = albumGroups.length > 0
+    && albumGroups.every((group) => !expandedGroups.has(group.id));
+  const toggleGroup = (groupId: string) => {
+    const next = new Set(expandedGroups);
+    const expanding = !next.has(groupId);
+    if (expanding) next.add(groupId);
+    else next.delete(groupId);
+    updateExpandedGroups(next);
+    if (expanding) {
+      const pagination = paginateMusicGroups(albumGroups, filteredRecords, page, next);
+      const targetPage = pagination.groupPages.get(groupId);
+      if (targetPage !== undefined) setPage(targetPage);
+    }
+  };
+  React.useEffect(() => setPage(1), [search, filters]);
 
   const recordTitle = React.useCallback(
     (record: MusicCatalogRecord | null) =>
@@ -232,6 +245,7 @@ export const MusicPage: React.FC = () => {
       setQueue(nextQueue);
       setQueueIndex(nextQueue.findIndex((item) => item.id === record.id));
       setPlaybackUrl(playback.url);
+      setPlaybackVersion((version) => version + 1);
       setPosition(0);
       advancingRef.current = false;
     } catch {
@@ -239,21 +253,14 @@ export const MusicPage: React.FC = () => {
     }
   }, [t]);
 
-  const playAlbum = React.useCallback((record: MusicCatalogRecord) => {
-    if (!albumField) {
-      void startPlayback(record, filteredRecords);
-      return;
-    }
-    const album = scalarText(record.data[albumField.key]);
-    const albumQueue = (catalog?.records ?? [])
-      .filter((item) => scalarText(item.data[albumField.key]) === album)
-      .sort((a, b) => compareRecords(a, b, trackNumberField));
-    void startPlayback(record, albumQueue);
-  }, [albumField, catalog, filteredRecords, startPlayback, trackNumberField]);
+  const playAlbum = React.useCallback((group: MusicAlbumGroup) => {
+    void startPlayback(group.records[0], group.records);
+  }, [startPlayback]);
 
   const playAdjacent = React.useCallback((offset: number) => {
     const nextIndex = queueIndex + offset;
     if (nextIndex < 0 || nextIndex >= queue.length) {
+      audioRef.current?.pause();
       setIsPlaying(false);
       return;
     }
@@ -281,6 +288,7 @@ export const MusicPage: React.FC = () => {
     const end = current.playback.endSeconds;
     setPosition(Math.max(0, audio.currentTime - start));
     if (end != null && audio.currentTime >= end - 0.1 && !advancingRef.current) {
+      audio.pause();
       advancingRef.current = true;
       playAdjacent(1);
     }
@@ -290,6 +298,13 @@ export const MusicPage: React.FC = () => {
     const audio = audioRef.current;
     if (!audio) return;
     if (audio.paused) {
+      const start = current?.playback.startSeconds ?? 0;
+      const end = current?.playback.endSeconds ?? audio.duration;
+      if (audio.ended || audio.currentTime >= end - 0.1) {
+        audio.currentTime = start;
+        setPosition(0);
+        advancingRef.current = false;
+      }
       audio.play()
         .then(() => setIsPlaying(true))
         .catch(() => setError(t('music.playFailed')));
@@ -297,31 +312,33 @@ export const MusicPage: React.FC = () => {
       audio.pause();
       setIsPlaying(false);
     }
-  }, [t]);
-
-  const clearFilters = () => {
-    setSearch('');
-    setFilters({});
-  };
+  }, [current, t]);
 
   const renderValue = (record: MusicCatalogRecord, field: MusicCatalogField) => {
     const value = record.data[field.key];
-    if (Array.isArray(value)) {
+    if (Array.isArray(value) || field.type === 'tags') {
       return (
-        <Stack direction="row" spacing={0.5} useFlexGap flexWrap="wrap">
-          {value.map((item) => {
-            const text = scalarText(item);
+        <Stack direction="row" spacing={0.5} sx={{ overflow: 'hidden', maxHeight: 28 }}>
+          {fieldValues(record, field).map((text) => {
+            const label = text || t('music.uncategorized');
             return (
               <Chip
                 key={text}
-                label={text}
+                label={label}
+                title={label}
                 size="small"
+                variant="outlined"
+                sx={{
+                  maxWidth: '100%',
+                  flexShrink: 0,
+                  height: 20,
+                  fontSize: '0.72rem',
+                  fontWeight: 600,
+                  '& .MuiChip-label': { px: 0.75 },
+                }}
                 clickable={field.filterable}
                 onClick={field.filterable
-                  ? () => setFilters((currentFilters) => ({
-                    ...currentFilters,
-                    [field.key]: text,
-                  }))
+                  ? () => updateFilter(field.key, JSON.stringify(text))
                   : undefined}
               />
             );
@@ -334,147 +351,288 @@ export const MusicPage: React.FC = () => {
 
   return (
     <>
+      <GlobalStyles styles={{ body: { scrollbarGutter: 'stable' } }} />
       <AppHeader />
-      <BoxAny sx={{ ...appPageShellSx, pb: current ? 14 : 0 }}>
-        <Container maxWidth={false} sx={{ ...appPageContentSx, maxWidth: 1600 }}>
-          <Stack spacing={2}>
-            <BoxAny>
-              <Typography sx={appPageTitleSx}>{t('music.title')}</Typography>
-              <Typography variant="body2" color="text.secondary">
-                {t('music.resultCount').replace('{count}', String(filteredRecords.length))}
-              </Typography>
-            </BoxAny>
-
-            {error && <Alert severity="error" onClose={() => setError('')}>{error}</Alert>}
-
+      <Snackbar open={Boolean(error)} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
+        <Alert severity="error" onClose={() => setError('')}>{error}</Alert>
+      </Snackbar>
+      <BoxAny sx={{ ...appPageShellSx, pb: { xs: 24, md: 14 } }}>
+        <Container maxWidth={false} sx={{ ...appPageContentSx, maxWidth: 1440 }}>
+          <Stack spacing={1.5}>
             <Paper
+              data-testid="music-filters"
               sx={{
                 ...appSurfaceSx,
-                p: 2,
+                p: { xs: 1, sm: 2 },
                 display: 'grid',
-                gridTemplateColumns: {
-                  xs: '1fr',
-                  sm: 'minmax(240px, 2fr) repeat(2, minmax(160px, 1fr))',
-                  lg: `minmax(280px, 2fr) repeat(${Math.min(filterableFields.length, 4)}, minmax(160px, 1fr))`,
-                },
-                gap: 1.5,
+                gridTemplateColumns: 'minmax(0, 1fr) minmax(88px, 0.6fr) 36px',
+                alignItems: 'center',
+                gap: { xs: 1, sm: 1.5 },
               }}
             >
               <TextField
                 value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                label={t('music.search')}
+                onChange={(event) => updateSearch(event.target.value)}
+                label={t('music.searchLabel')}
+                inputProps={{ 'aria-label': t('music.search') }}
                 size="small"
+                sx={{ minWidth: 0 }}
                 InputProps={{
                   startAdornment: (
-                    <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment>
+                    <InputAdornment position="start" sx={{ display: { xs: 'none', sm: 'flex' } }}><SearchIcon fontSize="small" /></InputAdornment>
                   ),
-                  endAdornment: search ? (
+                  endAdornment: (
                     <InputAdornment position="end">
-                      <IconButton size="small" onClick={() => setSearch('')}>
+                      <IconButton
+                        size="small"
+                        aria-label={t('music.clearSearch')}
+                        disabled={!search}
+                        onClick={() => updateSearch('')}
+                      >
                         <ClearIcon fontSize="small" />
                       </IconButton>
                     </InputAdornment>
-                  ) : undefined,
+                  ),
                 }}
               />
-              {filterableFields.slice(0, 4).map((field) => (
-                <FormControl key={field.key} size="small">
-                  <InputLabel>{fieldLabel(field, language)}</InputLabel>
+              {filterableFields.map((field) => (
+                <FormControl key={field.key} size="small" sx={{ minWidth: 0 }}>
+                  <InputLabel id={`music-filter-${field.key}`}>{fieldLabel(field, language)}</InputLabel>
                   <Select
+                    labelId={`music-filter-${field.key}`}
                     value={filters[field.key] ?? ''}
                     label={fieldLabel(field, language)}
-                    onChange={(event) => setFilters((currentFilters) => ({
-                      ...currentFilters,
-                      [field.key]: event.target.value,
-                    }))}
+                    MenuProps={{ disableScrollLock: true }}
+                    onChange={(event) => updateFilter(field.key, event.target.value)}
                   >
                     <MenuItem value="">{t('music.all')}</MenuItem>
                     {(filterOptions[field.key] ?? []).map((option) => (
-                      <MenuItem key={option} value={option}>{option}</MenuItem>
+                      <MenuItem key={option} value={JSON.stringify(option)} title={option || t('music.uncategorized')}>
+                        {option || t('music.uncategorized')}
+                      </MenuItem>
                     ))}
                   </Select>
                 </FormControl>
               ))}
-              {(search || Object.values(filters).some(Boolean)) && (
-                <BoxAny sx={{ display: 'flex', alignItems: 'center' }}>
-                  <Chip label={t('music.clearFilters')} onDelete={clearFilters} />
-                </BoxAny>
-              )}
+              <Tooltip title={t(allCollapsed ? 'music.expandAll' : 'music.collapseAll')}>
+                <span>
+                  <IconButton
+                    size="small"
+                    aria-label={t(allCollapsed ? 'music.expandAll' : 'music.collapseAll')}
+                    aria-expanded={!allCollapsed}
+                    disabled={albumGroups.length === 0}
+                    onClick={() => {
+                      setPage(1);
+                      updateExpandedGroups(allCollapsed
+                        ? new Set(albumGroups.map((group) => group.id))
+                        : new Set());
+                    }}
+                  >
+                    {allCollapsed ? <UnfoldMoreIcon fontSize="small" /> : <UnfoldLessIcon fontSize="small" />}
+                  </IconButton>
+                </span>
+              </Tooltip>
             </Paper>
 
-            <Paper sx={{ ...appSurfaceSx, overflow: 'hidden' }}>
-              {loading && <LinearProgress />}
-              {!loading && filteredRecords.length === 0 ? (
-                <BoxAny sx={{ p: 5, textAlign: 'center' }}>
-                  <Typography color="text.secondary">{t('music.empty')}</Typography>
-                </BoxAny>
-              ) : (
-                <TableVirtuoso
-                  style={{ height: 'min(62dvh, 720px)', minHeight: 420 }}
-                  data={filteredRecords}
-                  components={tableComponents}
-                  fixedHeaderContent={() => (
-                    <TableRow>
-                      <TableCell sx={{ width: 92, bgcolor: 'background.paper' }}>
-                        {t('music.play')}
-                      </TableCell>
+            <Paper sx={{ borderRadius: 2, overflow: 'hidden', position: 'relative' }}>
+              {loading && <LinearProgress sx={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 3 }} />}
+                <TableContainer data-testid="music-table" aria-busy={loading}>
+                  <BoxAny sx={{ minHeight: tableHeight }}>
+                  <Table aria-label={t('music.title')} size="small" stickyHeader sx={{ tableLayout: 'fixed', minWidth: 760, fontSize: '0.875rem' }}>
+                    <colgroup>
                       {visibleFields.map((field) => (
-                        <TableCell
+                        <col
                           key={field.key}
-                          sx={{
-                            width: field.width,
-                            minWidth: field.width ?? (field.primary ? 220 : 130),
-                            bgcolor: 'background.paper',
-                            fontWeight: 600,
+                          style={{
+                            width: field.type === 'tags' ? 'calc(10em + 32px)'
+                              : field === primaryField ? undefined : field.width ?? 180,
                           }}
-                        >
-                          {fieldLabel(field, language)}
-                        </TableCell>
+                        />
                       ))}
-                    </TableRow>
-                  )}
-                  itemContent={(_, record) => (
-                    <>
-                      <TableCell>
-                        <Tooltip title={t('music.playTrack')}>
-                          <IconButton
-                            size="small"
-                            onClick={() => void startPlayback(record, filteredRecords)}
+                    </colgroup>
+                    <TableHead>
+                      <TableRow sx={{ height: MUSIC_ROW_HEIGHT }}>
+                        {visibleFields.map((field) => (
+                          <TableCell key={field.key} sx={{ bgcolor: 'background.paper', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                            {fieldLabel(field, language)}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    </TableHead>
+                    {rows.map((row) => (
+                      <TableBody key={row.group.id}>
+                        {row.showDirectory && <TableRow data-testid="music-directory-row" sx={{ height: MUSIC_ROW_HEIGHT, bgcolor: 'action.selected' }}>
+                          <TableCell
+                            component="th"
+                            scope="rowgroup"
+                            colSpan={visibleFields.length}
+                            sx={{ py: 0.375, borderLeft: '3px solid', borderLeftColor: 'primary.main' }}
                           >
-                            <PlayArrowIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title={t('music.playAlbum')}>
-                          <span>
-                            <IconButton
-                              size="small"
-                              disabled={!albumField}
-                              onClick={() => playAlbum(record)}
-                            >
-                              <QueueMusicIcon fontSize="small" />
-                            </IconButton>
-                          </span>
-                        </Tooltip>
-                      </TableCell>
-                      {visibleFields.map((field) => (
-                        <TableCell
-                          key={field.key}
-                          sx={{
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: field.type === 'tags' ? 'normal' : 'nowrap',
-                            fontWeight: field.primary ? 600 : 400,
-                          }}
-                        >
-                          {renderValue(record, field)}
-                        </TableCell>
-                      ))}
-                    </>
-                  )}
-                />
-              )}
+                            <Stack direction="row" spacing={1.5} alignItems="center" sx={{ minWidth: 0, maxWidth: 'calc(100vw - 67px)' }}>
+                              <ButtonBase
+                                data-testid="music-directory-toggle"
+                                aria-expanded={expandedGroups.has(row.group.id)}
+                                aria-label={`${t(expandedGroups.has(row.group.id) ? 'music.collapseDirectory' : 'music.expandDirectory')}: ${row.group.directory}`}
+                                onClick={() => toggleGroup(row.group.id)}
+                                sx={{
+                                  flex: 1,
+                                  minWidth: 0,
+                                  minHeight: 32,
+                                  gap: 1.5,
+                                  textAlign: 'left',
+                                  justifyContent: 'flex-start',
+                                  borderRadius: 0.5,
+                                  '&.Mui-focusVisible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2 },
+                                }}
+                              >
+                              <FolderOutlinedIcon fontSize="small" color="primary" sx={{ flexShrink: 0 }} />
+                              <Typography
+                                variant="body2"
+                                fontWeight={700}
+                                title={row.group.directory}
+                                sx={{
+                                  flex: 1,
+                                  minWidth: 0,
+                                  whiteSpace: 'nowrap',
+                                  textOverflow: 'ellipsis',
+                                  overflow: 'hidden',
+                                  lineHeight: '20px',
+                                }}
+                              >
+                                {row.group.directory}
+                              </Typography>
+                                {expandedGroups.has(row.group.id)
+                                  ? <ExpandMoreIcon fontSize="small" sx={{ flexShrink: 0 }} />
+                                  : <ChevronRightIcon fontSize="small" sx={{ flexShrink: 0 }} />}
+                              </ButtonBase>
+                              <Tooltip title={t('music.playAlbum')}>
+                                <IconButton
+                                  size="small"
+                                  color="primary"
+                                  aria-label={t('music.playAlbum')}
+                                  onClick={() => playAlbum(row.group)}
+                                  sx={{ flexShrink: 0, bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' }}
+                                >
+                                  <PlayArrowIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                            </Stack>
+                          </TableCell>
+                        </TableRow>}
+                        {row.tracks.map((record, trackIndex) => (
+                          <TableRow key={record.id} hover sx={{ height: MUSIC_ROW_HEIGHT }}>
+                            {visibleFields.map((field) => (
+                                  <TableCell
+                                    key={field.key}
+                                    title={scalarText(record.data[field.key]) || (field.type === 'tags' ? t('music.uncategorized') : undefined)}
+                                    sx={{
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis',
+                                      whiteSpace: field.type === 'tags' ? 'normal' : 'nowrap',
+                                      fontWeight: 400,
+                                      py: field.type === 'tags' ? 0.5 : 0.375,
+                                      ...(field === primaryField && {
+                                        pl: 6,
+                                        position: 'relative',
+                                        '&::before': {
+                                          content: '""',
+                                          position: 'absolute',
+                                          left: 29,
+                                          top: 0,
+                                          bottom: trackIndex === row.tracks.length - 1 ? '50%' : 0,
+                                          width: '1px',
+                                          bgcolor: 'divider',
+                                          pointerEvents: 'none',
+                                        },
+                                        '&::after': {
+                                          content: '""',
+                                          position: 'absolute',
+                                          left: 29,
+                                          top: '50%',
+                                          width: 16,
+                                          height: '1px',
+                                          bgcolor: 'divider',
+                                          pointerEvents: 'none',
+                                        },
+                                      }),
+                                    }}
+                                  >
+                                    {field === primaryField ? (
+                                      <Stack direction="row" alignItems="center" spacing={1} sx={{ minWidth: 0 }}>
+                                        <Tooltip title={t('music.playTrack')}>
+                                          <IconButton
+                                            size="small"
+                                            aria-label={t('music.playTrack')}
+                                            onClick={() => void startPlayback(record, [record])}
+                                            sx={{ flexShrink: 0 }}
+                                          >
+                                            <PlayArrowIcon fontSize="small" />
+                                          </IconButton>
+                                        </Tooltip>
+                                        <Typography noWrap variant="body2" fontWeight={400}>
+                                          {renderValue(record, field)}
+                                        </Typography>
+                                      </Stack>
+                                    ) : renderValue(record, field)}
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))}
+                      </TableBody>
+                    ))}
+                    {!loading && filteredRecords.length === 0 && (
+                      <TableBody>
+                        <TableRow sx={{ height: tableHeight - MUSIC_ROW_HEIGHT }}>
+                          <TableCell colSpan={visibleFields.length} align="center">
+                            <Typography color="text.secondary">
+                              {!catalog && error ? error : t('music.empty')}
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
+                      </TableBody>
+                    )}
+                  </Table>
+                  </BoxAny>
+                </TableContainer>
             </Paper>
+              <Stack
+                data-testid="music-pagination"
+                direction={{ xs: 'column', sm: 'row' }}
+                spacing={1.5}
+                alignItems="center"
+                justifyContent="space-between"
+                sx={{ minHeight: { xs: 76, sm: 40 } }}
+              >
+                <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
+                  {t('music.pageRange')
+                    .replace('{from}', String(firstRow))
+                    .replace('{to}', String(lastRow))
+                    .replace('{count}', String(totalRows))}
+                </Typography>
+                <BoxAny sx={{ width: 340, maxWidth: '100%', display: 'flex', justifyContent: { xs: 'center', sm: 'flex-end' } }}>
+                  <Pagination
+                  disabled={loading || filteredRecords.length === 0}
+                  count={pageCount}
+                  page={currentPage}
+                  onChange={(_, nextPage) => setPage(nextPage)}
+                  color="primary"
+                  size="small"
+                  siblingCount={0}
+                  sx={{
+                    '& .MuiPagination-ul': { flexWrap: 'nowrap' },
+                    '& .MuiPaginationItem-root': { mx: 0.25 },
+                  }}
+                  showFirstButton
+                  showLastButton
+                  aria-label={t('music.pagination')}
+                  getItemAriaLabel={(type, targetPage) => type === 'page'
+                    ? t('music.goToPage').replace('{page}', String(targetPage))
+                    : ['first', 'last', 'previous', 'next'].includes(type)
+                      ? t(`music.${type}Page`)
+                      : t('music.pagination')}
+                />
+                </BoxAny>
+              </Stack>
           </Stack>
         </Container>
       </BoxAny>
@@ -493,6 +651,7 @@ export const MusicPage: React.FC = () => {
             borderColor: 'divider',
             px: { xs: 1.5, sm: 3 },
             py: 1,
+            pb: 'calc(8px + env(safe-area-inset-bottom))',
           }}
         >
           <BoxAny
@@ -508,8 +667,8 @@ export const MusicPage: React.FC = () => {
             <BoxAny sx={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 1 }}>
               <AlbumIcon color="action" />
               <BoxAny sx={{ minWidth: 0 }}>
-                <Typography fontWeight={600} noWrap>{recordTitle(current)}</Typography>
-                <Typography variant="caption" color="text.secondary" noWrap>
+                <Typography fontWeight={600} noWrap title={recordTitle(current)}>{recordTitle(current)}</Typography>
+                <Typography variant="caption" color="text.secondary" noWrap title={recordSubtitle(current)}>
                   {recordSubtitle(current)}
                 </Typography>
               </BoxAny>
@@ -572,6 +731,7 @@ export const MusicPage: React.FC = () => {
             </Stack>
           </BoxAny>
           <audio
+            key={playbackVersion}
             ref={audioRef}
             src={playbackUrl}
             preload="metadata"
