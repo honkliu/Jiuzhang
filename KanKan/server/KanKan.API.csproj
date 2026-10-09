@@ -26,7 +26,6 @@
   <ItemGroup>
     <Compile Remove="obj\**\*.cs;bin\**\*.cs;obj_*\**\*.cs;bin_*\**\*.cs" />
     <EmbeddedResource Remove="obj\**\*;bin\**\*;obj_*\**\*;bin_*\**\*" />
-    <EmbeddedResource Include="Data\MusicTitleOverrides.json" />
     <None Remove="obj\**\*;bin\**\*;obj_*\**\*;bin_*\**\*" />
   </ItemGroup>
 

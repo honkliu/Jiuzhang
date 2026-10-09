@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -8,6 +7,8 @@ namespace KanKan.API.Services.Implementations;
 
 internal static partial class MusicCatalogMetadata
 {
+    public const string TitleOverridesFileName = "MusicTitleOverrides.json";
+
     private static readonly HashSet<string> TrackListExtensions = new(
         [".txt", ".nfo"],
         StringComparer.OrdinalIgnoreCase);
@@ -89,8 +90,6 @@ internal static partial class MusicCatalogMetadata
         new("^\\s*(\\d{1,3})\\s*[.．、):：\\]-]\\s*(.+?)\\s*$", RegexOptions.Compiled),
         new("^\\s*(\\d{1,3})\\s{2,}(.+?)\\s*$", RegexOptions.Compiled)
     ];
-
-    private static readonly JsonElement TitleOverrides = LoadTitleOverrides();
 
     public static bool IsGenericTitle(string value)
     {
@@ -188,13 +187,15 @@ internal static partial class MusicCatalogMetadata
     }
 
     public static IReadOnlyList<string> OverrideTitles(
+        JsonElement? titleOverrides,
         string directoryName,
         string? cueName,
         bool standalone,
         int selectedCueCount,
         int expectedCount)
     {
-        if (!TitleOverrides.TryGetProperty(directoryName, out var directory)
+        if (!titleOverrides.HasValue
+            || !titleOverrides.Value.TryGetProperty(directoryName, out var directory)
             || directory.ValueKind != JsonValueKind.Object)
         {
             return [];
@@ -361,15 +362,31 @@ internal static partial class MusicCatalogMetadata
         return Encoding.UTF8.GetString(data);
     }
 
-    private static JsonElement LoadTitleOverrides()
+    public static JsonElement? LoadTitleOverrides(string rootPath)
     {
-        const string resourceName = "KanKan.API.Data.MusicTitleOverrides.json";
-        using var stream = Assembly.GetExecutingAssembly()
-            .GetManifestResourceStream(resourceName)
-            ?? throw new InvalidOperationException(
-                $"Embedded music title overrides were not found: {resourceName}");
-        using var document = JsonDocument.Parse(stream);
-        return document.RootElement.Clone();
+        var path = Path.Combine(rootPath, TitleOverridesFileName);
+        if (!File.Exists(path))
+        {
+            return null;
+        }
+
+        try
+        {
+            using var stream = File.OpenRead(path);
+            using var document = JsonDocument.Parse(stream);
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                throw new JsonException("The root value must be a JSON object.");
+            }
+
+            return document.RootElement.Clone();
+        }
+        catch (JsonException exception)
+        {
+            throw new InvalidDataException(
+                $"Music title overrides are invalid: {path}",
+                exception);
+        }
     }
 
     private static string Clean(string value) =>

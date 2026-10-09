@@ -70,6 +70,21 @@ public sealed class MusicCatalogGenerator(
         }
 
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+        var titleOverrides = MusicCatalogMetadata.LoadTitleOverrides(rootPath);
+        if (titleOverrides.HasValue)
+        {
+            logger.LogInformation(
+                "Loaded music title overrides from {OverridesPath}.",
+                Path.Combine(rootPath, MusicCatalogMetadata.TitleOverridesFileName));
+        }
+        else
+        {
+            logger.LogInformation(
+                "Music title overrides were not found at {OverridesPath}; "
+                + "using scanned metadata and default title fallbacks.",
+                Path.Combine(rootPath, MusicCatalogMetadata.TitleOverridesFileName));
+        }
+
         var allFiles = Directory.EnumerateFiles(rootPath, "*", EnumerationOptions)
             .Where(IsAudioOrCuePath)
             .OrderBy(path => path, PathComparer)
@@ -142,6 +157,7 @@ public sealed class MusicCatalogGenerator(
                 Path.GetFileName(cue.Path),
                 selectedCueCount);
             var overrideTitles = MusicCatalogMetadata.OverrideTitles(
+                titleOverrides,
                 directory,
                 Path.GetFileName(cue.Path),
                 standalone: false,
@@ -242,6 +258,7 @@ public sealed class MusicCatalogGenerator(
                 directory,
                 groupsInDirectory: 1);
             var overrideTitles = MusicCatalogMetadata.OverrideTitles(
+                titleOverrides,
                 directory,
                 cueName: null,
                 standalone: true,
