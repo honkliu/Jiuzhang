@@ -28,6 +28,7 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
+import { alpha, type Theme } from '@mui/material/styles';
 import {
   Album as AlbumIcon,
   Clear as ClearIcon,
@@ -70,6 +71,21 @@ import {
 const BoxAny = Box as any;
 const MUSIC_ROW_HEIGHT = 40;
 
+function selectionRowSx(theme: Theme) {
+  return {
+    '&.Mui-selected, &.Mui-selected:hover': {
+      bgcolor: alpha(theme.palette.primary.main, 0.16),
+    },
+    '&.Mui-selected > :first-child': {
+      boxShadow: `inset 3px 0 0 ${theme.palette.primary.main}`,
+    },
+    '&:focus-visible': {
+      outline: `2px solid ${theme.palette.primary.main}`,
+      outlineOffset: -2,
+    },
+  };
+}
+
 function fieldLabel(field: MusicCatalogField, language: string): string {
   return field.labels?.[language]
     || field.labels?.en
@@ -104,6 +120,9 @@ export const MusicPage: React.FC = () => {
   const [page, setPage] = React.useState(1);
   const [browseExpandedGroups, setBrowseExpandedGroups] = React.useState<Set<string>>(() => new Set());
   const [filteredExpandedGroups, setFilteredExpandedGroups] = React.useState<Set<string> | null>(null);
+  const [selection, setSelection] = React.useState<{
+    groupId: string; recordId: string | null;
+  } | null>(null);
   const [current, setCurrent] = React.useState<MusicCatalogRecord | null>(null);
   const [queue, setQueue] = React.useState<MusicCatalogRecord[]>([]);
   const [queueIndex, setQueueIndex] = React.useState(-1);
@@ -169,9 +188,12 @@ export const MusicPage: React.FC = () => {
       : browseExpandedGroups,
     [albumGroups, browseExpandedGroups, hasActiveFilters, filteredExpandedGroups],
   );
-  const selectFilteredGroup = (groupId: string) => {
+  const selectItem = (groupId: string, recordId: string | null = null) => {
+    setSelection({ groupId, recordId });
     if (hasActiveFilters) selectedFilteredGroupRef.current = groupId;
   };
+  const isSelected = (groupId: string, recordId: string | null = null) =>
+    selection?.groupId === groupId && selection.recordId === recordId;
   const updateFilterPosition = (
     nextSearch: string,
     nextFilters: Record<string, string>,
@@ -248,11 +270,11 @@ export const MusicPage: React.FC = () => {
   const allCollapsed = albumGroups.length > 0
     && albumGroups.every((group) => !expandedGroups.has(group.id));
   const toggleGroup = (groupId: string) => {
+    selectItem(groupId);
     const next = new Set(expandedGroups);
     const expanding = !next.has(groupId);
     if (expanding) {
       next.add(groupId);
-      selectFilteredGroup(groupId);
     } else {
       next.delete(groupId);
       if (selectedFilteredGroupRef.current === groupId) selectedFilteredGroupRef.current = null;
@@ -389,7 +411,10 @@ export const MusicPage: React.FC = () => {
                 }}
                 clickable={field.filterable}
                 onClick={field.filterable
-                  ? () => updateFilter(field.key, JSON.stringify(text))
+                  ? (event) => {
+                    event.stopPropagation();
+                    updateFilter(field.key, JSON.stringify(text));
+                  }
                   : undefined}
               />
             );
@@ -512,7 +537,16 @@ export const MusicPage: React.FC = () => {
                     </TableHead>
                     {rows.map((row) => (
                       <TableBody key={row.group.id}>
-                        {row.showDirectory && <TableRow data-testid="music-directory-row" sx={{ height: MUSIC_ROW_HEIGHT, bgcolor: 'action.selected' }}>
+                        {row.showDirectory && <TableRow
+                          data-testid="music-directory-row"
+                          selected={isSelected(row.group.id)}
+                          aria-selected={isSelected(row.group.id)}
+                          sx={(theme) => ({
+                            height: MUSIC_ROW_HEIGHT,
+                            bgcolor: 'action.selected',
+                            ...selectionRowSx(theme),
+                          })}
+                        >
                           <TableCell
                             component="th"
                             scope="rowgroup"
@@ -544,6 +578,7 @@ export const MusicPage: React.FC = () => {
                               <Typography
                                 variant="body2"
                                 fontWeight={700}
+                                color={isSelected(row.group.id) ? 'primary.main' : 'text.primary'}
                                 title={row.group.directory}
                                 sx={{
                                   flex: 1,
@@ -566,7 +601,7 @@ export const MusicPage: React.FC = () => {
                                   color="primary"
                                   aria-label={t('music.playAlbum')}
                                   onClick={() => {
-                                    selectFilteredGroup(row.group.id);
+                                    selectItem(row.group.id);
                                     playAlbum(row.group);
                                   }}
                                   sx={{ flexShrink: 0, bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' }}
@@ -578,7 +613,26 @@ export const MusicPage: React.FC = () => {
                           </TableCell>
                         </TableRow>}
                         {row.tracks.map((record, trackIndex) => (
-                          <TableRow key={record.id} hover sx={{ height: MUSIC_ROW_HEIGHT }}>
+                          <TableRow
+                            key={record.id}
+                            hover
+                            tabIndex={0}
+                            selected={isSelected(row.group.id, record.id)}
+                            aria-selected={isSelected(row.group.id, record.id)}
+                            onClick={() => selectItem(row.group.id, record.id)}
+                            onKeyDown={(event) => {
+                              if (event.target === event.currentTarget
+                                && (event.key === 'Enter' || event.key === ' ')) {
+                                event.preventDefault();
+                                selectItem(row.group.id, record.id);
+                              }
+                            }}
+                            sx={(theme) => ({
+                              height: MUSIC_ROW_HEIGHT,
+                              cursor: 'pointer',
+                              ...selectionRowSx(theme),
+                            })}
+                          >
                             {visibleFields.map((field) => (
                                   <TableCell
                                     key={field.key}
@@ -621,7 +675,6 @@ export const MusicPage: React.FC = () => {
                                         alignItems="center"
                                         spacing={1}
                                         sx={{ minWidth: 0 }}
-                                        onClick={() => selectFilteredGroup(row.group.id)}
                                       >
                                         <Tooltip title={t('music.playTrack')}>
                                           <IconButton
@@ -633,7 +686,12 @@ export const MusicPage: React.FC = () => {
                                             <PlayArrowIcon fontSize="small" />
                                           </IconButton>
                                         </Tooltip>
-                                        <Typography noWrap variant="body2" fontWeight={400}>
+                                        <Typography
+                                          noWrap
+                                          variant="body2"
+                                          fontWeight={400}
+                                          color={isSelected(row.group.id, record.id) ? 'primary.main' : 'text.primary'}
+                                        >
                                           {renderValue(record, field)}
                                         </Typography>
                                       </Stack>

@@ -119,6 +119,11 @@ KanKan/
   connectors, making parent/child ownership explicit. Directory and song rows
   share the same compact 40px height; long directory titles use single-line
   ellipsis with the full name available on hover.
+- Selecting a song row or directory shows a persistent theme-colored highlight,
+  title color, and left accent without changing row geometry. Song rows can also
+  be selected with Enter/Space; selection alone does not start playback. Playback
+  buttons select their song/directory. Selection survives filtering and pagination,
+  is distinct from hover/focus, and never highlights unrelated off-page rows.
 - The single-row toolbar contains search, category selection, and an expand/collapse
   all button. Directories start collapsed; clicking a directory heading (or using
   Enter/Space) toggles only that directory. Its playback button never toggles it.
