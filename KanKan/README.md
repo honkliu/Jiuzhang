@@ -125,23 +125,28 @@ KanKan/
   Global toggling applies to all pages and returns to page one. A nonempty search
   or category selection (from the dropdown or a song's category chip) temporarily
   expands matching directories to reveal their songs. Clearing both search and
-  category restores the prior expansion state; clearing just one keeps the other
+  category restores the prior expansion state, except a chosen result's directory
+  stays expanded. Clicking a song title/play button, album play button, or expanding
+  a filtered directory selects it: clearing a filter opens that directory's page
+  and brings its heading into view if it still matches. Clearing just one keeps the other
   filter's matches expanded. Manual toggles during filtering affect only those
   results, and changing either filter expands its matches again. Individual
   states persist across pagination. Collapsing intentionally removes track
   space and recalculates pagination, without changing filters or playback queues.
 - Pagination allows at most 20 **visible rows** per page: each directory heading
-  counts once, and only expanded tracks count. If a directory and its matching
-  tracks do not fit in the remaining space, they start on a new page; expanding
-  that directory automatically opens its starting page. Only directories with
-  more than 19 matching songs span pages, with their heading repeated at the top
-  of each continuation page (also counted toward the 20-row limit).
+  counts once, and only expanded tracks count. Expanding a directory keeps it
+  in place and fills the remaining space with its matching songs. Remaining songs
+  continue on subsequent pages, with their heading repeated at the top of each
+  continuation page (also counted toward the 20-row limit). Once those songs end,
+  subsequent directories fill the remaining space on that page. This applies
+  equally to directories with more than 20 songs; only the last page may be short.
   Songs are not repeated. The footer includes continuation headings in its
   visible row ranges/counts, but excludes unused page space and hidden songs.
   Pages are clamped when collapsing removes later pages.
   Compact pagination buttons stay on one line, including on narrow screens;
   distant page numbers use ellipses while first/previous/next/last remain available.
-  Search/category changes return to the first page. The compact table matches
+  Search/category changes return to the first page unless clearing a filter
+  returns to a selected directory. The compact table matches
   the Stocks page, with category content limited to roughly ten Chinese characters
   in width instead of a vertically scrolling virtual list.
 - Search reserves its clear-button space; categories are reset with All. Opening a filter

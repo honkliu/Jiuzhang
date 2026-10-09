@@ -71,13 +71,12 @@ export function paginateMusicGroups(
     let offset = 0;
     do {
       let target = pages[pages.length - 1];
-      // Keep a directory together when possible, and start oversized directories at the top.
-      if (target.rowCount > 0 && target.rowCount + 1 + tracks.length - offset > MUSIC_PAGE_SIZE) {
+      if (target.rowCount === MUSIC_PAGE_SIZE) {
         target = { rows: [], rowCount: 0 };
         pages.push(target);
       }
-      if (offset === 0) groupPages.set(group.id, pages.length);
-      const chunk = tracks.slice(offset, offset + MUSIC_PAGE_SIZE - 1);
+      if (!groupPages.has(group.id)) groupPages.set(group.id, pages.length);
+      const chunk = tracks.slice(offset, offset + MUSIC_PAGE_SIZE - target.rowCount - 1);
       target.rows.push({ group, showDirectory: true, tracks: chunk });
       target.rowCount += 1 + chunk.length;
       offset += chunk.length;

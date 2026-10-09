@@ -93,6 +93,9 @@ export const MusicPage: React.FC = () => {
   const { t, language } = useLanguage();
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
   const advancingRef = React.useRef(false);
+  const selectedFilteredGroupRef = React.useRef<string | null>(null);
+  const pendingDirectoryScrollRef = React.useRef<string | null>(null);
+  const directoryHeadingRefs = React.useRef(new Map<string, HTMLButtonElement>());
   const [catalog, setCatalog] = React.useState<MusicCatalog | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState('');
@@ -166,12 +169,47 @@ export const MusicPage: React.FC = () => {
       : browseExpandedGroups,
     [albumGroups, browseExpandedGroups, hasActiveFilters, filteredExpandedGroups],
   );
+  const selectFilteredGroup = (groupId: string) => {
+    if (hasActiveFilters) selectedFilteredGroupRef.current = groupId;
+  };
+  const updateFilterPosition = (
+    nextSearch: string,
+    nextFilters: Record<string, string>,
+    removingFilter: boolean,
+  ) => {
+    const nextHasFilters = Boolean(nextSearch.trim())
+      || filterableFields.some((field) => Boolean(nextFilters[field.key]));
+    const selectedGroup = selectedFilteredGroupRef.current;
+    if (removingFilter && selectedGroup !== null) {
+      const nextExpanded = nextHasFilters
+        ? new Set(albumGroups.map((group) => group.id))
+        : new Set(browseExpandedGroups).add(selectedGroup);
+      const nextRecords = filterMusicRecords(
+        catalog?.records ?? [], searchableFields, filterableFields, nextSearch, nextFilters,
+      );
+      const nextPagination = paginateMusicGroups(albumGroups, nextRecords, 1, nextExpanded);
+      const targetPage = nextPagination.groupPages.get(selectedGroup);
+      if (targetPage !== undefined) {
+        if (!nextHasFilters) setBrowseExpandedGroups(nextExpanded);
+        setPage(targetPage);
+        pendingDirectoryScrollRef.current = selectedGroup;
+      } else {
+        setPage(1);
+      }
+    } else {
+      setPage(1);
+    }
+    if (!nextHasFilters || !hasActiveFilters) selectedFilteredGroupRef.current = null;
+  };
   const updateSearch = (value: string) => {
+    updateFilterPosition(value, filters, Boolean(search.trim()) && !value.trim());
     setSearch(value);
     setFilteredExpandedGroups(null);
   };
   const updateFilter = (key: string, value: string) => {
-    setFilters((currentFilters) => ({ ...currentFilters, [key]: value }));
+    const nextFilters = { ...filters, [key]: value };
+    updateFilterPosition(search, nextFilters, Boolean(filters[key]) && !value);
+    setFilters(nextFilters);
     setFilteredExpandedGroups(null);
   };
   const updateExpandedGroups = (next: Set<string>) => {
@@ -212,8 +250,13 @@ export const MusicPage: React.FC = () => {
   const toggleGroup = (groupId: string) => {
     const next = new Set(expandedGroups);
     const expanding = !next.has(groupId);
-    if (expanding) next.add(groupId);
-    else next.delete(groupId);
+    if (expanding) {
+      next.add(groupId);
+      selectFilteredGroup(groupId);
+    } else {
+      next.delete(groupId);
+      if (selectedFilteredGroupRef.current === groupId) selectedFilteredGroupRef.current = null;
+    }
     updateExpandedGroups(next);
     if (expanding) {
       const pagination = paginateMusicGroups(albumGroups, filteredRecords, page, next);
@@ -221,7 +264,15 @@ export const MusicPage: React.FC = () => {
       if (targetPage !== undefined) setPage(targetPage);
     }
   };
-  React.useEffect(() => setPage(1), [search, filters]);
+  React.useEffect(() => {
+    const groupId = pendingDirectoryScrollRef.current;
+    if (groupId === null) return;
+    const heading = directoryHeadingRefs.current.get(groupId);
+    if (heading) {
+      heading.scrollIntoView({ block: 'center', inline: 'nearest' });
+      pendingDirectoryScrollRef.current = null;
+    }
+  }, [rows]);
 
   const recordTitle = React.useCallback(
     (record: MusicCatalogRecord | null) =>
@@ -471,6 +522,10 @@ export const MusicPage: React.FC = () => {
                             <Stack direction="row" spacing={1.5} alignItems="center" sx={{ minWidth: 0, maxWidth: 'calc(100vw - 67px)' }}>
                               <ButtonBase
                                 data-testid="music-directory-toggle"
+                                ref={(element: HTMLButtonElement | null) => {
+                                  if (element) directoryHeadingRefs.current.set(row.group.id, element);
+                                  else directoryHeadingRefs.current.delete(row.group.id);
+                                }}
                                 aria-expanded={expandedGroups.has(row.group.id)}
                                 aria-label={`${t(expandedGroups.has(row.group.id) ? 'music.collapseDirectory' : 'music.expandDirectory')}: ${row.group.directory}`}
                                 onClick={() => toggleGroup(row.group.id)}
@@ -510,7 +565,10 @@ export const MusicPage: React.FC = () => {
                                   size="small"
                                   color="primary"
                                   aria-label={t('music.playAlbum')}
-                                  onClick={() => playAlbum(row.group)}
+                                  onClick={() => {
+                                    selectFilteredGroup(row.group.id);
+                                    playAlbum(row.group);
+                                  }}
                                   sx={{ flexShrink: 0, bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' }}
                                 >
                                   <PlayArrowIcon fontSize="small" />
@@ -558,7 +616,13 @@ export const MusicPage: React.FC = () => {
                                     }}
                                   >
                                     {field === primaryField ? (
-                                      <Stack direction="row" alignItems="center" spacing={1} sx={{ minWidth: 0 }}>
+                                      <Stack
+                                        direction="row"
+                                        alignItems="center"
+                                        spacing={1}
+                                        sx={{ minWidth: 0 }}
+                                        onClick={() => selectFilteredGroup(row.group.id)}
+                                      >
                                         <Tooltip title={t('music.playTrack')}>
                                           <IconButton
                                             size="small"
