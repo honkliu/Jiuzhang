@@ -13,6 +13,7 @@ import {
   LinearProgress,
   MenuItem,
   Pagination,
+  PaginationItem,
   Paper,
   Select,
   Slider,
@@ -27,10 +28,10 @@ import {
   TextField,
   Tooltip,
   Typography,
+  useMediaQuery,
 } from '@mui/material';
 import { alpha, type Theme } from '@mui/material/styles';
 import {
-  Album as AlbumIcon,
   Clear as ClearIcon,
   UnfoldLess as UnfoldLessIcon,
   UnfoldMore as UnfoldMoreIcon,
@@ -42,7 +43,6 @@ import {
   Search as SearchIcon,
   SkipNext as SkipNextIcon,
   SkipPrevious as SkipPreviousIcon,
-  VolumeUp as VolumeUpIcon,
 } from '@mui/icons-material';
 import { AppHeader } from '@/components/Shared/AppHeader';
 import { useLanguage } from '@/i18n/LanguageContext';
@@ -69,7 +69,7 @@ import {
 } from './musicCatalog';
 
 const BoxAny = Box as any;
-const MUSIC_ROW_HEIGHT = 40;
+const MUSIC_ROW_HEIGHT = 'var(--music-row-height)';
 
 function selectionRowSx(theme: Theme) {
   return {
@@ -107,6 +107,7 @@ function formatTime(seconds: number): string {
 
 export const MusicPage: React.FC = () => {
   const { t, language } = useLanguage();
+  const isNarrow = useMediaQuery((theme: Theme) => theme.breakpoints.down('sm'));
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
   const advancingRef = React.useRef(false);
   const selectedFilteredGroupRef = React.useRef<string | null>(null);
@@ -131,7 +132,6 @@ export const MusicPage: React.FC = () => {
   const [isPlaying, setIsPlaying] = React.useState(false);
   const [position, setPosition] = React.useState(0);
   const [duration, setDuration] = React.useState(0);
-  const [volume, setVolume] = React.useState(0.8);
 
   React.useEffect(() => {
     let active = true;
@@ -238,10 +238,7 @@ export const MusicPage: React.FC = () => {
     if (hasActiveFilters) setFilteredExpandedGroups(next);
     else setBrowseExpandedGroups(next);
   };
-  const rowSlots = Math.min(MUSIC_PAGE_SIZE, albumGroups.reduce(
-    (count, group) => count + 1 + (expandedGroups.has(group.id) ? group.records.length : 0), 0,
-  ));
-  const tableHeight = (rowSlots + 1) * MUSIC_ROW_HEIGHT;
+  const tableHeight = `calc(${MUSIC_PAGE_SIZE + 1} * ${MUSIC_ROW_HEIGHT})`;
 
   const filterOptions = React.useMemo(() => {
     const options: Record<string, string[]> = {};
@@ -266,6 +263,11 @@ export const MusicPage: React.FC = () => {
     () => paginateMusicGroups(albumGroups, filteredRecords, page, expandedGroups),
     [albumGroups, filteredRecords, page, expandedGroups],
   );
+  const showEmptyMessage = !loading && filteredRecords.length === 0;
+  const visibleRowCount = rows.reduce(
+    (count, row) => count + (row.showDirectory ? 1 : 0) + row.tracks.length, 0,
+  );
+  const paddingRowCount = MUSIC_PAGE_SIZE - visibleRowCount - (showEmptyMessage ? 1 : 0);
   React.useEffect(() => setPage(currentPage), [currentPage]);
   const allCollapsed = albumGroups.length > 0
     && albumGroups.every((group) => !expandedGroups.has(group.id));
@@ -347,12 +349,12 @@ export const MusicPage: React.FC = () => {
     const start = current.playback.startSeconds ?? 0;
     const end = current.playback.endSeconds;
     audio.currentTime = start;
-    audio.volume = volume;
+    audio.volume = 0.8;
     setDuration(end != null ? Math.max(0, end - start) : Math.max(0, audio.duration - start));
     audio.play()
       .then(() => setIsPlaying(true))
       .catch(() => setError(t('music.playFailed')));
-  }, [current, t, volume]);
+  }, [current, t]);
 
   const handleTimeUpdate = React.useCallback(() => {
     const audio = audioRef.current;
@@ -386,6 +388,13 @@ export const MusicPage: React.FC = () => {
       setIsPlaying(false);
     }
   }, [current, t]);
+  const pageRange = t('music.pageRange')
+    .replace('{from}', String(firstRow))
+    .replace('{to}', String(lastRow))
+    .replace('{count}', String(totalRows));
+  const shortPageRange = t('music.pageRangeShort')
+    .replace('{from}', String(firstRow))
+    .replace('{to}', String(lastRow));
 
   const renderValue = (record: MusicCatalogRecord, field: MusicCatalogField) => {
     const value = record.data[field.key];
@@ -432,18 +441,41 @@ export const MusicPage: React.FC = () => {
       <Snackbar open={Boolean(error)} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
         <Alert severity="error" onClose={() => setError('')}>{error}</Alert>
       </Snackbar>
-      <BoxAny sx={{ ...appPageShellSx, pb: { xs: 24, md: 14 } }}>
-        <Container maxWidth={false} sx={{ ...appPageContentSx, maxWidth: 1440 }}>
-          <Stack spacing={1.5}>
+      <BoxAny sx={{
+        ...appPageShellSx,
+        '--music-row-height': {
+          xs: '40px',
+          md: 'clamp(32px, calc((100dvh - 224px) / 21), 36px)',
+        },
+        pb: 'env(safe-area-inset-bottom)',
+      }}>
+        <Container maxWidth={false} sx={{ ...appPageContentSx, py: { xs: 2, md: 1 }, maxWidth: 1440 }}>
+          <Stack spacing={{ xs: 1.5, md: 1 }}>
             <Paper
               data-testid="music-filters"
               sx={{
                 ...appSurfaceSx,
-                p: { xs: 1, sm: 2 },
+                p: { xs: 0.75, sm: 1, md: 0.75 },
                 display: 'grid',
                 gridTemplateColumns: 'minmax(0, 1fr) minmax(88px, 0.6fr) 36px',
                 alignItems: 'center',
                 gap: { xs: 1, sm: 1.5 },
+                '& .MuiInputBase-root': {
+                  height: { xs: 36, md: 32 },
+                  minHeight: { xs: 36, md: 32 },
+                  fontSize: '0.8125rem',
+                },
+                '& .MuiOutlinedInput-input': { py: 0.5 },
+                '& .MuiInputLabel-root': { fontSize: '0.8125rem' },
+                '& .MuiInputLabel-root:not(.MuiInputLabel-shrink)': {
+                  transform: { xs: 'translate(14px, 7px) scale(1)', md: 'translate(14px, 5px) scale(1)' },
+                },
+                '& .MuiIconButton-root': {
+                  width: { md: 28 },
+                  height: { md: 28 },
+                  minWidth: { md: 28 },
+                  minHeight: { md: 28 },
+                },
               }}
             >
               <TextField
@@ -514,7 +546,20 @@ export const MusicPage: React.FC = () => {
               {loading && <LinearProgress sx={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 3 }} />}
                 <TableContainer data-testid="music-table" aria-busy={loading}>
                   <BoxAny sx={{ minHeight: tableHeight }}>
-                  <Table aria-label={t('music.title')} size="small" stickyHeader sx={{ tableLayout: 'fixed', minWidth: 760, fontSize: '0.875rem' }}>
+                  <Table
+                    aria-label={t('music.title')}
+                    size="small"
+                    stickyHeader
+                    sx={{
+                      tableLayout: 'fixed',
+                      minWidth: 760,
+                      fontSize: '0.875rem',
+                      '& .MuiTableCell-root:not(:last-child)': {
+                        borderRight: '1px solid',
+                        borderRightColor: 'divider',
+                      },
+                    }}
+                  >
                     <colgroup>
                       {visibleFields.map((field) => (
                         <col
@@ -529,7 +574,7 @@ export const MusicPage: React.FC = () => {
                     <TableHead>
                       <TableRow sx={{ height: MUSIC_ROW_HEIGHT }}>
                         {visibleFields.map((field) => (
-                          <TableCell key={field.key} sx={{ bgcolor: 'background.paper', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                          <TableCell key={field.key} sx={{ bgcolor: 'background.paper', fontWeight: 700, whiteSpace: 'nowrap', py: { md: 0.25 } }}>
                             {fieldLabel(field, language)}
                           </TableCell>
                         ))}
@@ -551,7 +596,7 @@ export const MusicPage: React.FC = () => {
                             component="th"
                             scope="rowgroup"
                             colSpan={visibleFields.length}
-                            sx={{ py: 0.375, borderLeft: '3px solid', borderLeftColor: 'primary.main' }}
+                            sx={{ py: { xs: 0.375, md: 0.125 }, borderLeft: '3px solid', borderLeftColor: 'primary.main' }}
                           >
                             <Stack direction="row" spacing={1.5} alignItems="center" sx={{ minWidth: 0, maxWidth: 'calc(100vw - 67px)' }}>
                               <ButtonBase
@@ -566,7 +611,7 @@ export const MusicPage: React.FC = () => {
                                 sx={{
                                   flex: 1,
                                   minWidth: 0,
-                                  minHeight: 32,
+                                  minHeight: { xs: 32, md: 28 },
                                   gap: 1.5,
                                   textAlign: 'left',
                                   justifyContent: 'flex-start',
@@ -595,7 +640,7 @@ export const MusicPage: React.FC = () => {
                                   ? <ExpandMoreIcon fontSize="small" sx={{ flexShrink: 0 }} />
                                   : <ChevronRightIcon fontSize="small" sx={{ flexShrink: 0 }} />}
                               </ButtonBase>
-                              <Tooltip title={t('music.playAlbum')}>
+                              <Tooltip title={t('music.playAlbum')} disableInteractive>
                                 <IconButton
                                   size="small"
                                   color="primary"
@@ -604,7 +649,17 @@ export const MusicPage: React.FC = () => {
                                     selectItem(row.group.id);
                                     playAlbum(row.group);
                                   }}
-                                  sx={{ flexShrink: 0, bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' }}
+                                  sx={{
+                                    flexShrink: 0,
+                                    width: { md: 28 },
+                                    height: { md: 28 },
+                                    minWidth: { md: 28 },
+                                    minHeight: { md: 28 },
+                                    p: { md: 0.375 },
+                                    bgcolor: 'background.paper',
+                                    border: '1px solid',
+                                    borderColor: 'divider',
+                                  }}
                                 >
                                   <PlayArrowIcon fontSize="small" />
                                 </IconButton>
@@ -642,7 +697,10 @@ export const MusicPage: React.FC = () => {
                                       textOverflow: 'ellipsis',
                                       whiteSpace: field.type === 'tags' ? 'normal' : 'nowrap',
                                       fontWeight: 400,
-                                      py: field.type === 'tags' ? 0.5 : 0.375,
+                                      py: {
+                                        xs: field.type === 'tags' ? 0.5 : 0.375,
+                                        md: field.type === 'tags' ? 0.25 : 0.125,
+                                      },
                                       ...(field === primaryField && {
                                         pl: 6,
                                         position: 'relative',
@@ -676,12 +734,19 @@ export const MusicPage: React.FC = () => {
                                         spacing={1}
                                         sx={{ minWidth: 0 }}
                                       >
-                                        <Tooltip title={t('music.playTrack')}>
+                                        <Tooltip title={t('music.playTrack')} disableInteractive>
                                           <IconButton
                                             size="small"
                                             aria-label={t('music.playTrack')}
                                             onClick={() => void startPlayback(record, [record])}
-                                            sx={{ flexShrink: 0 }}
+                                            sx={{
+                                              flexShrink: 0,
+                                              width: { md: 28 },
+                                              height: { md: 28 },
+                                              minWidth: { md: 28 },
+                                              minHeight: { md: 28 },
+                                              p: { md: 0.5 },
+                                            }}
                                           >
                                             <PlayArrowIcon fontSize="small" />
                                           </IconButton>
@@ -702,10 +767,10 @@ export const MusicPage: React.FC = () => {
                             ))}
                       </TableBody>
                     ))}
-                    {!loading && filteredRecords.length === 0 && (
+                    {showEmptyMessage && (
                       <TableBody>
-                        <TableRow sx={{ height: tableHeight - MUSIC_ROW_HEIGHT }}>
-                          <TableCell colSpan={visibleFields.length} align="center">
+                        <TableRow sx={{ height: MUSIC_ROW_HEIGHT }}>
+                          <TableCell colSpan={visibleFields.length} align="center" sx={{ py: 0 }}>
                             <Typography color="text.secondary">
                               {!catalog && error ? error : t('music.empty')}
                             </Typography>
@@ -713,25 +778,118 @@ export const MusicPage: React.FC = () => {
                         </TableRow>
                       </TableBody>
                     )}
+                    {paddingRowCount > 0 && (
+                      <TableBody aria-hidden="true">
+                        {Array.from({ length: paddingRowCount }, (_, index) => (
+                          <TableRow key={index} data-testid="music-empty-row" sx={{ height: MUSIC_ROW_HEIGHT }}>
+                            {visibleFields.map((field) => (
+                              <TableCell key={field.key} sx={{ p: 0 }} />
+                            ))}
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    )}
                   </Table>
                   </BoxAny>
                 </TableContainer>
             </Paper>
-              <Stack
+              <BoxAny
                 data-testid="music-pagination"
-                direction={{ xs: 'column', sm: 'row' }}
-                spacing={1.5}
-                alignItems="center"
-                justifyContent="space-between"
-                sx={{ minHeight: { xs: 76, sm: 40 } }}
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: {
+                    xs: 'minmax(56px, 0.7fr) minmax(116px, 1fr) 104px',
+                    sm: '120px minmax(0, 1fr) 224px',
+                    md: '200px minmax(0, 1fr) 224px',
+                  },
+                  gap: { xs: 0.25, md: 1 },
+                  alignItems: 'end',
+                  minHeight: 32,
+                }}
               >
-                <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
-                  {t('music.pageRange')
-                    .replace('{from}', String(firstRow))
-                    .replace('{to}', String(lastRow))
-                    .replace('{count}', String(totalRows))}
+                <Typography noWrap variant="caption" color="text.secondary" title={pageRange} aria-label={pageRange} sx={{ height: 28, lineHeight: '28px', fontVariantNumeric: 'tabular-nums', fontSize: { xs: '0.6875rem', md: '0.75rem' } }}>
+                  <Box component="span" sx={{ display: { xs: 'none', md: 'inline' } }}>{pageRange}</Box>
+                  <Box component="span" sx={{ display: { xs: 'inline', md: 'none' } }}>{shortPageRange}</Box>
                 </Typography>
-                <BoxAny sx={{ width: 340, maxWidth: '100%', display: 'flex', justifyContent: { xs: 'center', sm: 'flex-end' } }}>
+                <BoxAny
+                  data-testid="music-player"
+                  aria-hidden={!current}
+                  sx={{
+                    minWidth: 0,
+                    display: 'grid',
+                    gridTemplateColumns: { xs: 'minmax(24px, 1fr) 88px', md: 'minmax(0, 1fr) 96px minmax(80px, 1fr) 88px' },
+                    columnGap: { xs: 0.5, md: 0.75 },
+                    rowGap: 0,
+                    alignItems: 'center',
+                    visibility: current ? 'visible' : 'hidden',
+                  }}
+                >
+                  <Typography
+                    data-testid="music-current-title"
+                    noWrap
+                    variant="caption"
+                    fontWeight={600}
+                    title={`${recordTitle(current)} | ${recordSubtitle(current)} | ${formatTime(position)} / ${formatTime(duration)}`}
+                    sx={{ display: { xs: 'none', md: 'block' }, textAlign: 'right', gridColumn: 1, gridRow: 1 }}
+                  >
+                    {recordTitle(current) || t('music.play')}
+                  </Typography>
+                  <Typography
+                    data-testid="music-time"
+                    noWrap
+                    variant="caption"
+                    sx={{
+                      gridColumn: { xs: '1 / -1', md: 2 },
+                      gridRow: 1,
+                      textAlign: { xs: 'center', md: 'left' },
+                      fontSize: { xs: '0.625rem', md: '0.75rem' },
+                      lineHeight: '12px',
+                      fontVariantNumeric: 'tabular-nums',
+                    }}
+                  >
+                    {formatTime(position)} / {formatTime(duration)}
+                  </Typography>
+                  <Slider
+                    size="small"
+                    aria-label={t('music.seek')}
+                    aria-valuetext={`${formatTime(position)} / ${formatTime(duration)}`}
+                    disabled={!current}
+                    min={0}
+                    max={Math.max(duration, 0.1)}
+                    value={Math.min(position, Math.max(duration, 0.1))}
+                    valueLabelDisplay="auto"
+                    valueLabelFormat={formatTime}
+                    onChange={(_, value) => {
+                      const next = Array.isArray(value) ? value[0] : value;
+                      const audio = audioRef.current;
+                      if (!audio || !current) return;
+                      audio.currentTime = (current.playback.startSeconds ?? 0) + next;
+                      setPosition(next);
+                    }}
+                    sx={{ py: 1, gridColumn: { xs: 1, md: 3 }, gridRow: { xs: 2, md: 1 } }}
+                  />
+                <Stack
+                  direction="row"
+                  spacing={0.25}
+                  alignItems="center"
+                  sx={{
+                    gridColumn: { xs: 2, md: 4 },
+                    gridRow: { xs: 2, md: 1 },
+                    '& .MuiIconButton-root': { width: 28, height: 28, minWidth: 28, minHeight: 28, p: 0.5 },
+                  }}
+                >
+                  <IconButton size="small" aria-label={t('music.previousTrack')} disabled={!current || queueIndex <= 0} onClick={() => playAdjacent(-1)}>
+                    <SkipPreviousIcon fontSize="small" />
+                  </IconButton>
+                  <IconButton size="small" color="primary" aria-label={t(isPlaying ? 'music.pause' : 'music.play')} title={`${recordTitle(current)} | ${recordSubtitle(current)}`} disabled={!current} onClick={togglePlayback}>
+                    {isPlaying ? <PauseIcon fontSize="small" /> : <PlayArrowIcon fontSize="small" />}
+                  </IconButton>
+                  <IconButton size="small" aria-label={t('music.nextTrack')} disabled={!current || queueIndex < 0 || queueIndex >= queue.length - 1} onClick={() => playAdjacent(1)}>
+                    <SkipNextIcon fontSize="small" />
+                  </IconButton>
+                </Stack>
+                </BoxAny>
+                <BoxAny sx={{ minWidth: 0, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
                   <Pagination
                   disabled={loading || filteredRecords.length === 0}
                   count={pageCount}
@@ -739,13 +897,20 @@ export const MusicPage: React.FC = () => {
                   onChange={(_, nextPage) => setPage(nextPage)}
                   color="primary"
                   size="small"
-                  siblingCount={0}
+                  siblingCount={1}
+                  boundaryCount={0}
+                  renderItem={(item) => {
+                    if (item.type === 'start-ellipsis' || item.type === 'end-ellipsis') return null;
+                    if (item.type === 'page' && item.page !== null
+                      && Math.abs(item.page - currentPage) > (isNarrow ? 0 : 1)) return null;
+                    return <PaginationItem {...item} />;
+                  }}
                   sx={{
                     '& .MuiPagination-ul': { flexWrap: 'nowrap' },
-                    '& .MuiPaginationItem-root': { mx: 0.25 },
+                    '& .MuiPaginationItem-root': { mx: 0.125 },
                   }}
-                  showFirstButton
-                  showLastButton
+                  showFirstButton={!isNarrow}
+                  showLastButton={!isNarrow}
                   aria-label={t('music.pagination')}
                   getItemAriaLabel={(type, targetPage) => type === 'page'
                     ? t('music.goToPage').replace('{page}', String(targetPage))
@@ -754,104 +919,12 @@ export const MusicPage: React.FC = () => {
                       : t('music.pagination')}
                 />
                 </BoxAny>
-              </Stack>
+              </BoxAny>
           </Stack>
         </Container>
       </BoxAny>
 
       {current && (
-        <Paper
-          square
-          elevation={8}
-          sx={{
-            position: 'fixed',
-            zIndex: (theme) => theme.zIndex.appBar,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            borderTop: '1px solid',
-            borderColor: 'divider',
-            px: { xs: 1.5, sm: 3 },
-            py: 1,
-            pb: 'calc(8px + env(safe-area-inset-bottom))',
-          }}
-        >
-          <BoxAny
-            sx={{
-              maxWidth: 1500,
-              mx: 'auto',
-              display: 'grid',
-              gridTemplateColumns: { xs: '1fr', md: 'minmax(220px, 1fr) minmax(320px, 2fr) auto' },
-              alignItems: 'center',
-              gap: { xs: 0.5, md: 2 },
-            }}
-          >
-            <BoxAny sx={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 1 }}>
-              <AlbumIcon color="action" />
-              <BoxAny sx={{ minWidth: 0 }}>
-                <Typography fontWeight={600} noWrap title={recordTitle(current)}>{recordTitle(current)}</Typography>
-                <Typography variant="caption" color="text.secondary" noWrap title={recordSubtitle(current)}>
-                  {recordSubtitle(current)}
-                </Typography>
-              </BoxAny>
-            </BoxAny>
-
-            <Stack direction="row" spacing={1} alignItems="center">
-              <Typography variant="caption" sx={{ width: 38, textAlign: 'right' }}>
-                {formatTime(position)}
-              </Typography>
-              <Slider
-                size="small"
-                min={0}
-                max={Math.max(duration, 0.1)}
-                value={Math.min(position, Math.max(duration, 0.1))}
-                onChange={(_, value) => {
-                  const next = Array.isArray(value) ? value[0] : value;
-                  const audio = audioRef.current;
-                  if (!audio || !current) return;
-                  audio.currentTime = (current.playback.startSeconds ?? 0) + next;
-                  setPosition(next);
-                }}
-              />
-              <Typography variant="caption" sx={{ width: 38 }}>
-                {formatTime(duration)}
-              </Typography>
-            </Stack>
-
-            <Stack direction="row" spacing={0.5} alignItems="center" justifyContent="center">
-              <IconButton
-                size="small"
-                disabled={queueIndex <= 0}
-                onClick={() => playAdjacent(-1)}
-              >
-                <SkipPreviousIcon />
-              </IconButton>
-              <IconButton color="primary" onClick={togglePlayback}>
-                {isPlaying ? <PauseIcon /> : <PlayArrowIcon />}
-              </IconButton>
-              <IconButton
-                size="small"
-                disabled={queueIndex < 0 || queueIndex >= queue.length - 1}
-                onClick={() => playAdjacent(1)}
-              >
-                <SkipNextIcon />
-              </IconButton>
-              <VolumeUpIcon fontSize="small" color="action" />
-              <Slider
-                size="small"
-                min={0}
-                max={1}
-                step={0.05}
-                value={volume}
-                onChange={(_, value) => {
-                  const next = Array.isArray(value) ? value[0] : value;
-                  setVolume(next);
-                  if (audioRef.current) audioRef.current.volume = next;
-                }}
-                sx={{ width: 72 }}
-              />
-            </Stack>
-          </BoxAny>
           <audio
             key={playbackVersion}
             ref={audioRef}
@@ -864,7 +937,6 @@ export const MusicPage: React.FC = () => {
             onEnded={() => playAdjacent(1)}
             onError={() => setError(t('music.playFailed'))}
           />
-        </Paper>
       )}
     </>
   );

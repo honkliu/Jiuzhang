@@ -117,7 +117,10 @@ KanKan/
 - Directory headings use a folder icon, a stronger title band, and a separate
   album-play control. Lighter track labels are indented beneath them with tree
   connectors, making parent/child ownership explicit. Directory and song rows
-  share the same compact 40px height; long directory titles use single-line
+  share the same compact height: 40px on mobile and 32-36px on desktop, adjusted
+  to viewport height. Desktop toolbar/gaps and reserved player space are smaller
+  so twenty rows and pagination fit a 900px-tall desktop viewport without page
+  scrolling, including during playback. Long directory titles use single-line
   ellipsis with the full name available on hover.
 - Selecting a song row or directory shows a persistent theme-colored highlight,
   title color, and left accent without changing row geometry. Song rows can also
@@ -125,7 +128,8 @@ KanKan/
   buttons select their song/directory. Selection survives filtering and pagination,
   is distinct from hover/focus, and never highlights unrelated off-page rows.
 - The single-row toolbar contains search, category selection, and an expand/collapse
-  all button. Directories start collapsed; clicking a directory heading (or using
+  all button, with compact 32px desktop/36px mobile inputs and minimal outer padding.
+  Directories start collapsed; clicking a directory heading (or using
   Enter/Space) toggles only that directory. Its playback button never toggles it.
   Global toggling applies to all pages and returns to page one. A nonempty search
   or category selection (from the dropdown or a song's category chip) temporarily
@@ -145,11 +149,20 @@ KanKan/
   continuation page (also counted toward the 20-row limit). Once those songs end,
   subsequent directories fill the remaining space on that page. This applies
   equally to directories with more than 20 songs; only the last page may be short.
+  Every page reserves space for all 20 rows, filling shorter lists with empty
+  grid rows aligned with the table columns. Headers, song rows and empty rows
+  share vertical column dividers; directory headings still span the full width,
+  so playback and page controls stay at the same bottom position. Padding rows
+  are non-interactive, hidden from assistive technology, and excluded from counts.
+  This also
+  applies to small catalogs, collapsed directories, filtered and empty results.
   Songs are not repeated. The footer includes continuation headings in its
   visible row ranges/counts, but excludes unused page space and hidden songs.
   Pages are clamped when collapsing removes later pages.
   Compact pagination buttons stay on one line, including on narrow screens;
-  distant page numbers use ellipses while first/previous/next/last remain available.
+  only the current page and up to two neighbors are shown on desktop, with
+  first/previous/next/last controls. Mobile shows just the current page with
+  previous/next controls; full row counts remain available on hover.
   Search/category changes return to the first page unless clearing a filter
   returns to a selected directory. The compact table matches
   the Stocks page, with category content limited to roughly ten Chinese characters
@@ -158,11 +171,18 @@ KanKan/
   menu does not lock the page scrollbar or change column widths. While the music
   page is mounted, the body reserves its vertical scrollbar gutter so expanding
   or collapsing directories cannot shift the page horizontally. The table keeps
-  its header and a stable page footprint while searching/filtering in the same
-  expansion state;
+  its header and a fixed 20-row page footprint across pagination, directory
+  expansion/collapse, and searching/filtering;
   pagination remains in place, and its range is the only visible record count.
-  Playback space is reserved before playback starts, including the taller mobile
-  player and bottom safe area. Errors appear in a dismissible notification without
+  The compact footer places row counts on the left, playback in the center,
+  and pagination on the right. Playback buttons and page controls share one line,
+  without a floating player or volume control. Seeking and elapsed/total time
+  remain available; the desktop title is right-aligned next to time and progress.
+  On mobile time sits above the playback controls. Empty playback
+  space is reserved before playback starts so the footer does not move.
+  Fixed row-count and page-control columns, plus a fixed desktop time width,
+  keep playback controls and the seek bar from moving horizontally as pages change.
+  Bottom safe-area padding is retained. Errors appear in a dismissible notification without
   pushing the table down.
 - The button next to a track plays only that track (including its CUE segment).
   The button next to the directory plays the entire album in track order, even
