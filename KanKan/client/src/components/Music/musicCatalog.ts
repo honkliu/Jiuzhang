@@ -87,8 +87,15 @@ export function paginateMusicGroups(
   const currentPage = Math.min(Math.max(1, page), pageCount);
   const precedingRows = pages.slice(0, currentPage - 1).reduce((count, item) => count + item.rowCount, 0);
   const selected = pages[currentPage - 1];
+  const nextGroup = pages[currentPage]?.rows[0];
+  const lastGroup = selected.rows[selected.rows.length - 1];
+  const preview = nextGroup
+    ? nextGroup.group.id === lastGroup?.group.id && nextGroup.tracks.length > 0
+      ? { kind: 'track' as const, group: nextGroup.group, record: nextGroup.tracks[0] }
+      : { kind: 'directory' as const, group: nextGroup.group }
+    : null;
   return {
-    rows: selected.rows, totalRows, pageCount, currentPage, groupPages,
+    rows: selected.rows, preview, totalRows, pageCount, currentPage, groupPages,
     firstRow: totalRows === 0 ? 0 : precedingRows + 1,
     lastRow: precedingRows + selected.rowCount,
   };

@@ -70,6 +70,10 @@ import {
 
 const BoxAny = Box as any;
 const MUSIC_ROW_HEIGHT = 'var(--music-row-height)';
+type MusicDisplayRow =
+  | { kind: 'directory'; group: MusicAlbumGroup }
+  | { kind: 'track'; group: MusicAlbumGroup; record: MusicCatalogRecord }
+  | { kind: 'blank' | 'empty' };
 
 function selectionRowSx(theme: Theme) {
   return {
@@ -238,7 +242,7 @@ export const MusicPage: React.FC = () => {
     if (hasActiveFilters) setFilteredExpandedGroups(next);
     else setBrowseExpandedGroups(next);
   };
-  const tableHeight = `calc(${MUSIC_PAGE_SIZE + 1} * ${MUSIC_ROW_HEIGHT})`;
+  const tableHeight = `calc(${MUSIC_PAGE_SIZE + 1.6} * ${MUSIC_ROW_HEIGHT})`;
 
   const filterOptions = React.useMemo(() => {
     const options: Record<string, string[]> = {};
@@ -259,15 +263,31 @@ export const MusicPage: React.FC = () => {
       catalog?.records ?? [], searchableFields, filterableFields, search, filters),
     [catalog, filterableFields, filters, search, searchableFields],
   );
-  const { rows, totalRows, pageCount, currentPage, firstRow, lastRow } = React.useMemo(
+  const lastMatchingTrackIds = React.useMemo(() => {
+    const matches = new Set(filteredRecords.map(record => record.id));
+    const lastTracks = new Set<string>();
+    for (const group of albumGroups) {
+      for (let index = group.records.length - 1; index >= 0; index--) {
+        if (matches.has(group.records[index].id)) {
+          lastTracks.add(group.records[index].id);
+          break;
+        }
+      }
+    }
+    return lastTracks;
+  }, [albumGroups, filteredRecords]);
+  const { rows, preview, totalRows, pageCount, currentPage, firstRow, lastRow } = React.useMemo(
     () => paginateMusicGroups(albumGroups, filteredRecords, page, expandedGroups),
     [albumGroups, filteredRecords, page, expandedGroups],
   );
   const showEmptyMessage = !loading && filteredRecords.length === 0;
-  const visibleRowCount = rows.reduce(
-    (count, row) => count + (row.showDirectory ? 1 : 0) + row.tracks.length, 0,
-  );
-  const paddingRowCount = MUSIC_PAGE_SIZE - visibleRowCount - (showEmptyMessage ? 1 : 0);
+  const displayRows: MusicDisplayRow[] = rows.flatMap((row) => [
+    ...(row.showDirectory ? [{ kind: 'directory' as const, group: row.group }] : []),
+    ...row.tracks.map(record => ({ kind: 'track' as const, group: row.group, record })),
+  ]);
+  if (showEmptyMessage) displayRows.push({ kind: 'empty' });
+  while (displayRows.length < MUSIC_PAGE_SIZE) displayRows.push({ kind: 'blank' });
+  displayRows.push(preview ?? { kind: 'blank' });
   React.useEffect(() => setPage(currentPage), [currentPage]);
   const allCollapsed = albumGroups.length > 0
     && albumGroups.every((group) => !expandedGroups.has(group.id));
@@ -293,6 +313,7 @@ export const MusicPage: React.FC = () => {
     if (groupId === null) return;
     const heading = directoryHeadingRefs.current.get(groupId);
     if (heading) {
+      heading.focus({ preventScroll: true });
       heading.scrollIntoView({ block: 'center', inline: 'nearest' });
       pendingDirectoryScrollRef.current = null;
     }
@@ -433,6 +454,28 @@ export const MusicPage: React.FC = () => {
     }
     return scalarText(value) || '—';
   };
+  const tableColumns = (
+    <colgroup>
+      {visibleFields.map((field) => (
+        <col
+          key={field.key}
+          style={{
+            width: field.type === 'tags' ? 'calc(10em + 32px)'
+              : field === primaryField ? undefined : field.width ?? 180,
+          }}
+        />
+      ))}
+    </colgroup>
+  );
+  const tableSx = {
+    tableLayout: 'fixed',
+    minWidth: 760,
+    fontSize: '0.875rem',
+    '& .MuiTableCell-root:not(:last-child)': {
+      borderRight: '1px solid',
+      borderRightColor: 'divider',
+    },
+  } as const;
 
   return (
     <>
@@ -445,7 +488,7 @@ export const MusicPage: React.FC = () => {
         ...appPageShellSx,
         '--music-row-height': {
           xs: '40px',
-          md: 'clamp(32px, calc((100dvh - 224px) / 21), 36px)',
+          md: 'clamp(32px, calc((100dvh - 224px) / 21.6), 36px)',
         },
         pb: 'env(safe-area-inset-bottom)',
       }}>
@@ -510,7 +553,10 @@ export const MusicPage: React.FC = () => {
                     labelId={`music-filter-${field.key}`}
                     value={filters[field.key] ?? ''}
                     label={fieldLabel(field, language)}
-                    MenuProps={{ disableScrollLock: true }}
+                    MenuProps={{
+                      disableScrollLock: true,
+                      disableRestoreFocus: selection !== null,
+                    }}
                     onChange={(event) => updateFilter(field.key, event.target.value)}
                   >
                     <MenuItem value="">{t('music.all')}</MenuItem>
@@ -545,32 +591,14 @@ export const MusicPage: React.FC = () => {
             <Paper sx={{ borderRadius: 2, overflow: 'hidden', position: 'relative' }}>
               {loading && <LinearProgress sx={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 3 }} />}
                 <TableContainer data-testid="music-table" aria-busy={loading}>
-                  <BoxAny sx={{ minHeight: tableHeight }}>
+                  <BoxAny data-testid="music-row-viewport" sx={{ height: tableHeight, minWidth: 760, overflow: 'clip' }}>
                   <Table
                     aria-label={t('music.title')}
                     size="small"
                     stickyHeader
-                    sx={{
-                      tableLayout: 'fixed',
-                      minWidth: 760,
-                      fontSize: '0.875rem',
-                      '& .MuiTableCell-root:not(:last-child)': {
-                        borderRight: '1px solid',
-                        borderRightColor: 'divider',
-                      },
-                    }}
+                    sx={tableSx}
                   >
-                    <colgroup>
-                      {visibleFields.map((field) => (
-                        <col
-                          key={field.key}
-                          style={{
-                            width: field.type === 'tags' ? 'calc(10em + 32px)'
-                              : field === primaryField ? undefined : field.width ?? 180,
-                          }}
-                        />
-                      ))}
-                    </colgroup>
+                    {tableColumns}
                     <TableHead>
                       <TableRow sx={{ height: MUSIC_ROW_HEIGHT }}>
                         {visibleFields.map((field) => (
@@ -580,28 +608,54 @@ export const MusicPage: React.FC = () => {
                         ))}
                       </TableRow>
                     </TableHead>
-                    {rows.map((row) => (
-                      <TableBody key={row.group.id}>
-                        {row.showDirectory && <TableRow
-                          data-testid="music-directory-row"
-                          selected={isSelected(row.group.id)}
-                          aria-selected={isSelected(row.group.id)}
+                    <TableBody>
+                    {displayRows.map((row, rowIndex) => {
+                      const isPreview = rowIndex === MUSIC_PAGE_SIZE;
+                      const isEntry = row.kind === 'directory' || row.kind === 'track';
+                      const selected = isEntry && !isPreview
+                        && isSelected(row.group.id, row.kind === 'track' ? row.record.id : null);
+                      const record = row.kind === 'track' ? row.record : null;
+                      return (
+                        <TableRow
+                          key={row.kind === 'track' ? row.record.id
+                            : row.kind === 'directory' ? row.group.id : `slot-${rowIndex}`}
+                          data-testid={isPreview ? 'music-next-preview'
+                            : row.kind === 'directory' ? 'music-directory-row'
+                              : row.kind === 'blank' ? 'music-empty-row' : undefined}
+                          aria-hidden={isPreview || row.kind === 'blank' ? true : undefined}
+                          ref={(element) => element?.toggleAttribute('inert', isPreview)}
+                          hover={row.kind === 'track' && !isPreview}
+                          tabIndex={row.kind === 'track' && !isPreview ? 0 : undefined}
+                          selected={selected}
+                          aria-selected={isEntry && !isPreview ? selected : undefined}
+                          onClick={row.kind === 'track' && !isPreview
+                            ? () => selectItem(row.group.id, row.record.id) : undefined}
+                          onKeyDown={(event) => {
+                            if (row.kind === 'track' && !isPreview && event.target === event.currentTarget
+                              && (event.key === 'Enter' || event.key === ' ')) {
+                              event.preventDefault();
+                              selectItem(row.group.id, row.record.id);
+                            }
+                          }}
                           sx={(theme) => ({
                             height: MUSIC_ROW_HEIGHT,
-                            bgcolor: 'action.selected',
+                            ...(row.kind === 'directory' && { '&&': { bgcolor: 'action.selected' } }),
+                            cursor: row.kind === 'track' && !isPreview ? 'pointer' : undefined,
                             ...selectionRowSx(theme),
                           })}
                         >
+                          {row.kind === 'directory' ? (
                           <TableCell
                             component="th"
-                            scope="rowgroup"
+                            scope="row"
                             colSpan={visibleFields.length}
                             sx={{ py: { xs: 0.375, md: 0.125 }, borderLeft: '3px solid', borderLeftColor: 'primary.main' }}
                           >
                             <Stack direction="row" spacing={1.5} alignItems="center" sx={{ minWidth: 0, maxWidth: 'calc(100vw - 67px)' }}>
                               <ButtonBase
-                                data-testid="music-directory-toggle"
+                                data-testid={!isPreview ? 'music-directory-toggle' : undefined}
                                 ref={(element: HTMLButtonElement | null) => {
+                                  if (isPreview) return;
                                   if (element) directoryHeadingRefs.current.set(row.group.id, element);
                                   else directoryHeadingRefs.current.delete(row.group.id);
                                 }}
@@ -666,29 +720,8 @@ export const MusicPage: React.FC = () => {
                               </Tooltip>
                             </Stack>
                           </TableCell>
-                        </TableRow>}
-                        {row.tracks.map((record, trackIndex) => (
-                          <TableRow
-                            key={record.id}
-                            hover
-                            tabIndex={0}
-                            selected={isSelected(row.group.id, record.id)}
-                            aria-selected={isSelected(row.group.id, record.id)}
-                            onClick={() => selectItem(row.group.id, record.id)}
-                            onKeyDown={(event) => {
-                              if (event.target === event.currentTarget
-                                && (event.key === 'Enter' || event.key === ' ')) {
-                                event.preventDefault();
-                                selectItem(row.group.id, record.id);
-                              }
-                            }}
-                            sx={(theme) => ({
-                              height: MUSIC_ROW_HEIGHT,
-                              cursor: 'pointer',
-                              ...selectionRowSx(theme),
-                            })}
-                          >
-                            {visibleFields.map((field) => (
+                          ) : row.kind === 'track' && record ? (
+                            visibleFields.map((field) => (
                                   <TableCell
                                     key={field.key}
                                     title={scalarText(record.data[field.key]) || (field.type === 'tags' ? t('music.uncategorized') : undefined)}
@@ -709,7 +742,7 @@ export const MusicPage: React.FC = () => {
                                           position: 'absolute',
                                           left: 29,
                                           top: 0,
-                                          bottom: trackIndex === row.tracks.length - 1 ? '50%' : 0,
+                                          bottom: lastMatchingTrackIds.has(record.id) ? '50%' : 0,
                                           width: '1px',
                                           bgcolor: 'divider',
                                           pointerEvents: 'none',
@@ -762,33 +795,22 @@ export const MusicPage: React.FC = () => {
                                       </Stack>
                                     ) : renderValue(record, field)}
                                   </TableCell>
-                                ))}
-                              </TableRow>
-                            ))}
-                      </TableBody>
-                    ))}
-                    {showEmptyMessage && (
-                      <TableBody>
-                        <TableRow sx={{ height: MUSIC_ROW_HEIGHT }}>
+                                ))
+                          ) : row.kind === 'empty' ? (
                           <TableCell colSpan={visibleFields.length} align="center" sx={{ py: 0 }}>
                             <Typography color="text.secondary">
                               {!catalog && error ? error : t('music.empty')}
                             </Typography>
                           </TableCell>
-                        </TableRow>
-                      </TableBody>
-                    )}
-                    {paddingRowCount > 0 && (
-                      <TableBody aria-hidden="true">
-                        {Array.from({ length: paddingRowCount }, (_, index) => (
-                          <TableRow key={index} data-testid="music-empty-row" sx={{ height: MUSIC_ROW_HEIGHT }}>
-                            {visibleFields.map((field) => (
+                          ) : (
+                            visibleFields.map((field) => (
                               <TableCell key={field.key} sx={{ p: 0 }} />
-                            ))}
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    )}
+                            ))
+                          )}
+                        </TableRow>
+                      );
+                    })}
+                    </TableBody>
                   </Table>
                   </BoxAny>
                 </TableContainer>

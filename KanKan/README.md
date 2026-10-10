@@ -156,6 +156,22 @@ KanKan/
   are non-interactive, hidden from assistive technology, and excluded from counts.
   This also
   applies to small catalogs, collapsed directories, filtered and empty results.
+  An additional clipped 0.6-row previews the next directory or song without
+  adding to the 20-entry limit or counts. When entry 20 is expanded, this preview
+  shows its first song (skipping the continuation heading); the next page still
+  repeats the heading and shows the song normally. Previews are display-only and
+  use the same rendering as real rows: folder colors/icons and song indentation,
+  play icons and category chips, with the top 60% of the normal row visible.
+  The row viewport clips without internal scrolling, so category changes and
+  selection focus always leave twenty complete rows above the bottom preview;
+  the first row is never cropped to expose the end of the preview.
+  Rendering uses one list of 21 normal row slots in a single table body, clipped
+  to 20.6 rows. Unused slots are blank; slot 21 is always display-only. This keeps
+  alternating colors continuous: a blank preview matches row 19, not row 20.
+  Song tree connectors continue through page boundaries and the preview; only
+  the directory's final matching song ends its connector halfway down the row.
+  Previews are inert and hidden from assistive technology; the 0.6-row space is reserved on the last
+  page too.
   Songs are not repeated. The footer includes continuation headings in its
   visible row ranges/counts, but excludes unused page space and hidden songs.
   Pages are clamped when collapsing removes later pages.
@@ -173,6 +189,8 @@ KanKan/
   or collapsing directories cannot shift the page horizontally. The table keeps
   its header and a fixed 20-row page footprint across pagination, directory
   expansion/collapse, and searching/filtering;
+  clearing a category retains the selected directory and focus just like clearing
+  search, without the category menu restoring focus/scroll to the toolbar.
   pagination remains in place, and its range is the only visible record count.
   The compact footer places row counts on the left, playback in the center,
   and pagination on the right. Playback buttons and page controls share one line,
