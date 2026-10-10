@@ -839,11 +839,20 @@ export const MusicPage: React.FC = () => {
                   sx={{
                     minWidth: 0,
                     display: 'grid',
-                    gridTemplateColumns: { xs: 'minmax(24px, 1fr) 88px', md: 'minmax(0, 1fr) 96px minmax(80px, 1fr) 88px' },
+                    gridTemplateColumns: {
+                      xs: 'minmax(24px, 1fr) 88px',
+                      md: 'minmax(0, 1fr) 96px clamp(110px, 18vw, 240px) 88px minmax(0, 1fr)',
+                    },
                     columnGap: { xs: 0.5, md: 0.75 },
                     rowGap: 0,
                     alignItems: 'center',
                     visibility: current ? 'visible' : 'hidden',
+                    '&::after': {
+                      content: '""',
+                      display: { xs: 'none', md: 'block' },
+                      gridColumn: 5,
+                      gridRow: 1,
+                    },
                   }}
                 >
                   <Typography
@@ -920,19 +929,27 @@ export const MusicPage: React.FC = () => {
                   color="primary"
                   size="small"
                   siblingCount={1}
-                  boundaryCount={0}
+                  boundaryCount={1}
                   renderItem={(item) => {
-                    if (item.type === 'start-ellipsis' || item.type === 'end-ellipsis') return null;
+                    if (item.type === 'start-ellipsis') return null;
+                    if (item.type === 'end-ellipsis') {
+                      return currentPage + (isNarrow ? 0 : 1) < pageCount - 1
+                        ? <PaginationItem {...item} /> : null;
+                    }
                     if (item.type === 'page' && item.page !== null
-                      && Math.abs(item.page - currentPage) > (isNarrow ? 0 : 1)) return null;
+                      && item.page !== currentPage && item.page !== pageCount
+                      && (isNarrow || item.page !== currentPage + 1)) return null;
                     return <PaginationItem {...item} />;
                   }}
                   sx={{
                     '& .MuiPagination-ul': { flexWrap: 'nowrap' },
-                    '& .MuiPaginationItem-root': { mx: 0.125 },
+                    '& .MuiPaginationItem-root': {
+                      mx: 0.125,
+                      minWidth: { xs: 18, sm: 26 },
+                      px: { xs: 0.25, sm: 0.75 },
+                      fontSize: { xs: '0.75rem', sm: undefined },
+                    },
                   }}
-                  showFirstButton={!isNarrow}
-                  showLastButton={!isNarrow}
                   aria-label={t('music.pagination')}
                   getItemAriaLabel={(type, targetPage) => type === 'page'
                     ? t('music.goToPage').replace('{page}', String(targetPage))

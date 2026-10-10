@@ -176,9 +176,10 @@ KanKan/
   visible row ranges/counts, but excludes unused page space and hidden songs.
   Pages are clamped when collapsing removes later pages.
   Compact pagination buttons stay on one line, including on narrow screens;
-  only the current page and up to two neighbors are shown on desktop, with
-  first/previous/next/last controls. Mobile shows just the current page with
-  previous/next controls; full row counts remain available on hover.
+  desktop shows the current page, its next neighbor, and the final page, with
+  an ellipsis for skipped pages (for example, `20 21 ... 50`). Mobile shows the
+  current and final page with the gap ellipsis. Previous/next controls remain;
+  the final page number is directly clickable. Full row counts remain available on hover.
   Search/category changes return to the first page unless clearing a filter
   returns to a selected directory. The compact table matches
   the Stocks page, with category content limited to roughly ten Chinese characters
@@ -200,6 +201,8 @@ KanKan/
   space is reserved before playback starts so the footer does not move.
   Fixed row-count and page-control columns, plus a fixed desktop time width,
   keep playback controls and the seek bar from moving horizontally as pages change.
+  On desktop, equal flexible columns flank the time/progress/transport cluster
+  to center it within the playback area rather than pushing it toward pagination.
   Bottom safe-area padding is retained. Errors appear in a dismissible notification without
   pushing the table down.
 - The button next to a track plays only that track (including its CUE segment).
