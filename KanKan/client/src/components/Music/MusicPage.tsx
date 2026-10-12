@@ -112,6 +112,8 @@ function formatTime(seconds: number): string {
 export const MusicPage: React.FC = () => {
   const { t, language } = useLanguage();
   const isNarrow = useMediaQuery((theme: Theme) => theme.breakpoints.down('sm'));
+  const isCompact = useMediaQuery((theme: Theme) => theme.breakpoints.down('md'));
+  const tableContainerRef = React.useRef<HTMLDivElement | null>(null);
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
   const advancingRef = React.useRef(false);
   const selectedFilteredGroupRef = React.useRef<string | null>(null);
@@ -136,6 +138,19 @@ export const MusicPage: React.FC = () => {
   const [isPlaying, setIsPlaying] = React.useState(false);
   const [position, setPosition] = React.useState(0);
   const [duration, setDuration] = React.useState(0);
+
+  React.useLayoutEffect(() => {
+    const container = tableContainerRef.current;
+    if (!container || !isCompact) return;
+    const observer = new ResizeObserver(([entry]) => {
+      container.style.setProperty('--music-row-height', `${entry.contentRect.height / 21.6}px`);
+    });
+    observer.observe(container);
+    return () => {
+      observer.disconnect();
+      container.style.removeProperty('--music-row-height');
+    };
+  }, [isCompact]);
 
   React.useEffect(() => {
     let active = true;
@@ -487,17 +502,21 @@ export const MusicPage: React.FC = () => {
       <BoxAny sx={{
         ...appPageShellSx,
         '--music-row-height': {
-          xs: '40px',
+          xs: 'calc((100dvh - 224px) / 21.6)',
           md: 'clamp(32px, calc((100dvh - 224px) / 21.6), 36px)',
         },
         pb: 'env(safe-area-inset-bottom)',
+        height: { xs: '100dvh', md: 'auto' },
+        display: { xs: 'flex', md: 'block' },
+        flexDirection: 'column',
       }}>
-        <Container maxWidth={false} sx={{ ...appPageContentSx, py: { xs: 2, md: 1 }, maxWidth: 1440 }}>
-          <Stack spacing={{ xs: 1.5, md: 1 }}>
+        <Container maxWidth={false} sx={{ ...appPageContentSx, py: 1, maxWidth: 1440, flex: { xs: 1, md: 'initial' }, minHeight: 0 }}>
+          <Stack spacing={1} sx={{ height: { xs: '100%', md: 'auto' } }}>
             <Paper
               data-testid="music-filters"
               sx={{
                 ...appSurfaceSx,
+                flexShrink: 0,
                 p: { xs: 0.75, sm: 1, md: 0.75 },
                 display: 'grid',
                 gridTemplateColumns: 'minmax(0, 1fr) minmax(88px, 0.6fr) 36px',
@@ -588,9 +607,31 @@ export const MusicPage: React.FC = () => {
               </Tooltip>
             </Paper>
 
-            <Paper sx={{ borderRadius: 2, overflow: 'hidden', position: 'relative' }}>
+            <Paper sx={{ borderRadius: 2, overflow: 'hidden', position: 'relative', flex: { xs: 1, md: 'initial' }, minHeight: 0 }}>
               {loading && <LinearProgress sx={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 3 }} />}
-                <TableContainer data-testid="music-table" aria-busy={loading}>
+                <TableContainer
+                  ref={tableContainerRef}
+                  data-testid="music-table"
+                  aria-busy={loading}
+                  sx={(theme) => ({
+                    height: { xs: '100%', md: 'auto' },
+                    [theme.breakpoints.down('md')]: {
+                      '--music-control-height': `min(28px, calc(${MUSIC_ROW_HEIGHT} - 2px))`,
+                      '& .MuiTableCell-root': { py: 0, lineHeight: `min(20px, calc(${MUSIC_ROW_HEIGHT} - 2px))`, fontSize: '0.75rem' },
+                      '& .MuiTypography-root': { fontSize: '0.75rem', lineHeight: `min(20px, calc(${MUSIC_ROW_HEIGHT} - 2px))` },
+                      '& .MuiButtonBase-root': { minHeight: 'var(--music-control-height)' },
+                      '& .MuiIconButton-root': {
+                        width: 'var(--music-control-height)',
+                        height: 'var(--music-control-height)',
+                        minWidth: 'var(--music-control-height)',
+                        minHeight: 'var(--music-control-height)',
+                        p: 0,
+                      },
+                      '& .MuiSvgIcon-root': { fontSize: 'min(20px, var(--music-control-height))' },
+                      '& .MuiChip-root': { height: 'min(20px, var(--music-control-height))' },
+                    },
+                  })}
+                >
                   <BoxAny data-testid="music-row-viewport" sx={{ height: tableHeight, minWidth: 760, overflow: 'clip' }}>
                   <Table
                     aria-label={t('music.title')}
@@ -827,6 +868,7 @@ export const MusicPage: React.FC = () => {
                   gap: { xs: 0.25, md: 1 },
                   alignItems: 'end',
                   minHeight: 32,
+                  flexShrink: 0,
                 }}
               >
                 <Typography noWrap variant="caption" color="text.secondary" title={pageRange} aria-label={pageRange} sx={{ height: 28, lineHeight: '28px', fontVariantNumeric: 'tabular-nums', fontSize: { xs: '0.6875rem', md: '0.75rem' } }}>
