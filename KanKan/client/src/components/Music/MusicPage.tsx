@@ -428,9 +428,6 @@ export const MusicPage: React.FC = () => {
     .replace('{from}', String(firstRow))
     .replace('{to}', String(lastRow))
     .replace('{count}', String(totalRows));
-  const shortPageRange = t('music.pageRangeShort')
-    .replace('{from}', String(firstRow))
-    .replace('{to}', String(lastRow));
 
   const renderValue = (record: MusicCatalogRecord, field: MusicCatalogField) => {
     const value = record.data[field.key];
@@ -634,7 +631,7 @@ export const MusicPage: React.FC = () => {
                 >
                   <BoxAny data-testid="music-row-viewport" sx={{ height: tableHeight, minWidth: 760, overflow: 'clip' }}>
                   <Table
-                    aria-label={t('music.title')}
+                    aria-label={`${t('music.title')}: ${pageRange}`}
                     size="small"
                     stickyHeader
                     sx={tableSx}
@@ -861,9 +858,9 @@ export const MusicPage: React.FC = () => {
                 sx={{
                   display: 'grid',
                   gridTemplateColumns: {
-                    xs: 'minmax(56px, 0.7fr) minmax(116px, 1fr) 104px',
-                    sm: '120px minmax(0, 1fr) 224px',
-                    md: '200px minmax(0, 1fr) 224px',
+                    xs: 'minmax(0, 1fr) 104px',
+                    sm: 'minmax(0, 1fr) 224px',
+                    md: '224px minmax(0, 1fr) 224px',
                   },
                   gap: { xs: 0.25, md: 1 },
                   alignItems: 'end',
@@ -871,18 +868,15 @@ export const MusicPage: React.FC = () => {
                   flexShrink: 0,
                 }}
               >
-                <Typography noWrap variant="caption" color="text.secondary" title={pageRange} aria-label={pageRange} sx={{ height: 28, lineHeight: '28px', fontVariantNumeric: 'tabular-nums', fontSize: { xs: '0.6875rem', md: '0.75rem' } }}>
-                  <Box component="span" sx={{ display: { xs: 'none', md: 'inline' } }}>{pageRange}</Box>
-                  <Box component="span" sx={{ display: { xs: 'inline', md: 'none' } }}>{shortPageRange}</Box>
-                </Typography>
                 <BoxAny
                   data-testid="music-player"
                   aria-hidden={!current}
                   sx={{
                     minWidth: 0,
+                    gridColumn: { xs: 1, md: 2 },
                     display: 'grid',
                     gridTemplateColumns: {
-                      xs: 'minmax(24px, 1fr) 88px',
+                      xs: '60px minmax(24px, 1fr) 88px',
                       md: 'minmax(0, 1fr) 96px clamp(110px, 18vw, 240px) 88px minmax(0, 1fr)',
                     },
                     columnGap: { xs: 0.5, md: 0.75 },
@@ -912,7 +906,7 @@ export const MusicPage: React.FC = () => {
                     noWrap
                     variant="caption"
                     sx={{
-                      gridColumn: { xs: '1 / -1', md: 2 },
+                      gridColumn: { xs: 1, md: 2 },
                       gridRow: 1,
                       textAlign: { xs: 'center', md: 'left' },
                       fontSize: { xs: '0.625rem', md: '0.75rem' },
@@ -939,15 +933,15 @@ export const MusicPage: React.FC = () => {
                       audio.currentTime = (current.playback.startSeconds ?? 0) + next;
                       setPosition(next);
                     }}
-                    sx={{ py: 1, gridColumn: { xs: 1, md: 3 }, gridRow: { xs: 2, md: 1 } }}
+                    sx={{ py: 1, gridColumn: { xs: 2, md: 3 }, gridRow: 1 }}
                   />
                 <Stack
                   direction="row"
                   spacing={0.25}
                   alignItems="center"
                   sx={{
-                    gridColumn: { xs: 2, md: 4 },
-                    gridRow: { xs: 2, md: 1 },
+                    gridColumn: { xs: 3, md: 4 },
+                    gridRow: 1,
                     '& .MuiIconButton-root': { width: 28, height: 28, minWidth: 28, minHeight: 28, p: 0.5 },
                   }}
                 >
@@ -962,7 +956,7 @@ export const MusicPage: React.FC = () => {
                   </IconButton>
                 </Stack>
                 </BoxAny>
-                <BoxAny sx={{ minWidth: 0, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+                <BoxAny sx={{ gridColumn: { xs: 2, md: 3 }, minWidth: 0, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
                   <Pagination
                   disabled={loading || filteredRecords.length === 0}
                   count={pageCount}
