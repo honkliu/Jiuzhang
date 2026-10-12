@@ -863,7 +863,7 @@ export const MusicPage: React.FC = () => {
                     md: '224px minmax(0, 1fr) 224px',
                   },
                   gap: { xs: 0.25, md: 1 },
-                  alignItems: 'end',
+                  alignItems: 'center',
                   minHeight: 32,
                   flexShrink: 0,
                 }}
@@ -873,6 +873,7 @@ export const MusicPage: React.FC = () => {
                   aria-hidden={!current}
                   sx={{
                     minWidth: 0,
+                    height: 28,
                     gridColumn: { xs: 1, md: 2 },
                     display: 'grid',
                     gridTemplateColumns: {
@@ -933,7 +934,12 @@ export const MusicPage: React.FC = () => {
                       audio.currentTime = (current.playback.startSeconds ?? 0) + next;
                       setPosition(next);
                     }}
-                    sx={{ py: 1, gridColumn: { xs: 2, md: 3 }, gridRow: 1 }}
+                    sx={{
+                      py: 1,
+                      '@media (pointer: coarse)': { py: 1 },
+                      gridColumn: { xs: 2, md: 3 },
+                      gridRow: 1,
+                    }}
                   />
                 <Stack
                   direction="row"
@@ -981,6 +987,8 @@ export const MusicPage: React.FC = () => {
                     '& .MuiPagination-ul': { flexWrap: 'nowrap' },
                     '& .MuiPaginationItem-root': {
                       mx: 0.125,
+                      height: 28,
+                      minHeight: 28,
                       minWidth: { xs: 18, sm: 26 },
                       px: { xs: 0.25, sm: 0.75 },
                       fontSize: { xs: '0.75rem', sm: undefined },
