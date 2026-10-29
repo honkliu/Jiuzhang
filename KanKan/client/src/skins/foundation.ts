@@ -82,12 +82,12 @@ export const createSkinFoundation = (theme: Theme): ThemeOptions => {
   return {
     shape: { borderRadius: 4 },
     palette: {
-      primary: { contrastText: buttonColors.primary.foreground },
-      secondary: { contrastText: buttonColors.secondary.foreground },
-      error: { contrastText: buttonColors.error.foreground },
-      warning: { contrastText: buttonColors.warning.foreground },
-      info: { contrastText: buttonColors.info.foreground },
-      success: { contrastText: buttonColors.success.foreground },
+      primary: { main: theme.palette.primary.main, contrastText: buttonColors.primary.foreground },
+      secondary: { main: theme.palette.secondary.main, contrastText: buttonColors.secondary.foreground },
+      error: { main: theme.palette.error.main, contrastText: buttonColors.error.foreground },
+      warning: { main: theme.palette.warning.main, contrastText: buttonColors.warning.foreground },
+      info: { main: theme.palette.info.main, contrastText: buttonColors.info.foreground },
+      success: { main: theme.palette.success.main, contrastText: buttonColors.success.foreground },
       action: { hover, selected, focus: pressed },
     },
     typography: {
