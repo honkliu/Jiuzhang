@@ -1,10 +1,4 @@
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Metadata;
-using SixLabors.ImageSharp.Metadata.Profiles.Exif;
-using SixLabors.ImageSharp.Processing;
-using SixLabors.ImageSharp.Formats.Webp;
-using SixLabors.ImageSharp.Formats.Png;
-using SixLabors.ImageSharp.Formats.Jpeg;
+using SkiaSharp;
 
 namespace KanKan.API.Utils;
 
@@ -33,8 +27,9 @@ public static class ImageResizer
     /// </summary>
     public static (int width, int height) GetScaledDimensions(byte[] imageData, int maxDimension)
     {
-        using var image = Image.Load(imageData);
-        return GetScaledDimensions(image.Width, image.Height, maxDimension);
+        using var codec = SKCodec.Create(new MemoryStream(imageData))
+            ?? throw new InvalidDataException("Unsupported or corrupt image data.");
+        return GetScaledDimensions(codec.Info.Width, codec.Info.Height, maxDimension);
     }
 
     /// <summary>
@@ -42,25 +37,19 @@ public static class ImageResizer
     /// </summary>
     public static byte[] ResizeToExact(byte[] imageData, int width, int height, string? contentTypeOrExtension, int quality = 85)
     {
-        using var image = Image.Load(imageData);
-        image.Mutate(x => x.Resize(width, height));
+        using var source = Decode(imageData);
+        using var resized = Resize(source, width, height);
 
-        using var ms = new MemoryStream();
         var hint = (contentTypeOrExtension ?? string.Empty).ToLowerInvariant();
-        if (hint.Contains("jpeg") || hint.Contains("jpg") || hint.EndsWith(".jpg") || hint.EndsWith(".jpeg"))
+        if (hint.Contains("jpeg") || hint.Contains("jpg"))
         {
-            image.SaveAsJpeg(ms, new JpegEncoder { Quality = quality });
+            return Encode(resized, p => p.Encode(new SKJpegEncoderOptions(quality, SKJpegEncoderDownsample.Downsample420, SKJpegEncoderAlphaOption.Ignore)));
         }
-        else if (hint.Contains("webp") || hint.EndsWith(".webp"))
+        if (hint.Contains("webp"))
         {
-            image.SaveAsWebp(ms, new WebpEncoder { Quality = quality, Method = WebpEncodingMethod.BestQuality });
+            return Encode(resized, p => p.Encode(new SKWebpEncoderOptions(SKWebpEncoderCompression.Lossy, quality)));
         }
-        else
-        {
-            image.SaveAsPng(ms, new PngEncoder());
-        }
-
-        return ms.ToArray();
+        return Encode(resized, p => p.Encode(SKPngEncoderOptions.Default));
     }
 
     /// <summary>
@@ -68,24 +57,9 @@ public static class ImageResizer
     /// </summary>
     public static byte[] NormalizeToPng(byte[] imageData)
     {
-        using var image = Image.Load(imageData);
-        StripMetadata(image.Metadata);
-
-        var pngMetadata = image.Metadata.GetPngMetadata();
-        pngMetadata.TextData.Clear();
-
-        using var ms = new MemoryStream();
-        image.SaveAsPng(ms, new PngEncoder());
-        return ms.ToArray();
-    }
-
-    private static void StripMetadata(ImageMetadata metadata)
-    {
-        metadata.ExifProfile = null;
-        metadata.IccProfile = null;
-        metadata.IptcProfile = null;
-        metadata.XmpProfile = null;
-        metadata.CicpProfile = null;
+        // Re-encoding from decoded pixels drops EXIF/ICC/IPTC/XMP and PNG text chunks.
+        using var image = Decode(imageData);
+        return Encode(image, p => p.Encode(SKPngEncoderOptions.Default));
     }
 
     /// <summary>
@@ -93,29 +67,18 @@ public static class ImageResizer
     /// </summary>
     public static byte[] ResizeImage(byte[] imageData, int maxWidth, int maxHeight, int quality = 85)
     {
-        using var image = Image.Load(imageData);
+        using var image = Decode(imageData);
 
         // Calculate new size keeping aspect ratio
         var ratioX = (double)maxWidth / image.Width;
         var ratioY = (double)maxHeight / image.Height;
         var ratio = Math.Min(ratioX, ratioY);
 
-        var newWidth = (int)(image.Width * ratio);
-        var newHeight = (int)(image.Height * ratio);
+        var newWidth = Math.Max(1, (int)(image.Width * ratio));
+        var newHeight = Math.Max(1, (int)(image.Height * ratio));
 
-        // Resize
-        image.Mutate(x => x.Resize(newWidth, newHeight));
-
-        // Save as WebP
-        using var ms = new MemoryStream();
-        var encoder = new WebpEncoder
-        {
-            Quality = quality,
-            Method = WebpEncodingMethod.BestQuality
-        };
-        image.SaveAsWebp(ms, encoder);
-
-        return ms.ToArray();
+        using var resized = Resize(image, newWidth, newHeight);
+        return Encode(resized, p => p.Encode(new SKWebpEncoderOptions(SKWebpEncoderCompression.Lossy, quality)));
     }
 
     /// <summary>
@@ -124,5 +87,34 @@ public static class ImageResizer
     public static byte[] GenerateThumbnail(byte[] imageData)
     {
         return ResizeImage(imageData, 128, 128, quality: 75);
+    }
+
+    private static SKBitmap Decode(byte[] imageData)
+    {
+        using var codec = SKCodec.Create(new MemoryStream(imageData))
+            ?? throw new InvalidDataException("Unsupported or corrupt image data.");
+        return SKBitmap.Decode(codec) ?? throw new InvalidDataException("Unsupported or corrupt image data.");
+    }
+
+    private static SKBitmap Resize(SKBitmap source, int width, int height)
+    {
+        // Mipmaps avoid aliasing on large downscales; cubic is sharper when enlarging.
+        var sampling = width < source.Width || height < source.Height
+            ? new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear)
+            : new SKSamplingOptions(SKCubicResampler.Mitchell);
+        var info = new SKImageInfo(width, height, SKColorType.Rgba8888, source.AlphaType == SKAlphaType.Opaque ? SKAlphaType.Opaque : SKAlphaType.Premul);
+        var target = new SKBitmap(info);
+        using var canvas = new SKCanvas(target);
+        using var image = SKImage.FromBitmap(source);
+        canvas.Clear(SKColors.Transparent);
+        canvas.DrawImage(image, new SKRect(0, 0, width, height), sampling);
+        return target;
+    }
+
+    private static byte[] Encode(SKBitmap bitmap, Func<SKPixmap, SKData?> encode)
+    {
+        using var pixmap = bitmap.PeekPixels();
+        using var data = encode(pixmap) ?? throw new InvalidOperationException("Image encoding failed.");
+        return data.ToArray();
     }
 }
