@@ -1,0 +1,285 @@
+/* City of Towers (HoMM), scoped under .homm-root so nothing leaks into KanKan — implements docs/03-ui-spec.md §0 design tokens. */
+
+.homm-root {
+  --bg: #0d0b08;
+  --panel: #2a2016;
+  --panel-hi: #3d2f20;
+  --panel-lo: #1a130c;
+  --border: #c8a050;
+  --border-dim: #7a6030;
+  --text: #f0e0c0;
+  --text-dim: #a89070;
+  --text-mute: #6a5a40;
+  --accent: #ffd040;
+  --danger: #e05040;
+  --ok: #60c060;
+  --stone: var(--panel);
+  --gold-0: var(--border-dim);
+  --gold-1: var(--border);
+  --gold-2: var(--accent);
+  --res-wood: #a07840;
+  --res-ore: #9c9c9c;
+  --res-mercury: #c3d8e0;
+  --res-sulfur: #ddd050;
+  --res-crystal: #e78aaa;
+  --res-gems: #7aa8dc;
+  --res-gold: #ffd040;
+}
+
+.homm-root, .homm-root *, .homm-root *::before, .homm-root *::after { box-sizing: border-box; }
+
+/* Undo KanKan's global element resets (index.css) so the game sees browser defaults, as it was designed for. */
+.homm-root * { margin: revert; padding: revert; }
+.homm-root :is(button, input, textarea, select, a) { font: revert; color: revert; text-decoration: revert; }
+
+.homm-root {
+  position: relative;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  background: #000;
+  border-radius: 4px;
+  line-height: normal;
+  letter-spacing: normal;
+  text-align: left;
+  overflow: hidden;
+  font-family: Georgia, "Times New Roman", "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", serif;
+  color: var(--text);
+  user-select: none;
+}
+
+.homm-root .stage {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 800px;
+  height: 600px;
+  transform-origin: top left;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+.homm-root .legacy-screen {
+  position: absolute;
+  width: 1280px;
+  height: 800px;
+  transform: scale(0.625);
+  transform-origin: top left;
+}
+
+.homm-root .abs { position: absolute; }
+
+/* ---------------------------------------------------------------- panel */
+.homm-root .panel {
+  background: linear-gradient(180deg, var(--panel-hi) 0%, var(--panel) 50%, var(--panel-lo) 100%);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 3px rgba(0, 0, 0, 0.35), inset 0 0 0 4px var(--border-dim);
+}
+
+/* ---------------------------------------------------------------- button */
+.homm-root .btn {
+  position: absolute;
+  background: #4a3418;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--text);
+  font-family: inherit;
+  font-weight: bold;
+  padding: 0 6px;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  transition: background 80ms linear, border-color 80ms linear;
+}
+.homm-root .btn:hover:not(:disabled) { background: #6a4a20; border-color: var(--accent); }
+.homm-root .btn:active:not(:disabled) { background: #2a1a08; border-color: var(--border-dim); }
+.homm-root .btn:disabled {
+  background: #2a2016;
+  border-color: #4a3a20;
+  color: var(--text-mute);
+  cursor: default;
+}
+.homm-root .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ---------------------------------------------------------------- inputs */
+.homm-root .inp {
+  position: absolute;
+  background: #120d08;
+  border: 1px solid var(--border-dim);
+  border-radius: 3px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 14px;
+  padding: 0 8px;
+  outline: none;
+}
+.homm-root .inp:focus { border-color: var(--accent); }
+.homm-root .inp::placeholder { color: var(--text-mute); }
+.homm-root textarea.inp { padding: 8px; resize: none; line-height: 1.45; }
+.homm-root select.inp { padding: 0 6px; }
+
+/* ---------------------------------------------------------------- toast */
+.homm-root #toast {
+  position: absolute;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%) translateY(8px);
+  max-width: 600px;
+  padding: 10px 20px;
+  background: var(--panel-lo);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  font-size: 14px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms ease, transform 150ms ease;
+  z-index: 100;
+}
+.homm-root #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ---------------------------------------------------------------- modal */
+.homm-root .backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+.homm-root .modal { position: relative; }
+.homm-root .modal-close {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  width: 28px;
+  height: 28px;
+  color: var(--text);
+  background: var(--panel-lo);
+  border: 1px solid var(--border-dim);
+  cursor: pointer;
+  z-index: 1;
+}
+.homm-root .tab {
+  position: absolute;
+  color: var(--text);
+  background: var(--panel-lo);
+  border: 1px solid var(--border-dim);
+  font: inherit;
+  cursor: pointer;
+}
+.homm-root .tab:hover,
+.homm-root .tab.active { border-color: var(--accent); background: var(--panel-hi); }
+
+/* ---------------------------------------------------------------- tables */
+.homm-root .tbl { width: 100%; border-collapse: collapse; font-size: 14px; }
+.homm-root .tbl th {
+  height: 32px;
+  background: var(--panel-lo);
+  color: var(--text-dim);
+  font-size: 12px;
+  text-transform: uppercase;
+  font-weight: normal;
+  text-align: left;
+  padding: 0 8px;
+}
+.homm-root .tbl td { height: 44px; padding: 0 8px; border-top: 1px solid #3a2c1c; }
+.homm-root .tbl tr:nth-child(even) td { background: #221a10; }
+.homm-root .tbl tr:nth-child(odd) td { background: var(--panel-lo); }
+.homm-root .tbl tbody tr:hover td { background: #2e2416; }
+
+/* ---------------------------------------------------------------- scrollbars */
+.homm-root .scroll { overflow-y: auto; }
+.homm-root .scroll::-webkit-scrollbar { width: 8px; }
+.homm-root .scroll::-webkit-scrollbar-track { background: var(--panel-lo); }
+.homm-root .scroll::-webkit-scrollbar-thumb { background: #4a3418; border-radius: 4px; }
+.homm-root .scroll::-webkit-scrollbar-thumb:hover { background: #6a4a20; }
+
+/* ---------------------------------------------------------------- misc */
+.homm-root .link { color: var(--accent); cursor: pointer; text-decoration: underline; }
+.homm-root .link:hover { color: #fff0a0; }
+.homm-root .muted { color: var(--text-dim); }
+.homm-root .mute { color: var(--text-mute); }
+.homm-root .danger { color: var(--danger); }
+.homm-root .ok { color: var(--ok); }
+.homm-root .center { text-align: center; }
+
+.homm-root .spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid rgba(255, 208, 64, 0.25);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: homm-spin 1s linear infinite;
+  margin: 0 auto;
+}
+@keyframes homm-spin { to { transform: rotate(360deg); } }
+
+.homm-root .avatar {
+  border-radius: 50%;
+  background: #4a3418;
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+}
+.homm-root .avatar.offline { box-shadow: 0 0 0 2px var(--text-mute); }
+
+.homm-root .chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.homm-root .wall-panel {
+  transition: transform 200ms ease-out;
+}
+.homm-root .wall-panel.closed { transform: translateX(400px); }
+
+/* ---------------------------------------------------------------- HoMM3 widgets */
+.homm-root .well {
+  background: #070503;
+  border: 1px solid var(--border-dim);
+  box-shadow: inset 0 0 6px #000;
+}
+.homm-root .slot {
+  position: absolute;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid var(--border-dim);
+  box-shadow: inset 0 0 4px #000;
+}
+.homm-root .slot.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), inset 0 0 4px #000; }
+.homm-root .slot.clickable { cursor: pointer; }
+.homm-root .slot.clickable:hover { border-color: var(--border); }
+.homm-root .card { position: absolute; cursor: pointer; }
+.homm-root .card .bar {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 20px;
+  font-size: 11px; font-weight: bold; text-align: center; line-height: 20px;
+  color: #fff; text-shadow: 0 1px 2px #000; white-space: nowrap; overflow: hidden;
+}
+.homm-root .card:hover .frame { border-color: var(--accent); }
+.homm-root .card .frame {
+  position: absolute; left: 0; top: 0; right: 0; bottom: 0;
+  border: 1px solid var(--border-dim); background: radial-gradient(ellipse at 50% 40%, #2a3a1a, #0c0a06 75%);
+}
+.homm-root .card.selected .frame { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+/* ---- original-art (H3) mode widgets */
+.homm-root .h3hit { background: transparent; border: none; padding: 0; margin: 0; cursor: pointer; outline: none; }
+.homm-root .h3hit:focus-visible { outline: 1px dotted #f8e060; }
+.homm-root .h3text { color: #fff; font-family: 'Times New Roman', Georgia, "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", serif; text-shadow: 1px 1px 0 #000; white-space: nowrap; }
+.homm-root .advframe {
+  background:
+    linear-gradient(#0000, #0000) padding-box,
+    radial-gradient(circle at 50% 40%, #3a2c1c, #1a120a);
+  border: 1px solid #000;
+  box-shadow: inset 0 0 0 3px #6a5028, inset 0 0 0 5px #000;
+}
+.homm-root .h3btn-fallback { line-height: 1; white-space: normal; }
+.homm-root .clickable { cursor: pointer; }

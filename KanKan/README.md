@@ -117,8 +117,13 @@ KanKan/
 - Directory headings use a folder icon, a stronger title band, and a separate
   album-play control. Lighter track labels are indented beneath them with tree
   connectors, making parent/child ownership explicit. Directory and song rows
-  share the same compact height: 40px on mobile and 32-36px on desktop, adjusted
-  to viewport height. Desktop toolbar/gaps and reserved player space are smaller
+  share the same compact height: mobile measures the available table height and
+  divides it by 21.6 (header plus 20.6 content rows), while desktop retains its
+  32-36px viewport-adjusted rows. Mobile uses a `100dvh` page with fixed header,
+  search and footer space plus safe-area padding; row icons, buttons and chips
+  shrink to fit so the complete page fits one screen as browser controls resize.
+  This dense mobile layout trades smaller touch targets for showing all 20.6 rows.
+  Desktop toolbar/gaps and reserved player space are smaller
   so twenty rows and pagination fit a 900px-tall desktop viewport without page
   scrolling, including during playback. Long directory titles use single-line
   ellipsis with the full name available on hover.
@@ -172,14 +177,14 @@ KanKan/
   the directory's final matching song ends its connector halfway down the row.
   Previews are inert and hidden from assistive technology; the 0.6-row space is reserved on the last
   page too.
-  Songs are not repeated. The footer includes continuation headings in its
-  visible row ranges/counts, but excludes unused page space and hidden songs.
+  Songs are not repeated. The table's accessible label includes its row range
+  and count, including continuation headings but excluding unused space and hidden songs.
   Pages are clamped when collapsing removes later pages.
   Compact pagination buttons stay on one line, including on narrow screens;
   desktop shows the current page, its next neighbor, and the final page, with
   an ellipsis for skipped pages (for example, `20 21 ... 50`). Mobile shows the
   current and final page with the gap ellipsis. Previous/next controls remain;
-  the final page number is directly clickable. Full row counts remain available on hover.
+  the final page number is directly clickable.
   Search/category changes return to the first page unless clearing a filter
   returns to a selected directory. The compact table matches
   the Stocks page, with category content limited to roughly ten Chinese characters
@@ -192,14 +197,16 @@ KanKan/
   expansion/collapse, and searching/filtering;
   clearing a category retains the selected directory and focus just like clearing
   search, without the category menu restoring focus/scroll to the toolbar.
-  pagination remains in place, and its range is the only visible record count.
-  The compact footer places row counts on the left, playback in the center,
-  and pagination on the right. Playback buttons and page controls share one line,
+  Pagination remains in place. The compact footer omits visible row-range text
+  on both mobile and desktop, placing playback beside pagination.
+  Time, progress, playback buttons and page controls share one line,
+  with matching 28px control heights and a shared vertical center, including
+  touch-device slider styling. The track title is hidden without occupying space
+  on mobile.
   without a floating player or volume control. Seeking and elapsed/total time
   remain available; the desktop title is right-aligned next to time and progress.
-  On mobile time sits above the playback controls. Empty playback
-  space is reserved before playback starts so the footer does not move.
-  Fixed row-count and page-control columns, plus a fixed desktop time width,
+  Empty playback space is reserved before playback starts so the footer does not move.
+  Fixed page-control columns and a balancing desktop spacer, plus fixed time widths,
   keep playback controls and the seek bar from moving horizontally as pages change.
   On desktop, equal flexible columns flank the time/progress/transport cluster
   to center it within the playback area rather than pushing it toward pagination.

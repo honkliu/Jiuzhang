@@ -1,0 +1,10041 @@
+{
+  "source": "Installed Heroes III HCTRAITS, SPTRAITS, CRTRAITS and BUILDING numeric tables; VCMI abe535c4418b66bae8cdb56fee1473b109e8c55e hero class/starting skills. No descriptions or artwork.",
+  "classes": [
+    {
+      "name": "Knight",
+      "initial": [
+        2,
+        2,
+        1,
+        1
+      ],
+      "low": [
+        35,
+        45,
+        10,
+        10
+      ],
+      "high": [
+        30,
+        30,
+        20,
+        20
+      ],
+      "secondary": {
+        "pathfinding": 4,
+        "archery": 5,
+        "logistics": 5,
+        "scouting": 4,
+        "diplomacy": 4,
+        "navigation": 8,
+        "leadership": 10,
+        "wisdom": 3,
+        "mysticism": 2,
+        "luck": 3,
+        "ballistics": 8,
+        "eagleEye": 2,
+        "necromancy": 0,
+        "estates": 6,
+        "fire": 1,
+        "air": 3,
+        "water": 4,
+        "earth": 2,
+        "scholar": 1,
+        "tactics": 7,
+        "artillery": 5,
+        "learning": 4,
+        "offence": 7,
+        "armorer": 5,
+        "intelligence": 1,
+        "sorcery": 1,
+        "resistance": 5,
+        "firstAid": 2
+      }
+    },
+    {
+      "name": "Cleric",
+      "initial": [
+        1,
+        0,
+        2,
+        2
+      ],
+      "low": [
+        20,
+        15,
+        30,
+        35
+      ],
+      "high": [
+        20,
+        20,
+        30,
+        30
+      ],
+      "secondary": {
+        "pathfinding": 2,
+        "archery": 3,
+        "logistics": 4,
+        "scouting": 3,
+        "diplomacy": 7,
+        "navigation": 5,
+        "leadership": 2,
+        "wisdom": 7,
+        "mysticism": 4,
+        "luck": 5,
+        "ballistics": 4,
+        "eagleEye": 6,
+        "necromancy": 0,
+        "estates": 3,
+        "fire": 2,
+        "air": 4,
+        "water": 4,
+        "earth": 3,
+        "scholar": 6,
+        "tactics": 2,
+        "artillery": 2,
+        "learning": 4,
+        "offence": 4,
+        "armorer": 3,
+        "intelligence": 6,
+        "sorcery": 5,
+        "resistance": 2,
+        "firstAid": 10
+      }
+    },
+    {
+      "name": "Ranger",
+      "initial": [
+        1,
+        3,
+        1,
+        1
+      ],
+      "low": [
+        35,
+        45,
+        10,
+        10
+      ],
+      "high": [
+        30,
+        30,
+        20,
+        20
+      ],
+      "secondary": {
+        "pathfinding": 7,
+        "archery": 8,
+        "logistics": 5,
+        "scouting": 7,
+        "diplomacy": 4,
+        "navigation": 3,
+        "leadership": 6,
+        "wisdom": 3,
+        "mysticism": 3,
+        "luck": 6,
+        "ballistics": 4,
+        "eagleEye": 2,
+        "necromancy": 0,
+        "estates": 2,
+        "fire": 0,
+        "air": 1,
+        "water": 3,
+        "earth": 3,
+        "scholar": 1,
+        "tactics": 5,
+        "artillery": 6,
+        "learning": 4,
+        "offence": 5,
+        "armorer": 8,
+        "intelligence": 2,
+        "sorcery": 2,
+        "resistance": 9,
+        "firstAid": 3
+      }
+    },
+    {
+      "name": "Druid",
+      "initial": [
+        0,
+        2,
+        1,
+        2
+      ],
+      "low": [
+        10,
+        20,
+        35,
+        35
+      ],
+      "high": [
+        20,
+        20,
+        30,
+        30
+      ],
+      "secondary": {
+        "pathfinding": 5,
+        "archery": 5,
+        "logistics": 5,
+        "scouting": 2,
+        "diplomacy": 4,
+        "navigation": 2,
+        "leadership": 2,
+        "wisdom": 8,
+        "mysticism": 6,
+        "luck": 9,
+        "ballistics": 4,
+        "eagleEye": 7,
+        "necromancy": 0,
+        "estates": 3,
+        "fire": 1,
+        "air": 2,
+        "water": 4,
+        "earth": 4,
+        "scholar": 8,
+        "tactics": 1,
+        "artillery": 1,
+        "learning": 4,
+        "offence": 1,
+        "armorer": 3,
+        "intelligence": 7,
+        "sorcery": 6,
+        "resistance": 1,
+        "firstAid": 7
+      }
+    },
+    {
+      "name": "Alchemist",
+      "initial": [
+        1,
+        1,
+        2,
+        2
+      ],
+      "low": [
+        30,
+        30,
+        20,
+        20
+      ],
+      "high": [
+        30,
+        30,
+        20,
+        20
+      ],
+      "secondary": {
+        "pathfinding": 4,
+        "archery": 5,
+        "logistics": 6,
+        "scouting": 4,
+        "diplomacy": 3,
+        "navigation": 3,
+        "leadership": 3,
+        "wisdom": 6,
+        "mysticism": 4,
+        "luck": 2,
+        "ballistics": 6,
+        "eagleEye": 3,
+        "necromancy": 0,
+        "estates": 4,
+        "fire": 1,
+        "air": 4,
+        "water": 2,
+        "earth": 3,
+        "scholar": 3,
+        "tactics": 4,
+        "artillery": 4,
+        "learning": 10,
+        "offence": 6,
+        "armorer": 8,
+        "intelligence": 4,
+        "sorcery": 3,
+        "resistance": 5,
+        "firstAid": 2
+      }
+    },
+    {
+      "name": "Wizard",
+      "initial": [
+        0,
+        0,
+        2,
+        3
+      ],
+      "low": [
+        10,
+        10,
+        40,
+        40
+      ],
+      "high": [
+        30,
+        20,
+        20,
+        30
+      ],
+      "secondary": {
+        "pathfinding": 2,
+        "archery": 2,
+        "logistics": 2,
+        "scouting": 2,
+        "diplomacy": 4,
+        "navigation": 1,
+        "leadership": 4,
+        "wisdom": 10,
+        "mysticism": 8,
+        "luck": 4,
+        "ballistics": 4,
+        "eagleEye": 8,
+        "necromancy": 0,
+        "estates": 5,
+        "fire": 2,
+        "air": 6,
+        "water": 3,
+        "earth": 3,
+        "scholar": 9,
+        "tactics": 1,
+        "artillery": 1,
+        "learning": 4,
+        "offence": 1,
+        "armorer": 1,
+        "intelligence": 10,
+        "sorcery": 8,
+        "resistance": 0,
+        "firstAid": 7
+      }
+    },
+    {
+      "name": "Demoniac",
+      "initial": [
+        2,
+        2,
+        1,
+        1
+      ],
+      "low": [
+        35,
+        35,
+        15,
+        15
+      ],
+      "high": [
+        30,
+        30,
+        20,
+        20
+      ],
+      "secondary": {
+        "pathfinding": 4,
+        "archery": 6,
+        "logistics": 10,
+        "scouting": 5,
+        "diplomacy": 4,
+        "navigation": 4,
+        "leadership": 3,
+        "wisdom": 4,
+        "mysticism": 2,
+        "luck": 2,
+        "ballistics": 7,
+        "eagleEye": 3,
+        "necromancy": 0,
+        "estates": 3,
+        "fire": 4,
+        "air": 2,
+        "water": 1,
+        "earth": 3,
+        "scholar": 2,
+        "tactics": 6,
+        "artillery": 5,
+        "learning": 4,
+        "offence": 8,
+        "armorer": 7,
+        "intelligence": 2,
+        "sorcery": 3,
+        "resistance": 6,
+        "firstAid": 2
+      }
+    },
+    {
+      "name": "Heretic",
+      "initial": [
+        1,
+        1,
+        2,
+        1
+      ],
+      "low": [
+        15,
+        15,
+        35,
+        35
+      ],
+      "high": [
+        20,
+        20,
+        30,
+        30
+      ],
+      "secondary": {
+        "pathfinding": 4,
+        "archery": 4,
+        "logistics": 3,
+        "scouting": 3,
+        "diplomacy": 3,
+        "navigation": 2,
+        "leadership": 2,
+        "wisdom": 8,
+        "mysticism": 10,
+        "luck": 2,
+        "ballistics": 6,
+        "eagleEye": 4,
+        "necromancy": 0,
+        "estates": 2,
+        "fire": 5,
+        "air": 3,
+        "water": 2,
+        "earth": 4,
+        "scholar": 5,
+        "tactics": 4,
+        "artillery": 4,
+        "learning": 4,
+        "offence": 4,
+        "armorer": 4,
+        "intelligence": 6,
+        "sorcery": 6,
+        "resistance": 3,
+        "firstAid": 5
+      }
+    },
+    {
+      "name": "Death Knight",
+      "initial": [
+        1,
+        2,
+        2,
+        1
+      ],
+      "low": [
+        30,
+        25,
+        20,
+        25
+      ],
+      "high": [
+        25,
+        25,
+        25,
+        25
+      ],
+      "secondary": {
+        "pathfinding": 4,
+        "archery": 5,
+        "logistics": 5,
+        "scouting": 4,
+        "diplomacy": 2,
+        "navigation": 8,
+        "leadership": 0,
+        "wisdom": 6,
+        "mysticism": 4,
+        "luck": 1,
+        "ballistics": 7,
+        "eagleEye": 4,
+        "necromancy": 10,
+        "estates": 0,
+        "fire": 1,
+        "air": 2,
+        "water": 3,
+        "earth": 4,
+        "scholar": 2,
+        "tactics": 5,
+        "artillery": 5,
+        "learning": 4,
+        "offence": 7,
+        "armorer": 5,
+        "intelligence": 5,
+        "sorcery": 4,
+        "resistance": 5,
+        "firstAid": 0
+      }
+    },
+    {
+      "name": "Necromancer",
+      "initial": [
+        1,
+        0,
+        2,
+        2
+      ],
+      "low": [
+        15,
+        15,
+        35,
+        35
+      ],
+      "high": [
+        25,
+        25,
+        25,
+        25
+      ],
+      "secondary": {
+        "pathfinding": 6,
+        "archery": 2,
+        "logistics": 4,
+        "scouting": 2,
+        "diplomacy": 4,
+        "navigation": 5,
+        "leadership": 0,
+        "wisdom": 8,
+        "mysticism": 6,
+        "luck": 1,
+        "ballistics": 5,
+        "eagleEye": 7,
+        "necromancy": 10,
+        "estates": 3,
+        "fire": 2,
+        "air": 3,
+        "water": 3,
+        "earth": 8,
+        "scholar": 6,
+        "tactics": 2,
+        "artillery": 3,
+        "learning": 4,
+        "offence": 3,
+        "armorer": 2,
+        "intelligence": 6,
+        "sorcery": 6,
+        "resistance": 1,
+        "firstAid": 0
+      }
+    },
+    {
+      "name": "Overlord",
+      "initial": [
+        2,
+        2,
+        1,
+        1
+      ],
+      "low": [
+        35,
+        35,
+        15,
+        15
+      ],
+      "high": [
+        30,
+        30,
+        20,
+        20
+      ],
+      "secondary": {
+        "pathfinding": 5,
+        "archery": 6,
+        "logistics": 8,
+        "scouting": 5,
+        "diplomacy": 3,
+        "navigation": 4,
+        "leadership": 8,
+        "wisdom": 3,
+        "mysticism": 3,
+        "luck": 1,
+        "ballistics": 7,
+        "eagleEye": 2,
+        "necromancy": 0,
+        "estates": 4,
+        "fire": 2,
+        "air": 1,
+        "water": 0,
+        "earth": 3,
+        "scholar": 1,
+        "tactics": 10,
+        "artillery": 8,
+        "learning": 4,
+        "offence": 8,
+        "armorer": 6,
+        "intelligence": 1,
+        "sorcery": 2,
+        "resistance": 6,
+        "firstAid": 1
+      }
+    },
+    {
+      "name": "Warlock",
+      "initial": [
+        0,
+        0,
+        3,
+        2
+      ],
+      "low": [
+        10,
+        10,
+        50,
+        30
+      ],
+      "high": [
+        20,
+        20,
+        30,
+        30
+      ],
+      "secondary": {
+        "pathfinding": 2,
+        "archery": 2,
+        "logistics": 2,
+        "scouting": 2,
+        "diplomacy": 4,
+        "navigation": 4,
+        "leadership": 3,
+        "wisdom": 10,
+        "mysticism": 8,
+        "luck": 2,
+        "ballistics": 6,
+        "eagleEye": 8,
+        "necromancy": 0,
+        "estates": 5,
+        "fire": 5,
+        "air": 2,
+        "water": 2,
+        "earth": 5,
+        "scholar": 8,
+        "tactics": 1,
+        "artillery": 1,
+        "learning": 4,
+        "offence": 1,
+        "armorer": 1,
+        "intelligence": 8,
+        "sorcery": 10,
+        "resistance": 0,
+        "firstAid": 6
+      }
+    },
+    {
+      "name": "Barbarian",
+      "initial": [
+        4,
+        0,
+        1,
+        1
+      ],
+      "low": [
+        55,
+        35,
+        5,
+        5
+      ],
+      "high": [
+        30,
+        30,
+        20,
+        20
+      ],
+      "secondary": {
+        "pathfinding": 8,
+        "archery": 7,
+        "logistics": 7,
+        "scouting": 8,
+        "diplomacy": 1,
+        "navigation": 2,
+        "leadership": 5,
+        "wisdom": 2,
+        "mysticism": 3,
+        "luck": 3,
+        "ballistics": 8,
+        "eagleEye": 2,
+        "necromancy": 0,
+        "estates": 2,
+        "fire": 2,
+        "air": 3,
+        "water": 0,
+        "earth": 3,
+        "scholar": 1,
+        "tactics": 8,
+        "artillery": 8,
+        "learning": 4,
+        "offence": 10,
+        "armorer": 6,
+        "intelligence": 1,
+        "sorcery": 1,
+        "resistance": 6,
+        "firstAid": 1
+      }
+    },
+    {
+      "name": "Battle Mage",
+      "initial": [
+        2,
+        1,
+        1,
+        1
+      ],
+      "low": [
+        30,
+        20,
+        25,
+        25
+      ],
+      "high": [
+        25,
+        25,
+        25,
+        25
+      ],
+      "secondary": {
+        "pathfinding": 4,
+        "archery": 4,
+        "logistics": 9,
+        "scouting": 4,
+        "diplomacy": 3,
+        "navigation": 0,
+        "leadership": 4,
+        "wisdom": 6,
+        "mysticism": 4,
+        "luck": 2,
+        "ballistics": 6,
+        "eagleEye": 5,
+        "necromancy": 0,
+        "estates": 1,
+        "fire": 3,
+        "air": 3,
+        "water": 3,
+        "earth": 3,
+        "scholar": 4,
+        "tactics": 5,
+        "artillery": 4,
+        "learning": 4,
+        "offence": 8,
+        "armorer": 4,
+        "intelligence": 5,
+        "sorcery": 6,
+        "resistance": 4,
+        "firstAid": 4
+      }
+    },
+    {
+      "name": "Beastmaster",
+      "initial": [
+        0,
+        4,
+        1,
+        1
+      ],
+      "low": [
+        30,
+        50,
+        10,
+        10
+      ],
+      "high": [
+        30,
+        30,
+        20,
+        20
+      ],
+      "secondary": {
+        "pathfinding": 8,
+        "archery": 7,
+        "logistics": 8,
+        "scouting": 7,
+        "diplomacy": 1,
+        "navigation": 8,
+        "leadership": 5,
+        "wisdom": 2,
+        "mysticism": 2,
+        "luck": 2,
+        "ballistics": 7,
+        "eagleEye": 1,
+        "necromancy": 0,
+        "estates": 1,
+        "fire": 0,
+        "air": 1,
+        "water": 2,
+        "earth": 3,
+        "scholar": 1,
+        "tactics": 6,
+        "artillery": 8,
+        "learning": 4,
+        "offence": 5,
+        "armorer": 10,
+        "intelligence": 1,
+        "sorcery": 1,
+        "resistance": 5,
+        "firstAid": 6
+      }
+    },
+    {
+      "name": "Witch",
+      "initial": [
+        0,
+        1,
+        2,
+        2
+      ],
+      "low": [
+        5,
+        15,
+        40,
+        40
+      ],
+      "high": [
+        20,
+        20,
+        30,
+        30
+      ],
+      "secondary": {
+        "pathfinding": 2,
+        "archery": 3,
+        "logistics": 3,
+        "scouting": 2,
+        "diplomacy": 2,
+        "navigation": 6,
+        "leadership": 1,
+        "wisdom": 8,
+        "mysticism": 8,
+        "luck": 4,
+        "ballistics": 8,
+        "eagleEye": 10,
+        "necromancy": 0,
+        "estates": 1,
+        "fire": 3,
+        "air": 3,
+        "water": 3,
+        "earth": 3,
+        "scholar": 7,
+        "tactics": 1,
+        "artillery": 1,
+        "learning": 4,
+        "offence": 2,
+        "armorer": 4,
+        "intelligence": 7,
+        "sorcery": 8,
+        "resistance": 0,
+        "firstAid": 8
+      }
+    },
+    {
+      "name": "Planeswalker",
+      "initial": [
+        3,
+        1,
+        1,
+        1
+      ],
+      "low": [
+        45,
+        25,
+        15,
+        15
+      ],
+      "high": [
+        30,
+        30,
+        20,
+        20
+      ],
+      "secondary": {
+        "pathfinding": 6,
+        "archery": 8,
+        "logistics": 8,
+        "scouting": 6,
+        "diplomacy": 2,
+        "navigation": 5,
+        "leadership": 3,
+        "wisdom": 2,
+        "mysticism": 3,
+        "luck": 2,
+        "ballistics": 8,
+        "eagleEye": 2,
+        "necromancy": 0,
+        "estates": 3,
+        "fire": 3,
+        "air": 2,
+        "water": 2,
+        "earth": 3,
+        "scholar": 1,
+        "tactics": 8,
+        "artillery": 8,
+        "learning": 8,
+        "offence": 9,
+        "armorer": 5,
+        "intelligence": 1,
+        "sorcery": 1,
+        "resistance": 2,
+        "firstAid": 1
+      }
+    },
+    {
+      "name": "Elementalist",
+      "initial": [
+        0,
+        0,
+        3,
+        3
+      ],
+      "low": [
+        15,
+        15,
+        35,
+        35
+      ],
+      "high": [
+        25,
+        25,
+        25,
+        25
+      ],
+      "secondary": {
+        "pathfinding": 2,
+        "archery": 2,
+        "logistics": 2,
+        "scouting": 2,
+        "diplomacy": 4,
+        "navigation": 4,
+        "leadership": 3,
+        "wisdom": 8,
+        "mysticism": 8,
+        "luck": 2,
+        "ballistics": 4,
+        "eagleEye": 8,
+        "necromancy": 0,
+        "estates": 3,
+        "fire": 6,
+        "air": 6,
+        "water": 6,
+        "earth": 6,
+        "scholar": 8,
+        "tactics": 1,
+        "artillery": 1,
+        "learning": 4,
+        "offence": 1,
+        "armorer": 1,
+        "intelligence": 8,
+        "sorcery": 8,
+        "resistance": 0,
+        "firstAid": 4
+      }
+    }
+  ],
+  "heroes": {
+    "orrin": {
+      "faction": "castle",
+      "name": "Orrin",
+      "class": "knight",
+      "skills": {
+        "leadership": 1,
+        "archery": 1
+      },
+      "spells": []
+    },
+    "valeska": {
+      "faction": "castle",
+      "name": "Valeska",
+      "class": "knight",
+      "skills": {
+        "leadership": 1,
+        "archery": 1
+      },
+      "spells": []
+    },
+    "edric": {
+      "faction": "castle",
+      "name": "Edric",
+      "class": "knight",
+      "skills": {
+        "leadership": 1,
+        "armorer": 1
+      },
+      "spells": []
+    },
+    "sylvia": {
+      "faction": "castle",
+      "name": "Sylvia",
+      "class": "knight",
+      "skills": {
+        "leadership": 1,
+        "navigation": 1
+      },
+      "spells": []
+    },
+    "lordhaart": {
+      "faction": "castle",
+      "name": "Lord Haart",
+      "class": "knight",
+      "skills": {
+        "leadership": 1,
+        "estates": 1
+      },
+      "spells": []
+    },
+    "sorsha": {
+      "faction": "castle",
+      "name": "Sorsha",
+      "class": "knight",
+      "skills": {
+        "leadership": 1,
+        "offence": 1
+      },
+      "spells": []
+    },
+    "christian": {
+      "faction": "castle",
+      "name": "Christian",
+      "class": "knight",
+      "skills": {
+        "leadership": 1,
+        "artillery": 1
+      },
+      "spells": []
+    },
+    "tyris": {
+      "faction": "castle",
+      "name": "Tyris",
+      "class": "knight",
+      "skills": {
+        "leadership": 1,
+        "tactics": 1
+      },
+      "spells": []
+    },
+    "rion": {
+      "faction": "castle",
+      "name": "Rion",
+      "class": "cleric",
+      "skills": {
+        "wisdom": 1,
+        "firstAid": 1
+      },
+      "spells": [
+        "stoneSkin"
+      ]
+    },
+    "adela": {
+      "faction": "castle",
+      "name": "Adela",
+      "class": "cleric",
+      "skills": {
+        "wisdom": 1,
+        "diplomacy": 1
+      },
+      "spells": [
+        "bless"
+      ]
+    },
+    "cuthbert": {
+      "faction": "castle",
+      "name": "Cuthbert",
+      "class": "cleric",
+      "skills": {
+        "wisdom": 1,
+        "estates": 1
+      },
+      "spells": [
+        "weakness"
+      ]
+    },
+    "adelaide": {
+      "faction": "castle",
+      "name": "Adelaide",
+      "class": "cleric",
+      "skills": {
+        "wisdom": 2
+      },
+      "spells": [
+        "frostRing"
+      ]
+    },
+    "ingham": {
+      "faction": "castle",
+      "name": "Ingham",
+      "class": "cleric",
+      "skills": {
+        "wisdom": 1,
+        "mysticism": 1
+      },
+      "spells": [
+        "curse"
+      ]
+    },
+    "sanya": {
+      "faction": "castle",
+      "name": "Sanya",
+      "class": "cleric",
+      "skills": {
+        "wisdom": 1,
+        "eagleEye": 1
+      },
+      "spells": [
+        "dispel"
+      ]
+    },
+    "loynis": {
+      "faction": "castle",
+      "name": "Loynis",
+      "class": "cleric",
+      "skills": {
+        "wisdom": 1,
+        "learning": 1
+      },
+      "spells": [
+        "prayer"
+      ]
+    },
+    "caitlin": {
+      "faction": "castle",
+      "name": "Caitlin",
+      "class": "cleric",
+      "skills": {
+        "wisdom": 1,
+        "intelligence": 1
+      },
+      "spells": [
+        "cure"
+      ]
+    },
+    "mephala": {
+      "faction": "rampart",
+      "name": "Mephala",
+      "class": "ranger",
+      "skills": {
+        "leadership": 1,
+        "armorer": 1
+      },
+      "spells": []
+    },
+    "ufretin": {
+      "faction": "rampart",
+      "name": "Ufretin",
+      "class": "ranger",
+      "skills": {
+        "luck": 1,
+        "resistance": 1
+      },
+      "spells": []
+    },
+    "jenova": {
+      "faction": "rampart",
+      "name": "Jenova",
+      "class": "ranger",
+      "skills": {
+        "archery": 2
+      },
+      "spells": []
+    },
+    "ryland": {
+      "faction": "rampart",
+      "name": "Ryland",
+      "class": "ranger",
+      "skills": {
+        "diplomacy": 1,
+        "leadership": 1
+      },
+      "spells": []
+    },
+    "thorgrim": {
+      "faction": "rampart",
+      "name": "Thorgrim",
+      "class": "ranger",
+      "skills": {
+        "resistance": 2
+      },
+      "spells": []
+    },
+    "ivor": {
+      "faction": "rampart",
+      "name": "Ivor",
+      "class": "ranger",
+      "skills": {
+        "archery": 1,
+        "offence": 1
+      },
+      "spells": []
+    },
+    "clancy": {
+      "faction": "rampart",
+      "name": "Clancy",
+      "class": "ranger",
+      "skills": {
+        "pathfinding": 1,
+        "resistance": 1
+      },
+      "spells": []
+    },
+    "kyrre": {
+      "faction": "rampart",
+      "name": "Kyrre",
+      "class": "ranger",
+      "skills": {
+        "archery": 1,
+        "logistics": 1
+      },
+      "spells": []
+    },
+    "coronius": {
+      "faction": "rampart",
+      "name": "Coronius",
+      "class": "druid",
+      "skills": {
+        "wisdom": 1,
+        "scholar": 1
+      },
+      "spells": [
+        "slayer"
+      ]
+    },
+    "uland": {
+      "faction": "rampart",
+      "name": "Uland",
+      "class": "druid",
+      "skills": {
+        "wisdom": 2,
+        "ballistics": 1
+      },
+      "spells": [
+        "cure"
+      ]
+    },
+    "elleshar": {
+      "faction": "rampart",
+      "name": "Elleshar",
+      "class": "druid",
+      "skills": {
+        "wisdom": 1,
+        "intelligence": 1
+      },
+      "spells": [
+        "curse"
+      ]
+    },
+    "gem": {
+      "faction": "rampart",
+      "name": "Gem",
+      "class": "druid",
+      "skills": {
+        "wisdom": 1,
+        "firstAid": 1
+      },
+      "spells": [
+        "summonBoat"
+      ]
+    },
+    "malcom": {
+      "faction": "rampart",
+      "name": "Malcom",
+      "class": "druid",
+      "skills": {
+        "wisdom": 1,
+        "eagleEye": 1
+      },
+      "spells": [
+        "magicArrow"
+      ]
+    },
+    "melodia": {
+      "faction": "rampart",
+      "name": "Melodia",
+      "class": "druid",
+      "skills": {
+        "wisdom": 1,
+        "luck": 1
+      },
+      "spells": [
+        "fortune"
+      ]
+    },
+    "alagar": {
+      "faction": "rampart",
+      "name": "Alagar",
+      "class": "druid",
+      "skills": {
+        "wisdom": 1,
+        "sorcery": 1
+      },
+      "spells": [
+        "iceBolt"
+      ]
+    },
+    "aeris": {
+      "faction": "rampart",
+      "name": "Aeris",
+      "class": "druid",
+      "skills": {
+        "wisdom": 1,
+        "scouting": 1
+      },
+      "spells": [
+        "protectAir"
+      ]
+    },
+    "piquedram": {
+      "faction": "tower",
+      "name": "Piquedram",
+      "class": "alchemist",
+      "skills": {
+        "scouting": 1,
+        "mysticism": 1
+      },
+      "spells": [
+        "shield"
+      ]
+    },
+    "thane": {
+      "faction": "tower",
+      "name": "Thane",
+      "class": "alchemist",
+      "skills": {
+        "scholar": 2
+      },
+      "spells": [
+        "magicArrow"
+      ]
+    },
+    "josephine": {
+      "faction": "tower",
+      "name": "Josephine",
+      "class": "alchemist",
+      "skills": {
+        "mysticism": 1,
+        "sorcery": 1
+      },
+      "spells": [
+        "haste"
+      ]
+    },
+    "neela": {
+      "faction": "tower",
+      "name": "Neela",
+      "class": "alchemist",
+      "skills": {
+        "scholar": 1,
+        "armorer": 1
+      },
+      "spells": [
+        "shield"
+      ]
+    },
+    "torosar": {
+      "faction": "tower",
+      "name": "Torosar ",
+      "class": "alchemist",
+      "skills": {
+        "mysticism": 1,
+        "tactics": 1
+      },
+      "spells": [
+        "magicArrow"
+      ]
+    },
+    "fafner": {
+      "faction": "tower",
+      "name": "Fafner",
+      "class": "alchemist",
+      "skills": {
+        "scholar": 1,
+        "resistance": 1
+      },
+      "spells": [
+        "haste"
+      ]
+    },
+    "rissa": {
+      "faction": "tower",
+      "name": "Rissa",
+      "class": "alchemist",
+      "skills": {
+        "mysticism": 1,
+        "offence": 1
+      },
+      "spells": [
+        "magicArrow"
+      ]
+    },
+    "iona": {
+      "faction": "tower",
+      "name": "Iona",
+      "class": "alchemist",
+      "skills": {
+        "scholar": 1,
+        "intelligence": 1
+      },
+      "spells": [
+        "magicArrow"
+      ]
+    },
+    "astral": {
+      "faction": "tower",
+      "name": "Astral",
+      "class": "wizard",
+      "skills": {
+        "wisdom": 2
+      },
+      "spells": [
+        "hypnotize"
+      ]
+    },
+    "halon": {
+      "faction": "tower",
+      "name": "Halon",
+      "class": "wizard",
+      "skills": {
+        "wisdom": 1,
+        "mysticism": 1
+      },
+      "spells": [
+        "stoneSkin"
+      ]
+    },
+    "serena": {
+      "faction": "tower",
+      "name": "Serena",
+      "class": "wizard",
+      "skills": {
+        "wisdom": 1,
+        "eagleEye": 1
+      },
+      "spells": [
+        "dispel"
+      ]
+    },
+    "daremyth": {
+      "faction": "tower",
+      "name": "Daremyth",
+      "class": "wizard",
+      "skills": {
+        "wisdom": 1,
+        "intelligence": 1
+      },
+      "spells": [
+        "fortune"
+      ]
+    },
+    "theodorus": {
+      "faction": "tower",
+      "name": "Theodorus",
+      "class": "wizard",
+      "skills": {
+        "wisdom": 1,
+        "ballistics": 1
+      },
+      "spells": [
+        "shield"
+      ]
+    },
+    "solmyr": {
+      "faction": "tower",
+      "name": "Solmyr",
+      "class": "wizard",
+      "skills": {
+        "wisdom": 1,
+        "sorcery": 1
+      },
+      "spells": [
+        "chainLightning"
+      ]
+    },
+    "cyra": {
+      "faction": "tower",
+      "name": "Cyra",
+      "class": "wizard",
+      "skills": {
+        "wisdom": 1,
+        "diplomacy": 1
+      },
+      "spells": [
+        "haste"
+      ]
+    },
+    "aine": {
+      "faction": "tower",
+      "name": "Aine",
+      "class": "wizard",
+      "skills": {
+        "wisdom": 1,
+        "scholar": 1
+      },
+      "spells": [
+        "curse"
+      ]
+    },
+    "fiona": {
+      "faction": "inferno",
+      "name": "Fiona",
+      "class": "demoniac",
+      "skills": {
+        "scouting": 2
+      },
+      "spells": []
+    },
+    "rashka": {
+      "faction": "inferno",
+      "name": "Rashka",
+      "class": "demoniac",
+      "skills": {
+        "wisdom": 1,
+        "scholar": 1
+      },
+      "spells": []
+    },
+    "marius": {
+      "faction": "inferno",
+      "name": "Marius",
+      "class": "demoniac",
+      "skills": {
+        "armorer": 2
+      },
+      "spells": []
+    },
+    "ignatius": {
+      "faction": "inferno",
+      "name": "Ignatius",
+      "class": "demoniac",
+      "skills": {
+        "tactics": 1,
+        "resistance": 1
+      },
+      "spells": []
+    },
+    "octavia": {
+      "faction": "inferno",
+      "name": "Octavia",
+      "class": "demoniac",
+      "skills": {
+        "scholar": 1,
+        "offence": 1
+      },
+      "spells": []
+    },
+    "calh": {
+      "faction": "inferno",
+      "name": "Calh",
+      "class": "demoniac",
+      "skills": {
+        "archery": 1,
+        "scouting": 1
+      },
+      "spells": []
+    },
+    "pyre": {
+      "faction": "inferno",
+      "name": "Pyre",
+      "class": "demoniac",
+      "skills": {
+        "artillery": 1,
+        "logistics": 1
+      },
+      "spells": []
+    },
+    "nymus": {
+      "faction": "inferno",
+      "name": "Nymus",
+      "class": "demoniac",
+      "skills": {
+        "offence": 2
+      },
+      "spells": []
+    },
+    "ayden": {
+      "faction": "inferno",
+      "name": "Ayden",
+      "class": "heretic",
+      "skills": {
+        "wisdom": 1,
+        "intelligence": 1
+      },
+      "spells": [
+        "viewEarth"
+      ]
+    },
+    "xyron": {
+      "faction": "inferno",
+      "name": "Xyron",
+      "class": "heretic",
+      "skills": {
+        "wisdom": 1,
+        "scholar": 1
+      },
+      "spells": [
+        "inferno"
+      ]
+    },
+    "axsis": {
+      "faction": "inferno",
+      "name": "Axsis",
+      "class": "heretic",
+      "skills": {
+        "wisdom": 1,
+        "mysticism": 1
+      },
+      "spells": [
+        "protectAir"
+      ]
+    },
+    "olema": {
+      "faction": "inferno",
+      "name": "Olema",
+      "class": "heretic",
+      "skills": {
+        "wisdom": 1,
+        "ballistics": 1
+      },
+      "spells": [
+        "weakness"
+      ]
+    },
+    "calid": {
+      "faction": "inferno",
+      "name": "Calid",
+      "class": "heretic",
+      "skills": {
+        "wisdom": 1,
+        "learning": 1
+      },
+      "spells": [
+        "haste"
+      ]
+    },
+    "ash": {
+      "faction": "inferno",
+      "name": "Ash",
+      "class": "heretic",
+      "skills": {
+        "wisdom": 1,
+        "eagleEye": 1
+      },
+      "spells": [
+        "bloodlust"
+      ]
+    },
+    "zydar": {
+      "faction": "inferno",
+      "name": "Zydar",
+      "class": "heretic",
+      "skills": {
+        "wisdom": 1,
+        "sorcery": 1
+      },
+      "spells": [
+        "stoneSkin"
+      ]
+    },
+    "xarfax": {
+      "faction": "inferno",
+      "name": "Xarfax",
+      "class": "heretic",
+      "skills": {
+        "wisdom": 1,
+        "leadership": 1
+      },
+      "spells": [
+        "fireball"
+      ]
+    },
+    "straker": {
+      "faction": "necropolis",
+      "name": "Straker",
+      "class": "deathknight",
+      "skills": {
+        "necromancy": 1,
+        "resistance": 1
+      },
+      "spells": [
+        "haste"
+      ]
+    },
+    "vokial": {
+      "faction": "necropolis",
+      "name": "Vokial",
+      "class": "deathknight",
+      "skills": {
+        "necromancy": 1,
+        "artillery": 1
+      },
+      "spells": [
+        "stoneSkin"
+      ]
+    },
+    "moandor": {
+      "faction": "necropolis",
+      "name": "Moandor",
+      "class": "deathknight",
+      "skills": {
+        "necromancy": 1,
+        "learning": 1
+      },
+      "spells": [
+        "slow"
+      ]
+    },
+    "charna": {
+      "faction": "necropolis",
+      "name": "Charna",
+      "class": "deathknight",
+      "skills": {
+        "necromancy": 1,
+        "tactics": 1
+      },
+      "spells": [
+        "magicArrow"
+      ]
+    },
+    "tamika": {
+      "faction": "necropolis",
+      "name": "Tamika",
+      "class": "deathknight",
+      "skills": {
+        "necromancy": 1,
+        "offence": 1
+      },
+      "spells": [
+        "magicArrow"
+      ]
+    },
+    "isra": {
+      "faction": "necropolis",
+      "name": "Isra",
+      "class": "deathknight",
+      "skills": {
+        "necromancy": 2
+      },
+      "spells": [
+        "magicArrow"
+      ]
+    },
+    "clavius": {
+      "faction": "necropolis",
+      "name": "Clavius",
+      "class": "deathknight",
+      "skills": {
+        "necromancy": 1,
+        "offence": 1
+      },
+      "spells": [
+        "magicArrow"
+      ]
+    },
+    "galthran": {
+      "faction": "necropolis",
+      "name": "Galthran",
+      "class": "deathknight",
+      "skills": {
+        "necromancy": 1,
+        "armorer": 1
+      },
+      "spells": [
+        "shield"
+      ]
+    },
+    "septienna": {
+      "faction": "necropolis",
+      "name": "Septienna",
+      "class": "necromancer",
+      "skills": {
+        "necromancy": 1,
+        "scholar": 1
+      },
+      "spells": [
+        "deathRipple"
+      ]
+    },
+    "aislinn": {
+      "faction": "necropolis",
+      "name": "Aislinn",
+      "class": "necromancer",
+      "skills": {
+        "necromancy": 1,
+        "wisdom": 1
+      },
+      "spells": [
+        "meteorShower"
+      ]
+    },
+    "sandro": {
+      "faction": "necropolis",
+      "name": "Sandro",
+      "class": "necromancer",
+      "skills": {
+        "necromancy": 1,
+        "sorcery": 1
+      },
+      "spells": [
+        "slow"
+      ]
+    },
+    "nimbus": {
+      "faction": "necropolis",
+      "name": "Nimbus",
+      "class": "necromancer",
+      "skills": {
+        "necromancy": 1,
+        "eagleEye": 1
+      },
+      "spells": [
+        "shield"
+      ]
+    },
+    "thant": {
+      "faction": "necropolis",
+      "name": "Thant",
+      "class": "necromancer",
+      "skills": {
+        "necromancy": 1,
+        "mysticism": 1
+      },
+      "spells": [
+        "animateDead"
+      ]
+    },
+    "xsi": {
+      "faction": "necropolis",
+      "name": "Xsi",
+      "class": "necromancer",
+      "skills": {
+        "necromancy": 1,
+        "learning": 1
+      },
+      "spells": [
+        "stoneSkin"
+      ]
+    },
+    "vidomina": {
+      "faction": "necropolis",
+      "name": "Vidomina",
+      "class": "necromancer",
+      "skills": {
+        "necromancy": 2
+      },
+      "spells": [
+        "curse"
+      ]
+    },
+    "nagash": {
+      "faction": "necropolis",
+      "name": "Nagash",
+      "class": "necromancer",
+      "skills": {
+        "necromancy": 1,
+        "intelligence": 1
+      },
+      "spells": [
+        "protectAir"
+      ]
+    },
+    "lorelei": {
+      "faction": "dungeon",
+      "name": "Lorelei",
+      "class": "overlord",
+      "skills": {
+        "scouting": 1,
+        "leadership": 1
+      },
+      "spells": []
+    },
+    "arlach": {
+      "faction": "dungeon",
+      "name": "Arlach",
+      "class": "overlord",
+      "skills": {
+        "artillery": 1,
+        "offence": 1
+      },
+      "spells": []
+    },
+    "dace": {
+      "faction": "dungeon",
+      "name": "Dace",
+      "class": "overlord",
+      "skills": {
+        "tactics": 1,
+        "offence": 1
+      },
+      "spells": []
+    },
+    "ajit": {
+      "faction": "dungeon",
+      "name": "Ajit",
+      "class": "overlord",
+      "skills": {
+        "leadership": 1,
+        "resistance": 1
+      },
+      "spells": []
+    },
+    "damacon": {
+      "faction": "dungeon",
+      "name": "Damacon",
+      "class": "overlord",
+      "skills": {
+        "offence": 2
+      },
+      "spells": []
+    },
+    "gunnar": {
+      "faction": "dungeon",
+      "name": "Gunnar",
+      "class": "overlord",
+      "skills": {
+        "logistics": 1,
+        "tactics": 1
+      },
+      "spells": []
+    },
+    "synca": {
+      "faction": "dungeon",
+      "name": "Synca",
+      "class": "overlord",
+      "skills": {
+        "leadership": 1,
+        "scholar": 1
+      },
+      "spells": []
+    },
+    "shakti": {
+      "faction": "dungeon",
+      "name": "Shakti",
+      "class": "overlord",
+      "skills": {
+        "tactics": 1,
+        "offence": 1
+      },
+      "spells": []
+    },
+    "alamar": {
+      "faction": "dungeon",
+      "name": "Alamar",
+      "class": "warlock",
+      "skills": {
+        "wisdom": 1,
+        "scholar": 1
+      },
+      "spells": [
+        "resurrection"
+      ]
+    },
+    "jaegar": {
+      "faction": "dungeon",
+      "name": "Jaegar",
+      "class": "warlock",
+      "skills": {
+        "wisdom": 1,
+        "mysticism": 1
+      },
+      "spells": [
+        "shield"
+      ]
+    },
+    "malekith": {
+      "faction": "dungeon",
+      "name": "Malekith",
+      "class": "warlock",
+      "skills": {
+        "wisdom": 1,
+        "sorcery": 1
+      },
+      "spells": [
+        "bloodlust"
+      ]
+    },
+    "jeddite": {
+      "faction": "dungeon",
+      "name": "Jeddite",
+      "class": "warlock",
+      "skills": {
+        "wisdom": 2
+      },
+      "spells": [
+        "resurrection"
+      ]
+    },
+    "geon": {
+      "faction": "dungeon",
+      "name": "Geon",
+      "class": "warlock",
+      "skills": {
+        "wisdom": 1,
+        "eagleEye": 1
+      },
+      "spells": [
+        "slow"
+      ]
+    },
+    "deemer": {
+      "faction": "dungeon",
+      "name": "Deemer",
+      "class": "warlock",
+      "skills": {
+        "wisdom": 1,
+        "scouting": 2
+      },
+      "spells": [
+        "meteorShower"
+      ]
+    },
+    "sephinroth": {
+      "faction": "dungeon",
+      "name": "Sephinroth",
+      "class": "warlock",
+      "skills": {
+        "wisdom": 1,
+        "intelligence": 1
+      },
+      "spells": [
+        "protectAir"
+      ]
+    },
+    "darkstorn": {
+      "faction": "dungeon",
+      "name": "Darkstorn",
+      "class": "warlock",
+      "skills": {
+        "wisdom": 1,
+        "learning": 1
+      },
+      "spells": [
+        "stoneSkin"
+      ]
+    },
+    "yog": {
+      "faction": "stronghold",
+      "name": "Yog",
+      "class": "barbarian",
+      "skills": {
+        "offence": 1,
+        "ballistics": 1
+      },
+      "spells": []
+    },
+    "gurnisson": {
+      "faction": "stronghold",
+      "name": "Gurnisson",
+      "class": "barbarian",
+      "skills": {
+        "offence": 1,
+        "artillery": 1
+      },
+      "spells": []
+    },
+    "jabarkas": {
+      "faction": "stronghold",
+      "name": "Jabarkas",
+      "class": "barbarian",
+      "skills": {
+        "offence": 1,
+        "archery": 1
+      },
+      "spells": []
+    },
+    "shiva": {
+      "faction": "stronghold",
+      "name": "Shiva",
+      "class": "barbarian",
+      "skills": {
+        "offence": 1,
+        "scouting": 1
+      },
+      "spells": []
+    },
+    "gretchin": {
+      "faction": "stronghold",
+      "name": "Gretchin",
+      "class": "barbarian",
+      "skills": {
+        "offence": 1,
+        "pathfinding": 1
+      },
+      "spells": []
+    },
+    "krellion": {
+      "faction": "stronghold",
+      "name": "Krellion",
+      "class": "barbarian",
+      "skills": {
+        "offence": 1,
+        "resistance": 1
+      },
+      "spells": []
+    },
+    "craghack": {
+      "faction": "stronghold",
+      "name": "Crag Hack",
+      "class": "barbarian",
+      "skills": {
+        "offence": 2
+      },
+      "spells": []
+    },
+    "tyraxor": {
+      "faction": "stronghold",
+      "name": "Tyraxor",
+      "class": "barbarian",
+      "skills": {
+        "offence": 1,
+        "tactics": 1
+      },
+      "spells": []
+    },
+    "gird": {
+      "faction": "stronghold",
+      "name": "Gird",
+      "class": "battlemage",
+      "skills": {
+        "wisdom": 1,
+        "sorcery": 1
+      },
+      "spells": [
+        "bloodlust"
+      ]
+    },
+    "vey": {
+      "faction": "stronghold",
+      "name": "Vey",
+      "class": "battlemage",
+      "skills": {
+        "wisdom": 1,
+        "leadership": 1
+      },
+      "spells": [
+        "magicArrow"
+      ]
+    },
+    "dessa": {
+      "faction": "stronghold",
+      "name": "Dessa",
+      "class": "battlemage",
+      "skills": {
+        "wisdom": 1,
+        "logistics": 1
+      },
+      "spells": [
+        "stoneSkin"
+      ]
+    },
+    "terek": {
+      "faction": "stronghold",
+      "name": "Terek",
+      "class": "battlemage",
+      "skills": {
+        "wisdom": 1,
+        "tactics": 1
+      },
+      "spells": [
+        "haste"
+      ]
+    },
+    "zubin": {
+      "faction": "stronghold",
+      "name": "Zubin",
+      "class": "battlemage",
+      "skills": {
+        "wisdom": 1,
+        "artillery": 1
+      },
+      "spells": [
+        "precision"
+      ]
+    },
+    "gundula": {
+      "faction": "stronghold",
+      "name": "Gundula",
+      "class": "battlemage",
+      "skills": {
+        "wisdom": 1,
+        "offence": 1
+      },
+      "spells": [
+        "slow"
+      ]
+    },
+    "oris": {
+      "faction": "stronghold",
+      "name": "Oris",
+      "class": "battlemage",
+      "skills": {
+        "wisdom": 1,
+        "eagleEye": 1
+      },
+      "spells": [
+        "protectAir"
+      ]
+    },
+    "saurug": {
+      "faction": "stronghold",
+      "name": "Saurug",
+      "class": "battlemage",
+      "skills": {
+        "wisdom": 1,
+        "resistance": 1
+      },
+      "spells": [
+        "bloodlust"
+      ]
+    },
+    "bron": {
+      "faction": "fortress",
+      "name": "Bron",
+      "class": "beastmaster",
+      "skills": {
+        "armorer": 1,
+        "resistance": 1
+      },
+      "spells": []
+    },
+    "drakon": {
+      "faction": "fortress",
+      "name": "Drakon",
+      "class": "beastmaster",
+      "skills": {
+        "armorer": 1,
+        "leadership": 1
+      },
+      "spells": []
+    },
+    "wystan": {
+      "faction": "fortress",
+      "name": "Wystan",
+      "class": "beastmaster",
+      "skills": {
+        "armorer": 1,
+        "archery": 1
+      },
+      "spells": []
+    },
+    "tazar": {
+      "faction": "fortress",
+      "name": "Tazar",
+      "class": "beastmaster",
+      "skills": {
+        "armorer": 2
+      },
+      "spells": []
+    },
+    "alkin": {
+      "faction": "fortress",
+      "name": "Alkin",
+      "class": "beastmaster",
+      "skills": {
+        "armorer": 1,
+        "offence": 1
+      },
+      "spells": []
+    },
+    "korbac": {
+      "faction": "fortress",
+      "name": "Korbac",
+      "class": "beastmaster",
+      "skills": {
+        "armorer": 1,
+        "pathfinding": 1
+      },
+      "spells": []
+    },
+    "gerwulf": {
+      "faction": "fortress",
+      "name": "Gerwulf",
+      "class": "beastmaster",
+      "skills": {
+        "armorer": 1,
+        "artillery": 1
+      },
+      "spells": []
+    },
+    "broghild": {
+      "faction": "fortress",
+      "name": "Broghild",
+      "class": "beastmaster",
+      "skills": {
+        "armorer": 1,
+        "scouting": 1
+      },
+      "spells": []
+    },
+    "mirlanda": {
+      "faction": "fortress",
+      "name": "Mirlanda",
+      "class": "witch",
+      "skills": {
+        "wisdom": 2
+      },
+      "spells": [
+        "weakness"
+      ]
+    },
+    "rosic": {
+      "faction": "fortress",
+      "name": "Rosic",
+      "class": "witch",
+      "skills": {
+        "wisdom": 1,
+        "mysticism": 1
+      },
+      "spells": [
+        "magicArrow"
+      ]
+    },
+    "voy": {
+      "faction": "fortress",
+      "name": "Voy",
+      "class": "witch",
+      "skills": {
+        "wisdom": 1,
+        "navigation": 1
+      },
+      "spells": [
+        "slow"
+      ]
+    },
+    "verdish": {
+      "faction": "fortress",
+      "name": "Verdish",
+      "class": "witch",
+      "skills": {
+        "wisdom": 1,
+        "firstAid": 1
+      },
+      "spells": [
+        "protectFire"
+      ]
+    },
+    "merist": {
+      "faction": "fortress",
+      "name": "Merist",
+      "class": "witch",
+      "skills": {
+        "wisdom": 1,
+        "learning": 1
+      },
+      "spells": [
+        "stoneSkin"
+      ]
+    },
+    "styg": {
+      "faction": "fortress",
+      "name": "Styg",
+      "class": "witch",
+      "skills": {
+        "wisdom": 1,
+        "sorcery": 1
+      },
+      "spells": [
+        "shield"
+      ]
+    },
+    "andra": {
+      "faction": "fortress",
+      "name": "Andra",
+      "class": "witch",
+      "skills": {
+        "wisdom": 1,
+        "intelligence": 1
+      },
+      "spells": [
+        "dispel"
+      ]
+    },
+    "tiva": {
+      "faction": "fortress",
+      "name": "Tiva",
+      "class": "witch",
+      "skills": {
+        "wisdom": 1,
+        "eagleEye": 1
+      },
+      "spells": [
+        "stoneSkin"
+      ]
+    },
+    "pasis": {
+      "faction": "conflux",
+      "name": "Pasis",
+      "class": "planeswalker",
+      "skills": {
+        "artillery": 1,
+        "offence": 1
+      },
+      "spells": []
+    },
+    "thunar": {
+      "faction": "conflux",
+      "name": "Thunar",
+      "class": "planeswalker",
+      "skills": {
+        "estates": 1,
+        "tactics": 1
+      },
+      "spells": []
+    },
+    "ignissa": {
+      "faction": "conflux",
+      "name": "Ignissa",
+      "class": "planeswalker",
+      "skills": {
+        "artillery": 1,
+        "offence": 1
+      },
+      "spells": []
+    },
+    "lacus": {
+      "faction": "conflux",
+      "name": "Lacus",
+      "class": "planeswalker",
+      "skills": {
+        "tactics": 2
+      },
+      "spells": []
+    },
+    "monere": {
+      "faction": "conflux",
+      "name": "Monere",
+      "class": "planeswalker",
+      "skills": {
+        "logistics": 1,
+        "offence": 1
+      },
+      "spells": []
+    },
+    "erdamon": {
+      "faction": "conflux",
+      "name": "Erdamon",
+      "class": "planeswalker",
+      "skills": {
+        "estates": 1,
+        "tactics": 1
+      },
+      "spells": []
+    },
+    "fiur": {
+      "faction": "conflux",
+      "name": "Fiur",
+      "class": "planeswalker",
+      "skills": {
+        "offence": 2
+      },
+      "spells": []
+    },
+    "kalt": {
+      "faction": "conflux",
+      "name": "Kalt",
+      "class": "planeswalker",
+      "skills": {
+        "tactics": 1,
+        "learning": 1
+      },
+      "spells": []
+    },
+    "luna": {
+      "faction": "conflux",
+      "name": "Luna",
+      "class": "elementalist",
+      "skills": {
+        "wisdom": 1,
+        "fireMagic": 1
+      },
+      "spells": [
+        "fireWall"
+      ]
+    },
+    "brissa": {
+      "faction": "conflux",
+      "name": "Brissa",
+      "class": "elementalist",
+      "skills": {
+        "wisdom": 1,
+        "airMagic": 1
+      },
+      "spells": [
+        "haste"
+      ]
+    },
+    "ciele": {
+      "faction": "conflux",
+      "name": "Ciele",
+      "class": "elementalist",
+      "skills": {
+        "wisdom": 1,
+        "waterMagic": 1
+      },
+      "spells": [
+        "magicArrow"
+      ]
+    },
+    "labetha": {
+      "faction": "conflux",
+      "name": "Labetha",
+      "class": "elementalist",
+      "skills": {
+        "wisdom": 1,
+        "earthMagic": 1
+      },
+      "spells": [
+        "stoneSkin"
+      ]
+    },
+    "inteus": {
+      "faction": "conflux",
+      "name": "Inteus",
+      "class": "elementalist",
+      "skills": {
+        "wisdom": 1,
+        "fireMagic": 1
+      },
+      "spells": [
+        "bloodlust"
+      ]
+    },
+    "aenain": {
+      "faction": "conflux",
+      "name": "Aenain",
+      "class": "elementalist",
+      "skills": {
+        "wisdom": 1,
+        "airMagic": 1
+      },
+      "spells": [
+        "disruptingRay"
+      ]
+    },
+    "gelare": {
+      "faction": "conflux",
+      "name": "Gelare",
+      "class": "elementalist",
+      "skills": {
+        "wisdom": 1,
+        "waterMagic": 1
+      },
+      "spells": [
+        "dispel"
+      ]
+    },
+    "grindan": {
+      "faction": "conflux",
+      "name": "Grindan",
+      "class": "elementalist",
+      "skills": {
+        "wisdom": 1,
+        "earthMagic": 1
+      },
+      "spells": [
+        "slow"
+      ]
+    }
+  },
+  "spells": [
+    {
+      "name": "Summon Boat",
+      "level": 1,
+      "schools": [
+        "water"
+      ],
+      "mana": [
+        8,
+        7,
+        7,
+        7
+      ],
+      "chance": [
+        3,
+        5,
+        5,
+        5,
+        3,
+        5,
+        5,
+        3,
+        3
+      ]
+    },
+    {
+      "name": "Scuttle Boat",
+      "level": 2,
+      "schools": [
+        "water"
+      ],
+      "mana": [
+        8,
+        6,
+        6,
+        6
+      ],
+      "chance": [
+        6,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4
+      ]
+    },
+    {
+      "name": "Visions",
+      "level": 2,
+      "schools": [
+        "earth",
+        "water",
+        "fire",
+        "air"
+      ],
+      "mana": [
+        4,
+        2,
+        2,
+        2
+      ],
+      "chance": [
+        2,
+        2,
+        2,
+        4,
+        2,
+        2,
+        2,
+        2,
+        2
+      ]
+    },
+    {
+      "name": "View Earth",
+      "level": 1,
+      "schools": [
+        "earth"
+      ],
+      "mana": [
+        2,
+        1,
+        1,
+        1
+      ],
+      "chance": [
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ]
+    },
+    {
+      "name": "Disguise",
+      "level": 2,
+      "schools": [
+        "air"
+      ],
+      "mana": [
+        4,
+        2,
+        2,
+        2
+      ],
+      "chance": [
+        2,
+        2,
+        2,
+        4,
+        2,
+        2,
+        2,
+        0,
+        2
+      ]
+    },
+    {
+      "name": "View Air",
+      "level": 1,
+      "schools": [
+        "air"
+      ],
+      "mana": [
+        2,
+        1,
+        1,
+        1
+      ],
+      "chance": [
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ]
+    },
+    {
+      "name": "Fly",
+      "level": 5,
+      "schools": [
+        "air"
+      ],
+      "mana": [
+        20,
+        15,
+        15,
+        15
+      ],
+      "chance": [
+        0,
+        16,
+        16,
+        16,
+        16,
+        12,
+        0,
+        0,
+        13
+      ]
+    },
+    {
+      "name": "Water Walk",
+      "level": 4,
+      "schools": [
+        "water"
+      ],
+      "mana": [
+        12,
+        8,
+        8,
+        8
+      ],
+      "chance": [
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        0,
+        0,
+        10
+      ]
+    },
+    {
+      "name": "Dimension Door",
+      "level": 5,
+      "schools": [
+        "air"
+      ],
+      "mana": [
+        25,
+        20,
+        20,
+        20
+      ],
+      "chance": [
+        0,
+        20,
+        14,
+        16,
+        16,
+        16,
+        0,
+        0,
+        13
+      ]
+    },
+    {
+      "name": "Town Portal",
+      "level": 4,
+      "schools": [
+        "earth"
+      ],
+      "mana": [
+        16,
+        12,
+        12,
+        12
+      ],
+      "chance": [
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        0,
+        0,
+        10
+      ]
+    },
+    {
+      "name": "Quicksand",
+      "level": 2,
+      "schools": [
+        "earth"
+      ],
+      "mana": [
+        8,
+        6,
+        6,
+        6
+      ],
+      "chance": [
+        4,
+        4,
+        6,
+        4,
+        4,
+        4,
+        6,
+        6,
+        4
+      ]
+    },
+    {
+      "name": "Land Mine",
+      "level": 3,
+      "schools": [
+        "fire"
+      ],
+      "mana": [
+        18,
+        15,
+        15,
+        15
+      ],
+      "chance": [
+        8,
+        8,
+        8,
+        6,
+        8,
+        12,
+        8,
+        2,
+        4
+      ]
+    },
+    {
+      "name": "Force Field",
+      "level": 3,
+      "schools": [
+        "earth"
+      ],
+      "mana": [
+        12,
+        9,
+        9,
+        9
+      ],
+      "chance": [
+        4,
+        4,
+        8,
+        2,
+        8,
+        8,
+        4,
+        4,
+        8
+      ]
+    },
+    {
+      "name": "Fire Wall",
+      "level": 2,
+      "schools": [
+        "fire"
+      ],
+      "mana": [
+        8,
+        6,
+        6,
+        6
+      ],
+      "chance": [
+        4,
+        4,
+        4,
+        12,
+        4,
+        4,
+        4,
+        4,
+        8
+      ]
+    },
+    {
+      "name": "Earthquake",
+      "level": 3,
+      "schools": [
+        "earth"
+      ],
+      "mana": [
+        20,
+        17,
+        17,
+        17
+      ],
+      "chance": [
+        4,
+        8,
+        4,
+        6,
+        4,
+        4,
+        4,
+        50,
+        4
+      ]
+    },
+    {
+      "name": "Magic Arrow",
+      "level": 1,
+      "schools": [
+        "earth",
+        "water",
+        "fire",
+        "air"
+      ],
+      "mana": [
+        5,
+        4,
+        4,
+        4
+      ],
+      "chance": [
+        30,
+        30,
+        30,
+        30,
+        30,
+        30,
+        30,
+        30,
+        30
+      ]
+    },
+    {
+      "name": "Ice Bolt",
+      "level": 2,
+      "schools": [
+        "water"
+      ],
+      "mana": [
+        8,
+        6,
+        6,
+        6
+      ],
+      "chance": [
+        50,
+        50,
+        6,
+        0,
+        6,
+        6,
+        4,
+        50,
+        25
+      ]
+    },
+    {
+      "name": "Lightning Bolt",
+      "level": 2,
+      "schools": [
+        "air"
+      ],
+      "mana": [
+        10,
+        8,
+        8,
+        8
+      ],
+      "chance": [
+        4,
+        4,
+        50,
+        20,
+        6,
+        50,
+        50,
+        4,
+        25
+      ]
+    },
+    {
+      "name": "Implosion",
+      "level": 5,
+      "schools": [
+        "earth"
+      ],
+      "mana": [
+        30,
+        25,
+        25,
+        25
+      ],
+      "chance": [
+        0,
+        16,
+        14,
+        16,
+        20,
+        12,
+        0,
+        0,
+        13
+      ]
+    },
+    {
+      "name": "Chain Lightning",
+      "level": 4,
+      "schools": [
+        "air"
+      ],
+      "mana": [
+        24,
+        20,
+        20,
+        20
+      ],
+      "chance": [
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        0,
+        0,
+        10
+      ]
+    },
+    {
+      "name": "Frost Ring",
+      "level": 3,
+      "schools": [
+        "water"
+      ],
+      "mana": [
+        12,
+        9,
+        9,
+        9
+      ],
+      "chance": [
+        16,
+        16,
+        16,
+        0,
+        12,
+        12,
+        12,
+        4,
+        12
+      ]
+    },
+    {
+      "name": "Fireball",
+      "level": 3,
+      "schools": [
+        "fire"
+      ],
+      "mana": [
+        15,
+        12,
+        12,
+        12
+      ],
+      "chance": [
+        8,
+        8,
+        8,
+        50,
+        12,
+        16,
+        12,
+        2,
+        12
+      ]
+    },
+    {
+      "name": "Inferno",
+      "level": 4,
+      "schools": [
+        "fire"
+      ],
+      "mana": [
+        16,
+        12,
+        12,
+        12
+      ],
+      "chance": [
+        5,
+        5,
+        5,
+        10,
+        5,
+        5,
+        0,
+        0,
+        10
+      ]
+    },
+    {
+      "name": "Meteor Shower",
+      "level": 4,
+      "schools": [
+        "earth"
+      ],
+      "mana": [
+        16,
+        12,
+        12,
+        12
+      ],
+      "chance": [
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        0,
+        0,
+        10
+      ]
+    },
+    {
+      "name": "Death Ripple",
+      "level": 2,
+      "schools": [
+        "earth"
+      ],
+      "mana": [
+        10,
+        8,
+        8,
+        8
+      ],
+      "chance": [
+        0,
+        0,
+        0,
+        0,
+        50,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "Destroy Undead",
+      "level": 3,
+      "schools": [
+        "air"
+      ],
+      "mana": [
+        15,
+        12,
+        12,
+        12
+      ],
+      "chance": [
+        12,
+        8,
+        8,
+        2,
+        0,
+        4,
+        4,
+        2,
+        4
+      ]
+    },
+    {
+      "name": "Armageddon",
+      "level": 4,
+      "schools": [
+        "fire"
+      ],
+      "mana": [
+        24,
+        20,
+        20,
+        20
+      ],
+      "chance": [
+        0,
+        0,
+        0,
+        5,
+        5,
+        10,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "Shield",
+      "level": 1,
+      "schools": [
+        "earth"
+      ],
+      "mana": [
+        5,
+        4,
+        4,
+        4
+      ],
+      "chance": [
+        10,
+        3,
+        5,
+        3,
+        10,
+        5,
+        5,
+        5,
+        5
+      ]
+    },
+    {
+      "name": "Air Shield",
+      "level": 3,
+      "schools": [
+        "air"
+      ],
+      "mana": [
+        12,
+        9,
+        9,
+        9
+      ],
+      "chance": [
+        4,
+        8,
+        8,
+        2,
+        4,
+        4,
+        8,
+        4,
+        4
+      ]
+    },
+    {
+      "name": "Fire Shield",
+      "level": 4,
+      "schools": [
+        "fire"
+      ],
+      "mana": [
+        16,
+        12,
+        12,
+        12
+      ],
+      "chance": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        0,
+        0,
+        5
+      ]
+    },
+    {
+      "name": "Protection from Air",
+      "level": 2,
+      "schools": [
+        "air"
+      ],
+      "mana": [
+        7,
+        5,
+        5,
+        5
+      ],
+      "chance": [
+        2,
+        2,
+        2,
+        4,
+        2,
+        2,
+        2,
+        2,
+        2
+      ]
+    },
+    {
+      "name": "Protection from Fire",
+      "level": 1,
+      "schools": [
+        "fire"
+      ],
+      "mana": [
+        5,
+        4,
+        4,
+        4
+      ],
+      "chance": [
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ]
+    },
+    {
+      "name": "Prot. from Water",
+      "level": 1,
+      "schools": [
+        "water"
+      ],
+      "mana": [
+        5,
+        4,
+        4,
+        4
+      ],
+      "chance": [
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ]
+    },
+    {
+      "name": "Prot. from Earth",
+      "level": 3,
+      "schools": [
+        "earth"
+      ],
+      "mana": [
+        12,
+        9,
+        9,
+        9
+      ],
+      "chance": [
+        4,
+        4,
+        4,
+        2,
+        4,
+        4,
+        4,
+        0,
+        4
+      ]
+    },
+    {
+      "name": "Anti-Magic",
+      "level": 3,
+      "schools": [
+        "earth"
+      ],
+      "mana": [
+        15,
+        12,
+        12,
+        12
+      ],
+      "chance": [
+        12,
+        8,
+        8,
+        4,
+        8,
+        8,
+        12,
+        10,
+        12
+      ]
+    },
+    {
+      "name": "Dispel",
+      "level": 1,
+      "schools": [
+        "water"
+      ],
+      "mana": [
+        5,
+        4,
+        4,
+        4
+      ],
+      "chance": [
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10
+      ]
+    },
+    {
+      "name": "Magic Mirror",
+      "level": 5,
+      "schools": [
+        "air"
+      ],
+      "mana": [
+        25,
+        20,
+        20,
+        20
+      ],
+      "chance": [
+        0,
+        16,
+        14,
+        0,
+        0,
+        12,
+        0,
+        0,
+        13
+      ]
+    },
+    {
+      "name": "Cure",
+      "level": 1,
+      "schools": [
+        "water"
+      ],
+      "mana": [
+        6,
+        5,
+        5,
+        5
+      ],
+      "chance": [
+        10,
+        10,
+        5,
+        5,
+        0,
+        5,
+        5,
+        10,
+        5
+      ]
+    },
+    {
+      "name": "Resurrection",
+      "level": 4,
+      "schools": [
+        "earth"
+      ],
+      "mana": [
+        20,
+        16,
+        16,
+        16
+      ],
+      "chance": [
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        0,
+        0,
+        5
+      ]
+    },
+    {
+      "name": "Animate Dead",
+      "level": 3,
+      "schools": [
+        "earth"
+      ],
+      "mana": [
+        15,
+        12,
+        12,
+        12
+      ],
+      "chance": [
+        0,
+        0,
+        0,
+        0,
+        16,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "Sacrifice",
+      "level": 5,
+      "schools": [
+        "fire"
+      ],
+      "mana": [
+        25,
+        20,
+        20,
+        20
+      ],
+      "chance": [
+        0,
+        0,
+        0,
+        20,
+        16,
+        12,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "Bless",
+      "level": 1,
+      "schools": [
+        "water"
+      ],
+      "mana": [
+        5,
+        4,
+        4,
+        4
+      ],
+      "chance": [
+        10,
+        5,
+        5,
+        0,
+        0,
+        3,
+        3,
+        5,
+        5
+      ]
+    },
+    {
+      "name": "Curse",
+      "level": 1,
+      "schools": [
+        "fire"
+      ],
+      "mana": [
+        6,
+        5,
+        5,
+        5
+      ],
+      "chance": [
+        0,
+        0,
+        3,
+        5,
+        10,
+        5,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "Bloodlust",
+      "level": 1,
+      "schools": [
+        "fire"
+      ],
+      "mana": [
+        5,
+        4,
+        4,
+        4
+      ],
+      "chance": [
+        0,
+        0,
+        0,
+        10,
+        5,
+        5,
+        10,
+        5,
+        5
+      ]
+    },
+    {
+      "name": "Precision",
+      "level": 2,
+      "schools": [
+        "air"
+      ],
+      "mana": [
+        8,
+        6,
+        6,
+        6
+      ],
+      "chance": [
+        6,
+        6,
+        4,
+        8,
+        2,
+        6,
+        4,
+        4,
+        2
+      ]
+    },
+    {
+      "name": "Weakness",
+      "level": 2,
+      "schools": [
+        "water"
+      ],
+      "mana": [
+        8,
+        6,
+        6,
+        6
+      ],
+      "chance": [
+        2,
+        2,
+        2,
+        8,
+        4,
+        4,
+        4,
+        4,
+        4
+      ]
+    },
+    {
+      "name": "Stone Skin",
+      "level": 1,
+      "schools": [
+        "earth"
+      ],
+      "mana": [
+        5,
+        4,
+        4,
+        4
+      ],
+      "chance": [
+        5,
+        5,
+        10,
+        5,
+        10,
+        5,
+        10,
+        5,
+        5
+      ]
+    },
+    {
+      "name": "Disrupting Ray",
+      "level": 2,
+      "schools": [
+        "air"
+      ],
+      "mana": [
+        10,
+        8,
+        8,
+        8
+      ],
+      "chance": [
+        6,
+        4,
+        6,
+        12,
+        4,
+        6,
+        6,
+        6,
+        8
+      ]
+    },
+    {
+      "name": "Prayer",
+      "level": 4,
+      "schools": [
+        "water"
+      ],
+      "mana": [
+        16,
+        12,
+        12,
+        12
+      ],
+      "chance": [
+        10,
+        5,
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        5
+      ]
+    },
+    {
+      "name": "Mirth",
+      "level": 3,
+      "schools": [
+        "water"
+      ],
+      "mana": [
+        12,
+        9,
+        9,
+        9
+      ],
+      "chance": [
+        4,
+        4,
+        4,
+        2,
+        4,
+        4,
+        12,
+        2,
+        4
+      ]
+    },
+    {
+      "name": "Sorrow",
+      "level": 4,
+      "schools": [
+        "earth"
+      ],
+      "mana": [
+        16,
+        12,
+        12,
+        12
+      ],
+      "chance": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        0,
+        0,
+        5
+      ]
+    },
+    {
+      "name": "Fortune",
+      "level": 2,
+      "schools": [
+        "air"
+      ],
+      "mana": [
+        7,
+        5,
+        5,
+        5
+      ],
+      "chance": [
+        4,
+        6,
+        4,
+        4,
+        2,
+        2,
+        4,
+        4,
+        2
+      ]
+    },
+    {
+      "name": "Misfortune",
+      "level": 3,
+      "schools": [
+        "fire"
+      ],
+      "mana": [
+        12,
+        9,
+        9,
+        9
+      ],
+      "chance": [
+        4,
+        4,
+        4,
+        6,
+        8,
+        4,
+        4,
+        2,
+        4
+      ]
+    },
+    {
+      "name": "Haste",
+      "level": 1,
+      "schools": [
+        "air"
+      ],
+      "mana": [
+        6,
+        5,
+        5,
+        5
+      ],
+      "chance": [
+        5,
+        10,
+        5,
+        5,
+        5,
+        10,
+        5,
+        10,
+        10
+      ]
+    },
+    {
+      "name": "Slow",
+      "level": 1,
+      "schools": [
+        "earth"
+      ],
+      "mana": [
+        6,
+        5,
+        5,
+        5
+      ],
+      "chance": [
+        5,
+        10,
+        10,
+        10,
+        5,
+        5,
+        5,
+        5,
+        10
+      ]
+    },
+    {
+      "name": "Slayer",
+      "level": 4,
+      "schools": [
+        "fire"
+      ],
+      "mana": [
+        16,
+        12,
+        12,
+        12
+      ],
+      "chance": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        0,
+        0,
+        5
+      ]
+    },
+    {
+      "name": "Frenzy",
+      "level": 4,
+      "schools": [
+        "fire"
+      ],
+      "mana": [
+        16,
+        12,
+        12,
+        12
+      ],
+      "chance": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        0,
+        0,
+        5
+      ]
+    },
+    {
+      "name": "Titan's Lightning Bolt",
+      "level": 5,
+      "schools": [
+        "air"
+      ],
+      "mana": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "chance": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "Counterstrike",
+      "level": 4,
+      "schools": [
+        "air"
+      ],
+      "mana": [
+        24,
+        20,
+        20,
+        20
+      ],
+      "chance": [
+        5,
+        10,
+        5,
+        5,
+        5,
+        5,
+        0,
+        0,
+        5
+      ]
+    },
+    {
+      "name": "Berserk",
+      "level": 4,
+      "schools": [
+        "fire"
+      ],
+      "mana": [
+        20,
+        16,
+        16,
+        16
+      ],
+      "chance": [
+        5,
+        5,
+        5,
+        5,
+        10,
+        5,
+        0,
+        0,
+        5
+      ]
+    },
+    {
+      "name": "Hypnotize",
+      "level": 3,
+      "schools": [
+        "air"
+      ],
+      "mana": [
+        18,
+        15,
+        15,
+        15
+      ],
+      "chance": [
+        4,
+        4,
+        8,
+        6,
+        0,
+        8,
+        4,
+        4,
+        12
+      ]
+    },
+    {
+      "name": "Forgetfulness",
+      "level": 3,
+      "schools": [
+        "water"
+      ],
+      "mana": [
+        12,
+        9,
+        9,
+        9
+      ],
+      "chance": [
+        8,
+        8,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        8
+      ]
+    },
+    {
+      "name": "Blind",
+      "level": 2,
+      "schools": [
+        "fire"
+      ],
+      "mana": [
+        10,
+        8,
+        8,
+        8
+      ],
+      "chance": [
+        4,
+        6,
+        2,
+        12,
+        4,
+        4,
+        4,
+        6,
+        8
+      ]
+    },
+    {
+      "name": "Teleport",
+      "level": 3,
+      "schools": [
+        "water"
+      ],
+      "mana": [
+        15,
+        12,
+        6,
+        3
+      ],
+      "chance": [
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        10,
+        8
+      ]
+    },
+    {
+      "name": "Remove Obstacle",
+      "level": 2,
+      "schools": [
+        "water"
+      ],
+      "mana": [
+        7,
+        5,
+        5,
+        5
+      ],
+      "chance": [
+        4,
+        4,
+        6,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4
+      ]
+    },
+    {
+      "name": "Clone",
+      "level": 4,
+      "schools": [
+        "water"
+      ],
+      "mana": [
+        24,
+        20,
+        20,
+        20
+      ],
+      "chance": [
+        5,
+        5,
+        10,
+        5,
+        5,
+        5,
+        0,
+        0,
+        10
+      ]
+    },
+    {
+      "name": "Fire Elemental",
+      "level": 5,
+      "schools": [
+        "fire"
+      ],
+      "mana": [
+        25,
+        20,
+        20,
+        20
+      ],
+      "chance": [
+        0,
+        0,
+        0,
+        16,
+        0,
+        12,
+        0,
+        0,
+        12
+      ]
+    },
+    {
+      "name": "Earth Elemental",
+      "level": 5,
+      "schools": [
+        "earth"
+      ],
+      "mana": [
+        25,
+        20,
+        20,
+        20
+      ],
+      "chance": [
+        0,
+        16,
+        14,
+        16,
+        16,
+        12,
+        0,
+        0,
+        12
+      ]
+    },
+    {
+      "name": "Water Elemental",
+      "level": 5,
+      "schools": [
+        "water"
+      ],
+      "mana": [
+        25,
+        20,
+        20,
+        20
+      ],
+      "chance": [
+        0,
+        16,
+        14,
+        0,
+        0,
+        12,
+        0,
+        0,
+        12
+      ]
+    },
+    {
+      "name": "Air Elemental",
+      "level": 5,
+      "schools": [
+        "air"
+      ],
+      "mana": [
+        25,
+        20,
+        20,
+        20
+      ],
+      "chance": [
+        0,
+        0,
+        14,
+        0,
+        16,
+        0,
+        0,
+        0,
+        12
+      ]
+    },
+    {
+      "name": "Stone Gaze",
+      "level": 3,
+      "schools": [],
+      "mana": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "chance": [
+        12,
+        13,
+        12,
+        13,
+        12,
+        13,
+        12,
+        13,
+        13
+      ]
+    },
+    {
+      "name": "Disease",
+      "level": 2,
+      "schools": [],
+      "mana": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "chance": [
+        12,
+        13,
+        12,
+        13,
+        12,
+        13,
+        12,
+        13,
+        13
+      ]
+    },
+    {
+      "name": "Paralyze",
+      "level": 4,
+      "schools": [],
+      "mana": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "chance": [
+        12,
+        13,
+        12,
+        13,
+        12,
+        13,
+        12,
+        13,
+        13
+      ]
+    },
+    {
+      "name": "Age",
+      "level": 5,
+      "schools": [],
+      "mana": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "chance": [
+        12,
+        13,
+        12,
+        13,
+        12,
+        13,
+        12,
+        13,
+        13
+      ]
+    }
+  ],
+  "creatures": [
+    {
+      "name": "Pikeman",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        60
+      ],
+      "growth": 14,
+      "hp": 10,
+      "speed": 4,
+      "attack": 4,
+      "defense": 5,
+      "damage": [
+        1,
+        3
+      ]
+    },
+    {
+      "name": "Halberdier",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        75
+      ],
+      "growth": 14,
+      "hp": 10,
+      "speed": 5,
+      "attack": 6,
+      "defense": 5,
+      "damage": [
+        2,
+        3
+      ]
+    },
+    {
+      "name": "Archer",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        100
+      ],
+      "growth": 9,
+      "hp": 10,
+      "speed": 4,
+      "attack": 6,
+      "defense": 3,
+      "damage": [
+        2,
+        3
+      ]
+    },
+    {
+      "name": "Marksman",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        150
+      ],
+      "growth": 9,
+      "hp": 10,
+      "speed": 6,
+      "attack": 6,
+      "defense": 3,
+      "damage": [
+        2,
+        3
+      ]
+    },
+    {
+      "name": "Griffin",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        200
+      ],
+      "growth": 7,
+      "hp": 25,
+      "speed": 6,
+      "attack": 8,
+      "defense": 8,
+      "damage": [
+        3,
+        6
+      ]
+    },
+    {
+      "name": "Royal Griffin",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        240
+      ],
+      "growth": 7,
+      "hp": 25,
+      "speed": 9,
+      "attack": 9,
+      "defense": 9,
+      "damage": [
+        3,
+        6
+      ]
+    },
+    {
+      "name": "Swordsman",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        300
+      ],
+      "growth": 4,
+      "hp": 35,
+      "speed": 5,
+      "attack": 10,
+      "defense": 12,
+      "damage": [
+        6,
+        9
+      ]
+    },
+    {
+      "name": "Crusader",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        400
+      ],
+      "growth": 4,
+      "hp": 35,
+      "speed": 6,
+      "attack": 12,
+      "defense": 12,
+      "damage": [
+        7,
+        10
+      ]
+    },
+    {
+      "name": "Monk",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        400
+      ],
+      "growth": 3,
+      "hp": 30,
+      "speed": 5,
+      "attack": 12,
+      "defense": 7,
+      "damage": [
+        10,
+        12
+      ]
+    },
+    {
+      "name": "Zealot",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        450
+      ],
+      "growth": 3,
+      "hp": 30,
+      "speed": 7,
+      "attack": 12,
+      "defense": 10,
+      "damage": [
+        10,
+        12
+      ]
+    },
+    {
+      "name": "Cavalier",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1000
+      ],
+      "growth": 2,
+      "hp": 100,
+      "speed": 7,
+      "attack": 15,
+      "defense": 15,
+      "damage": [
+        15,
+        25
+      ]
+    },
+    {
+      "name": "Champion",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1200
+      ],
+      "growth": 2,
+      "hp": 100,
+      "speed": 9,
+      "attack": 16,
+      "defense": 16,
+      "damage": [
+        20,
+        25
+      ]
+    },
+    {
+      "name": "Angel",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        3000
+      ],
+      "growth": 1,
+      "hp": 200,
+      "speed": 12,
+      "attack": 20,
+      "defense": 20,
+      "damage": [
+        50,
+        50
+      ]
+    },
+    {
+      "name": "Archangel",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        3,
+        5000
+      ],
+      "growth": 1,
+      "hp": 250,
+      "speed": 18,
+      "attack": 30,
+      "defense": 30,
+      "damage": [
+        50,
+        50
+      ]
+    },
+    {
+      "name": "Centaur",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        70
+      ],
+      "growth": 14,
+      "hp": 8,
+      "speed": 6,
+      "attack": 5,
+      "defense": 3,
+      "damage": [
+        2,
+        3
+      ]
+    },
+    {
+      "name": "Centaur Captain",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        90
+      ],
+      "growth": 14,
+      "hp": 10,
+      "speed": 8,
+      "attack": 6,
+      "defense": 3,
+      "damage": [
+        2,
+        3
+      ]
+    },
+    {
+      "name": "Dwarf",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        120
+      ],
+      "growth": 8,
+      "hp": 20,
+      "speed": 3,
+      "attack": 6,
+      "defense": 7,
+      "damage": [
+        2,
+        4
+      ]
+    },
+    {
+      "name": "Battle Dwarf",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        150
+      ],
+      "growth": 8,
+      "hp": 20,
+      "speed": 5,
+      "attack": 7,
+      "defense": 7,
+      "damage": [
+        2,
+        4
+      ]
+    },
+    {
+      "name": "Wood Elf",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        200
+      ],
+      "growth": 7,
+      "hp": 15,
+      "speed": 6,
+      "attack": 9,
+      "defense": 5,
+      "damage": [
+        3,
+        5
+      ]
+    },
+    {
+      "name": "Grand Elf",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        225
+      ],
+      "growth": 7,
+      "hp": 15,
+      "speed": 7,
+      "attack": 9,
+      "defense": 5,
+      "damage": [
+        3,
+        5
+      ]
+    },
+    {
+      "name": "Pegasus",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        250
+      ],
+      "growth": 5,
+      "hp": 30,
+      "speed": 8,
+      "attack": 9,
+      "defense": 8,
+      "damage": [
+        5,
+        9
+      ]
+    },
+    {
+      "name": "Silver Pegasus",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        275
+      ],
+      "growth": 5,
+      "hp": 30,
+      "speed": 12,
+      "attack": 9,
+      "defense": 10,
+      "damage": [
+        5,
+        9
+      ]
+    },
+    {
+      "name": "Dendroid Guard",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        350
+      ],
+      "growth": 3,
+      "hp": 55,
+      "speed": 3,
+      "attack": 9,
+      "defense": 12,
+      "damage": [
+        10,
+        14
+      ]
+    },
+    {
+      "name": "Dendroid Soldier",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        425
+      ],
+      "growth": 3,
+      "hp": 65,
+      "speed": 4,
+      "attack": 9,
+      "defense": 12,
+      "damage": [
+        10,
+        14
+      ]
+    },
+    {
+      "name": "Unicorn",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        850
+      ],
+      "growth": 2,
+      "hp": 90,
+      "speed": 7,
+      "attack": 15,
+      "defense": 14,
+      "damage": [
+        18,
+        22
+      ]
+    },
+    {
+      "name": "War Unicorn",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        950
+      ],
+      "growth": 2,
+      "hp": 110,
+      "speed": 9,
+      "attack": 15,
+      "defense": 14,
+      "damage": [
+        18,
+        22
+      ]
+    },
+    {
+      "name": "Green Dragon",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        2400
+      ],
+      "growth": 1,
+      "hp": 180,
+      "speed": 10,
+      "attack": 18,
+      "defense": 18,
+      "damage": [
+        40,
+        50
+      ]
+    },
+    {
+      "name": "Gold Dragon",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        2,
+        0,
+        4000
+      ],
+      "growth": 1,
+      "hp": 250,
+      "speed": 16,
+      "attack": 27,
+      "defense": 27,
+      "damage": [
+        40,
+        50
+      ]
+    },
+    {
+      "name": "Gremlin",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        30
+      ],
+      "growth": 16,
+      "hp": 4,
+      "speed": 4,
+      "attack": 3,
+      "defense": 3,
+      "damage": [
+        1,
+        2
+      ]
+    },
+    {
+      "name": "Master Gremlin",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        40
+      ],
+      "growth": 16,
+      "hp": 4,
+      "speed": 5,
+      "attack": 4,
+      "defense": 4,
+      "damage": [
+        1,
+        2
+      ]
+    },
+    {
+      "name": "Stone Gargoyle",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        130
+      ],
+      "growth": 9,
+      "hp": 16,
+      "speed": 6,
+      "attack": 6,
+      "defense": 6,
+      "damage": [
+        2,
+        3
+      ]
+    },
+    {
+      "name": "Obsidian Gargoyle",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        160
+      ],
+      "growth": 9,
+      "hp": 16,
+      "speed": 9,
+      "attack": 7,
+      "defense": 7,
+      "damage": [
+        2,
+        3
+      ]
+    },
+    {
+      "name": "Stone Golem",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        150
+      ],
+      "growth": 6,
+      "hp": 30,
+      "speed": 3,
+      "attack": 7,
+      "defense": 10,
+      "damage": [
+        4,
+        5
+      ]
+    },
+    {
+      "name": "Iron Golem",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        200
+      ],
+      "growth": 6,
+      "hp": 35,
+      "speed": 5,
+      "attack": 9,
+      "defense": 10,
+      "damage": [
+        4,
+        5
+      ]
+    },
+    {
+      "name": "Mage",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        350
+      ],
+      "growth": 4,
+      "hp": 25,
+      "speed": 5,
+      "attack": 11,
+      "defense": 8,
+      "damage": [
+        7,
+        9
+      ]
+    },
+    {
+      "name": "Arch Mage",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        450
+      ],
+      "growth": 4,
+      "hp": 30,
+      "speed": 7,
+      "attack": 12,
+      "defense": 9,
+      "damage": [
+        7,
+        9
+      ]
+    },
+    {
+      "name": "Genie",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        550
+      ],
+      "growth": 3,
+      "hp": 40,
+      "speed": 7,
+      "attack": 12,
+      "defense": 12,
+      "damage": [
+        13,
+        16
+      ]
+    },
+    {
+      "name": "Master Genie",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        600
+      ],
+      "growth": 3,
+      "hp": 40,
+      "speed": 11,
+      "attack": 12,
+      "defense": 12,
+      "damage": [
+        13,
+        16
+      ]
+    },
+    {
+      "name": "Naga",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1100
+      ],
+      "growth": 2,
+      "hp": 110,
+      "speed": 5,
+      "attack": 16,
+      "defense": 13,
+      "damage": [
+        20,
+        20
+      ]
+    },
+    {
+      "name": "Naga Queen",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1600
+      ],
+      "growth": 2,
+      "hp": 110,
+      "speed": 7,
+      "attack": 16,
+      "defense": 13,
+      "damage": [
+        30,
+        30
+      ]
+    },
+    {
+      "name": "Giant",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        2000
+      ],
+      "growth": 1,
+      "hp": 150,
+      "speed": 7,
+      "attack": 19,
+      "defense": 16,
+      "damage": [
+        40,
+        60
+      ]
+    },
+    {
+      "name": "Titan",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        2,
+        5000
+      ],
+      "growth": 1,
+      "hp": 300,
+      "speed": 11,
+      "attack": 24,
+      "defense": 24,
+      "damage": [
+        40,
+        60
+      ]
+    },
+    {
+      "name": "Imp",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        50
+      ],
+      "growth": 15,
+      "hp": 4,
+      "speed": 5,
+      "attack": 2,
+      "defense": 3,
+      "damage": [
+        1,
+        2
+      ]
+    },
+    {
+      "name": "Familiar",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        60
+      ],
+      "growth": 15,
+      "hp": 4,
+      "speed": 7,
+      "attack": 4,
+      "defense": 4,
+      "damage": [
+        1,
+        2
+      ]
+    },
+    {
+      "name": "Gog",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        125
+      ],
+      "growth": 8,
+      "hp": 13,
+      "speed": 4,
+      "attack": 6,
+      "defense": 4,
+      "damage": [
+        2,
+        4
+      ]
+    },
+    {
+      "name": "Magog",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        175
+      ],
+      "growth": 8,
+      "hp": 13,
+      "speed": 6,
+      "attack": 7,
+      "defense": 4,
+      "damage": [
+        2,
+        4
+      ]
+    },
+    {
+      "name": "Hell Hound",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        200
+      ],
+      "growth": 5,
+      "hp": 25,
+      "speed": 7,
+      "attack": 10,
+      "defense": 6,
+      "damage": [
+        2,
+        7
+      ]
+    },
+    {
+      "name": "Cerberus",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        250
+      ],
+      "growth": 5,
+      "hp": 25,
+      "speed": 8,
+      "attack": 10,
+      "defense": 8,
+      "damage": [
+        2,
+        7
+      ]
+    },
+    {
+      "name": "Demon",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        250
+      ],
+      "growth": 4,
+      "hp": 35,
+      "speed": 5,
+      "attack": 10,
+      "defense": 10,
+      "damage": [
+        7,
+        9
+      ]
+    },
+    {
+      "name": "Horned Demon",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        270
+      ],
+      "growth": 4,
+      "hp": 40,
+      "speed": 6,
+      "attack": 10,
+      "defense": 10,
+      "damage": [
+        7,
+        9
+      ]
+    },
+    {
+      "name": "Pit Fiend",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        500
+      ],
+      "growth": 3,
+      "hp": 45,
+      "speed": 6,
+      "attack": 13,
+      "defense": 13,
+      "damage": [
+        13,
+        17
+      ]
+    },
+    {
+      "name": "Pit Lord",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        700
+      ],
+      "growth": 3,
+      "hp": 45,
+      "speed": 7,
+      "attack": 13,
+      "defense": 13,
+      "damage": [
+        13,
+        17
+      ]
+    },
+    {
+      "name": "Efreeti",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        900
+      ],
+      "growth": 2,
+      "hp": 90,
+      "speed": 9,
+      "attack": 16,
+      "defense": 12,
+      "damage": [
+        16,
+        24
+      ]
+    },
+    {
+      "name": "Efreet Sultan",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1100
+      ],
+      "growth": 2,
+      "hp": 90,
+      "speed": 13,
+      "attack": 16,
+      "defense": 14,
+      "damage": [
+        16,
+        24
+      ]
+    },
+    {
+      "name": "Devil",
+      "cost": [
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        2700
+      ],
+      "growth": 1,
+      "hp": 160,
+      "speed": 11,
+      "attack": 19,
+      "defense": 21,
+      "damage": [
+        30,
+        40
+      ]
+    },
+    {
+      "name": "Arch Devil",
+      "cost": [
+        0,
+        2,
+        0,
+        0,
+        0,
+        0,
+        4500
+      ],
+      "growth": 1,
+      "hp": 200,
+      "speed": 17,
+      "attack": 26,
+      "defense": 28,
+      "damage": [
+        30,
+        40
+      ]
+    },
+    {
+      "name": "Skeleton",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        60
+      ],
+      "growth": 12,
+      "hp": 6,
+      "speed": 4,
+      "attack": 5,
+      "defense": 4,
+      "damage": [
+        1,
+        3
+      ]
+    },
+    {
+      "name": "Skeleton Warrior",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        70
+      ],
+      "growth": 12,
+      "hp": 6,
+      "speed": 5,
+      "attack": 6,
+      "defense": 6,
+      "damage": [
+        1,
+        3
+      ]
+    },
+    {
+      "name": "Walking Dead",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        100
+      ],
+      "growth": 8,
+      "hp": 15,
+      "speed": 3,
+      "attack": 5,
+      "defense": 5,
+      "damage": [
+        2,
+        3
+      ]
+    },
+    {
+      "name": "Zombie",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        125
+      ],
+      "growth": 8,
+      "hp": 20,
+      "speed": 4,
+      "attack": 5,
+      "defense": 5,
+      "damage": [
+        2,
+        3
+      ]
+    },
+    {
+      "name": "Wight",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        200
+      ],
+      "growth": 7,
+      "hp": 18,
+      "speed": 5,
+      "attack": 7,
+      "defense": 7,
+      "damage": [
+        3,
+        5
+      ]
+    },
+    {
+      "name": "Wraith",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        230
+      ],
+      "growth": 7,
+      "hp": 18,
+      "speed": 7,
+      "attack": 7,
+      "defense": 7,
+      "damage": [
+        3,
+        5
+      ]
+    },
+    {
+      "name": "Vampire",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        360
+      ],
+      "growth": 4,
+      "hp": 30,
+      "speed": 6,
+      "attack": 10,
+      "defense": 9,
+      "damage": [
+        5,
+        8
+      ]
+    },
+    {
+      "name": "Vampire Lord",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        500
+      ],
+      "growth": 4,
+      "hp": 40,
+      "speed": 9,
+      "attack": 10,
+      "defense": 10,
+      "damage": [
+        5,
+        8
+      ]
+    },
+    {
+      "name": "Lich",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        550
+      ],
+      "growth": 3,
+      "hp": 30,
+      "speed": 6,
+      "attack": 13,
+      "defense": 10,
+      "damage": [
+        11,
+        13
+      ]
+    },
+    {
+      "name": "Power Lich",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        600
+      ],
+      "growth": 3,
+      "hp": 40,
+      "speed": 7,
+      "attack": 13,
+      "defense": 10,
+      "damage": [
+        11,
+        15
+      ]
+    },
+    {
+      "name": "Black Knight",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1200
+      ],
+      "growth": 2,
+      "hp": 120,
+      "speed": 7,
+      "attack": 16,
+      "defense": 16,
+      "damage": [
+        15,
+        30
+      ]
+    },
+    {
+      "name": "Dread Knight",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1500
+      ],
+      "growth": 2,
+      "hp": 120,
+      "speed": 9,
+      "attack": 18,
+      "defense": 18,
+      "damage": [
+        15,
+        30
+      ]
+    },
+    {
+      "name": "Bone Dragon",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1800
+      ],
+      "growth": 1,
+      "hp": 150,
+      "speed": 9,
+      "attack": 17,
+      "defense": 15,
+      "damage": [
+        25,
+        50
+      ]
+    },
+    {
+      "name": "Ghost Dragon",
+      "cost": [
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        3000
+      ],
+      "growth": 1,
+      "hp": 200,
+      "speed": 14,
+      "attack": 19,
+      "defense": 17,
+      "damage": [
+        25,
+        50
+      ]
+    },
+    {
+      "name": "Troglodyte",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        50
+      ],
+      "growth": 14,
+      "hp": 5,
+      "speed": 4,
+      "attack": 4,
+      "defense": 3,
+      "damage": [
+        1,
+        3
+      ]
+    },
+    {
+      "name": "Infernal Troglodyte",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        65
+      ],
+      "growth": 14,
+      "hp": 6,
+      "speed": 5,
+      "attack": 5,
+      "defense": 4,
+      "damage": [
+        1,
+        3
+      ]
+    },
+    {
+      "name": "Harpy",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        130
+      ],
+      "growth": 8,
+      "hp": 14,
+      "speed": 6,
+      "attack": 6,
+      "defense": 5,
+      "damage": [
+        1,
+        4
+      ]
+    },
+    {
+      "name": "Harpy Hag",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        170
+      ],
+      "growth": 8,
+      "hp": 14,
+      "speed": 9,
+      "attack": 6,
+      "defense": 6,
+      "damage": [
+        1,
+        4
+      ]
+    },
+    {
+      "name": "Beholder",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        250
+      ],
+      "growth": 7,
+      "hp": 22,
+      "speed": 5,
+      "attack": 9,
+      "defense": 7,
+      "damage": [
+        3,
+        5
+      ]
+    },
+    {
+      "name": "Evil Eye",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        280
+      ],
+      "growth": 7,
+      "hp": 22,
+      "speed": 7,
+      "attack": 10,
+      "defense": 8,
+      "damage": [
+        3,
+        5
+      ]
+    },
+    {
+      "name": "Medusa",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        300
+      ],
+      "growth": 4,
+      "hp": 25,
+      "speed": 5,
+      "attack": 9,
+      "defense": 9,
+      "damage": [
+        6,
+        8
+      ]
+    },
+    {
+      "name": "Medusa Queen",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        330
+      ],
+      "growth": 4,
+      "hp": 30,
+      "speed": 6,
+      "attack": 10,
+      "defense": 10,
+      "damage": [
+        6,
+        8
+      ]
+    },
+    {
+      "name": "Minotaur",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        500
+      ],
+      "growth": 3,
+      "hp": 50,
+      "speed": 6,
+      "attack": 14,
+      "defense": 12,
+      "damage": [
+        12,
+        20
+      ]
+    },
+    {
+      "name": "Minotaur King",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        575
+      ],
+      "growth": 3,
+      "hp": 50,
+      "speed": 8,
+      "attack": 15,
+      "defense": 15,
+      "damage": [
+        12,
+        20
+      ]
+    },
+    {
+      "name": "Manticore",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        850
+      ],
+      "growth": 2,
+      "hp": 80,
+      "speed": 7,
+      "attack": 15,
+      "defense": 13,
+      "damage": [
+        14,
+        20
+      ]
+    },
+    {
+      "name": "Scorpicore",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1050
+      ],
+      "growth": 2,
+      "hp": 80,
+      "speed": 11,
+      "attack": 16,
+      "defense": 14,
+      "damage": [
+        14,
+        20
+      ]
+    },
+    {
+      "name": "Red Dragon",
+      "cost": [
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        2500
+      ],
+      "growth": 1,
+      "hp": 180,
+      "speed": 11,
+      "attack": 19,
+      "defense": 19,
+      "damage": [
+        40,
+        50
+      ]
+    },
+    {
+      "name": "Black Dragon",
+      "cost": [
+        0,
+        0,
+        0,
+        2,
+        0,
+        0,
+        4000
+      ],
+      "growth": 1,
+      "hp": 300,
+      "speed": 15,
+      "attack": 25,
+      "defense": 25,
+      "damage": [
+        40,
+        50
+      ]
+    },
+    {
+      "name": "Goblin",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        40
+      ],
+      "growth": 15,
+      "hp": 5,
+      "speed": 5,
+      "attack": 4,
+      "defense": 2,
+      "damage": [
+        1,
+        2
+      ]
+    },
+    {
+      "name": "Hobgoblin",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        50
+      ],
+      "growth": 15,
+      "hp": 5,
+      "speed": 7,
+      "attack": 5,
+      "defense": 3,
+      "damage": [
+        1,
+        2
+      ]
+    },
+    {
+      "name": "Wolf Rider",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        100
+      ],
+      "growth": 9,
+      "hp": 10,
+      "speed": 6,
+      "attack": 7,
+      "defense": 5,
+      "damage": [
+        2,
+        4
+      ]
+    },
+    {
+      "name": "Wolf Raider",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        140
+      ],
+      "growth": 9,
+      "hp": 10,
+      "speed": 8,
+      "attack": 8,
+      "defense": 5,
+      "damage": [
+        3,
+        4
+      ]
+    },
+    {
+      "name": "Orc",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        150
+      ],
+      "growth": 7,
+      "hp": 15,
+      "speed": 4,
+      "attack": 8,
+      "defense": 4,
+      "damage": [
+        2,
+        5
+      ]
+    },
+    {
+      "name": "Orc Chieftain",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        165
+      ],
+      "growth": 7,
+      "hp": 20,
+      "speed": 5,
+      "attack": 8,
+      "defense": 4,
+      "damage": [
+        2,
+        5
+      ]
+    },
+    {
+      "name": "Ogre",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        300
+      ],
+      "growth": 4,
+      "hp": 40,
+      "speed": 4,
+      "attack": 13,
+      "defense": 7,
+      "damage": [
+        6,
+        12
+      ]
+    },
+    {
+      "name": "Ogre Mage",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        400
+      ],
+      "growth": 4,
+      "hp": 60,
+      "speed": 5,
+      "attack": 13,
+      "defense": 7,
+      "damage": [
+        6,
+        12
+      ]
+    },
+    {
+      "name": "Roc",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        600
+      ],
+      "growth": 3,
+      "hp": 60,
+      "speed": 7,
+      "attack": 13,
+      "defense": 11,
+      "damage": [
+        11,
+        15
+      ]
+    },
+    {
+      "name": "Thunderbird",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        700
+      ],
+      "growth": 3,
+      "hp": 60,
+      "speed": 11,
+      "attack": 13,
+      "defense": 11,
+      "damage": [
+        11,
+        15
+      ]
+    },
+    {
+      "name": "Cyclops",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        750
+      ],
+      "growth": 2,
+      "hp": 70,
+      "speed": 6,
+      "attack": 15,
+      "defense": 12,
+      "damage": [
+        16,
+        20
+      ]
+    },
+    {
+      "name": "Cyclops King",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1100
+      ],
+      "growth": 2,
+      "hp": 70,
+      "speed": 8,
+      "attack": 17,
+      "defense": 13,
+      "damage": [
+        16,
+        20
+      ]
+    },
+    {
+      "name": "Behemoth",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1500
+      ],
+      "growth": 1,
+      "hp": 160,
+      "speed": 6,
+      "attack": 17,
+      "defense": 17,
+      "damage": [
+        30,
+        50
+      ]
+    },
+    {
+      "name": "Ancient Behemoth",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        3000
+      ],
+      "growth": 1,
+      "hp": 300,
+      "speed": 9,
+      "attack": 19,
+      "defense": 19,
+      "damage": [
+        30,
+        50
+      ]
+    },
+    {
+      "name": "Gnoll",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        50
+      ],
+      "growth": 12,
+      "hp": 6,
+      "speed": 4,
+      "attack": 3,
+      "defense": 5,
+      "damage": [
+        2,
+        3
+      ]
+    },
+    {
+      "name": "Gnoll Marauder",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        70
+      ],
+      "growth": 12,
+      "hp": 6,
+      "speed": 5,
+      "attack": 4,
+      "defense": 6,
+      "damage": [
+        2,
+        3
+      ]
+    },
+    {
+      "name": "Lizardman",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        110
+      ],
+      "growth": 9,
+      "hp": 14,
+      "speed": 4,
+      "attack": 5,
+      "defense": 6,
+      "damage": [
+        2,
+        3
+      ]
+    },
+    {
+      "name": "Lizard Warrior",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        140
+      ],
+      "growth": 9,
+      "hp": 15,
+      "speed": 5,
+      "attack": 6,
+      "defense": 8,
+      "damage": [
+        2,
+        5
+      ]
+    },
+    {
+      "name": "Gorgon",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        525
+      ],
+      "growth": 3,
+      "hp": 70,
+      "speed": 5,
+      "attack": 10,
+      "defense": 14,
+      "damage": [
+        12,
+        16
+      ]
+    },
+    {
+      "name": "Mighty Gorgon",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        600
+      ],
+      "growth": 3,
+      "hp": 70,
+      "speed": 6,
+      "attack": 11,
+      "defense": 16,
+      "damage": [
+        12,
+        16
+      ]
+    },
+    {
+      "name": "Serpent Fly",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        220
+      ],
+      "growth": 8,
+      "hp": 20,
+      "speed": 9,
+      "attack": 7,
+      "defense": 9,
+      "damage": [
+        2,
+        5
+      ]
+    },
+    {
+      "name": "Dragon Fly",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        240
+      ],
+      "growth": 8,
+      "hp": 20,
+      "speed": 13,
+      "attack": 8,
+      "defense": 10,
+      "damage": [
+        2,
+        5
+      ]
+    },
+    {
+      "name": "Basilisk",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        325
+      ],
+      "growth": 4,
+      "hp": 35,
+      "speed": 5,
+      "attack": 11,
+      "defense": 11,
+      "damage": [
+        6,
+        10
+      ]
+    },
+    {
+      "name": "Greater Basilisk",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        400
+      ],
+      "growth": 4,
+      "hp": 40,
+      "speed": 7,
+      "attack": 12,
+      "defense": 12,
+      "damage": [
+        6,
+        10
+      ]
+    },
+    {
+      "name": "Wyvern",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        800
+      ],
+      "growth": 2,
+      "hp": 70,
+      "speed": 7,
+      "attack": 14,
+      "defense": 14,
+      "damage": [
+        14,
+        18
+      ]
+    },
+    {
+      "name": "Wyvern Monarch",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1100
+      ],
+      "growth": 2,
+      "hp": 70,
+      "speed": 11,
+      "attack": 14,
+      "defense": 14,
+      "damage": [
+        18,
+        22
+      ]
+    },
+    {
+      "name": "Hydra",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        2200
+      ],
+      "growth": 1,
+      "hp": 175,
+      "speed": 5,
+      "attack": 16,
+      "defense": 18,
+      "damage": [
+        25,
+        45
+      ]
+    },
+    {
+      "name": "Chaos Hydra",
+      "cost": [
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        3500
+      ],
+      "growth": 1,
+      "hp": 250,
+      "speed": 7,
+      "attack": 18,
+      "defense": 20,
+      "damage": [
+        25,
+        45
+      ]
+    },
+    {
+      "name": "Air Elemental",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        250
+      ],
+      "growth": 6,
+      "hp": 25,
+      "speed": 7,
+      "attack": 9,
+      "defense": 9,
+      "damage": [
+        2,
+        8
+      ]
+    },
+    {
+      "name": "Earth Elemental",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        400
+      ],
+      "growth": 4,
+      "hp": 40,
+      "speed": 4,
+      "attack": 10,
+      "defense": 10,
+      "damage": [
+        4,
+        8
+      ]
+    },
+    {
+      "name": "Fire Elemental",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        350
+      ],
+      "growth": 5,
+      "hp": 35,
+      "speed": 6,
+      "attack": 10,
+      "defense": 8,
+      "damage": [
+        4,
+        6
+      ]
+    },
+    {
+      "name": "Water Elemental",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        300
+      ],
+      "growth": 6,
+      "hp": 30,
+      "speed": 5,
+      "attack": 8,
+      "defense": 10,
+      "damage": [
+        3,
+        7
+      ]
+    },
+    {
+      "name": "Gold Golem",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        500
+      ],
+      "growth": 3,
+      "hp": 50,
+      "speed": 5,
+      "attack": 11,
+      "defense": 12,
+      "damage": [
+        8,
+        10
+      ]
+    },
+    {
+      "name": "Diamond Golem",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        750
+      ],
+      "growth": 2,
+      "hp": 60,
+      "speed": 5,
+      "attack": 13,
+      "defense": 12,
+      "damage": [
+        10,
+        14
+      ]
+    },
+    {
+      "name": "Pixie",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        25
+      ],
+      "growth": 20,
+      "hp": 3,
+      "speed": 7,
+      "attack": 2,
+      "defense": 2,
+      "damage": [
+        1,
+        2
+      ]
+    },
+    {
+      "name": "Sprite",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        30
+      ],
+      "growth": 20,
+      "hp": 3,
+      "speed": 9,
+      "attack": 2,
+      "defense": 2,
+      "damage": [
+        1,
+        3
+      ]
+    },
+    {
+      "name": "Psychic Elemental",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        750
+      ],
+      "growth": 2,
+      "hp": 75,
+      "speed": 7,
+      "attack": 15,
+      "defense": 13,
+      "damage": [
+        10,
+        20
+      ]
+    },
+    {
+      "name": "Magic Elemental",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        800
+      ],
+      "growth": 2,
+      "hp": 80,
+      "speed": 9,
+      "attack": 15,
+      "defense": 13,
+      "damage": [
+        15,
+        25
+      ]
+    },
+    {
+      "name": "NOT USED (1)",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "growth": 0,
+      "hp": 0,
+      "speed": 0,
+      "attack": 0,
+      "defense": 0,
+      "damage": [
+        0,
+        0
+      ]
+    },
+    {
+      "name": "Ice Elemental",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        375
+      ],
+      "growth": 6,
+      "hp": 30,
+      "speed": 6,
+      "attack": 8,
+      "defense": 10,
+      "damage": [
+        3,
+        7
+      ]
+    },
+    {
+      "name": "NOT USED (2) ",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "growth": 0,
+      "hp": 0,
+      "speed": 0,
+      "attack": 0,
+      "defense": 0,
+      "damage": [
+        0,
+        0
+      ]
+    },
+    {
+      "name": "Magma Elemental",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        500
+      ],
+      "growth": 4,
+      "hp": 40,
+      "speed": 6,
+      "attack": 11,
+      "defense": 11,
+      "damage": [
+        6,
+        10
+      ]
+    },
+    {
+      "name": "NOT USED (3)",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "growth": 0,
+      "hp": 0,
+      "speed": 0,
+      "attack": 0,
+      "defense": 0,
+      "damage": [
+        0,
+        0
+      ]
+    },
+    {
+      "name": "Storm Elemental",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        275
+      ],
+      "growth": 6,
+      "hp": 25,
+      "speed": 8,
+      "attack": 9,
+      "defense": 9,
+      "damage": [
+        2,
+        8
+      ]
+    },
+    {
+      "name": "NOT USED (4)",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "growth": 0,
+      "hp": 0,
+      "speed": 0,
+      "attack": 0,
+      "defense": 0,
+      "damage": [
+        0,
+        0
+      ]
+    },
+    {
+      "name": "Energy Elemental",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        400
+      ],
+      "growth": 5,
+      "hp": 35,
+      "speed": 8,
+      "attack": 12,
+      "defense": 8,
+      "damage": [
+        4,
+        6
+      ]
+    },
+    {
+      "name": "Firebird",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1500
+      ],
+      "growth": 2,
+      "hp": 150,
+      "speed": 15,
+      "attack": 18,
+      "defense": 18,
+      "damage": [
+        30,
+        40
+      ]
+    },
+    {
+      "name": "Phoenix",
+      "cost": [
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        2000
+      ],
+      "growth": 2,
+      "hp": 200,
+      "speed": 21,
+      "attack": 21,
+      "defense": 18,
+      "damage": [
+        30,
+        40
+      ]
+    },
+    {
+      "name": "Azure Dragon",
+      "cost": [
+        0,
+        20,
+        0,
+        0,
+        0,
+        0,
+        30000
+      ],
+      "growth": 1,
+      "hp": 1000,
+      "speed": 19,
+      "attack": 50,
+      "defense": 50,
+      "damage": [
+        70,
+        80
+      ]
+    },
+    {
+      "name": "Crystal Dragon",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        10,
+        0,
+        20000
+      ],
+      "growth": 1,
+      "hp": 800,
+      "speed": 16,
+      "attack": 40,
+      "defense": 40,
+      "damage": [
+        60,
+        75
+      ]
+    },
+    {
+      "name": "Faerie Dragon",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        8,
+        10000
+      ],
+      "growth": 1,
+      "hp": 500,
+      "speed": 15,
+      "attack": 20,
+      "defense": 20,
+      "damage": [
+        20,
+        30
+      ]
+    },
+    {
+      "name": "Rust Dragon",
+      "cost": [
+        0,
+        0,
+        0,
+        14,
+        0,
+        0,
+        15000
+      ],
+      "growth": 1,
+      "hp": 750,
+      "speed": 17,
+      "attack": 30,
+      "defense": 30,
+      "damage": [
+        50,
+        50
+      ]
+    },
+    {
+      "name": "Enchanter",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        750
+      ],
+      "growth": 2,
+      "hp": 30,
+      "speed": 9,
+      "attack": 17,
+      "defense": 12,
+      "damage": [
+        14,
+        14
+      ]
+    },
+    {
+      "name": "Sharpshooter",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        400
+      ],
+      "growth": 4,
+      "hp": 15,
+      "speed": 9,
+      "attack": 12,
+      "defense": 10,
+      "damage": [
+        8,
+        10
+      ]
+    },
+    {
+      "name": "Halfling",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        40
+      ],
+      "growth": 15,
+      "hp": 4,
+      "speed": 5,
+      "attack": 4,
+      "defense": 2,
+      "damage": [
+        1,
+        3
+      ]
+    },
+    {
+      "name": "Peasant",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        10
+      ],
+      "growth": 25,
+      "hp": 1,
+      "speed": 3,
+      "attack": 1,
+      "defense": 1,
+      "damage": [
+        1,
+        1
+      ]
+    },
+    {
+      "name": "Boar",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        150
+      ],
+      "growth": 8,
+      "hp": 15,
+      "speed": 6,
+      "attack": 6,
+      "defense": 5,
+      "damage": [
+        2,
+        3
+      ]
+    },
+    {
+      "name": "Mummy",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        300
+      ],
+      "growth": 7,
+      "hp": 30,
+      "speed": 5,
+      "attack": 7,
+      "defense": 7,
+      "damage": [
+        3,
+        5
+      ]
+    },
+    {
+      "name": "Nomad",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        200
+      ],
+      "growth": 7,
+      "hp": 30,
+      "speed": 7,
+      "attack": 9,
+      "defense": 8,
+      "damage": [
+        2,
+        6
+      ]
+    },
+    {
+      "name": "Rogue",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        100
+      ],
+      "growth": 8,
+      "hp": 10,
+      "speed": 6,
+      "attack": 8,
+      "defense": 3,
+      "damage": [
+        2,
+        4
+      ]
+    },
+    {
+      "name": "Troll",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        500
+      ],
+      "growth": 3,
+      "hp": 40,
+      "speed": 7,
+      "attack": 14,
+      "defense": 7,
+      "damage": [
+        10,
+        15
+      ]
+    },
+    {
+      "name": "Catapult",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1
+      ],
+      "growth": 0,
+      "hp": 1000,
+      "speed": 0,
+      "attack": 10,
+      "defense": 10,
+      "damage": [
+        0,
+        0
+      ]
+    },
+    {
+      "name": "Ballista",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        2500
+      ],
+      "growth": 0,
+      "hp": 250,
+      "speed": 0,
+      "attack": 10,
+      "defense": 10,
+      "damage": [
+        2,
+        3
+      ]
+    },
+    {
+      "name": "First Aid Tent",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        750
+      ],
+      "growth": 0,
+      "hp": 75,
+      "speed": 0,
+      "attack": 0,
+      "defense": 0,
+      "damage": [
+        0,
+        0
+      ]
+    },
+    {
+      "name": "Ammo Cart",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1000
+      ],
+      "growth": 0,
+      "hp": 100,
+      "speed": 0,
+      "attack": 0,
+      "defense": 5,
+      "damage": [
+        0,
+        0
+      ]
+    },
+    {
+      "name": "Arrow Tower",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1000
+      ],
+      "growth": 0,
+      "hp": 100,
+      "speed": 0,
+      "attack": 10,
+      "defense": 5,
+      "damage": [
+        2,
+        4
+      ]
+    }
+  ],
+  "buildings": [
+    {
+      "section": "Castle",
+      "name": "Lighthouse",
+      "cost": [
+        0,
+        0,
+        10,
+        0,
+        0,
+        0,
+        2000
+      ]
+    },
+    {
+      "section": "Castle",
+      "name": "Griffin Horde",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Castle",
+      "name": "Royal Griffin Horde",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Castle",
+      "name": "Stables",
+      "cost": [
+        10,
+        0,
+        0,
+        0,
+        0,
+        0,
+        2000
+      ]
+    },
+    {
+      "section": "Castle",
+      "name": "Tavern Upgrade",
+      "cost": [
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        500
+      ]
+    },
+    {
+      "section": "Rampart",
+      "name": "Mystic Garden",
+      "cost": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2000
+      ]
+    },
+    {
+      "section": "Rampart",
+      "name": "Dwarf Horde",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Rampart",
+      "name": "Battle Dwarf Horde",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Rampart",
+      "name": "Rainbow",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        10,
+        0,
+        1500
+      ]
+    },
+    {
+      "section": "Rampart",
+      "name": "Treasury",
+      "cost": [
+        5,
+        0,
+        10,
+        0,
+        0,
+        0,
+        5000
+      ]
+    },
+    {
+      "section": "Rampart",
+      "name": "Treefolk Horde",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        2000
+      ]
+    },
+    {
+      "section": "Rampart",
+      "name": "Briar Treefolk Horde",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        2000
+      ]
+    },
+    {
+      "section": "Tower",
+      "name": "Artifact Merchants",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        10000
+      ]
+    },
+    {
+      "section": "Tower",
+      "name": "Stone Gargoyle Horde",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Tower",
+      "name": "Obsidian Gargoyle Horde",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Tower",
+      "name": "Watchtower",
+      "cost": [
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Tower",
+      "name": "Library",
+      "cost": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        1500
+      ]
+    },
+    {
+      "section": "Tower",
+      "name": "Wall of Glyphic Knowledge",
+      "cost": [
+        0,
+        0,
+        5,
+        0,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Inferno",
+      "name": "Imp Horde",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Inferno",
+      "name": "Familiar Horde",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Inferno",
+      "name": "Brimstone Stormclouds",
+      "cost": [
+        0,
+        0,
+        0,
+        5,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Inferno",
+      "name": "Castle Gate",
+      "cost": [
+        5,
+        0,
+        5,
+        0,
+        0,
+        0,
+        10000
+      ]
+    },
+    {
+      "section": "Inferno",
+      "name": "Order of Fire",
+      "cost": [
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Inferno",
+      "name": "Hell Hound Horde",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Inferno",
+      "name": "Cerberus Horde",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Necropolis",
+      "name": "Cover of Darkness",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Necropolis",
+      "name": "Skeleton Horde",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Necropolis",
+      "name": "Skeleton Warrior Horde",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Necropolis",
+      "name": "Necromancy Amplifier",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Necropolis",
+      "name": "Skeleton Transformer",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Dungeon",
+      "name": "Artifact Merchants",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        10000
+      ]
+    },
+    {
+      "section": "Dungeon",
+      "name": "Troglodyte Horde",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Dungeon",
+      "name": "Infernal Troglodyte Horde",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Dungeon",
+      "name": "Mana Vortex",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Dungeon",
+      "name": "Portal of Summoning",
+      "cost": [
+        0,
+        0,
+        5,
+        0,
+        0,
+        0,
+        2500
+      ]
+    },
+    {
+      "section": "Dungeon",
+      "name": "Academy of Battle Scholars",
+      "cost": [
+        5,
+        0,
+        5,
+        0,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Stronghold",
+      "name": "Escape Tunnel",
+      "cost": [
+        5,
+        0,
+        5,
+        0,
+        0,
+        0,
+        2000
+      ]
+    },
+    {
+      "section": "Stronghold",
+      "name": "Goblin Horde",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Stronghold",
+      "name": "Hobgoblin Horde",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Stronghold",
+      "name": "Freelancers Guild",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Stronghold",
+      "name": "Ballista Works",
+      "cost": [
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Stronghold",
+      "name": "Hall of Valhalla",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Fortress",
+      "name": "Defense Cage",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Fortress",
+      "name": "Gnoll Horde",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Fortress",
+      "name": "Gnoll Marauder Horde",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Fortress",
+      "name": "Siege Defense",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Fortress",
+      "name": "Siege Attack",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Conflux",
+      "name": "Artifact Merchants",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        10000
+      ]
+    },
+    {
+      "section": "Conflux",
+      "name": "Pixie Horde",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Conflux",
+      "name": "Sprite Horde",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Conflux",
+      "name": "never used",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "section": "Conflux",
+      "name": "Magic University",
+      "cost": [
+        10,
+        0,
+        10,
+        0,
+        0,
+        0,
+        5000
+      ]
+    },
+    {
+      "section": "Conflux",
+      "name": "unused",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "section": "Conflux",
+      "name": "unused",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "section": "Conflux",
+      "name": "unused",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "section": "Conflux",
+      "name": "unused",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "section": "Neutral Buildings",
+      "name": "MAGE_GUILD_ID",
+      "cost": [
+        5,
+        0,
+        5,
+        0,
+        0,
+        0,
+        2000
+      ]
+    },
+    {
+      "section": "Neutral Buildings",
+      "name": "MAGE_GUILD2_ID",
+      "cost": [
+        5,
+        4,
+        5,
+        4,
+        4,
+        4,
+        1000
+      ]
+    },
+    {
+      "section": "Neutral Buildings",
+      "name": "MAGE_GUILD3_ID",
+      "cost": [
+        5,
+        6,
+        5,
+        6,
+        6,
+        6,
+        1000
+      ]
+    },
+    {
+      "section": "Neutral Buildings",
+      "name": "MAGE_GUILD4_ID",
+      "cost": [
+        5,
+        8,
+        5,
+        8,
+        8,
+        8,
+        1000
+      ]
+    },
+    {
+      "section": "Neutral Buildings",
+      "name": "MAGE_GUILD5_ID",
+      "cost": [
+        5,
+        10,
+        5,
+        10,
+        10,
+        10,
+        1000
+      ]
+    },
+    {
+      "section": "Neutral Buildings",
+      "name": "TAVERN_ID",
+      "cost": [
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        500
+      ]
+    },
+    {
+      "section": "Neutral Buildings",
+      "name": "DOCK_ID",
+      "cost": [
+        20,
+        0,
+        0,
+        0,
+        0,
+        0,
+        2000
+      ]
+    },
+    {
+      "section": "Neutral Buildings",
+      "name": "CASTLE_FORT_ID",
+      "cost": [
+        20,
+        0,
+        20,
+        0,
+        0,
+        0,
+        5000
+      ]
+    },
+    {
+      "section": "Neutral Buildings",
+      "name": "CASTLE_CITADEL_ID",
+      "cost": [
+        0,
+        0,
+        5,
+        0,
+        0,
+        0,
+        2500
+      ]
+    },
+    {
+      "section": "Neutral Buildings",
+      "name": "CASTLE_CASTLE_ID",
+      "cost": [
+        10,
+        0,
+        10,
+        0,
+        0,
+        0,
+        5000
+      ]
+    },
+    {
+      "section": "Neutral Buildings",
+      "name": "HALL_VILLAGE_ID",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1
+      ]
+    },
+    {
+      "section": "Neutral Buildings",
+      "name": "HALL_TOWN_ID",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        2500
+      ]
+    },
+    {
+      "section": "Neutral Buildings",
+      "name": "HALL_CITY_ID",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        5000
+      ]
+    },
+    {
+      "section": "Neutral Buildings",
+      "name": "HALL_CAPITOL_ID",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        10000
+      ]
+    },
+    {
+      "section": "Neutral Buildings",
+      "name": "MARKETPLACE_ID",
+      "cost": [
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        500
+      ]
+    },
+    {
+      "section": "Neutral Buildings",
+      "name": "MARKETPLACE_SILO_ID",
+      "cost": [
+        0,
+        0,
+        5,
+        0,
+        0,
+        0,
+        5000
+      ]
+    },
+    {
+      "section": "Neutral Buildings",
+      "name": "BLACKSMITH_ID",
+      "cost": [
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Castle",
+      "name": "pikeman",
+      "cost": [
+        0,
+        0,
+        10,
+        0,
+        0,
+        0,
+        500
+      ]
+    },
+    {
+      "section": "Castle",
+      "name": "archer",
+      "cost": [
+        5,
+        0,
+        5,
+        0,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Castle",
+      "name": "griffin",
+      "cost": [
+        0,
+        0,
+        5,
+        0,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Castle",
+      "name": "swordsman",
+      "cost": [
+        0,
+        0,
+        5,
+        0,
+        0,
+        0,
+        2000
+      ]
+    },
+    {
+      "section": "Castle",
+      "name": "monk",
+      "cost": [
+        5,
+        2,
+        5,
+        2,
+        2,
+        2,
+        3000
+      ]
+    },
+    {
+      "section": "Castle",
+      "name": "cavalier",
+      "cost": [
+        20,
+        0,
+        0,
+        0,
+        0,
+        0,
+        5000
+      ]
+    },
+    {
+      "section": "Castle",
+      "name": "angel",
+      "cost": [
+        0,
+        10,
+        0,
+        10,
+        10,
+        10,
+        20000
+      ]
+    },
+    {
+      "section": "Castle",
+      "name": "halberdier",
+      "cost": [
+        0,
+        0,
+        5,
+        0,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Castle",
+      "name": "marksman",
+      "cost": [
+        5,
+        0,
+        5,
+        0,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Castle",
+      "name": "royal griffin",
+      "cost": [
+        0,
+        0,
+        5,
+        0,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Castle",
+      "name": "crusader",
+      "cost": [
+        0,
+        0,
+        5,
+        0,
+        5,
+        0,
+        2000
+      ]
+    },
+    {
+      "section": "Castle",
+      "name": "zealot",
+      "cost": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        1000
+      ]
+    },
+    {
+      "section": "Castle",
+      "name": "champion",
+      "cost": [
+        10,
+        0,
+        0,
+        0,
+        0,
+        0,
+        3000
+      ]
+    },
+    {
+      "section": "Castle",
+      "name": "arch angel",
+      "cost": [
+        0,
+        10,
+        0,
+        10,
+        10,
+        10,
+        20000
+      ]
+    },
+    {
+      "section": "Rampart",
+      "name": "Centaur",
+      "cost": [
+        10,
+        0,
+        0,
+        0,
+        0,
+        0,
+        500
+      ]
+    },
+    {
+      "section": "Rampart",
+      "name": "Dwarf",
+      "cost": [
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Rampart",
+      "name": "Wood Elf",
+      "cost": [
+        10,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1500
+      ]
+    },
+    {
+      "section": "Rampart",
+      "name": "Pegasus",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        10,
+        0,
+        2000
+      ]
+    },
+    {
+      "section": "Rampart",
+      "name": "Dendroid Guard",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        2500
+      ]
+    },
+    {
+      "section": "Rampart",
+      "name": "Unicorn",
+      "cost": [
+        5,
+        0,
+        5,
+        0,
+        0,
+        10,
+        4000
+      ]
+    },
+    {
+      "section": "Rampart",
+      "name": "Green Dragon",
+      "cost": [
+        0,
+        0,
+        30,
+        0,
+        20,
+        0,
+        10000
+      ]
+    },
+    {
+      "section": "Rampart",
+      "name": "Centaur Captain",
+      "cost": [
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Rampart",
+      "name": "Battle Dwarf",
+      "cost": [
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Rampart",
+      "name": "Grand Elf",
+      "cost": [
+        10,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1500
+      ]
+    },
+    {
+      "section": "Rampart",
+      "name": "Silver Pegasus",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        5,
+        0,
+        2000
+      ]
+    },
+    {
+      "section": "Rampart",
+      "name": "Dendroid Soldier",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1500
+      ]
+    },
+    {
+      "section": "Rampart",
+      "name": "War Unicorn",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        5,
+        3000
+      ]
+    },
+    {
+      "section": "Rampart",
+      "name": "Gold Dragon",
+      "cost": [
+        0,
+        0,
+        30,
+        0,
+        20,
+        0,
+        20000
+      ]
+    },
+    {
+      "section": "Tower",
+      "name": "Gremlin",
+      "cost": [
+        5,
+        0,
+        5,
+        0,
+        0,
+        0,
+        300
+      ]
+    },
+    {
+      "section": "Tower",
+      "name": "Stone Gargoyle",
+      "cost": [
+        0,
+        0,
+        10,
+        0,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Tower",
+      "name": "Stone Golem",
+      "cost": [
+        5,
+        0,
+        5,
+        0,
+        0,
+        0,
+        2000
+      ]
+    },
+    {
+      "section": "Tower",
+      "name": "Mage",
+      "cost": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        2500
+      ]
+    },
+    {
+      "section": "Tower",
+      "name": "Genie",
+      "cost": [
+        5,
+        0,
+        5,
+        0,
+        6,
+        6,
+        3000
+      ]
+    },
+    {
+      "section": "Tower",
+      "name": "Naga",
+      "cost": [
+        5,
+        2,
+        5,
+        2,
+        2,
+        2,
+        4000
+      ]
+    },
+    {
+      "section": "Tower",
+      "name": "Giant",
+      "cost": [
+        10,
+        0,
+        10,
+        0,
+        0,
+        10,
+        5000
+      ]
+    },
+    {
+      "section": "Tower",
+      "name": "Master Gremlin",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Tower",
+      "name": "Obsidian Gargoyle",
+      "cost": [
+        0,
+        0,
+        5,
+        0,
+        0,
+        0,
+        1500
+      ]
+    },
+    {
+      "section": "Tower",
+      "name": "Iron Golem",
+      "cost": [
+        5,
+        5,
+        5,
+        0,
+        0,
+        0,
+        2000
+      ]
+    },
+    {
+      "section": "Tower",
+      "name": "Arch Mage",
+      "cost": [
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        2000
+      ]
+    },
+    {
+      "section": "Tower",
+      "name": "Master Genie",
+      "cost": [
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        2000
+      ]
+    },
+    {
+      "section": "Tower",
+      "name": "Naga Queen",
+      "cost": [
+        0,
+        3,
+        0,
+        3,
+        3,
+        3,
+        3000
+      ]
+    },
+    {
+      "section": "Tower",
+      "name": "Titan",
+      "cost": [
+        5,
+        0,
+        5,
+        0,
+        0,
+        30,
+        25000
+      ]
+    },
+    {
+      "section": "Inferno",
+      "name": "Imp",
+      "cost": [
+        5,
+        0,
+        5,
+        0,
+        0,
+        0,
+        300
+      ]
+    },
+    {
+      "section": "Inferno",
+      "name": "Gog",
+      "cost": [
+        0,
+        0,
+        5,
+        0,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Inferno",
+      "name": "Hell Hound",
+      "cost": [
+        10,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1500
+      ]
+    },
+    {
+      "section": "Inferno",
+      "name": "Demon",
+      "cost": [
+        5,
+        0,
+        5,
+        0,
+        0,
+        0,
+        2000
+      ]
+    },
+    {
+      "section": "Inferno",
+      "name": "Pit Fiend",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        3000
+      ]
+    },
+    {
+      "section": "Inferno",
+      "name": "Efreet",
+      "cost": [
+        0,
+        3,
+        10,
+        3,
+        0,
+        3,
+        4000
+      ]
+    },
+    {
+      "section": "Inferno",
+      "name": "Devil",
+      "cost": [
+        10,
+        20,
+        10,
+        0,
+        0,
+        0,
+        15000
+      ]
+    },
+    {
+      "section": "Inferno",
+      "name": "Familiar",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Inferno",
+      "name": "Magog",
+      "cost": [
+        0,
+        5,
+        0,
+        0,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Inferno",
+      "name": "Cerberus",
+      "cost": [
+        0,
+        0,
+        0,
+        5,
+        0,
+        0,
+        1500
+      ]
+    },
+    {
+      "section": "Inferno",
+      "name": "Horned Demon",
+      "cost": [
+        5,
+        0,
+        5,
+        0,
+        0,
+        0,
+        2000
+      ]
+    },
+    {
+      "section": "Inferno",
+      "name": "Pit Lord",
+      "cost": [
+        0,
+        5,
+        0,
+        5,
+        0,
+        0,
+        3000
+      ]
+    },
+    {
+      "section": "Inferno",
+      "name": "Efreet Sultan",
+      "cost": [
+        0,
+        5,
+        5,
+        5,
+        0,
+        5,
+        3000
+      ]
+    },
+    {
+      "section": "Inferno",
+      "name": "Arch Devil",
+      "cost": [
+        5,
+        20,
+        5,
+        0,
+        0,
+        0,
+        20000
+      ]
+    },
+    {
+      "section": "Necropolis",
+      "name": "Skeleton",
+      "cost": [
+        5,
+        0,
+        5,
+        0,
+        0,
+        0,
+        400
+      ]
+    },
+    {
+      "section": "Necropolis",
+      "name": "Walking Dead",
+      "cost": [
+        0,
+        0,
+        5,
+        0,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Necropolis",
+      "name": "Wight",
+      "cost": [
+        5,
+        0,
+        5,
+        0,
+        0,
+        0,
+        1500
+      ]
+    },
+    {
+      "section": "Necropolis",
+      "name": "Vampire",
+      "cost": [
+        5,
+        0,
+        5,
+        0,
+        0,
+        0,
+        2000
+      ]
+    },
+    {
+      "section": "Necropolis",
+      "name": "Lich",
+      "cost": [
+        0,
+        0,
+        10,
+        10,
+        0,
+        0,
+        2000
+      ]
+    },
+    {
+      "section": "Necropolis",
+      "name": "Black Knight",
+      "cost": [
+        10,
+        0,
+        10,
+        0,
+        0,
+        0,
+        6000
+      ]
+    },
+    {
+      "section": "Necropolis",
+      "name": "Bone Dragon",
+      "cost": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        10000
+      ]
+    },
+    {
+      "section": "Necropolis",
+      "name": "Skeleton Warrior",
+      "cost": [
+        5,
+        0,
+        5,
+        0,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Necropolis",
+      "name": "Zombie",
+      "cost": [
+        5,
+        0,
+        5,
+        0,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Necropolis",
+      "name": "Wraith",
+      "cost": [
+        0,
+        5,
+        0,
+        0,
+        0,
+        0,
+        1500
+      ]
+    },
+    {
+      "section": "Necropolis",
+      "name": "Vampire Lord",
+      "cost": [
+        5,
+        0,
+        0,
+        0,
+        10,
+        10,
+        2000
+      ]
+    },
+    {
+      "section": "Necropolis",
+      "name": "Power Lich",
+      "cost": [
+        0,
+        0,
+        5,
+        5,
+        0,
+        0,
+        2000
+      ]
+    },
+    {
+      "section": "Necropolis",
+      "name": "Black Lord",
+      "cost": [
+        5,
+        2,
+        5,
+        2,
+        2,
+        2,
+        3000
+      ]
+    },
+    {
+      "section": "Necropolis",
+      "name": "Ghost Dragon",
+      "cost": [
+        5,
+        20,
+        5,
+        0,
+        0,
+        0,
+        15000
+      ]
+    },
+    {
+      "section": "Dungeon",
+      "name": "Troglodyte",
+      "cost": [
+        10,
+        0,
+        0,
+        0,
+        0,
+        0,
+        400
+      ]
+    },
+    {
+      "section": "Dungeon",
+      "name": "Harpy",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Dungeon",
+      "name": "Beholder",
+      "cost": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1000
+      ]
+    },
+    {
+      "section": "Dungeon",
+      "name": "Medusa",
+      "cost": [
+        5,
+        0,
+        10,
+        0,
+        0,
+        0,
+        2000
+      ]
+    },
+    {
+      "section": "Dungeon",
+      "name": "Minotaur",
+      "cost": [
+        0,
+        0,
+        10,
+        0,
+        0,
+        10,
+        4000
+      ]
+    },
+    {
+      "section": "Dungeon",
+      "name": "Manticore",
+      "cost": [
+        5,
+        5,
+        5,
+        5,
+        0,
+        0,
+        5000
+      ]
+    },
+    {
+      "section": "Dungeon",
+      "name": "Red Dragon",
+      "cost": [
+        15,
+        0,
+        15,
+        20,
+        0,
+        0,
+        15000
+      ]
+    },
+    {
+      "section": "Dungeon",
+      "name": "Infernal Troglodyte",
+      "cost": [
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Dungeon",
+      "name": "Harpy Hag",
+      "cost": [
+        0,
+        0,
+        0,
+        2,
+        2,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Dungeon",
+      "name": "Evil Eye",
+      "cost": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1000
+      ]
+    },
+    {
+      "section": "Dungeon",
+      "name": "Medusa Queen",
+      "cost": [
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1500
+      ]
+    },
+    {
+      "section": "Dungeon",
+      "name": "Minotaur King",
+      "cost": [
+        0,
+        0,
+        5,
+        0,
+        0,
+        5,
+        3000
+      ]
+    },
+    {
+      "section": "Dungeon",
+      "name": "Scorpicore",
+      "cost": [
+        5,
+        5,
+        5,
+        5,
+        0,
+        0,
+        3000
+      ]
+    },
+    {
+      "section": "Dungeon",
+      "name": "Black Dragon",
+      "cost": [
+        15,
+        0,
+        15,
+        20,
+        0,
+        0,
+        15000
+      ]
+    },
+    {
+      "section": "Stronghold",
+      "name": "Goblin",
+      "cost": [
+        5,
+        0,
+        5,
+        0,
+        0,
+        0,
+        200
+      ]
+    },
+    {
+      "section": "Stronghold",
+      "name": "Wolf Rider",
+      "cost": [
+        10,
+        0,
+        5,
+        0,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Stronghold",
+      "name": "Orc",
+      "cost": [
+        5,
+        0,
+        5,
+        0,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Stronghold",
+      "name": "Ogre",
+      "cost": [
+        20,
+        0,
+        0,
+        0,
+        0,
+        0,
+        2000
+      ]
+    },
+    {
+      "section": "Stronghold",
+      "name": "Roc",
+      "cost": [
+        0,
+        0,
+        10,
+        0,
+        0,
+        0,
+        2500
+      ]
+    },
+    {
+      "section": "Stronghold",
+      "name": "Cyclops",
+      "cost": [
+        0,
+        0,
+        20,
+        0,
+        20,
+        0,
+        3500
+      ]
+    },
+    {
+      "section": "Stronghold",
+      "name": "Behemoth",
+      "cost": [
+        10,
+        0,
+        10,
+        0,
+        10,
+        0,
+        10000
+      ]
+    },
+    {
+      "section": "Stronghold",
+      "name": "Hobgoblin",
+      "cost": [
+        5,
+        0,
+        5,
+        0,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Stronghold",
+      "name": "Wolf Raider",
+      "cost": [
+        5,
+        0,
+        5,
+        0,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Stronghold",
+      "name": "Orc Chieftain",
+      "cost": [
+        2,
+        0,
+        2,
+        0,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Stronghold",
+      "name": "Ogre Mage",
+      "cost": [
+        5,
+        0,
+        5,
+        0,
+        0,
+        5,
+        2000
+      ]
+    },
+    {
+      "section": "Stronghold",
+      "name": "Thunderbird",
+      "cost": [
+        5,
+        0,
+        5,
+        0,
+        0,
+        0,
+        2000
+      ]
+    },
+    {
+      "section": "Stronghold",
+      "name": "Cyclops King",
+      "cost": [
+        5,
+        0,
+        5,
+        0,
+        0,
+        0,
+        3000
+      ]
+    },
+    {
+      "section": "Stronghold",
+      "name": "Ancient Behemoth",
+      "cost": [
+        10,
+        0,
+        10,
+        0,
+        20,
+        0,
+        15000
+      ]
+    },
+    {
+      "section": "Fortress",
+      "name": "Gnoll",
+      "cost": [
+        10,
+        0,
+        0,
+        0,
+        0,
+        0,
+        400
+      ]
+    },
+    {
+      "section": "Fortress",
+      "name": "Lizardman",
+      "cost": [
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Fortress",
+      "name": "Serpent Fly",
+      "cost": [
+        5,
+        2,
+        0,
+        2,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Fortress",
+      "name": "Basilisk",
+      "cost": [
+        5,
+        0,
+        10,
+        0,
+        0,
+        0,
+        2000
+      ]
+    },
+    {
+      "section": "Fortress",
+      "name": "Gorgon",
+      "cost": [
+        10,
+        5,
+        10,
+        5,
+        0,
+        0,
+        2500
+      ]
+    },
+    {
+      "section": "Fortress",
+      "name": "Wyvern",
+      "cost": [
+        15,
+        0,
+        0,
+        0,
+        0,
+        0,
+        3500
+      ]
+    },
+    {
+      "section": "Fortress",
+      "name": "Hydra",
+      "cost": [
+        10,
+        0,
+        10,
+        10,
+        0,
+        0,
+        10000
+      ]
+    },
+    {
+      "section": "Fortress",
+      "name": "Gnoll Marauder",
+      "cost": [
+        10,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Fortress",
+      "name": "Lizard Warrior",
+      "cost": [
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Fortress",
+      "name": "Dragon Fly",
+      "cost": [
+        0,
+        2,
+        0,
+        2,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Fortress",
+      "name": "Greater Basilisk",
+      "cost": [
+        5,
+        0,
+        5,
+        0,
+        0,
+        0,
+        2000
+      ]
+    },
+    {
+      "section": "Fortress",
+      "name": "Mighty Gorgon",
+      "cost": [
+        5,
+        0,
+        5,
+        0,
+        0,
+        0,
+        2000
+      ]
+    },
+    {
+      "section": "Fortress",
+      "name": "Wyvern Monarch",
+      "cost": [
+        10,
+        10,
+        0,
+        0,
+        0,
+        0,
+        3000
+      ]
+    },
+    {
+      "section": "Fortress",
+      "name": "Chaos Hydra",
+      "cost": [
+        10,
+        0,
+        10,
+        20,
+        0,
+        0,
+        15000
+      ]
+    },
+    {
+      "section": "Conflux",
+      "name": "Flower of Life - Pixies",
+      "cost": [
+        5,
+        0,
+        5,
+        0,
+        0,
+        0,
+        300
+      ]
+    },
+    {
+      "section": "Conflux",
+      "name": "Altar of Air - Air Elementals",
+      "cost": [
+        0,
+        0,
+        5,
+        0,
+        0,
+        0,
+        1500
+      ]
+    },
+    {
+      "section": "Conflux",
+      "name": "Altar of Water - Water Elementals",
+      "cost": [
+        0,
+        0,
+        5,
+        0,
+        0,
+        0,
+        1500
+      ]
+    },
+    {
+      "section": "Conflux",
+      "name": "Altar of Fire - Fire Elementals",
+      "cost": [
+        5,
+        0,
+        5,
+        0,
+        0,
+        0,
+        2000
+      ]
+    },
+    {
+      "section": "Conflux",
+      "name": "Altar of Earth - Earth Elementals",
+      "cost": [
+        0,
+        0,
+        10,
+        0,
+        0,
+        0,
+        2000
+      ]
+    },
+    {
+      "section": "Conflux",
+      "name": "Altar of Thought - Psychic Elementals",
+      "cost": [
+        5,
+        2,
+        5,
+        2,
+        2,
+        2,
+        3000
+      ]
+    },
+    {
+      "section": "Conflux",
+      "name": "Pyre - Firebirds",
+      "cost": [
+        10,
+        10,
+        10,
+        0,
+        0,
+        0,
+        10000
+      ]
+    },
+    {
+      "section": "Conflux",
+      "name": "Enchanted Flower - Sprites",
+      "cost": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Conflux",
+      "name": "Temple of Clouds - Storm Elementals",
+      "cost": [
+        2,
+        2,
+        0,
+        0,
+        0,
+        2,
+        1500
+      ]
+    },
+    {
+      "section": "Conflux",
+      "name": "Temple of Ice - Ice Elementals",
+      "cost": [
+        0,
+        5,
+        5,
+        0,
+        0,
+        0,
+        2000
+      ]
+    },
+    {
+      "section": "Conflux",
+      "name": "Temple of Energy - Energy Elementals",
+      "cost": [
+        0,
+        5,
+        5,
+        0,
+        0,
+        0,
+        2000
+      ]
+    },
+    {
+      "section": "Conflux",
+      "name": "Temple of Magma - Magma Elementals",
+      "cost": [
+        0,
+        0,
+        0,
+        5,
+        0,
+        0,
+        1000
+      ]
+    },
+    {
+      "section": "Conflux",
+      "name": "Temple of Magic - Magic Elementals",
+      "cost": [
+        0,
+        3,
+        0,
+        3,
+        3,
+        3,
+        3000
+      ]
+    },
+    {
+      "section": "Conflux",
+      "name": "Funeral Pyre - Phoenixes",
+      "cost": [
+        10,
+        20,
+        10,
+        0,
+        0,
+        0,
+        15000
+      ]
+    }
+  ]
+}

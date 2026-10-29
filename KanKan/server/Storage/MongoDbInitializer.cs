@@ -80,6 +80,7 @@ public class MongoDbInitializer : IHostedService
         // Create indexes for better query performance
         await CreateIndexesAsync(database, cancellationToken);
         await CreateFamilyIndexesAsync(database, cancellationToken);
+        await KanKan.API.Repositories.Homm.HommIndexes.CreateAsync(database, _configuration, cancellationToken);
 
         // Ensure the assistant user always exists for MongoDB mode.
         await EnsureAssistantUserAsync(database, cancellationToken);

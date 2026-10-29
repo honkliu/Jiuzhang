@@ -25,6 +25,11 @@ import {
 } from '@mui/icons-material';
 import { AppHeader } from '@/components/Shared/AppHeader';
 import { appPageContentSx, appPageShellSx, appSurfaceSx } from '@/styles/appLayout';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { useLanguage } from '@/i18n/LanguageContext';
+import { hommPath } from './Homm/paths';
+
+const HommApp = React.lazy(() => import('./Homm/HommApp'));
 
 const BoxAny = Box as any;
 
@@ -690,7 +695,7 @@ const writeSudokuState = (state: SavedSudokuState) => {
 const readGamesTab = () => {
   try {
     const value = Number(window.localStorage.getItem(GAMES_TAB_STORAGE_KEY));
-    return value === 1 ? 1 : 0;
+    return value === 1 || value === 2 ? value : 0;
   } catch {
     return 0;
   }
@@ -902,8 +907,7 @@ const SudokuGame: React.FC = () => {
                     display: 'grid',
                     gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
                     gridTemplateRows: 'repeat(3, minmax(0, 1fr))',
-                    gap: '1px',
-                    bgcolor: 'rgba(23,32,51,0.18)',
+                    bgcolor: '#f2ead8',
                     borderRight: boxCol < 2 ? '3px solid #172033' : 0,
                     borderBottom: boxRow < 2 ? '3px solid #172033' : 0,
                     boxSizing: 'border-box',
@@ -927,8 +931,11 @@ const SudokuGame: React.FC = () => {
                         sx={{
                           minWidth: 0,
                           minHeight: 0,
+                          height: 'auto',
                           borderRadius: 0,
                           border: 0,
+                          borderRight: cellInBox % 3 < 2 ? '1px solid #172033' : 0,
+                          borderBottom: cellInBox < 6 ? '1px solid #172033' : 0,
                           p: 0.25,
                           boxSizing: 'border-box',
                           backgroundColor: isSelected ? '#e7cfa2' : related ? '#f0dfbd' : '#f2ead8',
@@ -999,10 +1006,25 @@ const SudokuGame: React.FC = () => {
 };
 
 export const GamesPage: React.FC = () => {
-  const [tab, setTab] = useState(() => readGamesTab());
+  const { t } = useLanguage();
+  const navigate = useNavigate();
+  const location = useLocation();
+  // The Heroes tab owns the /games/homm/* routes (lobby, map, town, ...), so its
+  // in-game screens keep their own URLs while staying inside this page.
+  const inHomm = location.pathname.startsWith(hommPath('/'));
+  const [storedTab, setStoredTab] = useState(() => readGamesTab());
+  const tab = inHomm ? 2 : storedTab;
+  useEffect(() => {
+    if (!inHomm && storedTab === 2) navigate(hommPath('/'), { replace: true });
+  }, [inHomm, storedTab, navigate]);
   const handleTabChange = (_: React.SyntheticEvent, value: number) => {
-    setTab(value);
+    setStoredTab(value);
     writeGamesTab(value);
+    if (value === 2) {
+      if (!inHomm) navigate(hommPath('/'));
+    } else if (inHomm) {
+      navigate('/games');
+    }
   };
   return (
     <>
@@ -1021,14 +1043,20 @@ export const GamesPage: React.FC = () => {
                 '& .MuiTabs-flexContainer': { minHeight: 36 },
               }}
             >
-              <Tab label="俄罗斯方块" sx={{ minHeight: 36, py: 0, px: 1, textTransform: 'none' }} />
-              <Tab label="数独" sx={{ minHeight: 36, py: 0, px: 1, textTransform: 'none' }} />
+              <Tab label={t('games.tetris')} sx={{ minHeight: 36, py: 0, px: 1, textTransform: 'none' }} />
+              <Tab label={t('games.sudoku')} sx={{ minHeight: 36, py: 0, px: 1, textTransform: 'none' }} />
+              <Tab label={t('games.homm')} sx={{ minHeight: 36, py: 0, px: 1, textTransform: 'none' }} />
             </Tabs>
           </Paper>
           {tab === 0 ? <TetrisGame /> : null}
           <BoxAny sx={{ display: tab === 1 ? 'block' : 'none' }}>
             <SudokuGame />
           </BoxAny>
+          {inHomm ? (
+            <React.Suspense fallback={null}>
+              <HommApp />
+            </React.Suspense>
+          ) : null}
         </Container>
       </BoxAny>
     </>

@@ -248,6 +248,7 @@ builder.Services.AddSingleton(sp =>
 builder.Services.AddHttpClient<KanKan.API.Services.IComfyUIService, KanKan.API.Services.Implementations.ComfyUIService>();
 builder.Services.AddScoped<KanKan.API.Services.IAvatarService, KanKan.API.Services.Implementations.AvatarService>();
 builder.Services.AddScoped<KanKan.API.Services.IImageGenerationService, KanKan.API.Services.Implementations.ImageGenerationService>();
+KanKan.API.Services.Homm.HommServiceCollectionExtensions.AddHomm(builder.Services, builder.Configuration);
 
 // Add logging
 builder.Logging.ClearProviders();
@@ -324,11 +325,13 @@ app.UseCors("AllowClient");
 
 app.UseAuthentication();
 app.UseAuthorization();
+KanKan.API.Services.Homm.HommServiceCollectionExtensions.UseHommMutationLock(app);
 
 app.MapControllers();
 
 // Map SignalR hubs
 app.MapHub<ChatHub>("/hub/chat");
+KanKan.API.Services.Homm.HommServiceCollectionExtensions.MapHomm(app);
 
 Console.WriteLine("🚀 KanKan API started!");
 Console.WriteLine($"📡 SignalR Hub available at: /hub/chat");

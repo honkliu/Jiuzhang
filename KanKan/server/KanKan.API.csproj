@@ -29,4 +29,9 @@
     <None Remove="obj\**\*;bin\**\*;obj_*\**\*;bin_*\**\*" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="Domain\Homm\h3-rules.json" LogicalName="KanKan.API.Homm.NativeRules.json" />
+    <EmbeddedResource Include="Domain\Homm\object-geometry.json" LogicalName="KanKan.API.Homm.ObjectGeometry.json" />
+  </ItemGroup>
+
 </Project>

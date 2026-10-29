@@ -198,6 +198,16 @@ function App() {
                 }
               />
               <Route
+                path="/games/homm/*"
+                element={
+                  <ProtectedRoute>
+                    <React.Suspense fallback={null}>
+                      <GamesPage />
+                    </React.Suspense>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/help"
                 element={
                   <ProtectedRoute>
