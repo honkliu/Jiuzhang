@@ -75,7 +75,7 @@ function Screen({ children }: { children: ReactNode }) {
 export default function HommApp() {
   // Fullscreen is opt-in via the ⛶ button; ✕ leaves it but stays on the Heroes tab.
   const [allowFull, setAllowFull] = useState(false);
-  // In a phone browser the game fills the area below the KanKan menu (page scroll locked) instead of the whole screen.
+  // In a phone browser the game covers the whole page (KanKan menu included, page scroll locked) except the browser's own bars.
   const [belowMenuTop, setBelowMenuTop] = useState<number | null>(null);
   const turned = belowMenuTop !== null;
   const fixedMode = (allowFull && isHomeScreenApp()) || turned;
@@ -85,7 +85,7 @@ export default function HommApp() {
   const leaveFull = () => { setAllowFull(false); setBelowMenuTop(null); };
   const turn = () => {
     window.scrollTo(0, 0);
-    setBelowMenuTop(Math.max(0, Math.round(ref.current?.getBoundingClientRect().top ?? 0)));
+    setBelowMenuTop(0);
   };
   useEffect(() => {
     if (!turned) return;
@@ -106,7 +106,7 @@ export default function HommApp() {
 
   return (
     <div className={'homm-root' + (full ? ' homm-full' : '')} ref={ref}
-      style={full ? (turned ? { top: belowMenuTop ?? 0, zIndex: 1000 } : undefined) : { height: STAGE_H * scale }}>
+      style={full ? undefined : { height: STAGE_H * scale }}>
       {full && <button type="button" className="homm-exit" style={exitStyle} aria-label="Exit fullscreen" onClick={leaveFull}>✕</button>}
       {!full && isHomeScreenApp() && <button type="button" className="homm-exit" aria-label="Fullscreen" onClick={() => setAllowFull(true)}>⛶</button>}
       {!full && canTurn && <button type="button" className="homm-exit" aria-label="Landscape layout" onClick={turn}>⟳</button>}
