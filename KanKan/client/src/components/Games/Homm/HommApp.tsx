@@ -78,13 +78,12 @@ export default function HommApp() {
   // Fullscreen is opt-in via the ⛶ button; ✕ leaves it but stays on the Heroes tab.
   const [allowFull, setAllowFull] = useState(false);
   const { ref, full, rotated, scale, x, y, strip } = useStageFit(allowFull);
-  // The exit button sits centred in the black strip left of the stage, shrinking to fit it.
+  // The exit button is attached to the stage's top-left corner, inside the black strip.
   const exitSize = Math.max(18, Math.min(32, strip - 4));
-  const exitPos = (strip - exitSize) / 2;
-  // Kept off the rounded screen corners and the Dynamic Island (screen centre).
+  const exitEdge = Math.max(0, strip - exitSize - 4);
   const exitStyle = rotated
-    ? { width: exitSize, height: exitSize, top: exitPos, left: 'auto', right: '20%' }
-    : { width: exitSize, height: exitSize, left: exitPos, top: '20%' };
+    ? { width: exitSize, height: exitSize, top: exitEdge, left: 'auto', right: 8 }
+    : { width: exitSize, height: exitSize, left: exitEdge, top: 8 };
 
   // Leaving the game area drops the realtime connection.
   useEffect(() => () => socket.close(), []);
