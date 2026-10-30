@@ -17,6 +17,8 @@ const GameOver = lazy(() => import('./views/GameOver').then(m => ({ default: m.G
 
 const STAGE_W = 1920;
 const STAGE_H = 1080;
+// Gap kept at the screen's right edge so rounded corners and system areas never clip the game.
+const EDGE_PAD = 24;
 
 const isHomeScreenApp = () =>
   window.matchMedia('(pointer: coarse)').matches &&
@@ -37,7 +39,7 @@ function useStageFit(allowFull: boolean) {
       if (allowFull && isHomeScreenApp()) {
         const vw = el.clientWidth, vh = el.clientHeight;
         const rotated = vh > vw;
-        const w = rotated ? vh : vw, h = rotated ? vw : vh;
+        const w = (rotated ? vh : vw) - EDGE_PAD, h = rotated ? vw : vh;
         const scale = Math.min(w / STAGE_W, h / STAGE_H);
         const sw = STAGE_W * scale, sh = STAGE_H * scale;
         stageView.rotated = rotated;
@@ -95,8 +97,8 @@ export default function HommApp() {
       <div className="stage" style={full
         ? (rotated
           // Turned sideways: flush with the screen's bottom edge (the user's right), centred across.
-          ? { left: '50%', bottom: 0, top: 'auto', transformOrigin: 'center', transform: `translate(-${STAGE_W / 2}px, ${STAGE_H / 2 - (STAGE_W * scale) / 2}px) rotate(90deg) scale(${scale})` }
-          : { left: 'auto', right: 0, top: '50%', transformOrigin: 'right center', transform: `translateY(-50%) scale(${scale})` })
+          ? { left: '50%', bottom: EDGE_PAD, top: 'auto', transformOrigin: 'center', transform: `translate(-${STAGE_W / 2}px, ${STAGE_H / 2 - (STAGE_W * scale) / 2}px) rotate(90deg) scale(${scale})` }
+          : { left: 'auto', right: EDGE_PAD, top: '50%', transformOrigin: 'right center', transform: `translateY(-50%) scale(${scale})` })
         : { transform: `translate(${x}px, ${y}px) scale(${scale})` }}>
         <Suspense fallback={<Screen><Loading /></Screen>}>
           <Routes>
