@@ -41,7 +41,7 @@ function useStageFit(fixedMode: boolean, col: number) {
         const vw = el.clientWidth, vh = el.clientHeight;
         const rotated = vh > vw;
         const w = rotated ? vh : vw, h = rotated ? vw : vh;
-        const scale = Math.min((w - col) / STAGE_W, h / STAGE_H);
+        const scale = Math.min((w - EXIT_COL) / STAGE_W, h / STAGE_H);
         stageView.rotated = rotated;
         setFit({ full: true, rotated, scale, x: 0, y: 0 });
         return;
@@ -98,7 +98,7 @@ export default function HommApp() {
   const exitSize = turned ? 24 : 32;
   const exitEdge = (col - exitSize) / 2;
   const exitStyle = rotated
-    ? { width: exitSize, height: exitSize, top: exitEdge, left: 'auto', right: 4 }
+    ? { width: exitSize, height: exitSize, top: exitEdge, left: 'auto', right: 0 }
     : { width: exitSize, height: exitSize, left: exitEdge, top: 4 };
 
   // Leaving the game area drops the realtime connection.
@@ -113,7 +113,7 @@ export default function HommApp() {
       <div className="stage" style={full
         ? (rotated
           // Turned sideways: starts after the exit column at the screen's top (the user's left).
-          ? { left: '50%', top: 0, transformOrigin: 'center', transform: `translate(-${STAGE_W / 2}px, ${col + (STAGE_W * scale) / 2 - STAGE_H / 2}px) rotate(90deg) scale(${scale})` }
+          ? { left: `calc(100% - ${(STAGE_H * scale) / 2}px)`, top: 0, transformOrigin: 'center', transform: `translate(-${STAGE_W / 2}px, ${col + (STAGE_W * scale) / 2 - STAGE_H / 2}px) rotate(90deg) scale(${scale})` }
           : { left: col, top: '50%', transformOrigin: 'left center', transform: `translateY(-50%) scale(${scale})` })
         : { transform: `translate(${x}px, ${y}px) scale(${scale})` }}>
         <Suspense fallback={<Screen><Loading /></Screen>}>
