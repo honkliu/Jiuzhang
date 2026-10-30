@@ -75,8 +75,8 @@ function Screen({ children }: { children: ReactNode }) {
 
 /** City of Towers (HoMM-style), embedded in the KanKan Games page under /games/homm/*. */
 export default function HommApp() {
-  // ✕ leaves fullscreen but stays on the Heroes tab, so the Games tabs and app menu are reachable.
-  const [allowFull, setAllowFull] = useState(true);
+  // Fullscreen is opt-in via the ⛶ button; ✕ leaves it but stays on the Heroes tab.
+  const [allowFull, setAllowFull] = useState(false);
   const { ref, full, rotated, scale, x, y } = useStageFit(allowFull);
 
   // Leaving the game area drops the realtime connection.
@@ -85,7 +85,7 @@ export default function HommApp() {
   return (
     <div className={'homm-root' + (full ? ' homm-full' : '')} ref={ref} style={full ? undefined : { height: STAGE_H * scale }}>
       {full && <button type="button" className="homm-exit" aria-label="Exit fullscreen" onClick={() => setAllowFull(false)}>✕</button>}
-      {!full && !allowFull && <button type="button" className="homm-exit" aria-label="Fullscreen" onClick={() => setAllowFull(true)}>⛶</button>}
+      {!full && isHomeScreenApp() && <button type="button" className="homm-exit" aria-label="Fullscreen" onClick={() => setAllowFull(true)}>⛶</button>}
       <div className="stage" style={{ transform: `translate(${x}px, ${y}px)${rotated ? ' rotate(90deg)' : ''} scale(${scale})` }}>
         <Suspense fallback={<Screen><Loading /></Screen>}>
           <Routes>

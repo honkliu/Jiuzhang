@@ -32,6 +32,8 @@ const VIEW_TX = 24;
 const VIEW_TY = 15;
 const MAP_W = VIEW_TX * TILE;
 const MAP_H = VIEW_TY * TILE;
+const EDGE_ZONE = 40;
+const EDGE_STEP = 4 / TILE;
 
 const TERRAIN_COLOR: Record<string, string> = {
   dirt: '#8a6a44', sand: '#c8b070', grass: '#5a8a3a', snow: '#c8d0d8',
@@ -210,9 +212,14 @@ function adventureCursorCss(sheet: Sheet, frame: number): string {
   }
   const base = frame >= 10 && frame <= 27 ? (frame - 4) % 6 + 4 : frame;
   const [x, y] = base === 2 ? [12, 10] : base === 3 ? [12, 12] : base === 4 ? [15, 13]
-    : base === 8 ? [8, 9] : base === 9 || base === 41 ? [14, 16] : [0, 0];
+    : base === 8 ? [8, 9] : base === 9 || base === 41 ? [14, 16]
+      : frame >= 32 && frame <= 39 ? [sheet.w >> 1, sheet.h >> 1] : [0, 0];
   return `url("${url}") ${x} ${y}, auto`;
 }
+
+// Scroll-arrow cursors (CRADVNTR frames 32-39) and CSS fallbacks, indexed N, NE, E, SE, S, SW, W, NW.
+const SCROLL_CURSORS = ['n-resize', 'ne-resize', 'e-resize', 'se-resize', 's-resize', 'sw-resize', 'w-resize', 'nw-resize'];
+const scrollIndex = (dx: number, dy: number) => [[7, 0, 1], [6, -1, 2], [5, 4, 3]][dy + 1][dx + 1];
 
 export function AdventureMap() {
   const { gameId } = useParams<{ gameId: string }>();
@@ -450,7 +457,70 @@ export function AdventureMap() {
     } else setHover(null);
   }
 
+  // Touch: dragging the map pans the camera; a plain tap still falls through to onClick.
+  const dragRef = useRef<{ id: number; px: number; py: number; cam: { x: number; y: number }; moved: boolean } | null>(null);
+  const suppressClickRef = useRef(false);
+
+  function onPointerDown(e: React.PointerEvent<HTMLCanvasElement>) {
+    if (e.pointerType === 'mouse') return;
+    suppressClickRef.current = false;
+    const p = localPoint(e, e.currentTarget);
+    dragRef.current = { id: e.pointerId, px: p.x, py: p.y, cam, moved: false };
+  }
+
+  // Desktop: pushing the mouse against a map edge scrolls the camera until the map's edge.
+  const edgeRef = useRef({ dx: 0, dy: 0 });
+  const [edgeDir, setEdgeDir] = useState({ dx: 0, dy: 0 });
+  useEffect(() => {
+    if (!map) return;
+    const timer = window.setInterval(() => {
+      const { dx, dy } = edgeRef.current;
+      if (!dx && !dy || movingRef.current) return;
+      setCam((c) => {
+        const next = clampCam(map, c.x + dx * EDGE_STEP, c.y + dy * EDGE_STEP);
+        return next.x === c.x && next.y === c.y ? c : next;
+      });
+    }, 33);
+    return () => window.clearInterval(timer);
+  }, [map]);
+
+  function updateEdge(e: React.PointerEvent<HTMLCanvasElement>) {
+    const p = localPoint(e, e.currentTarget);
+    const w = MAP_W * ZOOM, h = MAP_H * ZOOM;
+    const dir = {
+      dx: p.x < EDGE_ZONE ? -1 : p.x > w - EDGE_ZONE ? 1 : 0,
+      dy: p.y < EDGE_ZONE ? -1 : p.y > h - EDGE_ZONE ? 1 : 0
+    };
+    edgeRef.current = dir;
+    setEdgeDir((d) => (d.dx === dir.dx && d.dy === dir.dy ? d : dir));
+  }
+
+  function onPointerMove(e: React.PointerEvent<HTMLCanvasElement>) {
+    if (e.pointerType === 'mouse') { updateEdge(e); return; }
+    const d = dragRef.current;
+    if (!d || d.id !== e.pointerId || !map) return;
+    const p = localPoint(e, e.currentTarget);
+    const dx = p.x - d.px, dy = p.y - d.py;
+    if (!d.moved) {
+      if (Math.hypot(dx, dy) < 12) return;
+      d.moved = true;
+      e.currentTarget.setPointerCapture(e.pointerId);
+    }
+    const nx = Math.round((d.cam.x - dx / ZOOM / TILE) * TILE) / TILE;
+    const ny = Math.round((d.cam.y - dy / ZOOM / TILE) * TILE) / TILE;
+    const next = clampCam(map, nx, ny);
+    setCam((c) => (c.x === next.x && c.y === next.y ? c : next));
+  }
+
+  function onPointerEnd(e: React.PointerEvent<HTMLCanvasElement>) {
+    const d = dragRef.current;
+    if (!d || d.id !== e.pointerId) return;
+    dragRef.current = null;
+    if (d.moved) suppressClickRef.current = true;
+  }
+
   async function onClick(e: React.MouseEvent<HTMLCanvasElement>) {
+    if (suppressClickRef.current) { suppressClickRef.current = false; return; }
     if (!map || !hero || !game || movingRef.current || encounter || meeting || exchange || hero.pendingTreasure || hero.pendingLevel || worldView || noticeQueue.length || endTurnConfirm || endingTurn || spellBusyRef.current) return;
     const raw = toTile(e);
     if (raw.x < 0 || raw.y < 0 || raw.x >= map.width || raw.y >= map.height) return;
@@ -780,7 +850,11 @@ export function AdventureMap() {
   const dateText = t('homm.ui.adv.date').replace('{m}', String(game.month)).replace('{w}', String(game.week)).replace('{d}', String(game.day));
   const cursorSheet = h3 ? getDef('CRADVNTR') : null;
   const cursorFrame = movingRef.current ? 1 : cursor.frame;
-  const cursorStyle = cursorSheet ? adventureCursorCss(cursorSheet, cursorFrame)
+  const scrolling = edgeDir.dx !== 0 || edgeDir.dy !== 0;
+  const scrollIdx = scrolling ? scrollIndex(edgeDir.dx, edgeDir.dy) : 0;
+  const cursorStyle = scrolling
+    ? (cursorSheet ? adventureCursorCss(cursorSheet, 32 + scrollIdx) : SCROLL_CURSORS[scrollIdx])
+    : cursorSheet ? adventureCursorCss(cursorSheet, cursorFrame)
     : cursor.action === 'blocked' ? 'not-allowed' : cursor.action === 'visit' ? 'grab'
       : cursor.action === 'exchange' ? 'alias' : 'crosshair';
 
@@ -804,7 +878,12 @@ export function AdventureMap() {
         data-cursor-action={cursor.action}
         data-cursor-frame={cursorFrame}
         data-path-end={path?.length ? `${path[path.length - 1].x},${path[path.length - 1].y}` : ''}
-        style={{ position: 'absolute', left: MAP_X, top: MAP_Y, width: MAP_W * ZOOM, height: MAP_H * ZOOM, cursor: cursorStyle }}
+        style={{ position: 'absolute', left: MAP_X, top: MAP_Y, width: MAP_W * ZOOM, height: MAP_H * ZOOM, cursor: cursorStyle, touchAction: 'none' }}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerEnd}
+        onPointerCancel={onPointerEnd}
+        onPointerLeave={() => { edgeRef.current = { dx: 0, dy: 0 }; setEdgeDir({ dx: 0, dy: 0 }); }}
         onMouseMove={onMove}
         onMouseLeave={() => setHover(null)}
         onClick={onClick}
