@@ -12,20 +12,26 @@ import { socket } from '../ws';
 import { FACTION_COLOR, FACTION_SEAT, HeroPortrait, RES_ORDER, ResIcon, heroClassText, resLabel } from '../ui/homm';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { errRaw, nm, serverText, type T } from '../text';
+import { localPoint } from '../stageView';
 import { DefImg, Pcx, pcxUrl, drawFrame, getDef, groupFrame, onAssetLoaded, useDef, useH3, type Sheet } from '../h3/assets';
 import {
   MINE_DEF, MOUNTAIN_DEFS, OBJECT_DEF, RESOURCE_DEF, RES_FRAME, ROCK_DEFS, TERRAIN_DEF, TOWN_MAP_DEF, TREE_DEFS, artifactSeed, borderKind, edgeFrames, objectAnchorX,
   artifactDef, creaturePortraitFrame, flagDef, heroMapDef, heroPortrait, monsterDef, townListFrame
 } from '../h3/catalog';
 
-// Original HoMM3 800x600 adventure-screen geometry (shared by both art modes).
+// Adventure screen on the 1920x1080 stage: the original 200x575 sidebar and 800x25 resource bar are
+// scaled by HUD_K; the map takes the rest at 2x pixel art (64px tiles).
 const TILE = 32;
-const MAP_X = 7;
-const MAP_Y = 7;
-const MAP_W = 594;
-const MAP_H = 546;
-const VIEW_TX = Math.floor(MAP_W / TILE); // 18 whole tiles
-const VIEW_TY = Math.floor(MAP_H / TILE); // 17 whole tiles
+const ZOOM = 2;
+const HUD_K = 1.8;
+const SIDE_X = 1920 - 200 * HUD_K;
+const BAR_Y = 575 * HUD_K;
+const MAP_X = 12;
+const MAP_Y = 12;
+const VIEW_TX = 24;
+const VIEW_TY = 15;
+const MAP_W = VIEW_TX * TILE;
+const MAP_H = VIEW_TY * TILE;
 
 const TERRAIN_COLOR: Record<string, string> = {
   dirt: '#8a6a44', sand: '#c8b070', grass: '#5a8a3a', snow: '#c8d0d8',
@@ -397,6 +403,7 @@ export function AdventureMap() {
     if (!canvas || !map) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+    ctx.setTransform(ZOOM, 0, 0, ZOOM, 0, 0);
     ctx.imageSmoothingEnabled = false;
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, MAP_W, MAP_H);
@@ -432,11 +439,8 @@ export function AdventureMap() {
 
   // ---------------------------------------------------------------- input
   function toTile(e: React.MouseEvent<HTMLCanvasElement>) {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const scale = rect.width / MAP_W;
-    const px = (e.clientX - rect.left) / scale;
-    const py = (e.clientY - rect.top) / scale;
-    return { x: Math.floor(px / TILE + cam.x), y: Math.floor(py / TILE + cam.y) };
+    const p = localPoint(e, e.currentTarget);
+    return { x: Math.floor(p.x / ZOOM / TILE + cam.x), y: Math.floor(p.y / ZOOM / TILE + cam.y) };
   }
 
   function onMove(e: React.MouseEvent<HTMLCanvasElement>) {
@@ -782,16 +786,14 @@ export function AdventureMap() {
 
   return (
     <>
-      {/* frame */}
-      {h3
-        ? <Pcx name="advmap" x={0} y={0} w={800} h={600} />
-        : <div className="abs advframe" style={{ left: 0, top: 0, width: 800, height: 600 }} />}
+      {/* map frame */}
+      <div className="abs advframe" style={{ left: 0, top: 0, width: SIDE_X, height: BAR_Y }} />
 
       {/* adventure map */}
       <canvas
         ref={canvasRef}
-        width={MAP_W}
-        height={MAP_H}
+        width={MAP_W * ZOOM}
+        height={MAP_H * ZOOM}
         aria-label={t('homm.ui.adv.map')}
         data-cam-x={cam.x}
         data-cam-y={cam.y}
@@ -802,13 +804,26 @@ export function AdventureMap() {
         data-cursor-action={cursor.action}
         data-cursor-frame={cursorFrame}
         data-path-end={path?.length ? `${path[path.length - 1].x},${path[path.length - 1].y}` : ''}
-        style={{ position: 'absolute', left: MAP_X, top: MAP_Y, width: MAP_W, height: MAP_H, cursor: cursorStyle }}
+        style={{ position: 'absolute', left: MAP_X, top: MAP_Y, width: MAP_W * ZOOM, height: MAP_H * ZOOM, cursor: cursorStyle }}
         onMouseMove={onMove}
         onMouseLeave={() => setHover(null)}
         onClick={onClick}
         onContextMenu={onContextMenu}
         onWheel={onWheel}
       />
+
+      {/* status bar */}
+      <div className={'abs' + (h3 ? ' h3text' : '')} data-rollover
+        style={{ left: MAP_X, top: MAP_Y * 2 + MAP_H * ZOOM, width: MAP_W * ZOOM, height: 32, textAlign: 'center', fontSize: 22, lineHeight: '32px', color: h3 ? undefined : 'var(--text-dim)' }}>
+        {rollover}
+      </div>
+
+      {/* sidebar: original 200x575 column at 1.8x */}
+      <div className="abs" style={{ left: SIDE_X, top: 0, width: 200, height: 575, overflow: 'hidden', transform: `scale(${HUD_K})`, transformOrigin: '0 0' }}>
+      <div className="abs" style={{ left: -600, top: 0, width: 800, height: 600 }}>
+      {h3
+        ? <Pcx name="advmap" x={0} y={0} w={800} h={600} />
+        : <div className="abs advframe" style={{ left: 0, top: 0, width: 800, height: 600 }} />}
 
       <Minimap map={map} cam={cam} h3={h3} onJump={(x, y) => setCam(centerCam(map, x, y))} />
 
@@ -935,13 +950,13 @@ export function AdventureMap() {
         ) : null}
       </div>
 
-      {/* status bar */}
-      <div className={'abs' + (h3 ? ' h3text' : '')} data-rollover
-        style={{ left: 8, top: 556, width: 586, height: 18, textAlign: 'center', fontSize: 12, lineHeight: '18px', color: h3 ? undefined : 'var(--text-dim)' }}>
-        {rollover}
+      </div>
       </div>
 
-      {/* resource bar */}
+      {/* resource bar: original 800x25 strip at 1.8x */}
+      <div className="abs" style={{ left: 0, top: BAR_Y, width: 1920, height: 1080 - BAR_Y, background: '#1a120a' }} />
+      <div className="abs" style={{ left: 0, top: BAR_Y, width: 800, height: 25, overflow: 'hidden', transform: `scale(${HUD_K})`, transformOrigin: '0 0' }}>
+      <div className="abs" style={{ left: 0, top: -575, width: 800, height: 600 }}>
       {h3 ? <Pcx name="AResBar" x={3} y={575} /> : <div className="abs panel" style={{ left: 3, top: 575, width: 794, height: 22, borderRadius: 0 }} />}
       {RES_ORDER.map((r) => (
         <div key={r} className={'abs' + (h3 ? ' h3text' : '')} title={resLabel(t, r)}
@@ -952,6 +967,11 @@ export function AdventureMap() {
       ))}
       <div className={'abs' + (h3 ? ' h3text' : '')} title={t('homm.ui.adv.minesTip').replace('{n}', String(minesOwned)).replace('{o}', String(me?.obeliskVisits ?? 0))}
         style={{ left: 3 + 619, top: 578, fontSize: 12 }}>{dateText}</div>
+      </div>
+      </div>
+
+      {/* dialogs: classic 800x600 coordinates, centred at 1.8x */}
+      <div className="layer800">
 
       {/* spellbook */}
       {spellbookOpen && hero && <Spellbook hero={hero} spells={spellDefs} onCast={chooseSpell} onClose={() => setSpellbookOpen(false)} />}
@@ -1089,7 +1109,7 @@ export function AdventureMap() {
       {noticeQueue[0] && <AdventureNoticeDialog notice={noticeQueue[0]}
         spellName={spellDefs[noticeQueue[0].key] && nm(t, 'spell', noticeQueue[0].key, spellDefs[noticeQueue[0].key].name)} spellId={spellDefs[noticeQueue[0].key]?.id} h3={h3}
         onClose={() => setNoticeQueue(queue => queue.slice(1))} />}
-
+      </div>
     </>
   );
 }
@@ -1799,8 +1819,8 @@ function Minimap(props: { map: MapData; cam: { x: number; y: number }; h3: boole
       className={h3 ? undefined : 'well'}
       style={{ position: 'absolute', left: 630, top: 26, width: W, height: H, cursor: 'pointer' }}
       onClick={(e) => {
-        const r = e.currentTarget.getBoundingClientRect();
-        onJump(Math.floor((e.clientX - r.left) / r.width * map.width), Math.floor((e.clientY - r.top) / r.height * map.height));
+        const p = localPoint(e, e.currentTarget);
+        onJump(Math.floor(p.x / W * map.width), Math.floor(p.y / H * map.height));
       }}
     />
   );

@@ -8,6 +8,7 @@ import { toast } from '../ui/Toast';
 import { RES_ORDER, ResIcon, buildingName, factionLabel, resLabel } from '../ui/homm';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { errText, nm, serverText } from '../text';
+import { localPoint } from '../stageView';
 import { DefImg, Pcx, ScreenBackdrop, alphaAt, drawFrame, getDef, onAssetLoaded, useH3 } from '../h3/assets';
 import { FACTION_PLAYER_COLOR, creaturePortraitFrame, heroPortrait, townListFrame } from '../h3/catalog';
 import { HORDE_TIER, TOWN_BACK, townStructures } from '../h3/town';
@@ -144,10 +145,7 @@ function TownH3(props: {
   });
 
   function hit(e: React.MouseEvent): string | null {
-    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    // the stage may be scaled inside the KanKan tab; hit-test in unscaled stage pixels
-    const k = r.width / ((e.currentTarget as HTMLElement).offsetWidth || r.width);
-    const x = (e.clientX - r.left) / k, y = (e.clientY - r.top) / k;
+    const { x, y } = localPoint(e, e.currentTarget as HTMLElement);
     for (let i = structures.length - 1; i >= 0; i--) {
       const { key, s } = structures[i];
       if (key.startsWith('extra')) continue;
