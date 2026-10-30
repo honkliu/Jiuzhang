@@ -81,9 +81,10 @@ export default function HommApp() {
   // The exit button sits centred in the black strip left of the stage, shrinking to fit it.
   const exitSize = Math.max(18, Math.min(32, strip - 4));
   const exitPos = (strip - exitSize) / 2;
+  // Kept off the rounded screen corners and the Dynamic Island (screen centre).
   const exitStyle = rotated
-    ? { width: exitSize, height: exitSize, top: exitPos, left: 'auto', right: 6 }
-    : { width: exitSize, height: exitSize, left: exitPos, top: 6 };
+    ? { width: exitSize, height: exitSize, top: exitPos, left: 'auto', right: '20%' }
+    : { width: exitSize, height: exitSize, left: exitPos, top: '20%' };
 
   // Leaving the game area drops the realtime connection.
   useEffect(() => () => socket.close(), []);
@@ -92,7 +93,9 @@ export default function HommApp() {
     <div className={'homm-root' + (full ? ' homm-full' : '')} ref={ref} style={full ? undefined : { height: STAGE_H * scale }}>
       {full && <button type="button" className="homm-exit" style={exitStyle} aria-label="Exit fullscreen" onClick={() => setAllowFull(false)}>✕</button>}
       {!full && isHomeScreenApp() && <button type="button" className="homm-exit" aria-label="Fullscreen" onClick={() => setAllowFull(true)}>⛶</button>}
-      <div className="stage" style={{ transform: `translate(${x}px, ${y}px)${rotated ? ' rotate(90deg)' : ''} scale(${scale})` }}>
+      <div className="stage" style={full
+        ? { left: '50%', top: '50%', transformOrigin: 'center', transform: `translate(-50%, -50%)${rotated ? ' rotate(90deg)' : ''} scale(${scale})` }
+        : { transform: `translate(${x}px, ${y}px) scale(${scale})` }}>
         <Suspense fallback={<Screen><Loading /></Screen>}>
           <Routes>
             <Route index element={<Screen><Lobby /></Screen>} />
