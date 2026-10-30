@@ -42,7 +42,7 @@ function useStageFit(allowFull: boolean) {
         const sw = STAGE_W * scale, sh = STAGE_H * scale;
         stageView.rotated = rotated;
         setFit({
-          full: true, rotated, scale, strip: (w - sw) / 2,
+          full: true, rotated, scale, strip: w - sw,
           x: rotated ? (vw - sh) / 2 + sh : (vw - sw) / 2,
           y: rotated ? (vh - sw) / 2 : (vh - sh) / 2
         });
@@ -94,7 +94,10 @@ export default function HommApp() {
       {full && <button type="button" className="homm-exit" style={exitStyle} aria-label="Exit fullscreen" onClick={() => setAllowFull(false)}>✕</button>}
       {!full && isHomeScreenApp() && <button type="button" className="homm-exit" aria-label="Fullscreen" onClick={() => setAllowFull(true)}>⛶</button>}
       <div className="stage" style={full
-        ? { left: '50%', top: '50%', transformOrigin: 'center', transform: `translate(-50%, -50%)${rotated ? ' rotate(90deg)' : ''} scale(${scale})` }
+        ? (rotated
+          // Turned sideways: flush with the screen's bottom edge (the user's right), centred across.
+          ? { left: '50%', bottom: 0, top: 'auto', transformOrigin: 'center', transform: `translate(-${STAGE_W / 2}px, ${STAGE_H / 2 - (STAGE_W * scale) / 2}px) rotate(90deg) scale(${scale})` }
+          : { left: 'auto', right: 0, top: '50%', transformOrigin: 'right center', transform: `translateY(-50%) scale(${scale})` })
         : { transform: `translate(${x}px, ${y}px) scale(${scale})` }}>
         <Suspense fallback={<Screen><Loading /></Screen>}>
           <Routes>
