@@ -29,9 +29,9 @@ const isHomeScreenApp = () =>
  * the viewport height left below it. Launched from a phone's home screen it covers the whole screen
  * and, held upright, is turned sideways so the landscape stage uses the full portrait display.
  */
-function useStageFit(allowFull: boolean) {
+function useStageFit(allowFull: boolean, turned: boolean) {
   const ref = useRef<HTMLDivElement>(null);
-  const [fit, setFit] = useState({ full: false, rotated: false, scale: 1, x: 0, y: 0 });
+  const [fit, setFit] = useState({ full: false, rotated: false, scale: 1, x: 0, y: 0, h: 0 });
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -42,14 +42,22 @@ function useStageFit(allowFull: boolean) {
         const w = rotated ? vh : vw, h = rotated ? vw : vh;
         const scale = Math.min((w - EXIT_COL) / STAGE_W, h / STAGE_H);
         stageView.rotated = rotated;
-        setFit({ full: true, rotated, scale, x: 0, y: 0 });
+        setFit({ full: true, rotated, scale, x: 0, y: 0, h: 0 });
+        return;
+      }
+      const rect = el.getBoundingClientRect();
+      // In the browser the menu stays upright; the game fills the panel below it, turned sideways, and the user tilts the phone.
+      if (turned && window.innerHeight > window.innerWidth) {
+        const h = Math.max(300, window.innerHeight - Math.max(0, rect.top) - 8);
+        const scale = Math.max(0.2, Math.min((h - EXIT_COL) / STAGE_W, rect.width / STAGE_H));
+        stageView.rotated = true;
+        setFit({ full: false, rotated: true, scale, x: 0, y: 0, h });
         return;
       }
       stageView.rotated = false;
-      const rect = el.getBoundingClientRect();
       const availH = window.innerHeight - Math.max(0, rect.top) - 16;
       const scale = Math.max(0.2, Math.min(rect.width / STAGE_W, availH / STAGE_H));
-      setFit({ full: false, rotated: false, scale, x: Math.max(0, (rect.width - STAGE_W * scale) / 2), y: 0 });
+      setFit({ full: false, rotated: false, scale, x: Math.max(0, (rect.width - STAGE_W * scale) / 2), y: 0, h: 0 });
     };
     measure();
     const ro = new ResizeObserver(measure);
@@ -62,7 +70,7 @@ function useStageFit(allowFull: boolean) {
       window.removeEventListener('orientationchange', measure);
       stageView.rotated = false;
     };
-  }, [allowFull]);
+  }, [allowFull, turned]);
   return { ref, ...fit };
 }
 
@@ -74,7 +82,9 @@ function Screen({ children }: { children: ReactNode }) {
 export default function HommApp() {
   // Fullscreen is opt-in via the ⛶ button; ✕ leaves it but stays on the Heroes tab.
   const [allowFull, setAllowFull] = useState(false);
-  const { ref, full, rotated, scale, x, y } = useStageFit(allowFull);
+  const [turned, setTurned] = useState(false);
+  const { ref, full, rotated, scale, x, y, h } = useStageFit(allowFull, turned);
+  const canTurn = !isHomeScreenApp() && window.matchMedia('(pointer: coarse)').matches;
   // The exit button is centred in the left column.
   const exitSize = 32;
   const exitEdge = (EXIT_COL - exitSize) / 2;
@@ -86,15 +96,16 @@ export default function HommApp() {
   useEffect(() => () => socket.close(), []);
 
   return (
-    <div className={'homm-root' + (full ? ' homm-full' : '')} ref={ref} style={full ? undefined : { height: STAGE_H * scale }}>
-      {full && <button type="button" className="homm-exit" style={exitStyle} aria-label="Exit fullscreen" onClick={() => setAllowFull(false)}>✕</button>}
-      {!full && isHomeScreenApp() && <button type="button" className="homm-exit" aria-label="Fullscreen" onClick={() => setAllowFull(true)}>⛶</button>}
-      <div className="stage" style={full
-        ? (rotated
-          // Turned sideways: starts after the exit column at the screen's top (the user's left).
-          ? { left: '50%', top: 0, transformOrigin: 'center', transform: `translate(-${STAGE_W / 2}px, ${EXIT_COL + (STAGE_W * scale) / 2 - STAGE_H / 2}px) rotate(90deg) scale(${scale})` }
-          : { left: EXIT_COL, top: '50%', transformOrigin: 'left center', transform: `translateY(-50%) scale(${scale})` })
-        : { transform: `translate(${x}px, ${y}px) scale(${scale})` }}>
+    <div className={'homm-root' + (full ? ' homm-full' : '')} ref={ref}     style={full ? undefined : { height: rotated ? h : STAGE_H * scale }}>
+          {(full || rotated) && <button type="button" className="homm-exit" style={exitStyle} aria-label="Exit fullscreen" onClick={() => { setAllowFull(false); setTurned(false); }}>✕</button>}
+          {!full && !rotated && isHomeScreenApp() && <button type="button" className="homm-exit" aria-label="Fullscreen" onClick={() => setAllowFull(true)}>⛶</button>}
+          {!full && !rotated && canTurn && <button type="button" className="homm-exit" aria-label="Landscape layout" onClick={() => setTurned(true)}>⟳</button>}
+          <div className="stage" style={rotated
+            // Turned sideways: starts after the exit column at the panel's top (the user's left).
+            ? { left: '50%', top: 0, transformOrigin: 'center', transform: `translate(-${STAGE_W / 2}px, ${EXIT_COL + (STAGE_W * scale) / 2 - STAGE_H / 2}px) rotate(90deg) scale(${scale})` }
+            : full
+              ? { left: EXIT_COL, top: '50%', transformOrigin: 'left center', transform: `translateY(-50%) scale(${scale})` }
+              : { transform: `translate(${x}px, ${y}px) scale(${scale})` }}>
         <Suspense fallback={<Screen><Loading /></Screen>}>
           <Routes>
             <Route index element={<Screen><Lobby /></Screen>} />
