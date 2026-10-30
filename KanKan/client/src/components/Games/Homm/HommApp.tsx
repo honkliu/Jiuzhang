@@ -17,8 +17,8 @@ const GameOver = lazy(() => import('./views/GameOver').then(m => ({ default: m.G
 
 const STAGE_W = 1920;
 const STAGE_H = 1080;
-// The black strip left of the game (holding the exit button) is at most this wide; any other spare width goes to the right.
-const LEFT_MAX = 80;
+// Column at the screen's left (in the user's view) holding the exit button; the game sits right after it and spare width is on the right.
+const EXIT_COL = 40;
 
 const isHomeScreenApp = () =>
   window.matchMedia('(pointer: coarse)').matches &&
@@ -31,7 +31,7 @@ const isHomeScreenApp = () =>
  */
 function useStageFit(allowFull: boolean) {
   const ref = useRef<HTMLDivElement>(null);
-  const [fit, setFit] = useState({ full: false, rotated: false, scale: 1, x: 0, y: 0, strip: 0, pad: 0 });
+  const [fit, setFit] = useState({ full: false, rotated: false, scale: 1, x: 0, y: 0 });
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -40,22 +40,16 @@ function useStageFit(allowFull: boolean) {
         const vw = el.clientWidth, vh = el.clientHeight;
         const rotated = vh > vw;
         const w = rotated ? vh : vw, h = rotated ? vw : vh;
-        const scale = Math.min(w / STAGE_W, h / STAGE_H);
-        const sw = STAGE_W * scale, sh = STAGE_H * scale;
-        const strip = Math.min(LEFT_MAX, w - sw);
+        const scale = Math.min((w - EXIT_COL) / STAGE_W, h / STAGE_H);
         stageView.rotated = rotated;
-        setFit({
-          full: true, rotated, scale, strip, pad: w - sw - strip,
-          x: rotated ? (vw - sh) / 2 + sh : (vw - sw) / 2,
-          y: rotated ? (vh - sw) / 2 : (vh - sh) / 2
-        });
+        setFit({ full: true, rotated, scale, x: 0, y: 0 });
         return;
       }
       stageView.rotated = false;
       const rect = el.getBoundingClientRect();
       const availH = window.innerHeight - Math.max(0, rect.top) - 16;
       const scale = Math.max(0.2, Math.min(rect.width / STAGE_W, availH / STAGE_H));
-      setFit({ full: false, rotated: false, scale, x: Math.max(0, (rect.width - STAGE_W * scale) / 2), y: 0, strip: 0, pad: 0 });
+      setFit({ full: false, rotated: false, scale, x: Math.max(0, (rect.width - STAGE_W * scale) / 2), y: 0 });
     };
     measure();
     const ro = new ResizeObserver(measure);
@@ -80,10 +74,10 @@ function Screen({ children }: { children: ReactNode }) {
 export default function HommApp() {
   // Fullscreen is opt-in via the ⛶ button; ✕ leaves it but stays on the Heroes tab.
   const [allowFull, setAllowFull] = useState(false);
-  const { ref, full, rotated, scale, x, y, strip, pad } = useStageFit(allowFull);
-  // The exit button is attached to the stage's top-left corner, inside the black strip.
-  const exitSize = Math.max(18, Math.min(32, strip - 4));
-  const exitEdge = Math.max(0, strip - exitSize - 4);
+  const { ref, full, rotated, scale, x, y } = useStageFit(allowFull);
+  // The exit button is centred in the left column.
+  const exitSize = 32;
+  const exitEdge = (EXIT_COL - exitSize) / 2;
   const exitStyle = rotated
     ? { width: exitSize, height: exitSize, top: exitEdge, left: 'auto', right: 8 }
     : { width: exitSize, height: exitSize, left: exitEdge, top: 8 };
@@ -97,9 +91,9 @@ export default function HommApp() {
       {!full && isHomeScreenApp() && <button type="button" className="homm-exit" aria-label="Fullscreen" onClick={() => setAllowFull(true)}>⛶</button>}
       <div className="stage" style={full
         ? (rotated
-          // Turned sideways: flush with the screen's bottom edge (the user's right), centred across.
-          ? { left: '50%', bottom: pad, top: 'auto', transformOrigin: 'center', transform: `translate(-${STAGE_W / 2}px, ${STAGE_H / 2 - (STAGE_W * scale) / 2}px) rotate(90deg) scale(${scale})` }
-          : { left: 'auto', right: pad, top: '50%', transformOrigin: 'right center', transform: `translateY(-50%) scale(${scale})` })
+          // Turned sideways: starts after the exit column at the screen's top (the user's left).
+          ? { left: '50%', top: 0, transformOrigin: 'center', transform: `translate(-${STAGE_W / 2}px, ${EXIT_COL + (STAGE_W * scale) / 2 - STAGE_H / 2}px) rotate(90deg) scale(${scale})` }
+          : { left: EXIT_COL, top: '50%', transformOrigin: 'left center', transform: `translateY(-50%) scale(${scale})` })
         : { transform: `translate(${x}px, ${y}px) scale(${scale})` }}>
         <Suspense fallback={<Screen><Loading /></Screen>}>
           <Routes>
