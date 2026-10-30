@@ -29,7 +29,7 @@ const isHomeScreenApp = () =>
  */
 function useStageFit(allowFull: boolean) {
   const ref = useRef<HTMLDivElement>(null);
-  const [fit, setFit] = useState({ full: false, rotated: false, scale: 1, x: 0, y: 0 });
+  const [fit, setFit] = useState({ full: false, rotated: false, scale: 1, x: 0, y: 0, strip: 0 });
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -42,7 +42,7 @@ function useStageFit(allowFull: boolean) {
         const sw = STAGE_W * scale, sh = STAGE_H * scale;
         stageView.rotated = rotated;
         setFit({
-          full: true, rotated, scale,
+          full: true, rotated, scale, strip: (w - sw) / 2,
           x: rotated ? (vw - sh) / 2 + sh : (vw - sw) / 2,
           y: rotated ? (vh - sw) / 2 : (vh - sh) / 2
         });
@@ -52,7 +52,7 @@ function useStageFit(allowFull: boolean) {
       const rect = el.getBoundingClientRect();
       const availH = window.innerHeight - Math.max(0, rect.top) - 16;
       const scale = Math.max(0.2, Math.min(rect.width / STAGE_W, availH / STAGE_H));
-      setFit({ full: false, rotated: false, scale, x: Math.max(0, (rect.width - STAGE_W * scale) / 2), y: 0 });
+      setFit({ full: false, rotated: false, scale, x: Math.max(0, (rect.width - STAGE_W * scale) / 2), y: 0, strip: 0 });
     };
     measure();
     const ro = new ResizeObserver(measure);
@@ -77,14 +77,20 @@ function Screen({ children }: { children: ReactNode }) {
 export default function HommApp() {
   // Fullscreen is opt-in via the ⛶ button; ✕ leaves it but stays on the Heroes tab.
   const [allowFull, setAllowFull] = useState(false);
-  const { ref, full, rotated, scale, x, y } = useStageFit(allowFull);
+  const { ref, full, rotated, scale, x, y, strip } = useStageFit(allowFull);
+  // The exit button sits centred in the black strip left of the stage, shrinking to fit it.
+  const exitSize = Math.max(18, Math.min(32, strip - 4));
+  const exitPos = (strip - exitSize) / 2;
+  const exitStyle = rotated
+    ? { width: exitSize, height: exitSize, top: exitPos, left: 'auto', right: 6 }
+    : { width: exitSize, height: exitSize, left: exitPos, top: 6 };
 
   // Leaving the game area drops the realtime connection.
   useEffect(() => () => socket.close(), []);
 
   return (
     <div className={'homm-root' + (full ? ' homm-full' : '')} ref={ref} style={full ? undefined : { height: STAGE_H * scale }}>
-      {full && <button type="button" className={'homm-exit' + (rotated ? ' rot' : '')} aria-label="Exit fullscreen" onClick={() => setAllowFull(false)}>✕</button>}
+      {full && <button type="button" className="homm-exit" style={exitStyle} aria-label="Exit fullscreen" onClick={() => setAllowFull(false)}>✕</button>}
       {!full && isHomeScreenApp() && <button type="button" className="homm-exit" aria-label="Fullscreen" onClick={() => setAllowFull(true)}>⛶</button>}
       <div className="stage" style={{ transform: `translate(${x}px, ${y}px)${rotated ? ' rotate(90deg)' : ''} scale(${scale})` }}>
         <Suspense fallback={<Screen><Loading /></Screen>}>
