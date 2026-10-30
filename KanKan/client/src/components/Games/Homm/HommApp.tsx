@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
-import { Navigate, Route, Routes, useNavigate } from 'react-router-dom';
+import { Navigate, Route, Routes } from 'react-router-dom';
 import { Toast } from './ui/Toast';
 import { Loading } from './ui/Layout';
 import { socket } from './ws';
@@ -27,14 +27,14 @@ const isHomeScreenApp = () =>
  * the viewport height left below it. Launched from a phone's home screen it covers the whole screen
  * and, held upright, is turned sideways so the landscape stage uses the full portrait display.
  */
-function useStageFit() {
+function useStageFit(allowFull: boolean) {
   const ref = useRef<HTMLDivElement>(null);
   const [fit, setFit] = useState({ full: false, rotated: false, scale: 1, x: 0, y: 0 });
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
     const measure = () => {
-      if (isHomeScreenApp()) {
+      if (allowFull && isHomeScreenApp()) {
         const vw = window.innerWidth, vh = window.innerHeight;
         const rotated = vh > vw;
         const w = rotated ? vh : vw, h = rotated ? vw : vh;
@@ -65,7 +65,7 @@ function useStageFit() {
       window.removeEventListener('orientationchange', measure);
       stageView.rotated = false;
     };
-  }, []);
+  }, [allowFull]);
   return { ref, ...fit };
 }
 
@@ -75,15 +75,17 @@ function Screen({ children }: { children: ReactNode }) {
 
 /** City of Towers (HoMM-style), embedded in the KanKan Games page under /games/homm/*. */
 export default function HommApp() {
-  const { ref, full, rotated, scale, x, y } = useStageFit();
-  const navigate = useNavigate();
+  // ✕ leaves fullscreen but stays on the Heroes tab, so the Games tabs and app menu are reachable.
+  const [allowFull, setAllowFull] = useState(true);
+  const { ref, full, rotated, scale, x, y } = useStageFit(allowFull);
 
   // Leaving the game area drops the realtime connection.
   useEffect(() => () => socket.close(), []);
 
   return (
     <div className={'homm-root' + (full ? ' homm-full' : '')} ref={ref} style={full ? undefined : { height: STAGE_H * scale }}>
-      {full && <button type="button" className="homm-exit" aria-label="Exit" onClick={() => navigate('/chats')}>✕</button>}
+      {full && <button type="button" className="homm-exit" aria-label="Exit fullscreen" onClick={() => setAllowFull(false)}>✕</button>}
+      {!full && !allowFull && <button type="button" className="homm-exit" aria-label="Fullscreen" onClick={() => setAllowFull(true)}>⛶</button>}
       <div className="stage" style={{ transform: `translate(${x}px, ${y}px)${rotated ? ' rotate(90deg)' : ''} scale(${scale})` }}>
         <Suspense fallback={<Screen><Loading /></Screen>}>
           <Routes>
