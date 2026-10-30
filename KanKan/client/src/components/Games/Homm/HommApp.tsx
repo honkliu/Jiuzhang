@@ -35,7 +35,7 @@ function useStageFit(allowFull: boolean) {
     if (!el) return;
     const measure = () => {
       if (allowFull && isHomeScreenApp()) {
-        const vw = window.innerWidth, vh = window.innerHeight;
+        const vw = el.clientWidth, vh = el.clientHeight;
         const rotated = vh > vw;
         const w = rotated ? vh : vw, h = rotated ? vw : vh;
         const scale = Math.min(w / STAGE_W, h / STAGE_H);
