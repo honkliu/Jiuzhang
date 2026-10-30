@@ -479,6 +479,9 @@ export const AppHeader: React.FC<AppHeaderProps> = () => {
           aria-hidden
           sx={{
             position: 'absolute',
+            left: 0,
+            top: 0,
+            width: 0,
             visibility: 'hidden',
             pointerEvents: 'none',
             whiteSpace: 'nowrap',
