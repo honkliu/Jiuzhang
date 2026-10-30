@@ -17,8 +17,8 @@ const GameOver = lazy(() => import('./views/GameOver').then(m => ({ default: m.G
 
 const STAGE_W = 1920;
 const STAGE_H = 1080;
-// Gap kept at the screen's right edge so rounded corners and system areas never clip the game.
-const EDGE_PAD = 24;
+// The black strip left of the game (holding the exit button) is at most this wide; any other spare width goes to the right.
+const LEFT_MAX = 80;
 
 const isHomeScreenApp = () =>
   window.matchMedia('(pointer: coarse)').matches &&
@@ -31,7 +31,7 @@ const isHomeScreenApp = () =>
  */
 function useStageFit(allowFull: boolean) {
   const ref = useRef<HTMLDivElement>(null);
-  const [fit, setFit] = useState({ full: false, rotated: false, scale: 1, x: 0, y: 0, strip: 0 });
+  const [fit, setFit] = useState({ full: false, rotated: false, scale: 1, x: 0, y: 0, strip: 0, pad: 0 });
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -39,12 +39,13 @@ function useStageFit(allowFull: boolean) {
       if (allowFull && isHomeScreenApp()) {
         const vw = el.clientWidth, vh = el.clientHeight;
         const rotated = vh > vw;
-        const w = (rotated ? vh : vw) - EDGE_PAD, h = rotated ? vw : vh;
+        const w = rotated ? vh : vw, h = rotated ? vw : vh;
         const scale = Math.min(w / STAGE_W, h / STAGE_H);
         const sw = STAGE_W * scale, sh = STAGE_H * scale;
+        const strip = Math.min(LEFT_MAX, w - sw);
         stageView.rotated = rotated;
         setFit({
-          full: true, rotated, scale, strip: w - sw,
+          full: true, rotated, scale, strip, pad: w - sw - strip,
           x: rotated ? (vw - sh) / 2 + sh : (vw - sw) / 2,
           y: rotated ? (vh - sw) / 2 : (vh - sh) / 2
         });
@@ -54,7 +55,7 @@ function useStageFit(allowFull: boolean) {
       const rect = el.getBoundingClientRect();
       const availH = window.innerHeight - Math.max(0, rect.top) - 16;
       const scale = Math.max(0.2, Math.min(rect.width / STAGE_W, availH / STAGE_H));
-      setFit({ full: false, rotated: false, scale, x: Math.max(0, (rect.width - STAGE_W * scale) / 2), y: 0, strip: 0 });
+      setFit({ full: false, rotated: false, scale, x: Math.max(0, (rect.width - STAGE_W * scale) / 2), y: 0, strip: 0, pad: 0 });
     };
     measure();
     const ro = new ResizeObserver(measure);
@@ -79,7 +80,7 @@ function Screen({ children }: { children: ReactNode }) {
 export default function HommApp() {
   // Fullscreen is opt-in via the ⛶ button; ✕ leaves it but stays on the Heroes tab.
   const [allowFull, setAllowFull] = useState(false);
-  const { ref, full, rotated, scale, x, y, strip } = useStageFit(allowFull);
+  const { ref, full, rotated, scale, x, y, strip, pad } = useStageFit(allowFull);
   // The exit button is attached to the stage's top-left corner, inside the black strip.
   const exitSize = Math.max(18, Math.min(32, strip - 4));
   const exitEdge = Math.max(0, strip - exitSize - 4);
@@ -97,8 +98,8 @@ export default function HommApp() {
       <div className="stage" style={full
         ? (rotated
           // Turned sideways: flush with the screen's bottom edge (the user's right), centred across.
-          ? { left: '50%', bottom: EDGE_PAD, top: 'auto', transformOrigin: 'center', transform: `translate(-${STAGE_W / 2}px, ${STAGE_H / 2 - (STAGE_W * scale) / 2}px) rotate(90deg) scale(${scale})` }
-          : { left: 'auto', right: EDGE_PAD, top: '50%', transformOrigin: 'right center', transform: `translateY(-50%) scale(${scale})` })
+          ? { left: '50%', bottom: pad, top: 'auto', transformOrigin: 'center', transform: `translate(-${STAGE_W / 2}px, ${STAGE_H / 2 - (STAGE_W * scale) / 2}px) rotate(90deg) scale(${scale})` }
+          : { left: 'auto', right: pad, top: '50%', transformOrigin: 'right center', transform: `translateY(-50%) scale(${scale})` })
         : { transform: `translate(${x}px, ${y}px) scale(${scale})` }}>
         <Suspense fallback={<Screen><Loading /></Screen>}>
           <Routes>
