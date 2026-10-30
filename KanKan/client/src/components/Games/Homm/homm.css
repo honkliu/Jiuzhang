@@ -71,6 +71,12 @@
   padding: 0;
 }
 
+/* Stage is turned 90deg clockwise in portrait, so its top-left corner is the screen's top-right. */
+.homm-root .homm-exit.rot {
+  left: auto;
+  right: max(env(safe-area-inset-right), 4px);
+}
+
 .homm-root .stage {
   position: absolute;
   left: 0;

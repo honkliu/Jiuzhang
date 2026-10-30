@@ -84,7 +84,7 @@ export default function HommApp() {
 
   return (
     <div className={'homm-root' + (full ? ' homm-full' : '')} ref={ref} style={full ? undefined : { height: STAGE_H * scale }}>
-      {full && <button type="button" className="homm-exit" aria-label="Exit fullscreen" onClick={() => setAllowFull(false)}>✕</button>}
+      {full && <button type="button" className={'homm-exit' + (rotated ? ' rot' : '')} aria-label="Exit fullscreen" onClick={() => setAllowFull(false)}>✕</button>}
       {!full && isHomeScreenApp() && <button type="button" className="homm-exit" aria-label="Fullscreen" onClick={() => setAllowFull(true)}>⛶</button>}
       <div className="stage" style={{ transform: `translate(${x}px, ${y}px)${rotated ? ' rotate(90deg)' : ''} scale(${scale})` }}>
         <Suspense fallback={<Screen><Loading /></Screen>}>
